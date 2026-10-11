@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, IconButton } from '$ds';
+  import { Button, Chevron, IconButton } from '$ds';
   import type { Recipe } from '$features/recipes/types';
   import { m } from '$shell/i18n';
   import CookingControlsBar from './CookingControlsBar.svelte';
@@ -52,6 +52,7 @@
   {#if duration !== null}
     <div class="control-timer">
       <StepTimer
+        size="lg"
         durationSeconds={duration}
         timer={stepTimer}
         secondsLeft={stepTimer ? timers.remaining(stepTimer) : 0}
@@ -63,6 +64,7 @@
     </div>
   {/if}
 
+  <!-- One toolbar, one size: every control is 56px (a wet thumb), the tools are circles and only Next is a labelled pill. -->
   <div class="control-summary">
     <div class="control-place">
       <!-- eslint-disable svelte/no-navigation-without-resolve -- The page resolves the route before appending the yield. -->
@@ -72,15 +74,7 @@
         aria-label={m['cooking.backToRecipe']()}
         title={m['cooking.backToRecipe']()}
       >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
-        >
-          <path d="m10 6-6 6 6 6M4 12h16" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
+        <Chevron direction="back" />
         <span>{m['cooking.recipe']()}</span>
       </a>
       <!-- eslint-enable svelte/no-navigation-without-resolve -->
@@ -88,44 +82,50 @@
         {m['cooking.stepOf']({ current: currentStep + 1, total: totalSteps })}
       </p>
     </div>
-    <div class="auto-scroll">
-      <Button
-        size="sm"
-        label={autoScrolling ? m['cooking.autoScroll.stop']() : m['cooking.autoScroll.start']()}
-        disabled={!ready}
-        onclick={onautoscroll}
-      >
-        <span class="auto-text">
-          {autoScrolling ? m['cooking.autoScroll.stopShort']() : m['cooking.autoScroll.start']()}
-        </span>
-        <svg
-          class="auto-icon"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          aria-hidden="true"
-        >
-          <path d="M12 4v13m-5-5 5 5 5-5M6 21h12" stroke-linecap="round" stroke-linejoin="round" />
+
+    <div class="tools">
+      <IconButton label={m['notes.title']()} size="lg" bordered onclick={onnotes}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M5 4.5h14v15H5z" stroke-linejoin="round" />
+          <path d="M8 8h8M8 12h8M8 16h5" stroke-linecap="round" />
         </svg>
-      </Button>
+      </IconButton>
+
+      <IconButton label={m['kitchen.controls']()} size="lg" bordered onclick={onkitchen}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 7h16M4 17h16M9 4v6M15 14v6" stroke-linecap="round" />
+        </svg>
+      </IconButton>
+
+      <!-- The name says what a press will do (start or stop); the fill shows it is running. -->
+      <div class="auto-scroll" class:running={autoScrolling}>
+        <IconButton
+          size="lg"
+          bordered
+          label={autoScrolling ? m['cooking.autoScroll.stop']() : m['cooking.autoScroll.start']()}
+          disabled={!ready}
+          onclick={onautoscroll}
+        >
+          {#if autoScrolling}
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <rect x="7" y="7" width="10" height="10" rx="2" />
+            </svg>
+          {:else}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                d="M12 4v13m-5-5 5 5 5-5M6 21h12"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          {/if}
+        </IconButton>
+      </div>
     </div>
-    <IconButton size="sm" bordered label={m['kitchen.controls']()} onclick={onkitchen}>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M4 7h16M4 17h16M9 4v6M15 14v6" stroke-linecap="round" />
-      </svg>
-    </IconButton>
   </div>
 
   <div class="moves">
-    <IconButton label={m['notes.title']()} size="lg" bordered onclick={onnotes}>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M5 4.5h14v15H5z" stroke-linejoin="round" />
-        <path d="M8 8h8M8 12h8M8 16h5" stroke-linecap="round" />
-      </svg>
-    </IconButton>
-
-    <!-- Large controls: pressed with a wet thumb. Previous is an icon so Next gets the width. -->
+    <!-- Previous is an icon so Next gets the width. -->
     <IconButton
       label={m['cooking.previous']()}
       size="lg"
@@ -156,10 +156,19 @@
   }
 
   .control-summary {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    display: flex;
     align-items: center;
-    gap: var(--space-2);
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+
+  .control-place {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 var(--space-3);
+    min-width: 0;
   }
 
   .progress {
@@ -168,16 +177,10 @@
     font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
     overflow-wrap: normal;
+    white-space: nowrap;
   }
 
-  .control-place {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-2);
-    min-width: 0;
-  }
-
+  /* A navigation bar's back item: chevron and the place it returns to, in the accent. */
   .recipe-return {
     display: inline-flex;
     align-items: center;
@@ -187,25 +190,24 @@
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
     text-decoration: none;
-    border-radius: var(--radius-sm);
   }
 
   .recipe-return:hover {
     color: var(--accent-hover);
-    text-decoration: underline;
-    text-underline-offset: 0.2em;
   }
 
-  .recipe-return svg {
+  .tools {
+    display: flex;
     flex: none;
-    width: var(--space-4);
-    height: var(--space-4);
+    align-items: center;
+    gap: var(--space-2);
   }
 
-  .auto-icon {
-    display: none;
-    width: var(--space-6);
-    height: var(--space-6);
+  /* Running: filled with the accent, so the state reads at arm's length and not only from the icon. */
+  .auto-scroll.running :global(.icon-button) {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-contrast);
   }
 
   .advance :global(.button) {
@@ -214,14 +216,11 @@
 
   .advance-label {
     overflow-wrap: normal;
+    white-space: nowrap;
   }
 
-  /* One line for the place, and the page's name as an icon: its accessible name stays. */
+  /* The place shrinks to the chevron alone before anything wraps: its accessible name stays. */
   @media screen and (max-width: 24rem) {
-    .control-place {
-      flex-wrap: nowrap;
-    }
-
     .recipe-return span {
       display: none;
     }
@@ -231,36 +230,8 @@
       justify-content: center;
     }
 
-    .progress {
-      white-space: nowrap;
-    }
-
-    /* Too little width for the word: the icon stands in, named by the button's label. */
-    .auto-text {
-      display: none;
-    }
-
-    .auto-icon {
-      display: block;
-    }
-
-    /* Narrower side buttons leave Next room for its label on one line. */
-    .moves > :global(.icon-button) {
-      width: var(--control-sm);
-      height: var(--control-sm);
-    }
-
-    .advance :global(.button) {
-      padding-inline: var(--space-2);
-    }
-
-    .advance-label {
-      white-space: nowrap;
-    }
-
-    .auto-scroll :global(.button) {
-      padding-inline: 0;
-      width: var(--control-sm);
+    .tools {
+      gap: var(--space-1);
     }
   }
 </style>
