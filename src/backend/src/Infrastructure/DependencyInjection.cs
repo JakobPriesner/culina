@@ -63,7 +63,6 @@ public static class DependencyInjection
             .AddHostedService<RecipeIntakeWorker>()
             .AddSingleton<IImageStore, FileSystemImageStore>()
             .AddSingleton<IFoodTable>(BlsFoodTable.Load())
-            .AddScoped<INutritionWeightRepository, NutritionWeightRepository>()
             .AddSingleton(TimeProvider.System);
     }
 
@@ -159,6 +158,7 @@ public static class DependencyInjection
             .AddScoped<IShoppingListRepository, ShoppingListRepository>()
             .AddScoped<IRecipeCalories, RecipeCalories>()
             .AddScoped<INutritionCorrectionRepository, NutritionCorrectionRepository>()
+            .AddScoped<INutritionWeightRepository, NutritionWeightRepository>()
             .AddScoped<IRecipeSourceRepository, RecipeSourceRepository>()
             .AddScoped<IRecipeOriginRepository, RecipeOriginRepository>()
             // Ranking weights are code, not configuration, so installations behave identically; a singleton so tests can vary one.
