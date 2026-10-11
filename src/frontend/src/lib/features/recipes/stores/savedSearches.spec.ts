@@ -71,6 +71,8 @@ describe('saved searches', () => {
         query: 'auflauf',
         tags: ['vegetarisch'],
         maxMinutes: 30,
+        // A saved search that set no calorie ceiling reads back as none.
+        maxKcal: null,
         // The wire says `totalMinutes`; above this line it is `quickest`.
         sort: 'quickest'
       }

@@ -141,6 +141,12 @@
     gap: var(--space-2);
   }
 
+  /* A wrapper is sized by its button's longest line unless told otherwise; let it give way so the label wraps at an enlarged text size instead of pushing past the screen. */
+  .shopping {
+    min-width: 0;
+    max-width: 100%;
+  }
+
   @media (width < 36rem) {
     .actions {
       width: 100%;
