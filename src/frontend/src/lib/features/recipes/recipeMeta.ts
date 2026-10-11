@@ -10,7 +10,10 @@ export interface MetaFacts extends Yields {
 }
 
 /** The facts line under a title, shared by list, surface and search so the order stays consistent (time first). The list card leaves the yield out: its calorie figure says what it is per. */
-export function metaLineFor(recipe: MetaFacts, { yields = true }: { yields?: boolean } = {}): string {
+export function metaLineFor(
+  recipe: MetaFacts,
+  { yields = true }: { yields?: boolean } = {}
+): string {
   const parts: string[] = [];
 
   if (recipe.totalMinutes !== null) {
