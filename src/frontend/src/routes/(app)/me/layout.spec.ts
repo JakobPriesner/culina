@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/svelte';
+import { screen, within } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -100,5 +100,32 @@ describe('an administrator-only settings page', () => {
     renderWithProviders(SettingsLayout, { props: { children } });
 
     expect(screen.getByText('The server settings')).toBeInTheDocument();
+  });
+});
+
+describe('the settings rail', () => {
+  it("groups the instance's settings apart for an administrator", async () => {
+    location.pathname = '/me';
+    await signedInAs(true);
+
+    renderWithProviders(SettingsLayout, { props: { children } });
+
+    const group = screen.getByRole('group', { name: 'Administration' });
+
+    expect(
+      within(group)
+        .getAllByRole('link')
+        .map((link) => link.textContent?.trim())
+    ).toEqual(['Assistant', 'Server']);
+  });
+
+  it('offers a member no administration at all', async () => {
+    location.pathname = '/me';
+    await signedInAs(false);
+
+    renderWithProviders(SettingsLayout, { props: { children } });
+
+    expect(screen.queryByRole('group', { name: 'Administration' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Server' })).not.toBeInTheDocument();
   });
 });

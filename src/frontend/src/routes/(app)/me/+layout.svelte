@@ -20,8 +20,7 @@
 
   let { children }: Props = $props();
 
-  // Assistant and server configure the instance, so only the administrator gets them in the rail (absent, not disabled).
-  const categories = $derived([
+  const personal = [
     { href: resolve('/(app)/me'), label: m['me.account'], lead: m['me.account.lead'] },
     {
       href: resolve('/(app)/me/appearance'),
@@ -37,14 +36,17 @@
       href: resolve('/(app)/me/household'),
       label: m['me.household'],
       lead: m['me.household.lead']
-    },
-    ...(session.user?.isAdmin
-      ? [
-          { href: resolve('/(app)/me/ai'), label: m['me.ai'], lead: m['me.ai.lead'] },
-          { href: resolve('/(app)/me/server'), label: m['me.server'], lead: m['me.server.lead'] }
-        ]
-      : [])
-  ]);
+    }
+  ];
+
+  // Assistant and server configure the instance, not the person: the administrator gets them as a group of their own
+  // in the rail, and nobody else gets them at all (absent, not disabled).
+  const administration = [
+    { href: resolve('/(app)/me/ai'), label: m['me.ai'], lead: m['me.ai.lead'] },
+    { href: resolve('/(app)/me/server'), label: m['me.server'], lead: m['me.server.lead'] }
+  ];
+  const admin = $derived(session.user?.isAdmin ? administration : []);
+  const categories = $derived([...personal, ...admin]);
 
   // Exact match: a prefix would light Account up on every sub-route.
   const current = $derived(page.url.pathname);
@@ -55,14 +57,21 @@
    * whose refusal would read as a failed load with a useless retry.
    */
   const refused = $derived(
-    session.user?.isAdmin
-      ? null
-      : ([
-          { href: resolve('/(app)/me/ai'), label: m['me.ai'] },
-          { href: resolve('/(app)/me/server'), label: m['me.server'] }
-        ].find((page) => page.href === current) ?? null)
+    session.user?.isAdmin ? null : (administration.find((page) => page.href === current) ?? null)
   );
 </script>
+
+{#snippet link(category: { href: string; label: () => string })}
+  {@const selected = category.href === current}
+  <a
+    class="category"
+    class:selected
+    href={category.href}
+    aria-current={selected ? 'page' : undefined}
+  >
+    {category.label()}
+  </a>
+{/snippet}
 
 <svelte:head>
   {#if refused}<title>{m['notAllowed.title']()}</title>{/if}
@@ -75,17 +84,19 @@
       <p class="legend">{m['me.title']()}</p>
 
       <div class="categories">
-        {#each categories as category (category.href)}
-          {@const selected = category.href === current}
-          <a
-            class="category"
-            class:selected
-            href={category.href}
-            aria-current={selected ? 'page' : undefined}
-          >
-            {category.label()}
-          </a>
+        {#each personal as category (category.href)}
+          {@render link(category)}
         {/each}
+
+        {#if admin.length > 0}
+          <div class="administration" role="group" aria-labelledby="settings-administration">
+            <p class="legend" id="settings-administration">{m['me.administration']()}</p>
+
+            {#each admin as category (category.href)}
+              {@render link(category)}
+            {/each}
+          </div>
+        {/if}
       </div>
     </nav>
 
@@ -127,6 +138,20 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-1);
+  }
+
+  /* Phone and tablet: the administrator's pills follow the others in the same row, after a hairline. */
+  .administration {
+    display: contents;
+  }
+
+  .administration::before {
+    content: '';
+    align-self: center;
+    width: 1px;
+    height: 1.25rem;
+    margin-inline: var(--space-1);
+    background: var(--border);
   }
 
   .category {
@@ -261,6 +286,18 @@
     .category {
       justify-content: flex-start;
       padding-inline: var(--space-4);
+    }
+
+    /* The rail captions the administrator's group the way it captions the whole column. */
+    .administration {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      margin-top: var(--space-6);
+    }
+
+    .administration::before {
+      content: none;
     }
   }
 </style>
