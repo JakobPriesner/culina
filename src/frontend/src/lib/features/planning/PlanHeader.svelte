@@ -78,8 +78,4 @@
     align-items: center;
     gap: var(--space-2);
   }
-
-  .weeks :global(.button) {
-    border-radius: var(--radius-full);
-  }
 </style>

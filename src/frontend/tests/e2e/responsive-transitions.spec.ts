@@ -21,13 +21,11 @@ test.describe('responsive transitions @offline', () => {
       await next.scrollIntoViewIfNeeded();
       await expect(next).toBeInViewport({ ratio: 1 });
       await expectReflow(page);
-      const navigation = page.locator('nav.nav:visible');
-      await expect(navigation).toHaveCount(size.width < 1024 ? 0 : 1);
-      if (size.width < 1024) {
-        const button = (await next.boundingBox())!;
-        expect(button.y + button.height).toBeLessThanOrEqual(size.height);
-        await expect(page.locator('.shell > header.header')).toBeHidden();
-      }
+      // Cooking is a focused mode at every width: no navigation, no header.
+      await expect(page.locator('nav.nav:visible')).toHaveCount(0);
+      await expect(page.locator('.shell > header.header')).toBeHidden();
+      const button = (await next.boundingBox())!;
+      expect(button.y + button.height).toBeLessThanOrEqual(size.height);
     }
   });
 

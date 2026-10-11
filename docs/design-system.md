@@ -5,6 +5,73 @@ product. Component placement rules come from `sveltekit-components-and-pages`;
 this document fixes the **tokens, the theme architecture and the component
 inventory**.
 
+## October 2026 foundations
+
+From the design review of 2026-10-11 (beads `culina-v2-t1ou.*`). These are the
+rules every new screen inherits; they live in `tokens/scales.css`, `app.css` and
+the shared components, so a page cannot drift from them by accident.
+
+**Type.** The scale follows Apple's text styles: `--text-xs` 13px (captions
+and badges, the floor), `--text-sm` 15px (secondary text, labels), `--text-base`
+17px (body, inputs, list rows), `--text-lg` 20px, `--text-xl` up to 22px. Inputs
+stay above Safari's 16px zoom-on-focus threshold.
+
+**Two voices.** The editorial face (`--font-editorial`: `ui-serif`, so New York
+on Apple platforms, Georgia elsewhere) is for content: every `h1` (set in
+`app.css`, so no page opts out), recipe and cookbook names, sections inside a
+recipe. Everything you operate uses the sans. Never set digits in the editorial
+face beside a count: Georgia's old-style 0 reads as an o. The wordmark has its
+own `--font-brand`, so it looks the same on every platform. Signed-out pages
+share `AuthIntro` for their heading.
+
+**Labels.** Section labels, legends and eyebrows are sentence case, semibold,
+15px. Uppercase is kept for one role only: the step number in a recipe
+("Schritt 1" in the method). The illustrated 404 and the family-secret card are
+art, not labels.
+
+**Shape.** Radius is chosen by role and nests concentrically (inner = outer
+minus the padding between):
+
+| Token           | Size    | Role                                                                                            |
+| --------------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `--radius-sm`   | 6px     | tags inside text, code                                                                          |
+| `--radius-md`   | 12px    | fields, list cells, notices                                                                     |
+| `--radius-lg`   | 20px    | cards, photos, popovers, toasts, week days                                                      |
+| `--radius-xl`   | 28px    | sheets and dialogs                                                                              |
+| `--radius-full` | capsule | every control a finger presses: buttons, chips, search fields, segmented controls, icon buttons |
+
+The focus ring follows the element's own corners; only text links get a slight
+radius of their own.
+
+**States.** Every pressable thing hovers with `--surface-hover`, presses with
+`--surface-selected` (or the accent's `-active`) and sinks by `--press-scale`
+(0.98; `--press-scale-small` 0.94 for icon buttons), and focuses with the
+app-wide ring. A tile that leads somewhere reads like a settings cell: icon,
+words, trailing chevron.
+
+**Direction.** "Back" and "on" are drawn with `Chevron` from `$ds`, never with
+text arrows. The `@` glyph and keyboard hint appear only in a step's mention
+list, not in ordinary comboboxes.
+
+**Header.** The brand stays left and the navigation centred; on the right,
+search and the household switcher are pinned to the edge, and a page's own
+action (today only "new recipe" on the library) sits before them, so nothing
+moves when it comes and goes. The header is capped at `--layout-wide`, so its
+right column never grows: the create button is a plus (named by its label and
+tooltip) and the household switcher an icon. Cook mode hides the header at
+every width.
+
+**Page templates.** A page picks one of three, through `Page`:
+
+- _Library_ (`<Page>`, wide): recipes, cookbooks, the week. Grids and columns
+  use the full width.
+- _Document_ (`<Page>` with its own columns): one recipe, cook mode, the editor.
+  Prose keeps `--measure`; side panels use `--side-column`.
+- _Utility_ (`<Page width="reading">`): shopping, new recipe, import, and the
+  settings column. One column at the reading measure.
+
+A new page names its template instead of inventing a fourth width.
+
 ## September 2026 refinement
 
 Culina pairs warm ivory and charcoal surfaces with olive actions and a quiet
@@ -37,7 +104,7 @@ shared navigation too. The [research and current decision](navigation-research.m
 explain the evidence and the explicit five-destination limit.
 
 `NewRecipeLink` remains a direct link in the header on every signed-in page,
-with a visible label from 80rem and an accessible, titled plus control below.
+as an accessible, titled plus control (since October 2026 at every width).
 The logo and main navigation retain their matched translucent backgrounds.
 Current destinations use a raised selection shadow, text emphasis, and
 `aria-current`. Every navigation item is a link, not a modal launcher.

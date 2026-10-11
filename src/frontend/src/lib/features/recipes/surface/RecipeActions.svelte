@@ -214,12 +214,11 @@
     gap: var(--space-2);
   }
 
-  /* Three labelled buttons need the room; narrower, each collapses to a circle like the menu's, and its aria-label stays the full name. */
+  /* Three labelled buttons need the room; narrower, each collapses to a circle (a capsule with no label) like the menu's, and its aria-label stays the full name. */
   @media (width < 64rem) {
     .actions :global(.button) {
       width: var(--control-md);
       padding-inline: 0;
-      border-radius: var(--radius-full);
     }
 
     .actions :global(.button .label) {

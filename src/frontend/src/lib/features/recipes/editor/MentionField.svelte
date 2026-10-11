@@ -220,6 +220,7 @@
       items={options}
       {highlighted}
       {query}
+      mention
       onchoose={pick}
     />
   {/if}

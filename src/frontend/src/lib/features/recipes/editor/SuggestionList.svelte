@@ -19,9 +19,11 @@
     highlighted: number;
     onchoose: (index: number) => void;
     query?: string;
+    /** A step's @-mention list: each row says it inserts a mention, and the keys are spelled out since @ is not a familiar control. A unit or name list is an ordinary combobox and needs neither. */
+    mention?: boolean;
   }
 
-  let { id, label, items, highlighted, onchoose, query = '' }: Props = $props();
+  let { id, label, items, highlighted, onchoose, query = '', mention = false }: Props = $props();
 </script>
 
 <ul {id} class="picker" role="listbox" aria-label={label}>
@@ -48,7 +50,9 @@
           </span>
           <span class="label add-label">{item.label}</span>
         {:else}
-          <span class="icon glyph-icon" aria-hidden="true">@</span>
+          {#if mention}
+            <span class="icon glyph-icon" aria-hidden="true">@</span>
+          {/if}
           <span class="label">
             {#if query && item.label.toLowerCase().includes(query.toLowerCase())}
               {@const q = query.toLowerCase()}
@@ -69,9 +73,11 @@
     </li>
   {/each}
 
-  <li class="nav-hint" aria-hidden="true">
-    {m['editor.mentionNavHint']()}
-  </li>
+  {#if mention}
+    <li class="nav-hint" aria-hidden="true">
+      {m['editor.mentionNavHint']()}
+    </li>
+  {/if}
 </ul>
 
 <style>
@@ -198,7 +204,7 @@
     padding: var(--space-2) var(--space-3) var(--space-1);
     border-top: 1px solid var(--border);
     margin-top: var(--space-1);
-    font-size: 0.6875rem;
+    font-size: var(--text-xs);
     color: var(--text-subtle);
     text-align: center;
   }

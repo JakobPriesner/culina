@@ -56,10 +56,11 @@
     cursor: pointer;
     transition:
       background-color var(--duration-fast) var(--ease-out),
-      border-color var(--duration-fast) var(--ease-out);
+      border-color var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out);
   }
+  /* As tall as a search field beside it; the shape stays a capsule like the field's. */
   .chip.rounded {
-    border-radius: var(--radius-md);
     min-height: var(--control-md);
   }
   .chip:hover:not(:disabled) {
@@ -70,6 +71,10 @@
     background: var(--surface-accent-subtle);
     border-color: var(--accent);
     color: var(--accent);
+  }
+  .chip:active:not(:disabled) {
+    background: var(--surface-selected);
+    transform: scale(var(--press-scale));
   }
   .chip:disabled {
     cursor: not-allowed;

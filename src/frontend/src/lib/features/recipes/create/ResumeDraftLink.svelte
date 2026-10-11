@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Chevron } from '$ds';
   import { resolve } from '$app/paths';
   import type { LastDraft } from '$features/recipes/editor/lastDraft';
   import { m } from '$shell/i18n';
@@ -20,7 +21,7 @@
     <span class="resume-title">{draft.title}</span>
   </span>
 
-  <span class="resume-arrow" aria-hidden="true">→</span>
+  <span class="resume-arrow" aria-hidden="true"><Chevron /></span>
 </a>
 
 <style>
@@ -55,9 +56,8 @@
 
   .resume-label {
     color: var(--text-muted);
-    font-size: var(--text-xs);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
   }
 
   .resume-title {

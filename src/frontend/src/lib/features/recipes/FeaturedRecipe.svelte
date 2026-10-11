@@ -1,7 +1,7 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
 
-  import { Image } from '$ds';
+  import { Chevron, Image } from '$ds';
   import RecipeCalories from '$features/nutrition/RecipeCalories.svelte';
 
   import { m } from '$shell/i18n';
@@ -43,7 +43,7 @@
     <div class="actions">
       <a class="feature-link" href={resolve('/(app)/recipes/[recipeId]', { recipeId: recipe.id })}>
         {m['recipes.featured.open']()}
-        <span aria-hidden="true">→</span>
+        <span aria-hidden="true"><Chevron /></span>
       </a>
 
       {#if ondismiss}
@@ -131,10 +131,8 @@
   }
 
   .eyebrow {
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     font-weight: var(--weight-semibold);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
   }
 
   h2 {

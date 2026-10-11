@@ -192,9 +192,8 @@
   .legend {
     padding: var(--space-1) var(--space-2) var(--space-2);
     color: var(--text-subtle);
-    font-size: var(--text-xs);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
   }
 
   .empty {

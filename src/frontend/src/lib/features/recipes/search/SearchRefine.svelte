@@ -48,10 +48,8 @@
 
   .refine-label {
     color: var(--text-muted);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     font-weight: var(--weight-medium);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
   }
 
   .n {

@@ -95,7 +95,7 @@
   .input {
     padding-inline-start: var(--space-12);
     padding-inline-end: calc(var(--control-sm) + var(--space-2));
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-full);
   }
 
   .input.pill {
