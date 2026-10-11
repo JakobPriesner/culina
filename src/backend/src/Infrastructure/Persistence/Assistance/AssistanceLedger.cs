@@ -117,6 +117,7 @@ internal sealed class AssistanceLedger(
                 output_tokens = @outputTokens,
                 pictures = @pictures,
                 cost = @cost,
+                priced_by = @pricedBy,
                 outcome = @outcome
             where id = @id;
             """,
@@ -127,6 +128,7 @@ internal sealed class AssistanceLedger(
                 outputTokens = settlement.Usage.OutputTokens,
                 pictures = settlement.Usage.Pictures,
                 cost = settlement.Cost,
+                pricedBy = settlement.PricedBy,
                 outcome = settlement.Outcome
             },
             cancellationToken);
@@ -136,7 +138,7 @@ internal sealed class AssistanceLedger(
         DateTimeOffset since,
         CancellationToken cancellationToken)
     {
-        // Three reads: the totals and the two breakdowns group differently.
+        // Four reads: the totals and the three breakdowns group differently.
         var totals = await executor.QuerySingleOrDefaultAsync<TotalsRow>(
                 """
                 select coalesce(sum(cost), 0)                            as cost,
@@ -182,6 +184,24 @@ internal sealed class AssistanceLedger(
                 cancellationToken)
             .ConfigureAwait(false);
 
+        // Settled calls only: one still in flight has no price yet, so it has no source either.
+        var models = await executor.QueryAsync<ModelRow>(
+                """
+                select provider,
+                       model,
+                       priced_by,
+                       count(*)::int            as calls,
+                       coalesce(sum(cost), 0)   as cost
+                from assistance_usage
+                where occurred_at >= @since
+                  and outcome <> 'reserved'
+                group by provider, model, priced_by
+                order by cost desc, model, priced_by;
+                """,
+                new { since },
+                cancellationToken)
+            .ConfigureAwait(false);
+
         return new UsageSummary(
             totals?.Cost ?? 0m,
             totals?.InputTokens ?? 0,
@@ -191,7 +211,9 @@ internal sealed class AssistanceLedger(
             [.. people.Select(row =>
                 new PersonUsage(row.UserId, row.DisplayName, row.Calls, row.Cost))],
             [.. capabilities.Select(row =>
-                new CapabilityUsage(row.Capability, row.Calls, row.Cost))]);
+                new CapabilityUsage(row.Capability, row.Calls, row.Cost))],
+            [.. models.Select(row =>
+                new ModelUsageLine(row.Provider, row.Model, row.PricedBy, row.Calls, row.Cost))]);
     }
 
     private sealed record TotalsRow
@@ -221,6 +243,19 @@ internal sealed class AssistanceLedger(
     private sealed record CapabilityRow
     {
         public string Capability { get; init; } = string.Empty;
+
+        public int Calls { get; init; }
+
+        public decimal Cost { get; init; }
+    }
+
+    private sealed record ModelRow
+    {
+        public string Provider { get; init; } = string.Empty;
+
+        public string Model { get; init; } = string.Empty;
+
+        public string? PricedBy { get; init; }
 
         public int Calls { get; init; }
 

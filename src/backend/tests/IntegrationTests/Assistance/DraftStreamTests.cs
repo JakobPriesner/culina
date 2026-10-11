@@ -674,7 +674,8 @@ public class DraftStreamTests(PostgresFixture postgres)
                     new { capability = reading ? "read" : "draft", enabled = true, provider = "openai", model = "stub-one" }
                 },
                 monthlyBudget = (decimal?)null,
-                personalBudget = (decimal?)null
+                personalBudget = (decimal?)null,
+                prices = Array.Empty<object>()
             },
             Token);
 

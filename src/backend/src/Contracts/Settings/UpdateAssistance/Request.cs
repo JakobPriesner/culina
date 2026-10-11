@@ -17,6 +17,9 @@ public sealed record Request
 
     /// <summary>What one person may spend of it, or null for no share.</summary>
     public decimal? PersonalBudget { get; init; }
+
+    /// <summary>The administrator's own prices. Anything left out falls back to Culina's list.</summary>
+    public required IReadOnlyList<PriceRequest> Prices { get; init; }
 }
 
 /// <summary>One provider to connect, or to keep connected.</summary>
@@ -49,4 +52,20 @@ public sealed record UseRequest
 
     /// <summary>Which of its models, or empty for the current default.</summary>
     public required string Model { get; init; }
+}
+
+/// <summary>What the administrator pays for one model; leave a part empty to keep Culina's price for it.</summary>
+public sealed record PriceRequest
+{
+    /// <summary>The model, exactly as the provider names it (not a prefix).</summary>
+    public required string Model { get; init; }
+
+    /// <summary>US dollars per million input tokens; used only once <c>outputPerMillion</c> is given too.</summary>
+    public decimal? InputPerMillion { get; init; }
+
+    /// <summary>US dollars per million output tokens.</summary>
+    public decimal? OutputPerMillion { get; init; }
+
+    /// <summary>US dollars per image.</summary>
+    public decimal? PerImage { get; init; }
 }

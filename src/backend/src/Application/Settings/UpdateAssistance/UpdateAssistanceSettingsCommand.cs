@@ -14,12 +14,14 @@ namespace Application.Settings.UpdateAssistance;
 /// <param name="Uses">Which provider and model does each job.</param>
 /// <param name="MonthlyBudget">The instance's monthly ceiling.</param>
 /// <param name="PersonalBudget">One person's share of it.</param>
+/// <param name="Prices">The administrator's own prices.</param>
 public sealed record UpdateAssistanceSettingsCommand(
     bool Enabled,
     IReadOnlyList<ConnectionEdit> Connections,
     IReadOnlyList<UseEdit> Uses,
     decimal? MonthlyBudget,
-    decimal? PersonalBudget);
+    decimal? PersonalBudget,
+    IReadOnlyList<PriceEdit> Prices);
 
 /// <summary>One provider to connect, or to keep connected.</summary>
 /// <param name="Provider">Which provider.</param>
@@ -34,15 +36,26 @@ public sealed record ConnectionEdit(string Provider, string? ApiKey, string Base
 /// <param name="Model">Which model, or empty for the current default.</param>
 public sealed record UseEdit(string Capability, bool Enabled, string Provider, string Model);
 
+/// <summary>What the administrator pays for one model; an empty part is left to Culina's list.</summary>
+/// <param name="Model">Which model, exactly as the provider names it.</param>
+/// <param name="InputPerMillion">Dollars per million input tokens.</param>
+/// <param name="OutputPerMillion">Dollars per million output tokens.</param>
+/// <param name="PerImage">Dollars per image.</param>
+public sealed record PriceEdit(string Model, decimal? InputPerMillion, decimal? OutputPerMillion, decimal? PerImage);
+
 internal sealed class UpdateAssistanceSettingsCommandHandler(
     AssistanceSettings settings,
     ISettingsStore<AssistanceSettings> store,
     IAssistants assistants,
-    ISecretProtector protector)
+    ISecretProtector protector,
+    IModelPrices prices)
     : ICommandHandler<UpdateAssistanceSettingsCommand, Response>
 {
     /// <summary>A typo guard (100000 for 100.00), not a business rule.</summary>
     private const decimal LargestReasonableBudget = 10_000m;
+
+    /// <summary>A typo guard too: no model costs anywhere near a thousand dollars per million tokens or per image.</summary>
+    private const decimal LargestReasonablePrice = 1_000m;
 
     public async Task<Result<Response>> Handle(
         UpdateAssistanceSettingsCommand command,
@@ -80,6 +93,8 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
         {
             problems.Add(CheckUse(use));
         }
+
+        problems.AddRange(command.Prices.Select(CheckPrice));
 
         return Result.Combine(problems);
     }
@@ -148,6 +163,35 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
         return Result.Success();
     }
 
+    /// <summary>Whether a price names a model and could be one.</summary>
+    /// <remarks>
+    /// Half a token price (input without output) is kept, not refused: the screen saves each box as it is left,
+    /// and until both are there the cost comes from Culina's list rather than from half of the administrator's.
+    /// </remarks>
+    private static Result CheckPrice(PriceEdit price, int index)
+    {
+        var field = $"prices[{index}]";
+        var model = price.Model.Trim();
+
+        if (model.Length is 0 or > AssistanceSettings.MaxModelLength)
+        {
+            return Field($"{field}.model", AssistanceErrors.InvalidModel);
+        }
+
+        return Result.Combine(
+        [
+            Amount($"{field}.inputPerMillion", price.InputPerMillion),
+            Amount($"{field}.outputPerMillion", price.OutputPerMillion),
+            Amount($"{field}.perImage", price.PerImage)
+        ]);
+    }
+
+    private static Result Amount(string field, decimal? value) => value switch
+    {
+        < 0 or > LargestReasonablePrice => Field(field, AssistanceErrors.InvalidPrice),
+        _ => Result.Success()
+    };
+
     /// <summary>Whether an override address is absolute http(s); the import path's private-address rules do not apply to administrators.</summary>
     private static bool IsUsableAddress(string value) =>
         Uri.TryCreate(value, UriKind.Absolute, out var address)
@@ -181,7 +225,17 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
                 Model = use.Model.Trim()
             })],
             MonthlyBudget = command.MonthlyBudget,
-            PersonalBudget = command.PersonalBudget
+            PersonalBudget = command.PersonalBudget,
+            // A row with nothing in it is the screen's way of saying "Culina's list is fine".
+            Prices = [.. command.Prices
+                .Where(one => one.InputPerMillion.HasValue || one.OutputPerMillion.HasValue || one.PerImage.HasValue)
+                .Select(one => new AssistancePrice
+                {
+                    Model = one.Model.Trim(),
+                    InputPerMillion = one.InputPerMillion,
+                    OutputPerMillion = one.OutputPerMillion,
+                    PerImage = one.PerImage
+                })]
         };
 
         prepared.Enabled = command.Enabled && prepared.IsConnected;
@@ -243,6 +297,12 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
         {
             var use = settings.UseFor(capability);
             var kind = AssistantKind.Parse(use?.Provider);
+            var defaultModel = kind is null ? string.Empty : assistants.DefaultModelFor(kind, capability);
+
+            // Only a provider that bills has a price worth showing; a local model is free.
+            var listed = kind is { NeedsApiKey: true } && use is not null
+                ? prices.Listed(use.Model.Length > 0 ? use.Model : defaultModel)
+                : null;
 
             return new Contracts.Settings.UpdateAssistance.UseContract
             {
@@ -250,12 +310,26 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
                 Enabled = use?.Enabled ?? false,
                 Provider = use?.Provider ?? string.Empty,
                 Model = use?.Model ?? string.Empty,
-                DefaultModel = kind is null
-                    ? string.Empty
-                    : assistants.DefaultModelFor(kind, capability)
+                DefaultModel = defaultModel,
+                ListedPrice = listed is null
+                    ? null
+                    : new Contracts.Settings.UpdateAssistance.ListedPriceContract
+                    {
+                        InputPerMillion = listed.InputPerMillion,
+                        OutputPerMillion = listed.OutputPerMillion,
+                        PerImage = listed.PerImage
+                    }
             };
         })],
         MonthlyBudget = settings.MonthlyBudget,
-        PersonalBudget = settings.PersonalBudget
+        PersonalBudget = settings.PersonalBudget,
+        Prices = [.. settings.Prices.Select(one => new Contracts.Settings.UpdateAssistance.PriceContract
+        {
+            Model = one.Model,
+            InputPerMillion = one.InputPerMillion,
+            OutputPerMillion = one.OutputPerMillion,
+            PerImage = one.PerImage
+        })],
+        PricesRecordedOn = prices.RecordedOn
     };
 }

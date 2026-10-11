@@ -17,6 +17,12 @@ public sealed record Response
 
     /// <summary>What one person may spend of it, or null for no share.</summary>
     public decimal? PersonalBudget { get; init; }
+
+    /// <summary>The administrator's own prices, which win over Culina's list for the models they name.</summary>
+    public required IReadOnlyList<PriceContract> Prices { get; init; }
+
+    /// <summary>When Culina's own price list was last checked against the providers.</summary>
+    public required DateOnly PricesRecordedOn { get; init; }
 }
 
 /// <summary>One provider, and whether it is ready to be used.</summary>
@@ -52,4 +58,36 @@ public sealed record UseContract
 
     /// <summary>The model used when none is chosen; the server decides, so the form can show it as a placeholder.</summary>
     public required string DefaultModel { get; init; }
+
+    /// <summary>What Culina's own list says the model this job uses costs, or null when it has no price for it (or it is local and free).</summary>
+    public ListedPriceContract? ListedPrice { get; init; }
+}
+
+/// <summary>What the administrator pays for one model; an empty part is left to Culina's list.</summary>
+public sealed record PriceContract
+{
+    /// <summary>The model, exactly as the provider names it.</summary>
+    public required string Model { get; init; }
+
+    /// <summary>US dollars per million input tokens.</summary>
+    public decimal? InputPerMillion { get; init; }
+
+    /// <summary>US dollars per million output tokens.</summary>
+    public decimal? OutputPerMillion { get; init; }
+
+    /// <summary>US dollars per image.</summary>
+    public decimal? PerImage { get; init; }
+}
+
+/// <summary>A model's price on Culina's own list; a part it does not know is null.</summary>
+public sealed record ListedPriceContract
+{
+    /// <summary>US dollars per million input tokens.</summary>
+    public decimal? InputPerMillion { get; init; }
+
+    /// <summary>US dollars per million output tokens.</summary>
+    public decimal? OutputPerMillion { get; init; }
+
+    /// <summary>US dollars per image.</summary>
+    public decimal? PerImage { get; init; }
 }

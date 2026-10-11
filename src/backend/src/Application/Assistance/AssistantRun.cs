@@ -308,7 +308,7 @@ public sealed partial class AssistantRun(
         // A failed or abandoned call that reported no usage may still have been billed: its cost is
         // unknown (null), so the reservation's estimate keeps counting rather than a false zero.
         // A provider that needs no key (a local Ollama) bills nothing either way.
-        var cost = outcome != "ok" && usage == default && ready.Chosen.Kind.NeedsApiKey
+        var priced = outcome != "ok" && usage == default && ready.Chosen.Kind.NeedsApiKey
             && !RefusedBeforeGenerating(outcome)
             ? null
             : prices.Of(
@@ -329,10 +329,10 @@ public sealed partial class AssistantRun(
             usage.InputTokens,
             usage.OutputTokens,
             usage.Pictures,
-            cost);
+            priced?.Cost);
 
         return ledger.SettleAsync(
-            new Settlement(ready.ReservationId, usage, cost, outcome),
+            new Settlement(ready.ReservationId, usage, priced?.Cost, outcome, priced?.By),
             // Not the caller's token: a cancelled request must still account for what it spent.
             CancellationToken.None);
     }

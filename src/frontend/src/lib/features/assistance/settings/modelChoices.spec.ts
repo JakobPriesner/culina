@@ -17,6 +17,7 @@ const use = (overrides: Partial<Use> = {}): Use => ({
   provider: 'openai',
   model: '',
   defaultModel: 'gpt-default',
+  listedPrice: null,
   ...overrides
 });
 

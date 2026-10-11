@@ -21,6 +21,7 @@ const use = (capability: string, overrides: object = {}) => ({
   provider: '',
   model: '',
   defaultModel: `${capability}-default`,
+  listedPrice: null,
   ...overrides
 });
 
@@ -33,12 +34,22 @@ const configured = {
   ],
   uses: [
     use('improve', { enabled: true, provider: 'ollama' }),
-    use('draft', { enabled: true, provider: 'openai' }),
+    use('draft', {
+      enabled: true,
+      provider: 'openai',
+      listedPrice: { inputPerMillion: 1.25, outputPerMillion: 10, perImage: null }
+    }),
     use('read', { enabled: true, provider: 'gemini' }),
-    use('draw', { enabled: true, provider: 'gemini' })
+    use('draw', {
+      enabled: true,
+      provider: 'gemini',
+      listedPrice: { inputPerMillion: null, outputPerMillion: null, perImage: 0.039 }
+    })
   ],
   monthlyBudget: 20,
-  personalBudget: null
+  personalBudget: null,
+  prices: [],
+  pricesRecordedOn: '2026-09-19'
 };
 
 const offered = {
@@ -71,7 +82,9 @@ const emptyUsage = {
   totalPictures: 0,
   unpriced: 0,
   byPerson: [],
-  byCapability: []
+  byCapability: [],
+  byModel: [],
+  pricesRecordedOn: '2026-09-19'
 };
 
 /* Saving re-reads the session; answering with assistant settings crashed the session store (no households). */
@@ -93,17 +106,28 @@ const myPreferences = {
   version: 1
 };
 
-function serverAnswers(settings: object = configured, models: object = offered) {
+function serverAnswers(
+  settings: object = configured,
+  models: object = offered,
+  usage: object = emptyUsage
+) {
   const json = (body: object) =>
     new Response(JSON.stringify(body), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
 
-  const fetched = vi.fn((input: unknown) => {
+  const fetched = vi.fn(async (input: unknown) => {
     const url = String(input instanceof Request ? input.url : input);
 
-    if (url.includes('/usage')) return Promise.resolve(json(emptyUsage));
+    // Prices come back as sent, as the server keeps them: a save between two boxes must not empty the first.
+    if (input instanceof Request && input.method === 'PUT') {
+      const sent = (await input.clone().json()) as { prices: unknown[] };
+
+      return json({ ...settings, prices: sent.prices });
+    }
+
+    if (url.includes('/usage')) return Promise.resolve(json(usage));
     if (url.includes('/models')) return Promise.resolve(json(models));
     if (url.includes('/users/me/settings')) return Promise.resolve(json(myPreferences));
     if (url.includes('/users/me')) return Promise.resolve(json(me));
@@ -649,5 +673,102 @@ describe('the assistant settings page', () => {
     await settle();
 
     expect(screen.getByText(/sent to the provider selected for each feature/)).toBeInTheDocument();
+  });
+
+  it('offers a price for each billed model a job uses, beside what Culina would count', async () => {
+    serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    expect(screen.getByText(/recorded on September 19, 2026/)).toBeInTheDocument();
+
+    const drafting = rowFor('draft-default');
+    expect(within(drafting).getByText(/\$1\.25 input and \$10\.00 output/)).toBeInTheDocument();
+    expect(
+      within(drafting).getByRole('textbox', { name: 'Input, per million tokens' })
+    ).toHaveAttribute('placeholder', '1.25');
+
+    // A drawing model is billed per picture, so that is the box it gets.
+    const drawing = rowFor('draw-default');
+    expect(within(drawing).getByRole('textbox', { name: 'Per image' })).toBeInTheDocument();
+    expect(within(drawing).queryByRole('textbox', { name: /per million tokens/ })).toBeNull();
+
+    // A model Culina has never heard of says what an empty box means for it.
+    expect(within(rowFor('read-default')).getByText(/Not on Culina's list/)).toBeInTheDocument();
+
+    // A local model is free: there is nothing to correct.
+    expect(screen.queryByText('improve-default', { selector: '.label' })).toBeNull();
+  });
+
+  it('sends the price an administrator typed for the model they use', async () => {
+    const fetched = serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    const drafting = rowFor('draft-default');
+    await userEvent.type(
+      within(drafting).getByRole('textbox', { name: 'Input, per million tokens' }),
+      '1,1'
+    );
+    await userEvent.type(
+      within(drafting).getByRole('textbox', { name: 'Output, per million tokens' }),
+      '9'
+    );
+    await userEvent.tab();
+    await settle();
+
+    const sent = await writes(fetched);
+    expect(sent.at(-1)?.prices).toEqual([
+      { model: 'draft-default', inputPerMillion: 1.1, outputPerMillion: 9, perImage: null }
+    ]);
+  });
+
+  it('says half a token price is not used until the other half is there', async () => {
+    serverAnswers();
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    const drafting = rowFor('draft-default');
+    await userEvent.type(
+      within(drafting).getByRole('textbox', { name: 'Input, per million tokens' }),
+      '1.1'
+    );
+    await userEvent.tab();
+    await settle();
+
+    expect(within(drafting).getByText(/Until then, Culina's is used/)).toBeInTheDocument();
+  });
+
+  it('says whose price each figure on the usage screen came from', async () => {
+    serverAnswers(configured, offered, {
+      ...emptyUsage,
+      totalCost: 0.75,
+      byModel: [
+        {
+          provider: 'openai',
+          model: 'gpt-6-astra',
+          pricedBy: 'administrator',
+          calls: 2,
+          cost: 0.5
+        },
+        { provider: 'openai', model: 'gpt-6-astra', pricedBy: 'culina', calls: 1, cost: 0.25 },
+        { provider: 'openai', model: 'gpt-7', pricedBy: null, calls: 1, cost: 0 }
+      ]
+    });
+
+    renderWithProviders(AiPage);
+    await settle();
+
+    const line = (text: string) => screen.getByText(text).closest('tr') as HTMLElement;
+
+    expect(within(line('Your price')).getByText('$0.50')).toBeInTheDocument();
+    expect(
+      within(line("Culina's list (September 19, 2026)")).getByText('$0.25')
+    ).toBeInTheDocument();
+    // No price is not a price of nothing.
+    expect(within(line('No price')).queryByText('$0.00')).toBeNull();
   });
 });

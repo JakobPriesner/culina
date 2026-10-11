@@ -67,6 +67,9 @@ public class AssistantRunTests
         Assert.Equal("ok", settlement.Outcome);
         Assert.Equal(120, settlement.Usage.InputTokens);
         Assert.Equal(340, settlement.Usage.OutputTokens);
+
+        // Whose price it was travels with the cost, so the usage screen can say.
+        Assert.Equal(PricedBy.Culina, settlement.PricedBy);
     }
 
     [Fact]
@@ -95,7 +98,9 @@ public class AssistantRunTests
 
         // Null, not a priced zero: a zero would stop the reservation's estimate counting for a call
         // the provider may well have billed.
-        Assert.Null(Assert.Single(world.Ledger.Settled).Cost);
+        var settlement = Assert.Single(world.Ledger.Settled);
+        Assert.Null(settlement.Cost);
+        Assert.Null(settlement.PricedBy);
     }
 
     [Fact]

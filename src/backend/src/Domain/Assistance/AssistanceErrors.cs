@@ -115,6 +115,12 @@ public static class AssistanceErrors
         "A budget cannot be less than nothing.",
         ErrorType.Validation);
 
+    /// <summary>A model price was negative, or implausibly large for any model (a typo guard).</summary>
+    public static readonly Error InvalidPrice = new(
+        "assistance.invalid_price",
+        "A price cannot be less than nothing, and no model costs a thousand dollars or more.",
+        ErrorType.Validation);
+
     /// <summary>A model name was empty, or longer than any model is named.</summary>
     public static readonly Error InvalidModel = new(
         "assistance.invalid_model",

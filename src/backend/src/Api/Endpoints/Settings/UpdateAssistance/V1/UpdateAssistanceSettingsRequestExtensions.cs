@@ -17,6 +17,8 @@ internal static class UpdateAssistanceSettingsRequestExtensions
             [.. request.Uses.Select(one =>
                 new UseEdit(one.Capability, one.Enabled, one.Provider, one.Model))],
             request.MonthlyBudget,
-            request.PersonalBudget);
+            request.PersonalBudget,
+            [.. request.Prices.Select(one =>
+                new PriceEdit(one.Model, one.InputPerMillion, one.OutputPerMillion, one.PerImage))]);
     }
 }

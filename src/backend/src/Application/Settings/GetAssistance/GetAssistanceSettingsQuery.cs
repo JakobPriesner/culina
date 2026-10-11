@@ -14,7 +14,8 @@ public sealed record GetAssistanceSettingsQuery;
 
 internal sealed class GetAssistanceSettingsQueryHandler(
     AssistanceSettings settings,
-    IAssistants assistants)
+    IAssistants assistants,
+    IModelPrices prices)
     : IQueryHandler<GetAssistanceSettingsQuery, Response>
 {
     public Task<Result<Response>> Handle(
@@ -30,7 +31,15 @@ internal sealed class GetAssistanceSettingsQueryHandler(
             Connections = [.. Every()],
             Uses = [.. Jobs()],
             MonthlyBudget = settings.MonthlyBudget,
-            PersonalBudget = settings.PersonalBudget
+            PersonalBudget = settings.PersonalBudget,
+            Prices = [.. settings.Prices.Select(one => new PriceContract
+            {
+                Model = one.Model,
+                InputPerMillion = one.InputPerMillion,
+                OutputPerMillion = one.OutputPerMillion,
+                PerImage = one.PerImage
+            })],
+            PricesRecordedOn = prices.RecordedOn
         })));
     }
 
@@ -55,6 +64,12 @@ internal sealed class GetAssistanceSettingsQueryHandler(
         {
             var use = settings.UseFor(capability);
             var kind = AssistantKind.Parse(use?.Provider);
+            var defaultModel = kind is null ? string.Empty : assistants.DefaultModelFor(kind, capability);
+
+            // Only a provider that bills has a price worth showing; a local model is free.
+            var listed = kind is { NeedsApiKey: true } && use is not null
+                ? prices.Listed(use.Model.Length > 0 ? use.Model : defaultModel)
+                : null;
 
             return new UseContract
             {
@@ -62,9 +77,15 @@ internal sealed class GetAssistanceSettingsQueryHandler(
                 Enabled = use?.Enabled ?? false,
                 Provider = use?.Provider ?? string.Empty,
                 Model = use?.Model ?? string.Empty,
-                DefaultModel = kind is null
-                    ? string.Empty
-                    : assistants.DefaultModelFor(kind, capability)
+                DefaultModel = defaultModel,
+                ListedPrice = listed is null
+                    ? null
+                    : new ListedPriceContract
+                    {
+                        InputPerMillion = listed.InputPerMillion,
+                        OutputPerMillion = listed.OutputPerMillion,
+                        PerImage = listed.PerImage
+                    }
             };
         });
 }

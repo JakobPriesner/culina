@@ -30,6 +30,12 @@ public sealed record Response
 
     /// <summary>What it went on.</summary>
     public required IReadOnlyList<CapabilityUsageContract> ByCapability { get; init; }
+
+    /// <summary>Which models, and whose price each figure was worked out with.</summary>
+    public required IReadOnlyList<ModelUsageContract> ByModel { get; init; }
+
+    /// <summary>When Culina's own price list was last checked against the providers, for figures priced from it.</summary>
+    public required DateOnly PricesRecordedOn { get; init; }
 }
 
 /// <summary>One person's spend this month.</summary>
@@ -58,5 +64,25 @@ public sealed record CapabilityUsageContract
     public required int Calls { get; init; }
 
     /// <summary>What it came to.</summary>
+    public required decimal Cost { get; init; }
+}
+
+/// <summary>One model's settled calls this month, at one source of price.</summary>
+/// <remarks>A model whose price changed source during the month appears once per source.</remarks>
+public sealed record ModelUsageContract
+{
+    /// <summary><c>gemini</c>, <c>openai</c> or <c>ollama</c>.</summary>
+    public required string Provider { get; init; }
+
+    /// <summary>Which model.</summary>
+    public required string Model { get; init; }
+
+    /// <summary><c>culina</c> for Culina's own list, <c>administrator</c> for a price set here, or null when the model had no price.</summary>
+    public string? PricedBy { get; init; }
+
+    /// <summary>How many calls.</summary>
+    public required int Calls { get; init; }
+
+    /// <summary>What they came to.</summary>
     public required decimal Cost { get; init; }
 }

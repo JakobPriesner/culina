@@ -56,11 +56,13 @@ public sealed record Reservation(
 /// <param name="Usage">What the provider said it used.</param>
 /// <param name="Cost">What that came to, or null when this app has no price for the model.</param>
 /// <param name="Outcome">How it went: <c>ok</c>, or the error code.</param>
+/// <param name="PricedBy">Whose price the cost came from (<see cref="Abstractions.PricedBy"/>), or null with no cost.</param>
 public sealed record Settlement(
     Guid ReservationId,
     ModelUsage Usage,
     decimal? Cost,
-    string Outcome);
+    string Outcome,
+    string? PricedBy);
 
 /// <summary>This period's spend, as the settings screen shows it.</summary>
 /// <param name="TotalCost">Everything spent, where a price was known.</param>
@@ -72,6 +74,7 @@ public sealed record Settlement(
 /// </param>
 /// <param name="ByPerson">Who spent what.</param>
 /// <param name="ByCapability">What it went on.</param>
+/// <param name="ByModel">Which models, and whose prices they were counted at.</param>
 public sealed record UsageSummary(
     decimal TotalCost,
     long TotalInputTokens,
@@ -79,7 +82,8 @@ public sealed record UsageSummary(
     long TotalPictures,
     int Unpriced,
     IReadOnlyList<PersonUsage> ByPerson,
-    IReadOnlyList<CapabilityUsage> ByCapability);
+    IReadOnlyList<CapabilityUsage> ByCapability,
+    IReadOnlyList<ModelUsageLine> ByModel);
 
 /// <summary>One person's spend this period.</summary>
 /// <param name="UserId">Who.</param>
@@ -93,3 +97,11 @@ public sealed record PersonUsage(Guid UserId, string DisplayName, int Calls, dec
 /// <param name="Calls">How many times it was used.</param>
 /// <param name="Cost">What it came to.</param>
 public sealed record CapabilityUsage(string Capability, int Calls, decimal Cost);
+
+/// <summary>One model's settled calls this period, at one source of price.</summary>
+/// <param name="Provider">Which provider.</param>
+/// <param name="Model">Which model.</param>
+/// <param name="PricedBy">Whose price (<see cref="Abstractions.PricedBy"/>), or null when there was none.</param>
+/// <param name="Calls">How many calls.</param>
+/// <param name="Cost">What they came to.</param>
+public sealed record ModelUsageLine(string Provider, string Model, string? PricedBy, int Calls, decimal Cost);

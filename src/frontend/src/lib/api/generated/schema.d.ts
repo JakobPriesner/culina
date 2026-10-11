@@ -573,6 +573,8 @@ export interface paths {
          *     `apiKey` has three states, and the difference matters: omit it to keep the key already stored, send an empty string to remove it, and send a value to replace it. It is never returned by any endpoint, so a form has nothing to put in the box and omitting it is what saving an unrelated change looks like.
          *
          *     Turning the assistant on without a key stores it as off — there is nothing for it to be on with.
+         *
+         *     `prices` are the administrator's own, per model named exactly, and win over Culina's list (as recorded on `pricesRecordedOn`) for every call made after the save. A part left empty is Culina's to answer, and so is a token price until both input and output are given: half a price would make a total that looks right and is not.
          */
         put: operations["updateAssistanceSettingsV1"];
         post?: never;
@@ -596,6 +598,8 @@ export interface paths {
          *     The calendar month in UTC, because that is how a provider bills and a figure measured over a different period could not be reconciled with the invoice.
          *
          *     `unpriced` counts calls made with a model this app has no price for. Their tokens are in the totals and their cost is not, because a number nobody can check against a bill is worse than an empty cell.
+         *
+         *     `byModel` says, per model, whose price each figure was worked out with: `culina` for Culina's own list as recorded on `pricesRecordedOn`, `administrator` for a price set on the settings screen. It is recorded per call, so changing a price does not relabel what was already counted.
          */
         get: operations["getAssistanceUsageV1"];
         put?: never;
@@ -4559,6 +4563,24 @@ export interface components {
             /** @description Whether this connection has everything its provider needs. */
             usable: boolean;
         };
+        /** @description A model's price on Culina's own list; a part it does not know is null. */
+        SettingsGetAssistanceListedPriceContract: {
+            /**
+             * Format: double
+             * @description US dollars per million input tokens.
+             */
+            inputPerMillion?: number | null;
+            /**
+             * Format: double
+             * @description US dollars per million output tokens.
+             */
+            outputPerMillion?: number | null;
+            /**
+             * Format: double
+             * @description US dollars per image.
+             */
+            perImage?: number | null;
+        };
         /** @description One model. */
         SettingsGetAssistanceModelsModelContract: {
             /** @description What to store as the model name. */
@@ -4590,6 +4612,26 @@ export interface components {
             /** @description One entry per provider that is connected. */
             providers: components["schemas"]["SettingsGetAssistanceModelsProviderModelsContract"][];
         };
+        /** @description What the administrator pays for one model; an empty part is left to Culina's list. */
+        SettingsGetAssistancePriceContract: {
+            /** @description The model, exactly as the provider names it. */
+            model: string;
+            /**
+             * Format: double
+             * @description US dollars per million input tokens.
+             */
+            inputPerMillion?: number | null;
+            /**
+             * Format: double
+             * @description US dollars per million output tokens.
+             */
+            outputPerMillion?: number | null;
+            /**
+             * Format: double
+             * @description US dollars per image.
+             */
+            perImage?: number | null;
+        };
         /** @description The models this instance can talk to, and which of them does what. */
         SettingsGetAssistanceResponse: {
             /** @description Whether the assistant is on at all. */
@@ -4608,6 +4650,13 @@ export interface components {
              * @description What one person may spend of it, or null for no share.
              */
             personalBudget?: number | null;
+            /** @description The administrator's own prices, which win over Culina's list for the models they name. */
+            prices: components["schemas"]["SettingsGetAssistancePriceContract"][];
+            /**
+             * Format: date
+             * @description When Culina's own price list was last checked against the providers.
+             */
+            pricesRecordedOn: string;
         };
         /** @description One capability's spend this month. */
         SettingsGetAssistanceUsageCapabilityUsageContract: {
@@ -4621,6 +4670,25 @@ export interface components {
             /**
              * Format: double
              * @description What it came to.
+             */
+            cost: number;
+        };
+        /** @description One model's settled calls this month, at one source of price. */
+        SettingsGetAssistanceUsageModelUsageContract: {
+            /** @description `gemini`, `openai` or `ollama`. */
+            provider: string;
+            /** @description Which model. */
+            model: string;
+            /** @description `culina` for Culina's own list, `administrator` for a price set here, or null when the model had no price. */
+            pricedBy?: string | null;
+            /**
+             * Format: int32
+             * @description How many calls.
+             */
+            calls: number;
+            /**
+             * Format: double
+             * @description What they came to.
              */
             cost: number;
         };
@@ -4685,6 +4753,13 @@ export interface components {
             byPerson: components["schemas"]["SettingsGetAssistanceUsagePersonUsageContract"][];
             /** @description What it went on. */
             byCapability: components["schemas"]["SettingsGetAssistanceUsageCapabilityUsageContract"][];
+            /** @description Which models, and whose price each figure was worked out with. */
+            byModel: components["schemas"]["SettingsGetAssistanceUsageModelUsageContract"][];
+            /**
+             * Format: date
+             * @description When Culina's own price list was last checked against the providers, for figures priced from it.
+             */
+            pricesRecordedOn: string;
         };
         /** @description What does one job. */
         SettingsGetAssistanceUseContract: {
@@ -4698,6 +4773,7 @@ export interface components {
             model: string;
             /** @description The model that will actually be used when none is chosen. */
             defaultModel: string;
+            listedPrice?: (null) | components["schemas"]["SettingsGetAssistanceListedPriceContract"];
         };
         /** @description How this instance reaches PostgreSQL. Never the password. */
         SettingsGetDatabaseResponse: {
@@ -4872,6 +4948,64 @@ export interface components {
             /** @description Where the provider is, or empty for its own address. */
             baseUrl: string;
         };
+        /** @description A model's price on Culina's own list; a part it does not know is null. */
+        SettingsUpdateAssistanceListedPriceContract: {
+            /**
+             * Format: double
+             * @description US dollars per million input tokens.
+             */
+            inputPerMillion?: number | null;
+            /**
+             * Format: double
+             * @description US dollars per million output tokens.
+             */
+            outputPerMillion?: number | null;
+            /**
+             * Format: double
+             * @description US dollars per image.
+             */
+            perImage?: number | null;
+        };
+        /** @description What the administrator pays for one model; an empty part is left to Culina's list. */
+        SettingsUpdateAssistancePriceContract: {
+            /** @description The model, exactly as the provider names it. */
+            model: string;
+            /**
+             * Format: double
+             * @description US dollars per million input tokens.
+             */
+            inputPerMillion?: number | null;
+            /**
+             * Format: double
+             * @description US dollars per million output tokens.
+             */
+            outputPerMillion?: number | null;
+            /**
+             * Format: double
+             * @description US dollars per image.
+             */
+            perImage?: number | null;
+        };
+        /** @description What the administrator pays for one model; leave a part empty to keep Culina's price for it. */
+        SettingsUpdateAssistancePriceRequest: {
+            /** @description The model, exactly as the provider names it (not a prefix). */
+            model: string;
+            /**
+             * Format: double
+             * @description US dollars per million input tokens; used only once `outputPerMillion` is given too.
+             */
+            inputPerMillion?: number | null;
+            /**
+             * Format: double
+             * @description US dollars per million output tokens.
+             */
+            outputPerMillion?: number | null;
+            /**
+             * Format: double
+             * @description US dollars per image.
+             */
+            perImage?: number | null;
+        };
         /** @description The assistant configuration to apply, all at once: one screen with one Save, so no half-applied state. */
         SettingsUpdateAssistanceRequest: {
             /** @description Whether the assistant is on at all. */
@@ -4890,6 +5024,8 @@ export interface components {
              * @description What one person may spend of it, or null for no share.
              */
             personalBudget?: number | null;
+            /** @description The administrator's own prices. Anything left out falls back to Culina's list. */
+            prices: components["schemas"]["SettingsUpdateAssistancePriceRequest"][];
         };
         /** @description The models this instance can talk to, and which does what. An API key goes in and `apiKeyConfigured` comes out, never the value. */
         SettingsUpdateAssistanceResponse: {
@@ -4909,6 +5045,13 @@ export interface components {
              * @description What one person may spend of it, or null for no share.
              */
             personalBudget?: number | null;
+            /** @description The administrator's own prices, which win over Culina's list for the models they name. */
+            prices: components["schemas"]["SettingsUpdateAssistancePriceContract"][];
+            /**
+             * Format: date
+             * @description When Culina's own price list was last checked against the providers.
+             */
+            pricesRecordedOn: string;
         };
         /** @description What does one job. */
         SettingsUpdateAssistanceUseContract: {
@@ -4922,6 +5065,7 @@ export interface components {
             model: string;
             /** @description The model used when none is chosen; the server decides, so the form can show it as a placeholder. */
             defaultModel: string;
+            listedPrice?: (null) | components["schemas"]["SettingsUpdateAssistanceListedPriceContract"];
         };
         /** @description What should do one job. */
         SettingsUpdateAssistanceUseRequest: {

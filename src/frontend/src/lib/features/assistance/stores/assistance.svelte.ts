@@ -108,7 +108,8 @@ class AssistanceStore {
             model: one.model
           })),
           monthlyBudget: next.monthlyBudget,
-          personalBudget: next.personalBudget
+          personalBudget: next.personalBudget,
+          prices: next.prices
         }
       })
     );
@@ -176,7 +177,15 @@ function toUsage(wire: UsageWire): Usage {
       capability: one.capability,
       calls: one.calls,
       cost: one.cost
-    }))
+    })),
+    byModel: wire.byModel.map((one) => ({
+      provider: one.provider,
+      model: one.model,
+      pricedBy: one.pricedBy === 'culina' || one.pricedBy === 'administrator' ? one.pricedBy : null,
+      calls: one.calls,
+      cost: one.cost
+    })),
+    pricesRecordedOn: wire.pricesRecordedOn
   };
 }
 
