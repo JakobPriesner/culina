@@ -45,7 +45,7 @@ test.describe('the recipe editor with ingredient groups @offline', () => {
     await responsiveData(page, 'de', { twoGroups: true });
     await page.goto(`/recipes/${recipeId}/edit#ingredient-apples`);
 
-    await expect(page.locator(':focus')).toHaveValue('Äpfel');
+    await expect(page.locator('input:focus')).toHaveValue('Äpfel');
   });
 
   test('adds a group, and takes it away again while it is empty', async ({ page }) => {

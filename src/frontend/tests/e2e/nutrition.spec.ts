@@ -155,7 +155,9 @@ test.describe('nutrition on a recipe @offline', () => {
       await page.getByRole('link', { name: 'Im Rezept ändern' }).click();
 
       await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/edit#ingredient-milk$`));
-      await expect(page.locator(':focus')).toHaveValue('Milch');
+      // 'input:focus', not ':focus': mid-navigation the link or the body has focus, and toHaveValue throws on
+      // a non-input instead of waiting for the editor to focus the field.
+      await expect(page.locator('input:focus')).toHaveValue('Milch');
     });
 
     test('is accessible in the open panel', async ({ browser }) => {
