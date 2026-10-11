@@ -132,9 +132,14 @@ public sealed class CookSession
 
     /// <summary>Moves to a step.</summary>
     /// <param name="index">Which step, from zero.</param>
+    /// <param name="stepCount">How many steps the recipe has now.</param>
     /// <param name="now">The injected clock's reading.</param>
-    /// <remarks>Deliberately does not bump the version: the last tap is the truth, and a second device must not go stale.</remarks>
-    public Result MoveTo(int index, DateTimeOffset now)
+    /// <remarks>
+    /// Deliberately does not bump the version: the last tap is the truth, and a second device must not go stale.
+    /// An index past the last step is clamped rather than refused: a device still showing a longer recipe that
+    /// another device has since shortened should land on the last step, not on an error.
+    /// </remarks>
+    public Result MoveTo(int index, int stepCount, DateTimeOffset now)
     {
         if (!IsActive)
         {
@@ -146,7 +151,7 @@ public sealed class CookSession
             return CookingErrors.StepOutOfRange;
         }
 
-        CurrentStepIndex = index;
+        CurrentStepIndex = Math.Min(index, Math.Max(0, stepCount - 1));
         LastActiveAt = now;
 
         return Result.Success();

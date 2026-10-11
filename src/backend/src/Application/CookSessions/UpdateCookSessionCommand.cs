@@ -64,7 +64,7 @@ internal sealed class UpdateCookSessionCommandHandler(
             : Result.Success());
 
         var moved = rescaled.Bind(() => command.CurrentStepIndex is { } index
-            ? session.MoveTo(index, now)
+            ? recipe.Bind(found => session.MoveTo(index, found.Steps.Count, now))
             : Result.Success());
 
         var saved = await moved.Match(

@@ -418,7 +418,7 @@ claims to.
 
 **`CurrentStepIndex` is a position, not an identity.** A recipe edited from
 another device while somebody is cooking it can move the step under them. The
-backend only refuses a negative index (`cooking.step_out_of_range`) and stores any other; it is the frontend that clamps the index to the recipe's steps, so it never points past the end. Even so, a step *inserted* above
+backend refuses a negative index (`cooking.step_out_of_range`) and clamps one past the end to the recipe's last step, so a device still showing a longer version lands on the last step instead of an error; the frontend clamps the same way when it reads the index. Even so, a step *inserted* above
 the current one shifts the position silently. Making this exact means recording
 the step's id in the session, which is a migration and a contract change for a
 case that is rare and immediately visible to the person cooking. Recorded here

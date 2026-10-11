@@ -67,7 +67,7 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
     public async Task Update_ShouldMoveTheStep_WithoutBumpingTheVersion()
     {
         using var client = await SignedInAsync();
-        var recipeId = await RecipeAsync(client, "Lemon orzo");
+        var recipeId = await RecipeAsync(client, "Lemon orzo", steps: 3);
         var started = await client.PostAsync(
             "/api/v1/cook-sessions",
             new { recipeId, servings = 2 },
@@ -85,6 +85,34 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
         Assert.Equal(2, moved.Json!.Value.GetProperty("currentStepIndex").GetInt32());
         // Step advances are constant; making each a concurrency event would leave a second device stale for no benefit.
         Assert.Equal(version, moved.Json!.Value.GetProperty("version").GetInt64());
+    }
+
+    [Fact]
+    public async Task Update_ShouldStopAtTheLastStep_WhenAskedForOnePastTheEnd()
+    {
+        using var client = await SignedInAsync();
+        var recipeId = await RecipeAsync(client, "Lemon orzo", steps: 3);
+        var started = await client.PostAsync(
+            "/api/v1/cook-sessions",
+            new { recipeId, servings = 2 },
+            Token);
+
+        var sessionId = started.Json!.Value.GetProperty("sessionId").GetGuid();
+
+        // A device still showing a longer version of the recipe asks for a step that is gone.
+        var moved = await client.PatchAsync(
+            $"/api/v1/cook-sessions/{sessionId}",
+            new { currentStepIndex = 7 },
+            Token);
+        var negative = await client.PatchAsync(
+            $"/api/v1/cook-sessions/{sessionId}",
+            new { currentStepIndex = -1 },
+            Token);
+
+        Assert.Equal(HttpStatusCode.OK, moved.StatusCode);
+        Assert.Equal(2, moved.Json!.Value.GetProperty("currentStepIndex").GetInt32());
+        Assert.Equal(HttpStatusCode.BadRequest, negative.StatusCode);
+        Assert.Equal("cooking.step_out_of_range", negative.Json!.Value.GetProperty("code").GetString());
     }
 
     [Fact]
@@ -154,7 +182,7 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    private static async Task<Guid> RecipeAsync(ApiClient client, string title)
+    private static async Task<Guid> RecipeAsync(ApiClient client, string title, int steps = 0)
     {
         var me = await client.GetAsync("/api/v1/users/me", Token);
         var householdId = me.Json!.Value
@@ -163,8 +191,34 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
             .GetGuid();
 
         var created = await client.PostAsync("/api/v1/recipes", new { householdId, title }, Token);
+        var recipeId = created.Json!.Value.GetProperty("recipeId").GetGuid();
 
-        return created.Json!.Value.GetProperty("recipeId").GetGuid();
+        if (steps > 0)
+        {
+            var read = await client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
+            var request = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/recipes/{recipeId}")
+            {
+                Content = System.Net.Http.Json.JsonContent.Create(new
+                {
+                    title,
+                    language = "en",
+                    yieldAmount = 2,
+                    yieldKind = "servings",
+                    groups = Array.Empty<object>(),
+                    steps = Enumerable.Range(1, steps)
+                        .Select(step => new { segments = new[] { new { type = "text", value = $"Step {step}." } } })
+                        .ToArray(),
+                    tags = Array.Empty<string>()
+                })
+            };
+
+            request.Headers.IfMatch.Add(System.Net.Http.Headers.EntityTagHeaderValue.Parse(read.ETag!));
+
+            var saved = await client.SendAsync(request, Token);
+            Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
+        }
+
+        return recipeId;
     }
 
     private async Task<ApiClient> SignedInAsync()
