@@ -16,17 +16,27 @@
     ondismiss: () => void;
     onpause?: () => void;
     onresume?: () => void;
+    /** The cook dock's controls are all large; the floating window's are small. */
+    size?: 'sm' | 'lg';
   }
 
-  let { durationSeconds, timer, secondsLeft, onstart, ondismiss, onpause, onresume }: Props =
-    $props();
+  let {
+    durationSeconds,
+    timer,
+    secondsLeft,
+    onstart,
+    ondismiss,
+    onpause,
+    onresume,
+    size = 'sm'
+  }: Props = $props();
 
   const minutes = $derived(Math.floor(secondsLeft / 60));
   const seconds = $derived(String(secondsLeft % 60).padStart(2, '0'));
 </script>
 
 {#if !timer}
-  <Button size="sm" onclick={onstart}>
+  <Button {size} onclick={onstart}>
     {m['cooking.timer.start']({ minutes: Math.round(durationSeconds / 60) })}
   </Button>
 {:else if secondsLeft > 0}
@@ -37,9 +47,9 @@
         : m['cooking.timer.running']({ minutes, seconds })}
     </p>
     {#if timer.pausedRemaining !== undefined && onresume}
-      <Button size="sm" onclick={onresume}>{m['cooking.timer.resume']()}</Button>
+      <Button {size} onclick={onresume}>{m['cooking.timer.resume']()}</Button>
     {:else if onpause}
-      <Button size="sm" onclick={onpause}>{m['cooking.timer.pause']()}</Button>
+      <Button {size} onclick={onpause}>{m['cooking.timer.pause']()}</Button>
     {/if}
   </div>
 {:else}

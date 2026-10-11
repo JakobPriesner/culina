@@ -62,16 +62,17 @@
     .cook-action .foot {
       position: relative;
       margin-block-end: 0;
-      padding-block: var(--space-8) var(--space-6);
+      padding-block: var(--space-4);
     }
 
-    /* Gradient, not blur: the column beneath is flat. Solid behind the button, faded above. */
+    /* A short edge fade, like a toolbar's scroll edge: solid only below the button's middle, so the recipe
+       stays readable up to the button instead of disappearing behind a band (it once covered ~110px). */
     .cook-action .foot::before {
       content: '';
       position: absolute;
       inset: 0;
       z-index: -1;
-      background: linear-gradient(to top, var(--surface) 60%, transparent);
+      background: linear-gradient(to top, var(--surface) 35%, transparent);
       pointer-events: none;
     }
   }
