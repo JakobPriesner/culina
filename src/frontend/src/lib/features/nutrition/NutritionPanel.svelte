@@ -570,7 +570,7 @@
 
     .nutrition :global(.summary) {
       margin-inline: var(--space-6);
-      padding: var(--space-3) 0 var(--space-5);
+      padding: var(--space-3) 0 var(--space-6);
     }
 
     .open {

@@ -21,7 +21,9 @@ export default defineConfig({
     trace: 'on-first-retry',
     // A real timezone and locale, so dates render as a person in Germany sees them.
     locale: 'de-DE',
-    timezoneId: 'Europe/Berlin'
+    timezoneId: 'Europe/Berlin',
+    // The narrow-width specs describe phones, which overlay their scrollbars; Linux Chromium reserves a 10px classic gutter (the app asks for a stable one) that makes a 320px page 310px wide, so the same spec measured a different layout on CI than on macOS.
+    launchOptions: { args: ['--enable-features=OverlayScrollbar'] }
   },
 
   projects: [

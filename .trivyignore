@@ -31,3 +31,18 @@ CVE-2026-6368 exp:2026-10-19
 CVE-2026-19542 exp:2026-10-19
 CVE-2026-19499 exp:2026-10-19
 CVE-2026-84782 exp:2026-10-19
+
+# SixLabors.ImageSharp 3.1.12 (in app/Api.deps.json). Fixed only in 4.1.2+, which needs
+# a paid licence key for Release builds, so the app stays on 3.1.x and makes each one
+# unreachable instead (see the NuGetAuditSuppress entries in
+# src/backend/Directory.Packages.props and docs/security-review.md):
+#   CVE-2026-106110 = GHSA-j9gm-c75j-xc9q, TIFF CCITT T4 encoder: the app never encodes
+#     TIFF (renditions are JPEG/WebP) and the decoder configuration registers no TIFF.
+#   CVE-2026-106113 = GHSA-j3p4-wp97-rph4, HistogramEqualization on float TIFF: the app
+#     never equalises histograms, and TIFF is not registered.
+#   CVE-2026-106115 = GHSA-jjfr-hcj7-qf5w, TIFF CCITT T6 encoder: as T4.
+# When this expires: check whether ImageSharp was replaced or licensed, or whether a
+# 3.1.x fix exists; if neither, extend deliberately with today's reasoning.
+CVE-2026-106110 exp:2027-01-11
+CVE-2026-106113 exp:2027-01-11
+CVE-2026-106115 exp:2027-01-11
