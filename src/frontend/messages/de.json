@@ -1686,5 +1686,6 @@
   "search.place.cookbook": "Kochbuch",
   "search.place.list": "Liste",
   "search.place.plan": "Plan",
-  "search.place.settings": "Konto"
+  "search.place.settings": "Konto",
+  "me.administration": "Verwaltung"
 }
