@@ -20,17 +20,37 @@ const isWord = (character: string | undefined): boolean =>
 const startsMention = (text: string, at: number): boolean =>
   !isWord(text[at - 1]) && text[at + 1] !== ' ' && text[at + 1] !== '\n';
 
-export const toText = (step: Step): string =>
+/** The step as text; a mention shows the ingredient's current name, so a rename reaches every step that names it. */
+export const toText = (step: Step, ingredients: readonly Ingredient[] = []): string =>
   step.segments
-    .map((segment) => (segment.kind === 'text' ? segment.text : MARKER + segment.name))
+    .map((segment) =>
+      segment.kind === 'text'
+        ? segment.text
+        : MARKER +
+          (ingredients.find((one) => one.id === segment.ingredientId)?.name || segment.name)
+    )
     .join('');
 
-/** Splits text into words and mentions, longest name first (`@olive oil` beats `@olive`); unknown names stay plain text. */
-export function toSegments(text: string, ingredients: readonly Ingredient[]): StepSegment[] {
+/**
+ * Splits text into words and mentions, longest name first (`@olive oil` beats `@olive`); unknown names stay plain text.
+ * A mention the step already had (`previous`) keeps its ingredient, so editing a step never re-points `@Zucker` from
+ * the glaze to the dough; only newly typed mentions are looked up by name.
+ */
+export function toSegments(
+  text: string,
+  ingredients: readonly Ingredient[],
+  previous: readonly StepSegment[] = []
+): StepSegment[] {
   // An ingredient the server has not seen has no id to reference yet.
   const named = ingredients
     .filter((one) => one.id && one.name)
     .sort((a, b) => b.name.length - a.name.length);
+  const earlier = previous.flatMap((segment) => {
+    const still =
+      segment.kind === 'ingredient' && named.find((one) => one.id === segment.ingredientId);
+
+    return still ? [still] : [];
+  });
 
   const segments: StepSegment[] = [];
   let plain = '';
@@ -46,7 +66,8 @@ export function toSegments(text: string, ingredients: readonly Ingredient[]): St
   while (index < text.length) {
     const found =
       text[index] === MARKER && startsMention(text, index)
-        ? named.find((one) => matchesAt(text, index + 1, one.name))
+        ? (kept(text, index + 1, earlier) ??
+          named.find((one) => matchesAt(text, index + 1, one.name)))
         : undefined;
 
     if (!found) {
@@ -68,6 +89,13 @@ export function toSegments(text: string, ingredients: readonly Ingredient[]): St
   flush();
 
   return segments;
+}
+
+/** Takes the first of the step's earlier mentions written here, so each one is claimed once. */
+function kept(text: string, at: number, earlier: Ingredient[]): Ingredient | undefined {
+  const index = earlier.findIndex((one) => matchesAt(text, at, one.name));
+
+  return index < 0 ? undefined : earlier.splice(index, 1)[0];
 }
 
 /** Whether the name is spelled out here as a whole word, so "butter" does not claim "@buttermilk". */
