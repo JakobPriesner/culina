@@ -3,7 +3,7 @@ import type { Quantity, ScaledQuantity } from './quantityMath';
 import { counted } from './roundCounted';
 import { customary, measured } from './roundMeasured';
 import { spooned } from './roundSpoons';
-import { familyOf, scales, toCanonical } from './units';
+import { canCombine, familyOf, scales, toCanonical } from './units';
 
 export type { Quantity, ScaledQuantity };
 
@@ -90,7 +90,8 @@ export function targetYieldForAmount(
     return null;
   }
 
-  if (familyOf(base.unit) !== familyOf(available.unit)) {
+  // Only mass and volume convert; a teaspoon is not a tablespoon, and a clove is not a piece.
+  if (!canCombine(base.unit, available.unit)) {
     return null;
   }
 
