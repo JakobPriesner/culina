@@ -331,6 +331,26 @@ function nutrition(
 }
 
 /** Layout fixtures exercise the real routes without accounts or writes to a backend. */
+/**
+ * Phones overlay their scrollbars. Linux Chromium does with --enable-features=OverlayScrollbar
+ * (playwright.config.ts); macOS headless ignores that flag and draws the app's 10px scrollbar in its
+ * stable gutter, so a "320px" phone page was 309px wide there and the narrow specs failed only locally.
+ */
+async function overlayScrollbars(page: Page) {
+  if (process.platform !== 'darwin') {
+    return;
+  }
+
+  await page.addInitScript(() => {
+    document.addEventListener('DOMContentLoaded', () => {
+      const style = document.createElement('style');
+      style.textContent =
+        '* { scrollbar-width: none !important; } html { scrollbar-gutter: auto !important; }';
+      document.head.append(style);
+    });
+  });
+}
+
 export async function responsiveData(
   page: Page,
   locale: 'de' | 'en' = 'de',
@@ -354,6 +374,8 @@ export async function responsiveData(
     twoGroups = false
   } = {}
 ) {
+  await overlayScrollbars(page);
+
   const detail = {
     ...recipe,
     yieldAmount: nutritionVariant === 'whole' ? 1 : recipe.yieldAmount,
