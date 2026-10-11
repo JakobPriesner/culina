@@ -124,6 +124,9 @@ public sealed record AppliedInference
 /// </summary>
 public sealed record RecipeSummary
 {
+    /// <summary>Energy per serving or piece; null if nothing can be calculated.</summary>
+    public Contracts.Recipes.GetNutrition.NutritionValue? Calories { get; init; }
+
     /// <summary>The recipe's id.</summary>
     public required Guid RecipeId { get; init; }
 

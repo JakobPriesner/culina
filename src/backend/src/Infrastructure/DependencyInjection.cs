@@ -157,6 +157,7 @@ public static class DependencyInjection
             .AddScoped<ISavedSearchRepository, SavedSearchRepository>()
             .AddScoped<ITagRepository, TagRepository>()
             .AddScoped<IShoppingListRepository, ShoppingListRepository>()
+            .AddScoped<IRecipeCalories, RecipeCalories>()
             .AddScoped<INutritionCorrectionRepository, NutritionCorrectionRepository>()
             .AddScoped<IRecipeSourceRepository, RecipeSourceRepository>()
             .AddScoped<IRecipeOriginRepository, RecipeOriginRepository>()

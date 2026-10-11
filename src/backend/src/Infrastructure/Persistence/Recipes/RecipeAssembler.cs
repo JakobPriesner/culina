@@ -76,7 +76,7 @@ internal static class RecipeAssembler
                 [.. ingredients.Where(i => i.GroupId == group.Id).Select(ToIngredient)]),
             "ingredient group");
 
-    private static RecipeIngredient ToIngredient(RecipeIngredientRow row) =>
+    internal static RecipeIngredient ToIngredient(RecipeIngredientRow row) =>
         Unwrap(
             RecipeIngredient.Create(
                 row.Id,

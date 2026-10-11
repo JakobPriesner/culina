@@ -5,6 +5,8 @@ using Domain.Shared;
 using Domain.Suggestions;
 using Domain.Users;
 using Infrastructure.Persistence;
+using Infrastructure.Persistence.Nutrition;
+using Infrastructure.Nutrition;
 using Infrastructure.Persistence.Households;
 using Infrastructure.Persistence.Recipes;
 using Infrastructure.Persistence.Users;
@@ -283,7 +285,8 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
             new RecipeRepository(
                 executor,
                 new TagWriter(executor),
-                new RecipeSearcher(executor, TimeProvider.System, RankingWeights.Default),
+                new RecipeSearcher(executor, TimeProvider.System, RankingWeights.Default,
+                    new RecipeCalories(executor, BlsFoodTable.Load(), new NutritionCorrectionRepository(executor, TimeProvider.System), new NutritionWeightRepository(executor, TimeProvider.System))),
                 new SearchDocumentWriter(executor)),
             new UserRepository(executor),
             new HouseholdRepository(executor));

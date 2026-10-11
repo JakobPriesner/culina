@@ -6,11 +6,12 @@
   import {
     sortsFor,
     timeCeilings,
+    calorieCeilings,
     type RecipeQuery,
     type RecipeSort,
     type SortContext
   } from '../stores/libraryView.svelte';
-  import { sortLabel, timeLabel } from './labels';
+  import { calorieLabel, sortLabel, timeLabel } from './labels';
   import TagChooser from './TagChooser.svelte';
 
   /**
@@ -85,6 +86,22 @@
             >
               {timeLabel(minutes)}
             </button>
+          {/each}
+        </div>
+      {/snippet}
+    </Field>
+
+    <Field label={m['filters.calories']()} hint={m['filters.calories.hint']()} group>
+      {#snippet children({ describedBy })}
+        <div class="ceilings" aria-describedby={describedBy}>
+          {#each [null, ...calorieCeilings] as kcal (kcal ?? 'any')}
+            <button
+              type="button"
+              class="ceiling"
+              class:on={view.maxKcal === kcal}
+              aria-pressed={view.maxKcal === kcal}
+              onclick={() => (view.maxKcal = kcal)}>{calorieLabel(kcal)}</button
+            >
           {/each}
         </div>
       {/snippet}

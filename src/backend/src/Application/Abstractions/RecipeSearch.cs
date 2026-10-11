@@ -25,7 +25,10 @@ public sealed record RecipeSearch(
     string? Cursor,
     int Limit)
 {
-    /// <summary>What a query asked for beyond its words, once understood. A property so other callers need not say they did not.</summary>
+    /// <summary>Maximum kcal per serving or piece; unknown and lower-bound values cannot establish a maximum.</summary>
+    public int? MaxKcal { get; init; }
+
+    /// <summary>What a query asked for beyond its words, once understood.</summary>
     public RecipeConstraints Constraints { get; init; } = RecipeConstraints.None;
 
     /// <summary>The households whose recipes this one inherits, searched with its own. Empty unless asked, e.g. for the archive export.</summary>
@@ -140,6 +143,9 @@ public sealed record RecipeSearchRow(
 {
     /// <summary>Why the row is here when not its title; null for title matches and wordless searches.</summary>
     public MatchReason? Reason { get; init; }
+
+    /// <summary>Energy per serving or piece, with uncertainty preserved; null if unknown.</summary>
+    public Domain.Nutrition.LabelValue? Calories { get; init; }
 
     /// <summary>The diet the query asked for, when the recipe keeps it only by presumption.</summary>
     public string? PresumedDiet { get; init; }

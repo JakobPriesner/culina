@@ -25,11 +25,15 @@ export function sortLabel(sort: RecipeSort): string {
 export const timeLabel = (minutes: number | null): string =>
   minutes === null ? m['filters.time.any']() : m['filters.time.upTo']({ count: minutes });
 
+export const calorieLabel = (kcal: number | null): string =>
+  kcal === null ? m['filters.calories.any']() : m['filters.calories.upTo']({ count: kcal });
+
 /** A saved search in one line, shown before saving and beside each saved search. */
 export function summarise(criteria: {
   query: string;
   tags: readonly string[];
   maxMinutes: number | null;
+  maxKcal?: number | null;
   sort: RecipeSort | null;
 }): string {
   const parts = [
@@ -37,6 +41,7 @@ export function summarise(criteria: {
     ...(criteria.query.trim().length > 0 ? [criteria.query.trim()] : []),
     ...criteria.tags,
     ...(criteria.maxMinutes === null ? [] : [timeLabel(criteria.maxMinutes)]),
+    ...(criteria.maxKcal == null ? [] : [calorieLabel(criteria.maxKcal)]),
     ...(criteria.sort === null ? [] : [sortLabel(criteria.sort)])
   ];
 

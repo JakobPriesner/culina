@@ -2,6 +2,7 @@
   import { resolve } from '$app/paths';
 
   import { Image } from '$ds';
+  import RecipeCalories from '$features/nutrition/RecipeCalories.svelte';
 
   import { m } from '$shell/i18n';
   import { imageSrcset, imageUrl } from './recipeImage';
@@ -32,7 +33,10 @@
   <div class="copy">
     <p class="eyebrow">{reason ?? m['recipes.featured.eyebrow']()}</p>
     <h2 id={headingId}>{recipe.title}</h2>
-    <p class="meta">{metaLineFor(recipe)}</p>
+    <div class="facts">
+      <p class="meta">{metaLineFor(recipe)}</p>
+      <RecipeCalories {recipe} />
+    </div>
     {#if from}
       <p class="meta">{m['recipes.card.from']({ household: from })}</p>
     {/if}
@@ -73,6 +77,15 @@
 </section>
 
 <style>
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 var(--space-3);
+  }
+  .facts .meta {
+    margin-bottom: 0;
+  }
   .feature {
     --border-focus: var(--text-on-feature);
     display: grid;

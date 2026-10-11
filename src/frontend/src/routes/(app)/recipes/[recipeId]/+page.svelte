@@ -43,7 +43,11 @@
     nutritionFigure
       ? {
           label: nutritionFigure,
-          ariaLabel: m['nutrition.meta.open']({ figure: nutritionFigure }),
+          ariaLabel: m['nutrition.meta.open']({
+            figure:
+              metaFigureOf(nutrition.answerFor(recipeId, session.activeHouseholdId), true) ??
+              nutritionFigure
+          }),
           onopen: showNutrition
         }
       : null

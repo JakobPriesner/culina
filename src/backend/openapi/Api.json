@@ -2743,6 +2743,14 @@
             }
           },
           {
+            "name": "maxKcal",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
             "name": "cookbookId",
             "in": "query",
             "explode": false,
@@ -11001,6 +11009,19 @@
         ],
         "type": "object",
         "properties": {
+          "calories": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/RecipesGetNutritionNutritionValue"
+              }
+            ]
+          },
           "recipeId": {
             "type": "string",
             "description": "The recipe's id.",
@@ -13235,6 +13256,12 @@
             "format": "int32",
             "nullable": true
           },
+          "maxKcal": {
+            "type": "integer",
+            "description": "Maximum kcal per serving or piece, or omit.",
+            "format": "int32",
+            "nullable": true
+          },
           "sort": {
             "type": "string",
             "description": "The order to read in, or omit for the default. One of `relevance`, `suggested`, `-updatedAt`,\n`title`, `totalMinutes` or `-cookCount` (not `cookbookOrder`, which needs a cookbook).",
@@ -14690,6 +14717,19 @@
         ],
         "type": "object",
         "properties": {
+          "calories": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/RecipesGetNutritionNutritionValue"
+              }
+            ]
+          },
           "recipeId": {
             "type": "string",
             "description": "The recipe's id.",

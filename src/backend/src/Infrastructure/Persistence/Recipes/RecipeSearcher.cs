@@ -14,7 +14,8 @@ namespace Infrastructure.Persistence.Recipes;
 /// <param name="executor">Runs the SQL.</param>
 /// <param name="time">The clock the suggested order is ranked against.</param>
 /// <param name="weights">What each term of the suggested order is worth.</param>
-internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider time, RankingWeights weights)
+/// <param name="calories">Batch figures calculated with the household’s choices.</param>
+internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider time, RankingWeights weights, IRecipeCalories calories)
 {
     private readonly RecipeSearchParameters arguments = new(time, weights);
 
@@ -64,6 +65,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
     // Which rows survive; shared by the count and the candidates so a total cannot disagree with its list.
     private static string Rules(bool scored) => $$"""
         where r.household_id = any(@library)
+          and (not @filterCalories or r.id = any(@calorieIds::uuid[]))
           -- Hidden from the suggested order only: "stop suggesting this" is not "delete this".
           {{(scored ? "and not coalesce(s.dismissed, false)" : string.Empty)}}
           -- Words are answered by `hits`; both escapes are planner-time, so `hits` never runs without words.
@@ -190,18 +192,26 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             order by {{order}};
             """;
 
+        var parameters = arguments.Build(search, cursor, scored);
+        var figures = await ApplyCaloriesAsync(search, parameters, cancellationToken).ConfigureAwait(false);
         var rows = await executor.QueryAsync<RecipeSearchRowData>(
             sql,
-            arguments.Build(search, cursor, scored),
+            parameters,
             cancellationToken).ConfigureAwait(false);
 
         var page = rows.Take(limit).ToList();
+        figures ??= await calories.ReadAsync(search.HouseholdId, search.Library,
+            page.Select(row => row.Id).ToArray(), cancellationToken).ConfigureAwait(false);
 
         // A diet is only presumed when every requested diet can be; unasserted rows carry none.
         var presumable = search.Constraints.Diets is [var first, ..] ? first : null;
 
         return new RecipePage(
-            [.. page.Select(data => ToRow(data) with { PresumedDiet = data.DietAsserted ? null : presumable })],
+            [.. page.Select(data => ToRow(data) with
+            {
+                PresumedDiet = data.DietAsserted ? null : presumable,
+                Calories = figures.TryGetValue(data.Id, out var energy) ? energy : null
+            })],
             NextCursorFor(search.Sort, rows.Count > limit, page),
             rows.Count == 0 ? 0 : rows[0].TotalCount);
     }
@@ -238,6 +248,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
 
         var parameters = arguments.Build(search, cursor: null, scored: false);
         parameters.Add("cuisineKeys", Cuisines);
+        await ApplyCaloriesAsync(search, parameters, cancellationToken).ConfigureAwait(false);
 
         var rows = await executor.QueryAsync<FacetRow>(sql, parameters, cancellationToken).ConfigureAwait(false);
 
@@ -249,6 +260,19 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
             Of("tag"),
             Of("time"),
             Of("cuisine"));
+    }
+
+    private async Task<IReadOnlyDictionary<Guid, Domain.Nutrition.LabelValue>?> ApplyCaloriesAsync(
+        RecipeSearch search, DynamicParameters parameters, CancellationToken cancellationToken)
+    {
+        if (search.MaxKcal is not { } ceiling)
+        {
+            return null;
+        }
+        var figures = await calories.ReadAsync(search.HouseholdId, search.Library, null, cancellationToken).ConfigureAwait(false);
+        parameters.Add("calorieIds", figures.Where(pair => !pair.Value.AtLeast && pair.Value.Value <= ceiling)
+            .Select(pair => pair.Key).ToArray());
+        return figures;
     }
 
     private static readonly string[] Cuisines =

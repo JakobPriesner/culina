@@ -20,8 +20,9 @@ internal static class GetRecipesRequestExtensions
         return query.RequireGuid("householdId").Bind(householdId =>
             query.ReadInt("limit", 1, MaxLimit, DefaultLimit).Bind(limit =>
                 query.ReadInt("maxMinutes", 1).Bind(maxMinutes =>
+                    query.ReadInt("maxKcal", 1, 100_000).Bind(maxKcal =>
                     query.ReadGuid("cookbookId").Bind(cookbookId =>
-                        ToSearch(query, userId, householdId, limit, maxMinutes.Value, cookbookId.Value)))));
+                        ToSearch(query, userId, householdId, limit, maxMinutes.Value, maxKcal.Value, cookbookId.Value))))));
     }
 
     private static Result<RecipeSearch> ToSearch(
@@ -30,6 +31,7 @@ internal static class GetRecipesRequestExtensions
         Guid householdId,
         int limit,
         int? maxMinutes,
+        int? maxKcal,
         Guid? cookbookId)
     {
         var text = query["query"].ToString();
@@ -52,7 +54,10 @@ internal static class GetRecipesRequestExtensions
             Rules: null,
             sort,
             query["cursor"],
-            limit));
+            limit)
+        {
+            MaxKcal = maxKcal
+        });
     }
 
     // An explicit sort wins; otherwise words or ingredients rank, a cookbook with no question reads in built

@@ -55,9 +55,9 @@ internal sealed class GetRecipesEndpoint : IEndpoint
                 + "against the household's own words or sets one reading aside, and says which; "
                 + "`asTyped=true` turns the correction down.")
             .WithRepeatableQueryParameters(
-                ["householdId", "query", "maxMinutes", "cookbookId", "sort", "cursor", "limit", "asTyped"],
+                ["householdId", "query", "maxMinutes", "maxKcal", "cookbookId", "sort", "cursor", "limit", "asTyped"],
                 ["tag", "ingredient"],
-                ["maxMinutes", "limit"])
+                ["maxMinutes", "maxKcal", "limit"])
             .Produces<Response>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)

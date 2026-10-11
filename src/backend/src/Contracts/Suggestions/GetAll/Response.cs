@@ -11,6 +11,9 @@ public sealed record Response
 /// <summary>One recipe, and why it is here.</summary>
 public sealed record Suggestion
 {
+    /// <summary>Energy per serving or piece; null if nothing can be calculated.</summary>
+    public Contracts.Recipes.GetNutrition.NutritionValue? Calories { get; init; }
+
     /// <summary>The recipe's id.</summary>
     public required Guid RecipeId { get; init; }
 
