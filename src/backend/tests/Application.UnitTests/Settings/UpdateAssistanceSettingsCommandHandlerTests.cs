@@ -266,6 +266,86 @@ public class UpdateAssistanceSettingsCommandHandlerTests
         Assert.Equal("openai-default-improve", improve.DefaultModel);
     }
 
+    [Fact]
+    public async Task Handle_ShouldKeepTheAdministratorsPrice_ForTheModelTheyNamed()
+    {
+        var world = new World();
+
+        var response = (await world.Handle(Command(
+                connections: [Hosted("openai", "sk-one")],
+                uses: [Use("improve", "openai", "gpt-6-astra")],
+                prices: [new PriceEdit(" gpt-6-astra ", 1.10m, 9.00m, PerImage: null)])))
+            .ShouldBeSuccess();
+
+        var price = Assert.Single(world.Settings.Prices);
+        Assert.Equal("gpt-6-astra", price.Model);
+        Assert.Equal(1.10m, price.InputPerMillion);
+        Assert.Equal(9.00m, world.Settings.PriceFor("GPT-6-ASTRA")!.OutputPerMillion);
+        Assert.Equal(1.10m, Assert.Single(response.Prices).InputPerMillion);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldDropAPriceRowWithNothingInIt_SoCulinasListAnswersForThatModel()
+    {
+        var world = new World();
+
+        (await world.Handle(Command(
+                connections: [],
+                uses: [],
+                prices: [new PriceEdit("gpt-6-astra", null, null, null)])))
+            .ShouldBeSuccess();
+
+        Assert.Empty(world.Settings.Prices);
+    }
+
+    [Theory]
+    [InlineData(-0.01, 1.0, null)]
+    [InlineData(1.0, 1000.01, null)]
+    [InlineData(null, null, 5000.0)]
+    public async Task Handle_ShouldRefuse_APriceThatCannotBeRight(double? input, double? output, double? perImage)
+    {
+        var world = new World();
+
+        var result = await world.Handle(Command(
+            connections: [],
+            uses: [],
+            prices: [new PriceEdit("gpt-6-astra", (decimal?)input, (decimal?)output, (decimal?)perImage)]));
+
+        result.ShouldBeFailure(AssistanceErrors.InvalidPrice);
+        Assert.Empty(world.Settings.Prices);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldKeepHalfATokenPrice_BecauseTheScreenSavesEachBoxAsItIsLeft()
+    {
+        var world = new World();
+
+        (await world.Handle(Command(
+                connections: [],
+                uses: [],
+                prices: [new PriceEdit("gpt-6-astra", 1.10m, null, null)])))
+            .ShouldBeSuccess();
+
+        // Kept so the next box can complete it; costing ignores it until then.
+        Assert.Equal(1.10m, Assert.Single(world.Settings.Prices).InputPerMillion);
+    }
+
+    [Fact]
+    public async Task Handle_ShouldShowCulinasOwnPrice_ForTheModelEachBillingJobUses()
+    {
+        var world = new World();
+
+        var response = (await world.Handle(Command(
+                connections: [Hosted("openai", "sk-one"), Local()],
+                uses: [Use("improve", "openai"), Use("read", "ollama")])))
+            .ShouldBeSuccess();
+
+        // A local model is free, so there is nothing to correct and no price to show.
+        Assert.NotNull(response.Uses.Single(one => one.Capability == "improve").ListedPrice);
+        Assert.Null(response.Uses.Single(one => one.Capability == "read").ListedPrice);
+        Assert.Equal(new DateOnly(2026, 9, 19), response.PricesRecordedOn);
+    }
+
     private static ConnectionEdit Hosted(string provider, string? apiKey = "sk-secret") =>
         new(provider, apiKey, string.Empty);
 
@@ -278,8 +358,9 @@ public class UpdateAssistanceSettingsCommandHandlerTests
         IReadOnlyList<ConnectionEdit> connections,
         IReadOnlyList<UseEdit> uses,
         bool enabled = false,
-        decimal? monthlyBudget = null) =>
-        new(enabled, connections, uses, monthlyBudget, PersonalBudget: null);
+        decimal? monthlyBudget = null,
+        IReadOnlyList<PriceEdit>? prices = null) =>
+        new(enabled, connections, uses, monthlyBudget, PersonalBudget: null, prices ?? []);
 
     /// <summary>The handler and the things it writes through.</summary>
     private sealed class World
@@ -296,7 +377,8 @@ public class UpdateAssistanceSettingsCommandHandlerTests
                     Settings,
                     Store,
                     new FakeAssistants(new FakeAssistant()),
-                    Protector)
+                    Protector,
+                    new FakeModelPrices())
                 .Handle(command, Token);
     }
 }

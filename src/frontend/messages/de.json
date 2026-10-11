@@ -1687,5 +1687,21 @@
   "search.place.list": "Liste",
   "search.place.plan": "Plan",
   "search.place.settings": "Konto",
-  "me.administration": "Verwaltung"
+  "me.administration": "Verwaltung",
+  "ai.prices": "Preise",
+  "ai.prices.hint": "Culinas eigene Preise wurden am {date} erfasst und veralten. Wenn du etwas anderes bezahlst, trag es in US-Dollar ein. Ein leeres Feld behält Culinas Preis.",
+  "ai.prices.input": "Eingabe, je Million Tokens",
+  "ai.prices.output": "Ausgabe, je Million Tokens",
+  "ai.prices.image": "Je Bild",
+  "ai.prices.unlisted": "Nicht gelistet",
+  "ai.prices.listed.tokens": "Culinas Liste: {input} Eingabe und {output} Ausgabe je Million Tokens.",
+  "ai.prices.listed.image": "Culinas Liste: {price} je Bild.",
+  "ai.prices.listed.none": "Nicht in Culinas Liste. Ohne deinen Preis werden die Kosten nicht gezählt.",
+  "ai.prices.half": "Gib den Eingabe- und den Ausgabepreis ein. Bis dahin gilt Culinas Preis.",
+  "ai.usage.model": "Modell",
+  "ai.usage.pricedBy": "Preis laut",
+  "ai.usage.pricedBy.culina": "Culinas Liste ({date})",
+  "ai.usage.pricedBy.administrator": "Dein Preis",
+  "ai.usage.pricedBy.none": "Kein Preis",
+  "problem.assistance.invalid_price": "Ein Preis kann nicht unter null liegen, und kein Modell kostet tausend Dollar oder mehr."
 }

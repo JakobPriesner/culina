@@ -40,17 +40,21 @@ public sealed class FakeAssistanceLedger : IAssistanceLedger
     public Task<UsageSummary> SummariseAsync(
         DateTimeOffset since,
         CancellationToken cancellationToken) =>
-        Task.FromResult(new UsageSummary(0m, 0, 0, 0, 0, [], []));
+        Task.FromResult(new UsageSummary(0m, 0, 0, 0, 0, [], [], []));
 }
 
-/// <summary>Prices every call the same.</summary>
+/// <summary>Prices every call the same, from Culina's list.</summary>
 /// <param name="each">What every call costs.</param>
 public sealed class FakeModelPrices(decimal? each = 0.01m) : IModelPrices
 {
-    public decimal? Of(
+    public DateOnly RecordedOn { get; } = new(2026, 9, 19);
+
+    public Priced? Of(
         AssistantKind provider,
         string model,
         int inputTokens,
         int outputTokens,
-        int pictures) => each;
+        int pictures) => each is { } cost ? new Priced(cost, PricedBy.Culina) : null;
+
+    public ModelPrice? Listed(string model) => each is { } cost ? new ModelPrice(cost, cost, cost) : null;
 }

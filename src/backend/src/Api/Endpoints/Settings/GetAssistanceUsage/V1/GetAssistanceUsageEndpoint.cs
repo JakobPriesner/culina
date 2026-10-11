@@ -32,7 +32,11 @@ internal sealed class GetAssistanceUsageEndpoint : IEndpoint
                 + "not be reconciled with the invoice.\n\n"
                 + "`unpriced` counts calls made with a model this app has no price for. Their "
                 + "tokens are in the totals and their cost is not, because a number nobody can "
-                + "check against a bill is worse than an empty cell.")
+                + "check against a bill is worse than an empty cell.\n\n"
+                + "`byModel` says, per model, whose price each figure was worked out with: "
+                + "`culina` for Culina's own list as recorded on `pricesRecordedOn`, "
+                + "`administrator` for a price set on the settings screen. It is recorded per "
+                + "call, so changing a price does not relabel what was already counted.")
             .Produces<Response>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)

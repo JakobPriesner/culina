@@ -14,6 +14,7 @@ public sealed record GetAssistanceUsageQuery;
 internal sealed class GetAssistanceUsageQueryHandler(
     IAssistanceLedger ledger,
     AssistanceSettings settings,
+    IModelPrices prices,
     TimeProvider time)
     : IQueryHandler<GetAssistanceUsageQuery, Response>
 {
@@ -48,7 +49,16 @@ internal sealed class GetAssistanceUsageQueryHandler(
                 Capability = capability.Capability,
                 Calls = capability.Calls,
                 Cost = capability.Cost
-            })]
+            })],
+            ByModel = [.. summary.ByModel.Select(line => new ModelUsageContract
+            {
+                Provider = line.Provider,
+                Model = line.Model,
+                PricedBy = line.PricedBy,
+                Calls = line.Calls,
+                Cost = line.Cost
+            })],
+            PricesRecordedOn = prices.RecordedOn
         }));
     }
 

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using IntegrationTests.Fixtures;
 
 namespace IntegrationTests.Settings;
@@ -197,6 +198,83 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
         Assert.Equal(0, response.Json!.Value.GetProperty("byPerson").GetArrayLength());
     }
 
+    [Fact]
+    public async Task Prices_ShouldBeKept_AndShownBesideCulinasOwn()
+    {
+        using var admin = await AdminAsync();
+
+        var written = await admin.PutAsync(
+            "/api/v1/settings/assistance",
+            Configured(
+                composeModel: "gpt-6-astra",
+                prices: [new { model = "gpt-6-astra", inputPerMillion = 1.1m, outputPerMillion = 9m }]),
+            Token);
+        var read = await admin.GetAsync("/api/v1/settings/assistance", Token);
+
+        Assert.Equal(HttpStatusCode.OK, written.StatusCode);
+
+        var price = Assert.Single(read.Json!.Value.GetProperty("prices").EnumerateArray());
+        Assert.Equal("gpt-6-astra", price.GetProperty("model").GetString());
+        Assert.Equal(1.1m, price.GetProperty("inputPerMillion").GetDecimal());
+
+        // Culina's own price stays visible, so the administrator can see what they are correcting.
+        var listed = read.Json!.Value.GetProperty("uses").EnumerateArray()
+            .Single(one => one.GetProperty("capability").GetString() == "improve")
+            .GetProperty("listedPrice");
+        Assert.Equal(1.25m, listed.GetProperty("inputPerMillion").GetDecimal());
+        Assert.Equal("2026-09-19", read.Json!.Value.GetProperty("pricesRecordedOn").GetString());
+    }
+
+    [Fact]
+    public async Task Prices_ShouldBeRefused_WhenOneIsLessThanNothing()
+    {
+        using var admin = await AdminAsync();
+
+        var response = await admin.PutAsync(
+            "/api/v1/settings/assistance",
+            Configured(prices: [new { model = "gpt-image-2.5-flare", perImage = -0.04m }]),
+            Token);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("assistance.invalid_price", response.Body, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task Usage_ShouldSayWhosePriceEachFigureCameFrom()
+    {
+        using var admin = await AdminAsync();
+        var userId = await postgres.QuerySingleAsync<Guid>("select id from users limit 1;", Token);
+
+        await postgres.ExecuteAsync(
+            $"""
+             insert into assistance_usage
+                 (id, user_id, capability, provider, model, estimate, cost, priced_by, outcome, occurred_at)
+             values
+                 (gen_random_uuid(), '{userId}', 'improve', 'openai', 'gpt-6-astra', 0.1, 0.02, 'culina', 'ok', now()),
+                 (gen_random_uuid(), '{userId}', 'improve', 'openai', 'gpt-6-astra', 0.1, 0.01, 'administrator', 'ok', now()),
+                 (gen_random_uuid(), '{userId}', 'improve', 'openai', 'gpt-7', 0.1, null, null, 'ok', now()),
+                 (gen_random_uuid(), '{userId}', 'improve', 'openai', 'gpt-7', 0.1, null, null, 'reserved', now());
+             """,
+            Token);
+
+        var response = await admin.GetAsync("/api/v1/settings/assistance/usage", Token);
+
+        var lines = response.Json!.Value.GetProperty("byModel").EnumerateArray()
+            .Select(one => (
+                Model: one.GetProperty("model").GetString(),
+                By: one.GetProperty("pricedBy").ValueKind == JsonValueKind.Null
+                    ? null
+                    : one.GetProperty("pricedBy").GetString(),
+                Calls: one.GetProperty("calls").GetInt32()))
+            .ToList();
+
+        // A call still in flight has no price yet, so it is in no line.
+        Assert.Equal(
+            [("gpt-6-astra", "culina", 1), ("gpt-6-astra", "administrator", 1), ("gpt-7", null, 1)],
+            lines);
+        Assert.Equal("2026-09-19", response.Json!.Value.GetProperty("pricesRecordedOn").GetString());
+    }
+
     [Theory]
     [InlineData("/api/v1/settings/assistance")]
     [InlineData("/api/v1/settings/assistance/usage")]
@@ -244,7 +322,8 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
         string? apiKey = Key,
         string composeModel = "",
         decimal? monthlyBudget = null,
-        string baseUrl = "") => new
+        string baseUrl = "",
+        object[]? prices = null) => new
         {
             enabled = true,
             connections = new[] { new { provider, apiKey, baseUrl } },
@@ -255,7 +334,8 @@ public class AssistanceSettingsEndpointTests(PostgresFixture postgres)
                 new { capability = "read", enabled = true, provider, model = composeModel }
             },
             monthlyBudget,
-            personalBudget = (decimal?)null
+            personalBudget = (decimal?)null,
+            prices = prices ?? []
         };
 
     private static System.Text.Json.JsonElement ConnectionFor(ApiResponse response, string provider) =>

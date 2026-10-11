@@ -11,9 +11,12 @@ import {
   type Assistance,
   type Capability,
   type Connection,
+  type Price,
   type Provider,
+  type SetPrice,
   type Use
 } from '../types';
+import { priceFor, sameModel } from './prices';
 
 /**
  * The assistant settings being edited; there is no Save button: a choice saves at once, a typed field on blur.
@@ -149,7 +152,8 @@ export function createAiSettingsDraft() {
           enabled: false,
           provider: '',
           model: '',
-          defaultModel: ''
+          defaultModel: '',
+          listedPrice: null
         }
       );
     },
@@ -181,6 +185,20 @@ export function createAiSettingsDraft() {
       if (!draft) return;
 
       draft[which] = value;
+      edits += 1;
+    },
+
+    priceFor(model: string): SetPrice {
+      return priceFor(draft?.prices ?? [], model);
+    },
+
+    /** Sets part of the administrator's price for a model; null leaves that part to Culina's list. */
+    setPrice(model: string, patch: Partial<Price>) {
+      if (!draft) return;
+
+      const next = { ...priceFor(draft.prices, model), ...patch };
+
+      draft.prices = [...draft.prices.filter((one) => !sameModel(one.model, model)), next];
       edits += 1;
     }
   };

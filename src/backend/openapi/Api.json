@@ -2239,7 +2239,7 @@
           "Settings"
         ],
         "summary": "Change how the assistant is set up",
-        "description": "Instance administrator only. Takes effect on the next request, with no restart.\n\n`apiKey` has three states, and the difference matters: omit it to keep the key already stored, send an empty string to remove it, and send a value to replace it. It is never returned by any endpoint, so a form has nothing to put in the box and omitting it is what saving an unrelated change looks like.\n\nTurning the assistant on without a key stores it as off — there is nothing for it to be on with.",
+        "description": "Instance administrator only. Takes effect on the next request, with no restart.\n\n`apiKey` has three states, and the difference matters: omit it to keep the key already stored, send an empty string to remove it, and send a value to replace it. It is never returned by any endpoint, so a form has nothing to put in the box and omitting it is what saving an unrelated change looks like.\n\nTurning the assistant on without a key stores it as off — there is nothing for it to be on with.\n\n`prices` are the administrator's own, per model named exactly, and win over Culina's list (as recorded on `pricesRecordedOn`) for every call made after the save. A part left empty is Culina's to answer, and so is a token price until both input and output are given: half a price would make a total that looks right and is not.",
         "operationId": "updateAssistanceSettingsV1",
         "requestBody": {
           "content": {
@@ -2301,7 +2301,7 @@
           "Settings"
         ],
         "summary": "Read what the assistant has cost this month",
-        "description": "Instance administrator only.\n\nThe calendar month in UTC, because that is how a provider bills and a figure measured over a different period could not be reconciled with the invoice.\n\n`unpriced` counts calls made with a model this app has no price for. Their tokens are in the totals and their cost is not, because a number nobody can check against a bill is worse than an empty cell.",
+        "description": "Instance administrator only.\n\nThe calendar month in UTC, because that is how a provider bills and a figure measured over a different period could not be reconciled with the invoice.\n\n`unpriced` counts calls made with a model this app has no price for. Their tokens are in the totals and their cost is not, because a number nobody can check against a bill is worse than an empty cell.\n\n`byModel` says, per model, whose price each figure was worked out with: `culina` for Culina's own list as recorded on `pricesRecordedOn`, `administrator` for a price set on the settings screen. It is recorded per call, so changing a price does not relabel what was already counted.",
         "operationId": "getAssistanceUsageV1",
         "responses": {
           "200": {
@@ -13438,6 +13438,30 @@
         },
         "description": "One provider, and whether it is ready to be used."
       },
+      "SettingsGetAssistanceListedPriceContract": {
+        "type": "object",
+        "properties": {
+          "inputPerMillion": {
+            "type": "number",
+            "description": "US dollars per million input tokens.",
+            "format": "double",
+            "nullable": true
+          },
+          "outputPerMillion": {
+            "type": "number",
+            "description": "US dollars per million output tokens.",
+            "format": "double",
+            "nullable": true
+          },
+          "perImage": {
+            "type": "number",
+            "description": "US dollars per image.",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "description": "A model's price on Culina's own list; a part it does not know is null."
+      },
       "SettingsGetAssistanceModelsModelContract": {
         "required": [
           "id",
@@ -13508,11 +13532,44 @@
         },
         "description": "What each connected provider currently offers."
       },
+      "SettingsGetAssistancePriceContract": {
+        "required": [
+          "model"
+        ],
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "The model, exactly as the provider names it."
+          },
+          "inputPerMillion": {
+            "type": "number",
+            "description": "US dollars per million input tokens.",
+            "format": "double",
+            "nullable": true
+          },
+          "outputPerMillion": {
+            "type": "number",
+            "description": "US dollars per million output tokens.",
+            "format": "double",
+            "nullable": true
+          },
+          "perImage": {
+            "type": "number",
+            "description": "US dollars per image.",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "description": "What the administrator pays for one model; an empty part is left to Culina's list."
+      },
       "SettingsGetAssistanceResponse": {
         "required": [
           "enabled",
           "connections",
-          "uses"
+          "uses",
+          "prices",
+          "pricesRecordedOn"
         ],
         "type": "object",
         "properties": {
@@ -13545,6 +13602,18 @@
             "description": "What one person may spend of it, or null for no share.",
             "format": "double",
             "nullable": true
+          },
+          "prices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingsGetAssistancePriceContract"
+            },
+            "description": "The administrator's own prices, which win over Culina's list for the models they name."
+          },
+          "pricesRecordedOn": {
+            "type": "string",
+            "description": "When Culina's own price list was last checked against the providers.",
+            "format": "date"
           }
         },
         "description": "The models this instance can talk to, and which of them does what."
@@ -13573,6 +13642,41 @@
           }
         },
         "description": "One capability's spend this month."
+      },
+      "SettingsGetAssistanceUsageModelUsageContract": {
+        "required": [
+          "provider",
+          "model",
+          "calls",
+          "cost"
+        ],
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "description": "`gemini`, `openai` or `ollama`."
+          },
+          "model": {
+            "type": "string",
+            "description": "Which model."
+          },
+          "pricedBy": {
+            "type": "string",
+            "description": "`culina` for Culina's own list, `administrator` for a price set here, or null when the model had no price.",
+            "nullable": true
+          },
+          "calls": {
+            "type": "integer",
+            "description": "How many calls.",
+            "format": "int32"
+          },
+          "cost": {
+            "type": "number",
+            "description": "What they came to.",
+            "format": "double"
+          }
+        },
+        "description": "One model's settled calls this month, at one source of price."
       },
       "SettingsGetAssistanceUsagePersonUsageContract": {
         "required": [
@@ -13614,7 +13718,9 @@
           "totalPictures",
           "unpriced",
           "byPerson",
-          "byCapability"
+          "byCapability",
+          "byModel",
+          "pricesRecordedOn"
         ],
         "type": "object",
         "properties": {
@@ -13667,6 +13773,18 @@
               "$ref": "#/components/schemas/SettingsGetAssistanceUsageCapabilityUsageContract"
             },
             "description": "What it went on."
+          },
+          "byModel": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingsGetAssistanceUsageModelUsageContract"
+            },
+            "description": "Which models, and whose price each figure was worked out with."
+          },
+          "pricesRecordedOn": {
+            "type": "string",
+            "description": "When Culina's own price list was last checked against the providers, for figures priced from it.",
+            "format": "date"
           }
         },
         "description": "What the assistant has cost this month."
@@ -13700,6 +13818,19 @@
           "defaultModel": {
             "type": "string",
             "description": "The model that will actually be used when none is chosen."
+          },
+          "listedPrice": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/SettingsGetAssistanceListedPriceContract"
+              }
+            ]
           }
         },
         "description": "What does one job."
@@ -14042,11 +14173,98 @@
         },
         "description": "One provider to connect, or to keep connected."
       },
+      "SettingsUpdateAssistanceListedPriceContract": {
+        "type": "object",
+        "properties": {
+          "inputPerMillion": {
+            "type": "number",
+            "description": "US dollars per million input tokens.",
+            "format": "double",
+            "nullable": true
+          },
+          "outputPerMillion": {
+            "type": "number",
+            "description": "US dollars per million output tokens.",
+            "format": "double",
+            "nullable": true
+          },
+          "perImage": {
+            "type": "number",
+            "description": "US dollars per image.",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "description": "A model's price on Culina's own list; a part it does not know is null."
+      },
+      "SettingsUpdateAssistancePriceContract": {
+        "required": [
+          "model"
+        ],
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "The model, exactly as the provider names it."
+          },
+          "inputPerMillion": {
+            "type": "number",
+            "description": "US dollars per million input tokens.",
+            "format": "double",
+            "nullable": true
+          },
+          "outputPerMillion": {
+            "type": "number",
+            "description": "US dollars per million output tokens.",
+            "format": "double",
+            "nullable": true
+          },
+          "perImage": {
+            "type": "number",
+            "description": "US dollars per image.",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "description": "What the administrator pays for one model; an empty part is left to Culina's list."
+      },
+      "SettingsUpdateAssistancePriceRequest": {
+        "required": [
+          "model"
+        ],
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "The model, exactly as the provider names it (not a prefix)."
+          },
+          "inputPerMillion": {
+            "type": "number",
+            "description": "US dollars per million input tokens; used only once `outputPerMillion` is given too.",
+            "format": "double",
+            "nullable": true
+          },
+          "outputPerMillion": {
+            "type": "number",
+            "description": "US dollars per million output tokens.",
+            "format": "double",
+            "nullable": true
+          },
+          "perImage": {
+            "type": "number",
+            "description": "US dollars per image.",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "description": "What the administrator pays for one model; leave a part empty to keep Culina's price for it."
+      },
       "SettingsUpdateAssistanceRequest": {
         "required": [
           "enabled",
           "connections",
-          "uses"
+          "uses",
+          "prices"
         ],
         "type": "object",
         "properties": {
@@ -14079,6 +14297,13 @@
             "description": "What one person may spend of it, or null for no share.",
             "format": "double",
             "nullable": true
+          },
+          "prices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingsUpdateAssistancePriceRequest"
+            },
+            "description": "The administrator's own prices. Anything left out falls back to Culina's list."
           }
         },
         "description": "The assistant configuration to apply, all at once: one screen with one Save, so no half-applied state."
@@ -14087,7 +14312,9 @@
         "required": [
           "enabled",
           "connections",
-          "uses"
+          "uses",
+          "prices",
+          "pricesRecordedOn"
         ],
         "type": "object",
         "properties": {
@@ -14120,6 +14347,18 @@
             "description": "What one person may spend of it, or null for no share.",
             "format": "double",
             "nullable": true
+          },
+          "prices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingsUpdateAssistancePriceContract"
+            },
+            "description": "The administrator's own prices, which win over Culina's list for the models they name."
+          },
+          "pricesRecordedOn": {
+            "type": "string",
+            "description": "When Culina's own price list was last checked against the providers.",
+            "format": "date"
           }
         },
         "description": "The models this instance can talk to, and which does what. An API key goes in and `apiKeyConfigured` comes out, never the value."
@@ -14153,6 +14392,19 @@
           "defaultModel": {
             "type": "string",
             "description": "The model used when none is chosen; the server decides, so the form can show it as a placeholder."
+          },
+          "listedPrice": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/SettingsUpdateAssistanceListedPriceContract"
+              }
+            ]
           }
         },
         "description": "What does one job."

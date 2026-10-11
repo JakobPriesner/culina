@@ -1,15 +1,19 @@
 using Application.Abstractions;
+using Application.Abstractions.Settings;
 using Domain.Assistance;
 
 namespace Infrastructure.Assistance;
 
 /// <summary>What the models this knows about cost, so a call can be priced.</summary>
 /// <remarks>
-/// Code, not configuration, so prices are comparable across instances: correcting one is a commit.
-/// List prices in US dollars per million tokens as recorded on 2026-09-19; they go stale, so move that date when updating one.
+/// The list below is Culina's own, in code so it is the same on every instance: correcting it is a commit.
+/// List prices in US dollars per million tokens as recorded on <see cref="RecordedOn"/>; they go stale, so move that date when updating one.
+/// The administrator's prices (<see cref="AssistanceSettings.Prices"/>) win over it for the models they name, because only they
+/// know what they are actually charged: negotiated, regional, or for a model released since.
 /// An unknown model records tokens and no cost, never an invented number.
 /// </remarks>
-internal sealed class ModelPrices : IModelPrices
+/// <param name="settings">The live settings, for the administrator's prices.</param>
+internal sealed class ModelPrices(AssistanceSettings settings) : IModelPrices
 {
     private const decimal PerMillion = 1_000_000m;
 
@@ -51,13 +55,16 @@ internal sealed class ModelPrices : IModelPrices
         ("imagen-4", 0.04m)
     ];
 
-    /// <summary>What a call came to, or null for a model with no price here. Ollama is zero, a known price, not unknown.</summary>
+    /// <inheritdoc/>
+    public DateOnly RecordedOn { get; } = new(2026, 9, 19);
+
+    /// <summary>What a call came to and whose price it was, or null for a model with no price. Ollama is zero, a known price, not unknown.</summary>
     /// <param name="provider">Which provider was used.</param>
     /// <param name="model">Which model was used.</param>
     /// <param name="inputTokens">What was sent.</param>
     /// <param name="outputTokens">What came back.</param>
     /// <param name="pictures">How many images were made.</param>
-    public decimal? Of(
+    public Priced? Of(
         AssistantKind provider,
         string model,
         int inputTokens,
@@ -68,23 +75,48 @@ internal sealed class ModelPrices : IModelPrices
 
         if (provider == AssistantKind.Ollama)
         {
-            return 0m;
+            return new Priced(0m, PricedBy.Culina);
         }
 
-        var name = model.Trim().ToLowerInvariant();
+        var theirs = settings.PriceFor(model);
+        var listed = Listed(model);
 
         if (pictures > 0)
         {
-            return Match(Pictures, name) is { } each ? each * pictures : null;
+            return (theirs?.PerImage, listed?.PerImage) switch
+            {
+                ({ } set, _) => new Priced(set * pictures, PricedBy.Administrator),
+                (_, { } each) => new Priced(each * pictures, PricedBy.Culina),
+                _ => null
+            };
         }
 
-        if (Match(Text, name) is not { } price)
+        if (theirs is { InputPerMillion: { } input, OutputPerMillion: { } output })
         {
-            return null;
+            return new Priced(Tokens(inputTokens, outputTokens, input, output), PricedBy.Administrator);
         }
 
-        return ((inputTokens * price.Input) + (outputTokens * price.Output)) / PerMillion;
+        return listed is { InputPerMillion: { } listedInput, OutputPerMillion: { } listedOutput }
+            ? new Priced(Tokens(inputTokens, outputTokens, listedInput, listedOutput), PricedBy.Culina)
+            : null;
     }
+
+    /// <inheritdoc/>
+    public ModelPrice? Listed(string model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+
+        var name = model.Trim().ToLowerInvariant();
+        Price? text = Match(Text, name);
+        decimal? each = Match(Pictures, name);
+
+        return text is null && each is null
+            ? null
+            : new ModelPrice(text?.Input, text?.Output, each);
+    }
+
+    private static decimal Tokens(int inputTokens, int outputTokens, decimal input, decimal output) =>
+        ((inputTokens * input) + (outputTokens * output)) / PerMillion;
 
     private static TPrice? Match<TPrice>((string Prefix, TPrice Price)[] table, string name)
         where TPrice : struct

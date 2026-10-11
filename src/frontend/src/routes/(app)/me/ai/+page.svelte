@@ -11,6 +11,7 @@
 
   import SettingsSection from '../SettingsSection.svelte';
   import AiBudget from './AiBudget.svelte';
+  import AiPrices from './AiPrices.svelte';
   import AiUsage from './AiUsage.svelte';
   import JobAssignments from './JobAssignments.svelte';
   import ProviderAddress from './ProviderAddress.svelte';
@@ -58,6 +59,8 @@
   </SettingsSection>
 
   <AiBudget {settings} />
+
+  <AiPrices {settings} />
 
   {#if assistance.usage}
     <AiUsage usage={assistance.usage} />
