@@ -182,6 +182,19 @@ describe('scaling from an amount you have', () => {
     ).toBeNull();
   });
 
+  it('refuses between spoons or counted units that are not the same unit', () => {
+    // 1 tbsp is 3 tsp, not 1; and nobody knows how many cloves a piece is.
+    expect(
+      targetYieldForAmount({ value: 2, unit: 'tsp' }, { value: 1, unit: 'tbsp' }, 4)
+    ).toBeNull();
+    expect(
+      targetYieldForAmount({ value: 3, unit: 'clove' }, { value: 2, unit: 'piece' }, 4)
+    ).toBeNull();
+    expect(targetYieldForAmount({ value: 3, unit: 'clove' }, { value: 6, unit: 'clove' }, 4)).toBe(
+      8
+    );
+  });
+
   it('refuses on an ingredient with no amount to scale from', () => {
     expect(
       targetYieldForAmount({ value: null, unit: 'g' }, { value: 600, unit: 'g' }, 4)
