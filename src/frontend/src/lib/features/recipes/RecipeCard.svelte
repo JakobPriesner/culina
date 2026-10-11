@@ -25,7 +25,7 @@
 
   let { recipe, pending = false, query = '', from = null, priority = false }: Props = $props();
 
-  const meta = $derived(metaLineFor(recipe));
+  const meta = $derived(metaLineFor(recipe, { yields: false }));
   const match = $derived(matchLineFor(recipe));
   const eyebrow = $derived(recipe.tags[0] ?? null);
   /** Why a search found it, when its title does not say. */
@@ -62,7 +62,7 @@
 
   <div class="details">
     <div class="facts">
-      <p class="meta">{meta}</p>
+      {#if meta}<p class="meta">{meta}</p>{/if}
       <RecipeCalories {recipe} />
     </div>
     <span class="open" aria-hidden="true">
