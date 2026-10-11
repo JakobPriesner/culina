@@ -368,9 +368,9 @@ test.describe('writing a recipe', () => {
     await expect(page.getByRole('link', { name: opens(title) })).toBeVisible();
   });
 
-  test('does not lose what was typed to a reload, a language switch, or no signal', async ({
-    context
-  }) => {
+  test('does not lose what was typed to a reload, a language switch, or no signal', async () => {
+    // The page's own context: the test's `context` fixture is a different one, and switching it off left the page online.
+    const context = page.context();
     const title = unique('Kept');
 
     await page.goto('/recipes/new');

@@ -76,14 +76,24 @@ test.describe('deleting a recipe', () => {
 
   test('takes the "now cooking" bar with it when it was being cooked', async () => {
     title = unique('Gazpacho');
-    recipeId = await seedRecipe(page, { title });
+    recipeId = await seedRecipe(page, { title, steps: ['Blend the tomatoes.', 'Chill it.'] });
 
+    const headers = await writeHeaders(page);
     const started = await page.request.post('/api/v1/cook-sessions', {
-      headers: await writeHeaders(page),
+      headers,
       data: { recipeId, servings: 2 }
     });
 
     expect(started.ok(), await started.text()).toBe(true);
+
+    // On to the second step: a session only opened, on its first step, does not get the bar.
+    const { sessionId } = (await started.json()) as { sessionId: string };
+    const moved = await page.request.patch(`/api/v1/cook-sessions/${sessionId}`, {
+      headers,
+      data: { currentStepIndex: 1 }
+    });
+
+    expect(moved.ok(), await moved.text()).toBe(true);
 
     const bar = page.getByRole('link', { name: /keep cooking|weiterkochen/i });
     const dialog = await askToDelete();

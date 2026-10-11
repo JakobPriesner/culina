@@ -124,13 +124,17 @@ test.describe('a recipe already opened', () => {
 
     await context.setOffline(false);
 
-    // Only the allow-listed shapes; the allow-list is the privacy argument.
+    // Only the allow-listed shapes of service-worker/apiCache.ts; the allow-list is the privacy argument. The
+    // recipe asks for the shopping list to say whether it is on it.
     const kept = await cachedApiPaths(page);
 
     expect(kept.length).toBeGreaterThan(0);
     expect(
       kept.filter(
-        (path) => !/^\/api\/v1\/(recipes(\/[^/]+(\/(image|nutrition))?)?|users\/me)$/.test(path)
+        (path) =>
+          !/^\/api\/v1\/(recipes(\/[^/]+(\/(image|nutrition))?)?|users\/me|households\/[^/]+\/shopping-list)$/.test(
+            path
+          )
       )
     ).toEqual([]);
   });
