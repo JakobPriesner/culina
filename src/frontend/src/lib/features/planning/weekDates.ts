@@ -1,3 +1,5 @@
+import { m } from '$shell/i18n';
+
 import { asDate } from './mealPlan.svelte';
 
 export const addDays = (from: Date, days: number) =>
@@ -22,6 +24,16 @@ export const rangeOf = (monday: string, locale: string) => {
     addDays(start, 6)
   );
 };
+
+/** The week's name relative to this one; further away, the range beneath the title says which. */
+export const weekTitle = (offset: number): string =>
+  offset === 0
+    ? m['plan.title']()
+    : offset === 1
+      ? m['plan.title.next']()
+      : offset === -1
+        ? m['plan.title.previous']()
+        : m['plan.title.other']();
 
 /** The weekday alone; Intl's combined weekday+number order varies by locale. */
 export const weekdayName = (date: string, locale: string) =>

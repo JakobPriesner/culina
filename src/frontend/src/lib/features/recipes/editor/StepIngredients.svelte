@@ -7,6 +7,7 @@
   import { quantityLabels } from '../quantityLabels';
   import { scaleQuantity } from '../scaling';
   import type { Ingredient, Step } from '../types';
+  import { inferUses } from '../surface/inferredUses';
   import { namedIn } from './stepUsage';
 
   /**
@@ -28,6 +29,13 @@
 
   const choosable = $derived(ingredients.filter((one) => one.id));
   const chips = $derived(choosable.filter((one) => needs(one.id)));
+
+  /** Ingredients the step's words name but it doesn't list yet: offered, never added on their own. */
+  const suggested = $derived.by(() => {
+    const guessed = new Set(inferUses([step], choosable)[0]);
+
+    return choosable.filter((one) => guessed.has(one.id) && !needs(one.id) && !named.has(one.id));
+  });
 
   // The base amount, as the ingredient list shows it: a recipe is written at its own yield.
   const amountOf = (ingredient: Ingredient) =>
@@ -70,6 +78,27 @@
       </li>
     {/each}
   </ul>
+
+  {#each suggested as ingredient (ingredient.id)}
+    <button
+      type="button"
+      class="suggestion"
+      title={m['editor.stepIngredientSpotted']()}
+      aria-label={m['editor.addSpottedIngredient']({ name: ingredient.name, number })}
+      onclick={() => set(ingredient, true)}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        aria-hidden="true"
+      >
+        <path d="M12 5v14M5 12h14" stroke-linecap="round" />
+      </svg>
+      {ingredient.name}
+    </button>
+  {/each}
 
   <Popover>
     {#snippet trigger({ popovertarget })}
@@ -118,6 +147,40 @@
     margin: 0;
     padding: 0;
     list-style: none;
+  }
+
+  /* A guess from the step's words: dashed, so it reads as an offer and not as something already linked. */
+  .suggestion {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: var(--control-sm);
+    padding-inline: var(--space-3);
+    border: 1px dashed var(--border-accent);
+    border-radius: var(--radius-full);
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out);
+  }
+
+  .suggestion:hover {
+    background: var(--surface-accent-subtle);
+  }
+
+  .suggestion:active {
+    transform: scale(var(--press-scale));
+  }
+
+  .suggestion svg {
+    flex: none;
+    width: var(--space-4);
+    height: var(--space-4);
   }
 
   .chip {

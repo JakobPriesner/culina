@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+
   import { createIngredientPanel } from './ingredientPanel.svelte';
   import { createScaling } from './scaled.svelte';
   import CookingAction from './CookingAction.svelte';
@@ -42,6 +44,8 @@
     ontitleview?: (visible: boolean) => void;
     /** The nutrition headline for the meta line; absent while unknown, and never shown while cooking. */
     nutrition?: NutritionLink | null;
+    /** Where the recipe is in the loop (planned, on the list), after the servings band; not while cooking. */
+    whereabouts?: Snippet;
   }
 
   let {
@@ -63,7 +67,8 @@
     onstopcooking,
     onstep,
     ontitleview,
-    nutrition = null
+    nutrition = null,
+    whereabouts
   }: Props = $props();
 
   let highlighted = $state<string | null>(null);
@@ -131,6 +136,11 @@
     onscaleto={() => (scalingByAmount = true)}
   />
 
+  <!-- After the servings band, not under the title: on a phone that keeps the servings on the first screen. -->
+  {#if whereabouts && !cooking}
+    <div class="whereabouts">{@render whereabouts()}</div>
+  {/if}
+
   <div class="body">
     <IngredientsPanel
       panel={ingredients}
@@ -192,13 +202,14 @@
     .photographed {
       display: grid;
       grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-      grid-template-rows: auto 1fr;
+      /* Title, servings and the loop chips share the photo's height; the last row takes what is left. */
+      grid-template-rows: auto auto 1fr;
       column-gap: var(--layout-section-gap);
       row-gap: var(--space-4);
     }
 
     .photographed > :global(.hero) {
-      grid-row: 1 / 3;
+      grid-row: 1 / 4;
       aspect-ratio: 4 / 3;
       max-height: none;
     }
@@ -222,6 +233,16 @@
     .photographed > :global(.head .title) {
       font-size: var(--text-3xl);
       line-height: var(--leading-tight);
+    }
+
+    /* The grid's row gap spaces it here, so its own top padding would only push the steps down. */
+    .photographed > .whereabouts {
+      grid-column: 2;
+      align-self: start;
+    }
+
+    .photographed > .whereabouts > :global(*) {
+      padding-top: 0;
     }
 
     .photographed > .body,

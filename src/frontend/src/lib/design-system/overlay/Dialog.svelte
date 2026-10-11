@@ -18,6 +18,8 @@
     closeLabel: string;
     placement?: 'centre' | 'sheet';
     wide?: boolean;
+    /** `top` holds a sheet near the top on wide screens, so a panel that grows (search results) grows downward instead of jumping. */
+    anchor?: 'centre' | 'top';
     hideTitle?: boolean;
     onclose?: () => void;
   }
@@ -30,6 +32,7 @@
     closeLabel,
     placement = 'centre',
     wide = false,
+    anchor = 'centre',
     hideTitle = false,
     onclose
   }: Props = $props();
@@ -116,6 +119,7 @@
 
 <dialog
   class:wide
+  class:top={anchor === 'top'}
   bind:this={element}
   class="dialog {placement}"
   aria-labelledby={titleId}
@@ -271,10 +275,18 @@
       margin: auto;
     }
 
+    /* Like Spotlight: a fixed top edge, growing down. */
+    .sheet.top {
+      margin-block: 12dvh auto;
+    }
+
     .sheet .panel {
       max-height: calc(100dvh - var(--space-16));
       border-radius: var(--radius-xl);
       padding-bottom: 0;
+    }
+    .sheet.top .panel {
+      max-height: calc(88dvh - var(--space-8));
     }
   }
 

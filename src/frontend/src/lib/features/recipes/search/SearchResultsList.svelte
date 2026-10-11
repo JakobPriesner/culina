@@ -1,6 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { Image } from '$ds';
+  import { Chevron, Image } from '$ds';
   import { m } from '$shell/i18n';
 
   import { imageUrl } from '../recipeImage';
@@ -32,6 +32,7 @@
   ] as const);
 
   const results = $derived(options.filter((option) => option.kind === 'result'));
+  const places = $derived(options.filter((option) => option.kind === 'place'));
 
   function completionText(completion: Completion): string {
     return completion.kind === 'refinement'
@@ -41,6 +42,26 @@
 </script>
 
 <ul class="list" id="{id}-list" role="listbox" aria-label={m['search.group.results']()}>
+  {#if places.length > 0}
+    <li class="heading" role="presentation">{m['search.group.places']()}</li>
+    {#each places as option (option.key)}
+      {#if option.kind === 'place'}
+        <li
+          id="{id}-{option.key}"
+          class="option completion place"
+          role="option"
+          aria-selected={option.index === highlighted}
+        >
+          <button type="button" tabindex="-1" onclick={() => onactivate(option)}>
+            <span class="label">{option.place.label}</span>
+            {#if option.place.detail}<span class="meta">{option.place.detail}</span>{/if}
+            <span class="go" aria-hidden="true"><Chevron /></span>
+          </button>
+        </li>
+      {/if}
+    {/each}
+  {/if}
+
   {#each groups as group (group.kind)}
     {@const members = options.filter(
       (option) => option.kind === 'completion' && option.completion.kind === group.kind

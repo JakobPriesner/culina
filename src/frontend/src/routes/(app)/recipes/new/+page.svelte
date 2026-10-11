@@ -96,7 +96,11 @@
       incomingUrl = shared.url;
     }
 
-    pasting = shared.url !== '' || shared.text !== '';
+    // `?start=paste` or `?start=idea`: a door opened elsewhere (the empty library) lands in the right form.
+    const start = page.url.searchParams.get('start');
+
+    pasting = shared.url !== '' || shared.text !== '' || start === 'paste';
+    describing = start === 'idea' && Boolean(session.user?.assistance.draft);
   });
 
   function cancelPasting() {

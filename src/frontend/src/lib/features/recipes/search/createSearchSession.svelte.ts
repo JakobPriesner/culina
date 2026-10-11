@@ -2,6 +2,7 @@ import { m } from '$shell/i18n';
 
 import type { createRecipeStore } from '../stores/recipes.svelte';
 import type { Completion, RecipeSummary, SearchChip } from '../types';
+import type { Place } from './places';
 import type { createCompletionStore } from './stores/completions.svelte';
 import { withoutChip } from './wording';
 
@@ -17,6 +18,12 @@ export type SearchOption =
       readonly index: number;
       readonly kind: 'result';
       readonly recipe: RecipeSummary;
+    }
+  | {
+      readonly key: string;
+      readonly index: number;
+      readonly kind: 'place';
+      readonly place: Place;
     };
 
 interface Deps {
@@ -25,6 +32,9 @@ interface Deps {
   readonly householdId: () => string;
   readonly focus: () => void;
   readonly openRecipe: (recipeId: string, elsewhere: boolean) => void;
+  /** Pages, actions, cookbooks and list items the typed words name; first in the list. */
+  readonly places: (typed: string) => readonly Place[];
+  readonly openPlace: (href: string) => void;
 }
 
 /** The search box's text, applied query, tag filters and listbox options, changed together. */
@@ -33,7 +43,9 @@ export function createSearchSession({
   completions,
   householdId,
   focus,
-  openRecipe
+  openRecipe,
+  places,
+  openPlace
 }: Deps) {
   let typed = $state('');
   /** What was last searched for, which the chips' spans refer to. */
@@ -49,19 +61,30 @@ export function createSearchSession({
   const asking = $derived(applied.trim().length > 0 || tags.length > 0);
 
   const options = $derived.by((): SearchOption[] => {
-    const shown = typed.trim().length > 0 ? completions.items : [];
+    const goTo = places(typed);
     const found = asking ? recipes.items : [];
+    // A recipe the results already list is not suggested again above them.
+    const listed = found.map((recipe) => recipe.id);
+    const shown = (typed.trim().length > 0 ? completions.items : []).filter(
+      (completion) => completion.kind !== 'recipe' || !listed.includes(completion.recipeId)
+    );
 
     return [
+      ...goTo.map((place, index): SearchOption => ({
+        key: `p${place.key}`,
+        index,
+        kind: 'place',
+        place
+      })),
       ...shown.map((completion, index): SearchOption => ({
         key: `c${index}`,
-        index,
+        index: goTo.length + index,
         kind: 'completion',
         completion
       })),
       ...found.map((recipe, index): SearchOption => ({
         key: `r${recipe.id}`,
-        index: shown.length + index,
+        index: goTo.length + shown.length + index,
         kind: 'result',
         recipe
       }))
@@ -121,6 +144,12 @@ export function createSearchSession({
   }
 
   function activate(option: SearchOption, elsewhere = false) {
+    if (option.kind === 'place') {
+      openPlace(option.place.href);
+
+      return;
+    }
+
     if (option.kind === 'result') {
       openRecipe(option.recipe.id, elsewhere);
 

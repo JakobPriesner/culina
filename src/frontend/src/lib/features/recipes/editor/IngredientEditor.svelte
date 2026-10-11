@@ -7,6 +7,7 @@
   import IngredientFields, {
     draftOf,
     emptyDraft,
+    fromLine,
     toIngredient,
     type IngredientDraft
   } from './IngredientFields.svelte';
@@ -98,10 +99,13 @@
       return;
     }
 
-    remember(adding);
+    // "200 g Mehl, gesiebt" in the name field is read into its parts, the same way the shopping list reads it.
+    const line = fromLine(adding, units.own);
+
+    remember(line);
 
     // No id: the server assigns one.
-    onchange([...ingredients, toIngredient(adding, '')]);
+    onchange([...ingredients, toIngredient(line, '')]);
 
     adding = emptyDraft;
     document.getElementById(`${scope}add-ingredient-amount`)?.focus();

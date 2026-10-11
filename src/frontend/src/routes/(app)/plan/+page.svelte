@@ -17,9 +17,10 @@
   import PlanRecipePicker from '$features/planning/PlanRecipePicker.svelte';
   import PlanShopBar from '$features/planning/PlanShopBar.svelte';
   import PlanWeek from '$features/planning/PlanWeek.svelte';
+  import TodayMeal from '$features/planning/TodayMeal.svelte';
   import PlanWeekSkeleton from '$features/planning/PlanWeekSkeleton.svelte';
   import { usePlanActions } from '$features/planning/usePlanActions.svelte';
-  import { mondayOf, rangeOf } from '$features/planning/weekDates';
+  import { mondayOf, rangeOf, weekTitle } from '$features/planning/weekDates';
   import { WeekDrag } from '$features/planning/weekDrag.svelte';
   import { recipeAnswers } from '$features/nutrition/stores/recipeAnswers.svelte';
   import type { RecipeSummary } from '$features/recipes/types';
@@ -103,10 +104,12 @@
 </script>
 
 {#snippet peeking()}<Olli pose="peeking" />{/snippet}
-<svelte:head><title>{m['plan.title']()}</title></svelte:head>
+<svelte:head><title>{weekTitle(offset)}</title></svelte:head>
 
 <Page>
   <PlanHeader {range} {offset} onstep={(weeks) => (offset += weeks)} onreset={() => (offset = 0)} />
+
+  {#if householdId && offset === 0}<TodayMeal {householdId} />{/if}
 
   {#if mealPlan.error}
     <ErrorState title={m['error.unexpected.title']()} body={m['error.unexpected.body']()}>

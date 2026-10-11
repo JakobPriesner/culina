@@ -15,6 +15,7 @@ internal static class CookSessionMappings
             SessionId = session.Id,
             RecipeId = session.RecipeId,
             RecipeTitle = recipeTitle,
+            HouseholdId = session.HouseholdId,
             Servings = session.Servings,
             CurrentStepIndex = session.CurrentStepIndex,
             StartedAt = session.StartedAt,

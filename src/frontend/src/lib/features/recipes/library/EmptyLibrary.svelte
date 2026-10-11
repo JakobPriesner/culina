@@ -3,7 +3,11 @@
   import { Button, EmptyState } from '$ds';
   import { m } from '$shell/i18n';
   import Olli from '$shell/olli/Olli.svelte';
+
+  import OtherWaysIn from '../create/OtherWaysIn.svelte';
 </script>
+
+<!-- An empty library starts the loop: write one, or bring one you already have (paste first, the most common). -->
 
 {#snippet peeking()}<Olli pose="peeking" />{/snippet}
 
@@ -29,3 +33,14 @@
     </Button>
   {/snippet}
 </EmptyState>
+
+<div class="ways">
+  <OtherWaysIn />
+</div>
+
+<style>
+  .ways {
+    max-width: 40rem;
+    margin: var(--space-8) auto 0;
+  }
+</style>
