@@ -17,7 +17,7 @@ export interface SaveFacts {
 
 /**
  * The status word beside the title, in priority order: a conflict is never masked, unsent work never reads
- * "Saved", and an unreachable server reads as "kept here" rather than a failure.
+ * "Saved", and only an unreachable server reads as "kept here" (rather than as a failure).
  */
 export function describeSave(facts: SaveFacts): { tone: SaveTone; text: string } {
   const { failure } = facts;
@@ -38,8 +38,11 @@ export function describeSave(facts: SaveFacts): { tone: SaveTone; text: string }
     return { tone: 'local', text: m['editor.recovered']() };
   }
 
+  // Online, unsent work is only waiting for the next save, so it reads as saving; "this device" is said only when the server cannot be reached, where it is news.
   if (facts.unsent) {
-    return { tone: 'local', text: m['editor.keptHere']() };
+    return failure
+      ? { tone: 'local', text: m['editor.keptHere']() }
+      : { tone: 'saving', text: m['editor.saving']() };
   }
 
   return facts.saved

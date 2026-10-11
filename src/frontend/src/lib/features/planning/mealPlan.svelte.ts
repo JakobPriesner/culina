@@ -33,6 +33,14 @@ export interface MealPlace {
 /** Slot order, which the server sorts a day by first. */
 const slotRank = { breakfast: 0, lunch: 1, dinner: 2 } as const;
 
+/** The week starting on the Monday of `from`, read without becoming the week on screen; the plan sheet looks ahead across two of them. */
+export const readWeek = (householdId: string, from: string) =>
+  request(() =>
+    http.GET('/api/v1/households/{householdId}/meal-plan', {
+      params: { path: { householdId }, query: { from } }
+    })
+  );
+
 const rankOf = (slot: string): number => slotRank[slot as keyof typeof slotRank] ?? slotRank.dinner;
 
 export const placeOf = (week: readonly PlannedDay[], entryId: string): MealPlace | null => {

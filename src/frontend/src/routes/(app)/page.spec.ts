@@ -58,10 +58,11 @@ function answer(url: string, reasoned: { code: string; subject: string | null } 
     return json({ items: [] });
   }
 
+  // Six in the library, the first two on this page: a library this small would not lead with a suggestion.
   return json({
     items: [summary('r1', 'Linsensuppe'), summary('r2', 'Omelette')],
     nextCursor: null,
-    total: 2
+    total: 6
   });
 }
 
@@ -205,7 +206,7 @@ describe('opening the library', () => {
               summary('r3', 'Ratatouille')
             ],
             nextCursor: null,
-            total: 3
+            total: 6
           })
         );
       })

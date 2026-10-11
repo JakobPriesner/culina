@@ -64,14 +64,12 @@ test.describe('a household that inherits another', () => {
 
       await expect(page.getByText(/can change it|ändern kann es aber nur/i)).toBeVisible();
 
-      await page.getByRole('button', { name: /^(more actions|weitere aktionen)$/i }).click();
       await expect(page.getByRole('button', { name: /^(add to plan|einplanen)$/i })).toBeVisible();
       await expect(page.getByRole('link', { name: /^(edit|bearbeiten)$/i })).toHaveCount(0);
       await expect(
         page.getByRole('button', { name: /^(delete recipe|rezept löschen)$/i })
       ).toHaveCount(0);
       await expect(page.getByRole('button', { name: /^(share|teilen)$/i })).toHaveCount(0);
-      await page.keyboard.press('Escape');
 
       await page
         .getByRole('complementary')

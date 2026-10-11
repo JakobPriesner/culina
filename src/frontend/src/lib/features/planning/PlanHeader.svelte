@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button } from '$ds';
+  import { Button, IconButton } from '$ds';
 
   import { m } from '$shell/i18n';
 
@@ -21,12 +21,35 @@
     <p class="range">{range}</p>
   </div>
 
+  <!-- Calendar's order: back, today, forward. "Today" only when away from this week, so it never does nothing. -->
   <div class="weeks">
-    <Button size="sm" onclick={() => onstep(-1)}>← {m['plan.previous']()}</Button>
+    <IconButton bordered label={m['plan.previous']()} onclick={() => onstep(-1)}>
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m15 5-7 7 7 7" />
+      </svg>
+    </IconButton>
     {#if offset !== 0}
-      <Button size="sm" onclick={onreset}>{m['plan.thisWeek']()}</Button>
+      <Button size="sm" onclick={onreset}>{m['plan.today']()}</Button>
     {/if}
-    <Button size="sm" onclick={() => onstep(1)}>{m['plan.next']()} →</Button>
+    <IconButton bordered label={m['plan.next']()} onclick={() => onstep(1)}>
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="m9 5 7 7-7 7" />
+      </svg>
+    </IconButton>
   </div>
 </header>
 
@@ -34,7 +57,7 @@
   .head {
     display: flex;
     flex-wrap: wrap;
-    align-items: baseline;
+    align-items: center;
     justify-content: space-between;
     gap: var(--space-4);
     margin-bottom: var(--space-6);
@@ -52,7 +75,11 @@
 
   .weeks {
     display: flex;
-    flex-wrap: wrap;
+    align-items: center;
     gap: var(--space-2);
+  }
+
+  .weeks :global(.button) {
+    border-radius: var(--radius-full);
   }
 </style>

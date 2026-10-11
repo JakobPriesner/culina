@@ -137,7 +137,7 @@ describe('createRecipeDraft', () => {
     editor.dispose();
   });
 
-  it('says where the work is: here until saved, then saved', async () => {
+  it('says where the work is: saving until sent, then saved', async () => {
     const editor = createRecipeDraft(() => 'recipe-1');
 
     expect(editor.saveState.tone).toBe('idle');
@@ -145,7 +145,7 @@ describe('createRecipeDraft', () => {
     editor.takeLoaded();
     editor.change({ title: 'Paella' });
 
-    expect(editor.saveState.tone).toBe('local');
+    expect(editor.saveState.tone).toBe('saving');
 
     await vi.advanceTimersByTimeAsync(1000);
 

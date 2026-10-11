@@ -148,7 +148,7 @@ test.describe('responsive production layouts @offline', () => {
     await expect(page.locator('#g0-ingredient-0-name')).toBeVisible();
     expect((await page.locator('#g0-ingredient-0-name').boundingBox())!.width).toBeGreaterThan(200);
     await page.goto('/plan');
-    await page.getByRole('button', { name: /^Weiter →$/i }).click();
+    await page.getByRole('button', { name: /^Weiter$/i }).click();
     await expectReflow(page);
     await page
       .getByRole('button', { name: /Hinzufügen/i })
@@ -208,7 +208,7 @@ test.describe('responsive production layouts @offline', () => {
       await responsiveData(page);
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.goto('/plan');
-      await page.getByRole('button', { name: /^Weiter →$/i }).click();
+      await page.getByRole('button', { name: /^Weiter$/i }).click();
       await page
         .getByRole('button', { name: /Hinzufügen/i })
         .first()

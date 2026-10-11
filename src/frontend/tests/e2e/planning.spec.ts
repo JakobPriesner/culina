@@ -125,7 +125,6 @@ test.describe('planning a week', () => {
     });
 
     await page.goto(`/recipes/${recipeId}?yield=5`);
-    await page.getByRole('button', { name: /more actions|weitere aktionen/i }).click();
     await page.getByRole('button', { name: /add to plan|einplanen/i }).click();
 
     const sheet = page.getByRole('dialog', { name: new RegExp(plannedTitle) });

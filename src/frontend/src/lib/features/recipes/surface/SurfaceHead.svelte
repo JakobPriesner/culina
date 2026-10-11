@@ -91,10 +91,11 @@
     font-size: var(--text-xl);
   }
 
+  /* On a phone the title takes the whole line and the actions sit under it as a toolbar; on a photograph they float over the picture instead. */
   @media (width < 52rem) {
     .titleRow {
-      align-items: start;
-      gap: var(--space-2);
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-3);
     }
 
     .title {
