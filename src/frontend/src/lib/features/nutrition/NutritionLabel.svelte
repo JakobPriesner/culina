@@ -2,10 +2,11 @@
   import { VisuallyHidden } from '$ds';
   import { m } from '$shell/i18n';
 
-  import { labelNumber, nbsp, withBound } from './format';
+  import { labelNumber, nbsp } from './format';
   import { columnWords } from './headline';
   import { roundForLabel } from './rounding';
   import type { Nutrient } from './rounding';
+  import EstimateMark from './EstimateMark.svelte';
   import type { Nutrition, NutritionValue } from './types';
 
   /**
@@ -24,20 +25,19 @@
   const unknown = (nutrient: Nutrient, value: NutritionValue) =>
     value.atLeast && roundForLabel(nutrient, value.value, true).value === 0;
 
-  const grams = (nutrient: Nutrient, value: NutritionValue) =>
-    withBound(`${labelNumber(nutrient, value)}${nbsp}g`, value.atLeast);
-
-  const energy = $derived(
-    withBound(
-      `${labelNumber('energy', values.energyKj)}${nbsp}kJ / ${labelNumber('energy', values.energyKcal)}${nbsp}kcal`,
-      values.energyKj.atLeast || values.energyKcal.atLeast
-    )
-  );
+  // The bound comes first and the estimate mark after it, so a value reads "mind. ≈ 9,2 g": at least about this much.
+  const energy = $derived({
+    text: `${labelNumber('energy', values.energyKj)}${nbsp}kJ / ${labelNumber('energy', values.energyKcal)}${nbsp}kcal`,
+    atLeast: values.energyKj.atLeast || values.energyKcal.atLeast,
+    estimated: values.energyKcal.estimated === true || values.energyKj.estimated === true
+  });
 
   const entry = (label: string, nutrient: Nutrient, value: NutritionValue, sub: boolean) => ({
     label,
-    text: grams(nutrient, value),
+    text: `${labelNumber(nutrient, value)}${nbsp}g`,
+    atLeast: value.atLeast,
     unknown: unknown(nutrient, value),
+    estimated: value.estimated === true,
     sub
   });
 
@@ -64,7 +64,11 @@
   <tbody>
     <tr class="energy">
       <th scope="row">{m['nutrition.energy']()}</th>
-      <td class="value">{energy}</td>
+      <td class="value"
+        >{#if energy.atLeast}{m['nutrition.atLeast']()}{nbsp}{/if}<EstimateMark
+          estimated={energy.estimated}
+        />{energy.text}</td
+      >
     </tr>
 
     {#each rows as row (row.label)}
@@ -76,7 +80,9 @@
               >{m['nutrition.notKnown']()}</VisuallyHidden
             >
           {:else}
-            {row.text}
+            {#if row.atLeast}{m['nutrition.atLeast']()}{nbsp}{/if}<EstimateMark
+              estimated={row.estimated}
+            />{row.text}
           {/if}
         </td>
       </tr>

@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/svelte';
+import { screen, waitFor, within } from '@testing-library/svelte';
 import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -45,15 +45,18 @@ const respond = (items: unknown[] = butters) =>
     ))
   );
 
-function show(line: NutritionLine = counted) {
+function show(line: NutritionLine = counted, extra: Record<string, unknown> = {}) {
   const handlers = {
     onchoose: vi.fn(),
     onexclude: vi.fn(),
     onreset: vi.fn(),
+    onweigh: vi.fn(),
     onclose: vi.fn()
   };
 
-  renderWithProviders(NutritionCorrectionSheet, { props: { name: 'Butter', line, ...handlers } });
+  renderWithProviders(NutritionCorrectionSheet, {
+    props: { name: 'Butter', line, ...handlers, ...extra }
+  });
 
   return handlers;
 }
@@ -197,5 +200,191 @@ describe('the correction sheet', () => {
       )
     );
     expect(screen.getAllByRole('button', { name: /Don't count this/ })).toHaveLength(1);
+  });
+});
+
+const milk: NutritionLine = {
+  ...counted,
+  food: {
+    code: 'H1',
+    nameDe: 'Vollmilch, 3,5 % Fett',
+    nameEn: 'Whole milk, 3.5 % fat',
+    labelDe: 'Vollmilch 3,5 %',
+    labelEn: 'whole milk 3.5 %'
+  },
+  variants: [
+    { code: 'H1', labelDe: 'Vollmilch 3,5 %', labelEn: 'whole milk 3.5 %', energyKcal: 65 },
+    { code: 'H2', labelDe: 'fettarme Milch 1,5 %', labelEn: 'low-fat milk 1.5 %', energyKcal: 47 },
+    { code: 'H3', labelDe: 'Milch ohne Zahl', labelEn: 'milk without number', energyKcal: null }
+  ]
+};
+
+describe('the kinds of a food', () => {
+  it('lists them in one tap with the current one ticked and the energy as quiet text', async () => {
+    respond();
+    show(milk);
+
+    const list = await screen.findByRole('list', { name: 'Kind' });
+    const current = within(list).getByRole('button', { name: /whole milk 3\.5 %/ });
+
+    expect(current).toHaveAttribute('aria-current', 'true');
+    expect(
+      within(list).getByRole('button', { name: /low-fat milk 1\.5 %\s*47 kcal per 100 g/ })
+    ).not.toHaveAttribute('aria-current');
+    expect(within(list).getByRole('button', { name: 'milk without number' })).toBeInTheDocument();
+    // The food on show is not also a second "counts as" entry.
+    expect(screen.queryByRole('list', { name: 'Counts as' })).not.toBeInTheDocument();
+  });
+
+  it('chooses one by its code, and the search below is for everything else', async () => {
+    respond();
+
+    const { onchoose } = show(milk);
+
+    await userEvent.click(await screen.findByRole('button', { name: /low-fat milk 1\.5 %/ }));
+
+    expect(onchoose).toHaveBeenCalledWith(expect.objectContaining({ code: 'H2' }));
+    expect(screen.getByRole('searchbox', { name: 'Search other foods' })).toBeInTheDocument();
+  });
+
+  it('speaks German', async () => {
+    preferences.setLocale('de');
+    respond();
+    show(milk);
+
+    const list = await screen.findByRole('list', { name: 'Sorte' });
+
+    expect(within(list).getByRole('button', { name: /fettarme Milch 1,5 %/ })).toBeInTheDocument();
+  });
+
+  it('looks as it did before for a food with no kinds', async () => {
+    respond();
+    show();
+
+    await screen.findByRole('button', { name: /Butter\s*Default/ });
+    expect(screen.queryByRole('list', { name: 'Kind' })).not.toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Search foods' })).toBeInTheDocument();
+  });
+});
+
+describe('the weight of one unit', () => {
+  const onion: NutritionLine = {
+    ...counted,
+    status: 'amountNotInGrams',
+    reason: 'count',
+    grams: null,
+    via: null,
+    energyKcal: null,
+    unitKey: 'piece'
+  };
+
+  const weigh = (line: NutritionLine, extra: Record<string, unknown> = {}) => {
+    respond();
+
+    return show(line, { unit: 'piece', ...extra });
+  };
+
+  it('asks what one unit weighs, says it holds for every recipe, and starts empty', async () => {
+    weigh(onion);
+
+    expect(
+      await screen.findByRole('heading', { name: 'How much does 1 piece of “Butter” weigh?' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Applies to all your recipes with “Butter” in piece.')
+    ).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Weight in grams' })).toHaveValue('');
+    expect(screen.queryByRole('button', { name: 'Remove weight' })).not.toBeInTheDocument();
+  });
+
+  it('starts from the typical weight and says where it comes from', async () => {
+    weigh(
+      {
+        ...onion,
+        status: 'counted',
+        via: 'typicalWeight',
+        grams: 110,
+        source: 'USDA FoodData Central'
+      },
+      { perUnit: 110 }
+    );
+
+    expect(await screen.findByRole('textbox', { name: 'Weight in grams' })).toHaveValue('110');
+    expect(screen.getByText('typical 110 g · USDA FoodData Central')).toBeInTheDocument();
+  });
+
+  it('starts from the household weight and offers to take it back', async () => {
+    const { onweigh } = weigh(
+      { ...onion, status: 'counted', via: 'householdWeight', grams: 150 },
+      { perUnit: 150 }
+    );
+
+    expect(await screen.findByRole('textbox', { name: 'Weight in grams' })).toHaveValue('150');
+    expect(screen.queryByText(/^typical/)).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove weight' }));
+
+    expect(onweigh).toHaveBeenCalledWith(null);
+  });
+
+  it('saves what was typed, with a comma or a point', async () => {
+    const { onweigh } = weigh(onion);
+
+    const field = await screen.findByRole('textbox', { name: 'Weight in grams' });
+
+    await userEvent.type(field, '4,5');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(onweigh).toHaveBeenCalledWith(4.5);
+  });
+
+  it.each(['', '0', '-3', '10001', 'abc'])(
+    'tells %j is no weight, and sends nothing',
+    async (typed) => {
+      const { onweigh } = weigh(onion);
+
+      const field = await screen.findByRole('textbox', { name: 'Weight in grams' });
+
+      if (typed) {
+        await userEvent.type(field, typed);
+      }
+
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Enter a weight above 0 and at most 10,000 grams.'
+      );
+      expect(onweigh).not.toHaveBeenCalled();
+    }
+  );
+
+  it('takes 10,000 g', async () => {
+    const { onweigh } = weigh(onion);
+
+    await userEvent.type(await screen.findByRole('textbox', { name: 'Weight in grams' }), '10000');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(onweigh).toHaveBeenCalledWith(10000);
+  });
+
+  it('is absent for a line counted in grams, and when there is no way to say it', async () => {
+    respond();
+    show({ ...counted, unitKey: null }, { unit: 'piece' });
+
+    await screen.findByRole('button', { name: /Butter\s*Default/ });
+    expect(screen.queryByRole('textbox', { name: 'Weight in grams' })).not.toBeInTheDocument();
+  });
+
+  it('speaks German', async () => {
+    preferences.setLocale('de');
+    respond();
+    show(onion, { unit: 'Zehe', name: 'Knoblauch' });
+
+    expect(
+      await screen.findByRole('heading', { name: 'Wie viel wiegt 1 Zehe „Knoblauch“?' })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Gilt für alle eure Rezepte mit „Knoblauch“ in Zehe.')
+    ).toBeInTheDocument();
   });
 });

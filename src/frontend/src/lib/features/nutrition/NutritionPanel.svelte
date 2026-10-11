@@ -10,7 +10,10 @@
 
   import {
     amountAndName,
+    estimatedNames,
+    estimatedWords,
     implausibleLines,
+    isEstimated,
     isWholeRecipe,
     missingNames,
     perWords,
@@ -20,6 +23,7 @@
   import { roundForLabel } from './rounding';
   import type { NutritionValue } from './types';
   import CalorieInfo from './CalorieInfo.svelte';
+  import EstimateMark from './EstimateMark.svelte';
   import NutritionBreakdown from './NutritionBreakdown.svelte';
   import NutritionLabel from './NutritionLabel.svelte';
   import NutritionSkeleton from './NutritionSkeleton.svelte';
@@ -89,6 +93,14 @@
   const without = $derived(answer ? withoutWords(missingNames(answer, recipe)) : null);
   const wholeRecipe = $derived(answer ? isWholeRecipe(answer) : false);
 
+  /** "partly estimated: onion": which lines were counted by a typical weight, said where the figure is. */
+  const estimate = $derived(
+    answer && isEstimated(answer)
+      ? (estimatedWords(estimatedNames(answer, recipe)) ?? m['nutrition.partlyEstimated']())
+      : null
+  );
+  const detail = $derived([without, estimate].filter(Boolean).join(' · ') || null);
+
   const macros = $derived(
     answer
       ? [
@@ -144,16 +156,22 @@
                     ><VisuallyHidden>{m['nutrition.atLeast']()}{nbsp}</VisuallyHidden></span
                   >
                 {/if}
-                <span class="energyNumber">{labelNumber('energy', answer.values.energyKcal)}</span>
+                <span class="energyNumber"
+                  ><EstimateMark estimated={answer.values.energyKcal.estimated} />{labelNumber(
+                    'energy',
+                    answer.values.energyKcal
+                  )}</span
+                >
                 <span class="energyUnit">kcal</span>
                 <CalorieInfo
                   atLeast={answer.values.energyKcal.atLeast}
                   estimated={answer.values.energyKcal.estimated}
                   basis={perWords(answer)}
-                  detail={without}
+                  {detail}
                 />
               </span>
               <span class="per">{perWords(answer)}</span>
+              {#if estimate}<span class="hint">{estimate}</span>{/if}
               {@render amountHint()}
             </span>
 
@@ -168,16 +186,13 @@
                     {:else}
                       {#if macro.value.atLeast}
                         <span class="macroBound">{m['nutrition.atLeast']()}</span>
-                        <span class="macroNumber"
-                          >{labelNumber('macro', macro.value)}{nbsp}<span class="macroUnit">g</span
-                          ></span
-                        >
-                      {:else}
-                        <span class="macroNumber"
-                          >{labelNumber('macro', macro.value)}{nbsp}<span class="macroUnit">g</span
-                          ></span
-                        >
                       {/if}
+                      <span class="macroNumber"
+                        ><EstimateMark estimated={macro.value.estimated} />{labelNumber(
+                          'macro',
+                          macro.value
+                        )}{nbsp}<span class="macroUnit">g</span></span
+                      >
                     {/if}
                   </span>
                 </span>
@@ -570,7 +585,7 @@
 
     .nutrition :global(.summary) {
       margin-inline: var(--space-6);
-      padding: var(--space-3) 0 var(--space-6);
+      padding: var(--space-3) 0 var(--space-4);
     }
 
     .open {

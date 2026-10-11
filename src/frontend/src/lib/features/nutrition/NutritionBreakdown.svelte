@@ -1,15 +1,18 @@
 <script lang="ts">
   import { tick } from 'svelte';
 
-  import { IconButton } from '$ds';
+  import type { AppError } from '$api';
+  import { IconButton, VisuallyHidden } from '$ds';
   import { explain } from '$shell/explain';
   import { formatNumber, m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
   import { toaster } from '$shell/toaster.svelte';
   import type { Scaling } from '$features/recipes/surface/scaled.svelte';
   import { everyIngredient, type Ingredient, type RecipeReading } from '$features/recipes/types';
+  import { unitLabel } from '$features/recipes/quantityLabels';
 
   import { wholeOrTenth } from './format';
+  import { gramsWords } from './weights';
   import { perWords } from './headline';
   import NutritionCorrectionSheet from './NutritionCorrectionSheet.svelte';
   import { roundForLabel } from './rounding';
@@ -68,6 +71,27 @@
       .filter((row) => row.ingredient.name.trim().toLowerCase() === name.trim().toLowerCase())
       .map((row) => row.ingredient.id);
 
+  /** The word for the unit of a line as the recipe writes it, so the question names what the cook sees ("clove", "tbsp", a household's own word). */
+  const unitWordOf = ({ ingredient, line }: Row) =>
+    line.unitKey ? unitLabel(ingredient.quantity.unit ?? line.unitKey) : null;
+
+  /** What one unit weighs, as far as the line says: its grams at the recipe's own yield over the amount written. */
+  const perUnitOf = ({ ingredient, line }: Row) => {
+    const amount = ingredient.quantity.value;
+
+    return line.grams !== null && amount !== null && amount > 0 ? line.grams / amount : null;
+  };
+
+  /** Moves focus back to the row's button and says how it went: the row may have moved between the groups, which makes its button a new element. */
+  async function finish(label: string, failure: AppError | null, said: () => string) {
+    await tick();
+    const buttons = section?.querySelectorAll<HTMLElement>('button') ?? [];
+
+    [...buttons].find((button) => button.getAttribute('aria-label') === label)?.focus();
+
+    toaster.show(failure ? { message: () => explain(failure), tone: 'danger' } : { message: said });
+  }
+
   /** Applies a correction: the sheet closes, the rows change at once, and a refusal puts them back and says why. */
   async function correct(correction: Correction) {
     const row = editedRow;
@@ -83,16 +107,32 @@
     const { name } = row.ingredient;
     const failure = await store.correct(recipe.id, householdId, name, sameName(name), correction);
 
-    // The row may have moved between the groups, which makes its button a new element.
-    await tick();
-    const buttons = section?.querySelectorAll<HTMLElement>('button') ?? [];
+    await finish(label, failure, () => saidAfter(name, correction));
+  }
 
-    [...buttons].find((button) => button.getAttribute('aria-label') === label)?.focus();
+  /** Says what one unit weighs, or (null) takes it back; it counts for every line of the household with this name in this unit. */
+  async function weigh(grams: number | null) {
+    const row = editedRow;
+    const unit = row ? unitWordOf(row) : null;
 
-    toaster.show(
-      failure
-        ? { message: () => explain(failure), tone: 'danger' }
-        : { message: () => saidAfter(name, correction) }
+    editing = null;
+
+    if (!row || !householdId || !row.line.unitKey || !unit) {
+      return;
+    }
+
+    const label = m['nutrition.change']({ name: row.ingredient.name });
+    const { name } = row.ingredient;
+    const { unitKey } = row.line;
+    const ids = rows
+      .filter((one) => sameName(name).includes(one.ingredient.id) && one.line.unitKey === unitKey)
+      .map((one) => one.ingredient.id);
+    const failure = await store.weigh(recipe.id, householdId, name, unitKey, ids, grams);
+
+    await finish(label, failure, () =>
+      grams === null
+        ? m['nutrition.weight.doneRemoved']({ name, unit })
+        : m['nutrition.weight.done']({ name, unit, grams: gramsWords(grams) })
     );
   }
 
@@ -147,6 +187,10 @@
         return m['nutrition.grams.density']({ grams });
       case 'eggSize':
         return m['nutrition.grams.eggSize']({ grams });
+      case 'typicalWeight':
+        return m['nutrition.grams.typical']({ grams });
+      case 'householdWeight':
+        return m['nutrition.grams.household']({ grams });
       default:
         return null;
     }
@@ -243,6 +287,9 @@
               {detail(line)}
             </span>
             {#if blsName(line)}<span class="bls">{blsName(line)}</span>{/if}
+            {#if line.via === 'typicalWeight' && line.source}
+              <span class="bls">{m['nutrition.weight.source']({ source: line.source })}</span>
+            {/if}
           </div>
 
           <div class="end">
@@ -265,6 +312,11 @@
           <div class="what">
             {@render written(ingredient)}
             <span class="detail">{reason(line)}</span>
+            {#if householdId && line.unitKey}
+              <button type="button" class="weigh" onclick={() => (editing = ingredient.id)}>
+                {m['nutrition.weight.set']()}<VisuallyHidden>{ingredient.name}</VisuallyHidden>
+              </button>
+            {/if}
           </div>
 
           <div class="end">{@render change(ingredient)}</div>
@@ -277,7 +329,10 @@
 <NutritionCorrectionSheet
   name={editedRow?.ingredient.name ?? null}
   line={editedRow?.line ?? null}
+  unit={editedRow ? unitWordOf(editedRow) : null}
+  perUnit={editedRow ? perUnitOf(editedRow) : null}
   onchoose={choose}
+  onweigh={(grams) => void weigh(grams)}
   onexclude={() => void correct({ kind: 'exclude' })}
   onreset={() => void correct({ kind: 'default' })}
   onclose={() => (editing = null)}
@@ -378,6 +433,26 @@
 
   @media print {
     .end :global(button) {
+      display: none;
+    }
+  }
+
+  /* A text button for the one thing a row can still be told, quiet like the rest of the row. */
+  .weigh {
+    align-self: flex-start;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-size: var(--text-sm);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    cursor: pointer;
+  }
+
+  @media print {
+    .weigh {
       display: none;
     }
   }

@@ -810,3 +810,55 @@ works signed out.
 **Imports** keep what a page says it makes: `yieldKind` and `yieldLabel` of the import answer become the
 draft's yield kind and word ("12 Muffins" as pieces) instead of 12 servings.
 
+---
+
+## R. Typical weights, household weights and variants (11 October 2026)
+
+**A decision reversed by request.** §C counted nothing that the recipe did not
+weigh or pour: no onion, no spoonful of flour. On 11 October 2026 Jakob asked for
+defaults a household can set and for basic mappings, inspired by
+[open-tandoor-data](https://github.com/TandoorRecipes/open-tandoor-data), and for
+an easy way to switch a food's kind ("Milch 1,5 % statt 3,5 %"). The design keeps
+§E's honesty by making every estimate visible rather than refusing it.
+
+**Where grams come from now**, in order (`NutritionGrams`): no amount → not
+counted; a mass → exact; **the household's own weight** for that ingredient name
+and unit (`nutrition_unit_weights`; "bei uns wiegt 1 Zwiebel 150 g") → counted as
+the household's value; a volume or spoon of a food that pours → density; eggs by
+count → size M; **a typical weight** for the food and unit, if the household
+allows it → counted as an **estimate**; otherwise the reasons of §Q. Volumes never
+take a household or typical weight, because they have a size of their own.
+
+**Typical weights** (`TypicalWeights`, 101 entries, 13 unit keys in `UnitKeys`)
+carry a citation each: USDA FoodData Central SR Legacy portion rows (CC0) for
+pieces, cloves, slices, leaves and spoons, and pack sizes printed on German packs
+(Päckchen Vanillezucker 8 g, Würfel Frischhefe 42 g, Dose Tomaten 400 g; several
+spot-checked against retail listings). open-tandoor-data's model inspired the
+shape (food + unit → grams with a source per value), but its values were not
+copied: its database is ODbL, share-alike, the question §A avoided, and many of
+its sources are anecdotal. Left out on purpose: a Bund of herbs (varies 2–3×),
+Schalotte and Chilischote (no defensible size), broth cubes (US sizes only).
+"Knoblauchzehen" without a unit count as cloves (the form names the unit); a bare
+"Knoblauch" does not, because it can be a bulb. A can of "Tomaten" counts as
+canned tomatoes (`count_as`).
+
+**Honesty.** A value counted partly by a typical weight carries `estimated`; the
+client shows "≈" before the number (with the word for a screen reader), says
+"teils geschätzt: Zwiebel" beside the headline, and marks the line "≈ 110 g ·
+typisch" with its source. "mind." still means a line was left out; both can apply
+("mind. ≈ 9,2 g"). A household's own weight reads "150 g · euer Wert". Settings →
+Haushalt → Zutaten lists every correction and weight a household has made, and the
+switch "Typische Gewichte verwenden" (on by default) turns estimates off: then only
+weighed, poured and egg lines count, as in §C.
+
+**Measured** on the evaluation fixture: precision unchanged (100 %); with typical
+weights 641 of 970 lines count (467 without), 23 of 125 recipes count completely
+(8 without), and the median recipe counts 69 % of its lines (53 % without).
+
+**Variants.** 82 curated groups (`FoodVariants`) of foods a cook swaps one for
+another: milk fat stages and plant drinks, cream, yoghurt, quark, flour types,
+mince, rice, butter, cheese fat stages and more. Every line carries its food's
+group with kcal per 100 g, and the correction sheet offers them first, as one-tap
+choices; choosing one is the household's food correction (§G). Groups never mix
+foods whose grams are not interchangeable (fresh and dry yeast, dry and canned
+pulses), because a switch keeps the line's grams.
