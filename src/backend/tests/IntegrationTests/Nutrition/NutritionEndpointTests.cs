@@ -112,7 +112,7 @@ public class NutritionEndpointTests(PostgresFixture postgres)
         // Arrange
         var (kitchen, recipeId, _) = await SeededAsync();
         await kitchen.Client.PutAsync(
-            $"/api/v1/households/{kitchen.HouseholdId}/ingredients/Zwiebel",
+            $"/api/v1/households/{kitchen.HouseholdId}/ingredients/Knoblauch",
             new { food = "G488100" },
             Token);
 
@@ -274,7 +274,7 @@ public class NutritionEndpointTests(PostgresFixture postgres)
             kitchen.Client,
             recipeId,
             read.ETag!,
-            [("Mehl", 200m, "g"), ("Olivenöl", 2m, "tbsp"), ("Ei", 2m, null), ("Zwiebel", 1m, null), ("Salz", null, null)]);
+            [("Mehl", 200m, "g"), ("Olivenöl", 2m, "tbsp"), ("Ei", 2m, null), ("Knoblauch", 1m, null), ("Salz", null, null)]);
 
         var saved = await kitchen.Client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
         var lines = saved.Json!.Value.GetProperty("groups")[0].GetProperty("ingredients").EnumerateArray()

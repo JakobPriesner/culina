@@ -28,7 +28,7 @@ namespace Domain.Nutrition;
 public static partial class FoodNames
 {
     /// <summary>The table's version; raise it with any change to an entry or to how a name is matched.</summary>
-    public const int Version = 3;
+    public const int Version = 4;
 
     /// <summary>How many letters the last word of a name may carry past a form and still be that form.</summary>
     private const int Ending = 2;
@@ -116,7 +116,11 @@ public static partial class FoodNames
             {
                 foreach (var form in name.De.Concat(name.En))
                 {
-                    forms.TryAdd(fold(form), name);
+                    var meant = name.UnitForms is { } unit && unit.Forms.Contains(form)
+                        ? name with { ImpliedUnit = unit.UnitKey }
+                        : name;
+
+                    forms.TryAdd(fold(form), meant);
                 }
             }
 
@@ -132,8 +136,9 @@ public static partial class FoodNames
         string labelEn,
         decimal? density = null,
         EggPart egg = EggPart.None,
-        LiquidFood? liquid = null) =>
-        new(code, de, en, density, egg, labelDe, labelEn, liquid);
+        LiquidFood? liquid = null,
+        UnitForms? unitForms = null) =>
+        new(code, de, en, density, egg, labelDe, labelEn, liquid, unitForms);
 
     private static FoodName[] Entries() =>
     [
@@ -466,7 +471,9 @@ public static partial class FoodNames
         // Knoblauch+öl = Knoblauchöl within the 2-letter tolerance (accepted risk)
         Name("G490100", // Knoblauch roh
             ["Knoblauch", "Knoblauchzehe", "Knoblauchzehen"],
-            ["garlic", "garlic clove", "garlic cloves", "clove of garlic", "cloves of garlic"], "Knoblauch", "garlic"),
+            ["garlic", "garlic clove", "garlic cloves", "clove of garlic", "cloves of garlic"], "Knoblauch", "garlic",
+            // a bare "Knoblauch" can be a bulb, so only the forms that say clove make a count a clove
+            unitForms: new UnitForms("clove", ["Knoblauchzehe", "Knoblauchzehen", "garlic clove", "garlic cloves", "clove of garlic", "cloves of garlic"])),
         Name("G470100", // Porree/Lauch, roh
             ["Lauch", "Porree"],
             ["leek", "leeks"], "Lauch", "leek"),

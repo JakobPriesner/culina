@@ -39,7 +39,7 @@ internal static class NutritionMappings
         };
 
     private static Contracts.Recipes.GetNutrition.NutritionValue ToContract(this LabelValue value) =>
-        new() { Value = value.Value, AtLeast = value.AtLeast };
+        new() { Value = value.Value, AtLeast = value.AtLeast, Estimated = value.Estimated };
 
     private static NutritionIngredient ToContract(NutritionLine line) =>
         new()
@@ -62,26 +62,41 @@ internal static class NutritionMappings
                 GramsRefusal.HouseholdUnit => "householdUnit",
                 _ => null
             },
-            Food = line.Food is { } food
-                ? new NutritionFood
-                {
-                    Code = food.Code,
-                    NameDe = food.NameDe,
-                    NameEn = food.NameEn,
-                    LabelDe = line.LabelDe ?? food.NameDe,
-                    LabelEn = line.LabelEn ?? food.NameEn
-                }
-                : null,
+            Food = line.Food?.ToContract(line.LabelDe, line.LabelEn),
             Grams = line.Grams,
             Via = line.Via switch
             {
                 GramsBasis.Mass => "mass",
                 GramsBasis.Density => "density",
                 GramsBasis.EggSize => "eggSize",
+                GramsBasis.HouseholdWeight => "householdWeight",
+                GramsBasis.TypicalWeight => "typicalWeight",
                 _ => null
             },
             Corrected = line.Corrected,
             CanRaiseEnergy = line.CanRaiseEnergy,
-            EnergyKcal = line.EnergyKcal
+            EnergyKcal = line.EnergyKcal,
+            UnitKey = line.UnitKey,
+            Source = line.Source,
+            Variants = line.Variants is { Count: > 0 } variants
+                ? [.. variants.Select(variant => new NutritionVariant
+                {
+                    Code = variant.Code,
+                    LabelDe = variant.LabelDe,
+                    LabelEn = variant.LabelEn,
+                    EnergyKcal = variant.EnergyKcal
+                })]
+                : null
+        };
+
+    /// <summary>A food as the nutrition answer names it; its labels are the BLS names unless the table has better.</summary>
+    internal static NutritionFood ToContract(this Food food, string? labelDe, string? labelEn) =>
+        new()
+        {
+            Code = food.Code,
+            NameDe = food.NameDe,
+            NameEn = food.NameEn,
+            LabelDe = labelDe ?? food.NameDe,
+            LabelEn = labelEn ?? food.NameEn
         };
 }

@@ -63,6 +63,7 @@ public static class DependencyInjection
             .AddHostedService<RecipeIntakeWorker>()
             .AddSingleton<IImageStore, FileSystemImageStore>()
             .AddSingleton<IFoodTable>(BlsFoodTable.Load())
+            .AddScoped<INutritionWeightRepository, NutritionWeightRepository>()
             .AddSingleton(TimeProvider.System);
     }
 
