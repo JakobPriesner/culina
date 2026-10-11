@@ -12,7 +12,8 @@ import {
 
 /**
  * Reports browser errors to the API (not a collector) so the server exports them with the request id and user.
- * A failed report is dropped, never retried or itself reported; repeats go once, and a failing page stops after a few dozen.
+ * A failed report is dropped, never retried or itself reported. A repeat is counted and goes with the next batch as one
+ * record with its count, and a failing page stops reporting new failures after a few dozen an hour.
  */
 
 /** What the server records, and decides the level of. */
@@ -28,6 +29,8 @@ interface LogRecord extends MomentContext {
   readonly message: string;
   readonly stack?: string;
   readonly route?: string;
+  /** How many times it happened since it was last sent; left out when once. */
+  readonly occurrences?: number;
 }
 
 /** The server's own ceilings; anything longer would cost the whole batch. */
@@ -42,7 +45,9 @@ const keepaliveBudget = 64 * 1024;
 /** Long enough that a burst becomes one request, short enough to arrive before the tab closes. */
 const flushDelayMs = 5_000;
 
-const mostPerPage = 50;
+/** Distinct failures per window; a PWA tab stays open for days, so the limit and the memory of what was sent start over. */
+const mostPerWindow = 50;
+const windowMs = 60 * 60_000;
 
 /** What the service worker sends when it fails; see `tell` in service-worker.ts. */
 const workerFailed = 'culina:failed';
@@ -50,15 +55,36 @@ const workerFailed = 'culina:failed';
 let queue: LogRecord[] = [];
 let timer: ReturnType<typeof setTimeout> | undefined;
 let keptAlive = 0;
+let windowStart = Number.NEGATIVE_INFINITY;
 const seen = new Set<string>();
+/** Repeats of what was already sent, counted until the next batch. */
+const repeats = new Map<string, { record: LogRecord; count: number }>();
 const encoder = new TextEncoder();
 
 /** Records one thing that went wrong; takes anything thrown, since a handler cannot choose what reaches it. */
 export function report(event: ReportedEvent, thrown: unknown): void {
   const record = { event, route: currentRoute(), ...describe(thrown), ...describeMoment() };
-  const key = `${record.event} ${record.route} ${record.message}`;
+  const key = keyOf(record);
 
-  if (seen.has(key) || seen.size >= mostPerPage) {
+  if (Date.now() - windowStart >= windowMs) {
+    windowStart = Date.now();
+    seen.clear();
+  }
+
+  if (seen.has(key)) {
+    const waiting = queue.findIndex((one) => keyOf(one) === key);
+
+    if (waiting >= 0) {
+      queue[waiting] = { ...queue[waiting]!, occurrences: (queue[waiting]!.occurrences ?? 1) + 1 };
+    } else {
+      // The latest of them, so its moment (online, visible, page age) is the most recent.
+      repeats.set(key, { record, count: (repeats.get(key)?.count ?? 0) + 1 });
+    }
+
+    return;
+  }
+
+  if (seen.size >= mostPerWindow) {
     return;
   }
 
@@ -72,10 +98,18 @@ export function report(event: ReportedEvent, thrown: unknown): void {
   }
 }
 
+const keyOf = (record: LogRecord): string => `${record.event} ${record.route} ${record.message}`;
+
 /** Sends what is waiting. `keepalive` survives page close but fails silently over its budget, so a batch that does not fit goes as an ordinary request. */
 export function flush(): void {
   clearTimeout(timer);
   timer = undefined;
+
+  for (const { record, count } of repeats.values()) {
+    queue.push({ ...record, occurrences: count });
+  }
+
+  repeats.clear();
 
   const client = describeClient();
 
@@ -176,7 +210,9 @@ export function resetReporting(): void {
   timer = undefined;
   keptAlive = 0;
   queue = [];
+  windowStart = Number.NEGATIVE_INFINITY;
   seen.clear();
+  repeats.clear();
 }
 
 const extensionScheme = /^(?:chrome|moz|safari|safari-web)-extension:/;

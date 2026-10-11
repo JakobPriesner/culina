@@ -2868,6 +2868,12 @@ export interface components {
             /** @description The route as the router names it (`/recipes/[recipeId]`), never with the id. At most 200 characters. */
             route?: string | null;
             /**
+             * Format: int32
+             * @description How many times it happened since it was last reported, this one included; absent means once. The app sends a
+             *     repeat once, with its count, instead of once per time it happened.
+             */
+            occurrences?: number | null;
+            /**
              * Format: date-time
              * @description When it happened, by the device's clock.
              */

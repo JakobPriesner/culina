@@ -15,6 +15,12 @@ public sealed record Record
     /// <summary>The route as the router names it (<c>/recipes/[recipeId]</c>), never with the id. At most 200 characters.</summary>
     public string? Route { get; init; }
 
+    /// <summary>
+    /// How many times it happened since it was last reported, this one included; absent means once. The app sends a
+    /// repeat once, with its count, instead of once per time it happened.
+    /// </summary>
+    public int? Occurrences { get; init; }
+
     /// <summary>When it happened, by the device's clock.</summary>
     public DateTimeOffset? OccurredAt { get; init; }
 

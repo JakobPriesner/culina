@@ -146,6 +146,7 @@ public class LogRecordEndpointTests(PostgresFixture postgres)
                     stack = "at render (http://localhost/_app/immutable/chunks/a.js:1:42)",
                     route = "/(app)/recipes/[recipeId]",
                     occurredAt = "2026-10-02T08:15:00.000Z",
+                    occurrences = 3,
                     pageAge = 1234L,
                     online = true,
                     heapUsed = 12_345_678L
