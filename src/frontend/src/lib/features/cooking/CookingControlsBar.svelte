@@ -24,21 +24,22 @@
     bottom: calc(max(var(--bottom-inset), env(safe-area-inset-bottom, 0px)) + var(--space-4));
     z-index: var(--z-sticky);
     display: grid;
-    /* Wraps whole groups as space allows, including with enlarged text. */
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 25rem), 1fr));
+    /* Wraps whole groups as space allows, including with enlarged text; 22rem holds the place and three 56px tools, so a landscape phone keeps one row. */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
     align-items: center;
     gap: var(--space-3);
     margin-top: var(--space-8);
-    padding: var(--space-3) var(--space-4);
+    padding: var(--space-3);
     border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
+    /* Concentric with the 56px capsules inside: their radius plus the padding around them. */
+    border-radius: calc(var(--control-lg) / 2 + var(--space-3));
     background: var(--surface-overlay);
     box-shadow: var(--shadow-overlay);
   }
 
   .controls :global(.moves) {
     display: grid;
-    grid-template-columns: auto auto minmax(0, 1fr);
+    grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     min-width: 0;
     gap: var(--space-2);
@@ -54,7 +55,8 @@
     .controls {
       gap: var(--space-2);
       margin-top: var(--space-4);
-      padding: var(--space-2) var(--space-3);
+      padding: var(--space-2);
+      border-radius: calc(var(--control-lg) / 2 + var(--space-2));
     }
   }
 </style>
