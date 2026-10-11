@@ -4,12 +4,15 @@
 </script>
 
 <script lang="ts">
-  import AddToCookbookSheet from '$features/cookbooks/AddToCookbookSheet.svelte';
-  import PlanRecipeSheet from '$features/planning/PlanRecipeSheet.svelte';
+  import { untrack } from 'svelte';
+
   import DeleteRecipeDialog from '$features/recipes/DeleteRecipeDialog.svelte';
-  import ShareRecipeSheet from '$features/recipes/ShareRecipeSheet.svelte';
   import type { useRecipeDeletion } from './useRecipeDeletion.svelte';
 
+  /**
+   * Each sheet is downloaded the first time it opens, not with the recipe, which is the heaviest cold load in the app;
+   * once there it stays mounted so it can animate closed and open again at once.
+   */
   interface Props {
     recipeId: string;
     title: string;
@@ -20,6 +23,17 @@
   }
 
   let { recipeId, title, householdId, servings, open = $bindable(), deletion }: Props = $props();
+
+  let opened = $state<readonly RecipeSheet[]>([]);
+
+  $effect.pre(() => {
+    const wanted = open;
+    const known = untrack(() => opened);
+
+    if (wanted && !known.includes(wanted)) {
+      opened = [...known, wanted];
+    }
+  });
 
   const close = () => (open = null);
 </script>
@@ -33,17 +47,29 @@
   onclose={deletion.cancel}
 />
 
-<ShareRecipeSheet open={open === 'share'} {recipeId} {title} onclose={close} />
+{#if opened.includes('share')}
+  {#await import('$features/recipes/ShareRecipeSheet.svelte') then { default: ShareRecipeSheet }}
+    <ShareRecipeSheet open={open === 'share'} {recipeId} {title} onclose={close} />
+  {/await}
+{/if}
 
 {#if householdId}
-  <PlanRecipeSheet
-    open={open === 'plan'}
-    {householdId}
-    {recipeId}
-    {title}
-    {servings}
-    onclose={close}
-  />
+  {#if opened.includes('plan')}
+    {#await import('$features/planning/PlanRecipeSheet.svelte') then { default: PlanRecipeSheet }}
+      <PlanRecipeSheet
+        open={open === 'plan'}
+        {householdId}
+        {recipeId}
+        {title}
+        {servings}
+        onclose={close}
+      />
+    {/await}
+  {/if}
 
-  <AddToCookbookSheet open={open === 'cookbook'} {householdId} {recipeId} onclose={close} />
+  {#if opened.includes('cookbook')}
+    {#await import('$features/cookbooks/AddToCookbookSheet.svelte') then { default: AddToCookbookSheet }}
+      <AddToCookbookSheet open={open === 'cookbook'} {householdId} {recipeId} onclose={close} />
+    {/await}
+  {/if}
 {/if}
