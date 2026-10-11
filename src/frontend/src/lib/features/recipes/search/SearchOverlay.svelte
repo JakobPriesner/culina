@@ -5,6 +5,9 @@
   import { resolve } from '$app/paths';
   import { Button, Sheet } from '$ds';
   import CookbookSheet from '$features/cookbooks/CookbookSheet.svelte';
+  import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
+  import { shopping } from '$features/shopping/stores/shopping.svelte';
+  import { destinations } from '$shell/navigation';
   import { formatList, m } from '$shell/i18n';
 
   import { createRecipeStore } from '../stores/recipes.svelte';
@@ -16,6 +19,7 @@
   import SearchRefine from './SearchRefine.svelte';
   import SearchResultsList from './SearchResultsList.svelte';
   import SearchStart from './SearchStart.svelte';
+  import { matchPlaces, type Place } from './places';
   import { createShelving } from './shelving.svelte';
   import { shelfFrom, shelvable } from './shelf';
   import { createCompletionStore } from './stores/completions.svelte';
@@ -45,11 +49,55 @@
     completions,
     householdId: () => householdId,
     focus: () => field?.focus(),
-    openRecipe: (recipeId, elsewhere) => void go(recipeId, elsewhere)
+    openRecipe: (recipeId, elsewhere) => void go(recipeId, elsewhere),
+    places: (typed) => matchPlaces(typed, everywhere),
+    openPlace: (href) => {
+      onclose();
+      // eslint-disable-next-line svelte/no-navigation-without-resolve -- Every place's href is resolved where it is built.
+      void goto(href);
+    }
   });
+
+  const newRecipe = resolve('/(app)/recipes/new');
+
+  /** Everything besides recipes a word can lead to: the app's pages and doors, this household's cookbooks and list. */
+  const everywhere = $derived<readonly Place[]>([
+    ...destinations.map((destination) => ({
+      key: destination.icon,
+      label: destination.label(),
+      href: destination.href,
+      keywords: placeWords[destination.icon]?.()
+    })),
+    { key: 'new', label: m['editor.new'](), href: newRecipe },
+    { key: 'paste', label: m['import.paste.title'](), href: `${newRecipe}?start=paste` },
+    { key: 'import', label: m['import.source.title'](), href: resolve('/(app)/recipes/import') },
+    ...cookbooks.items.map((cookbook) => ({
+      key: `cookbook-${cookbook.id}`,
+      label: cookbook.name,
+      detail: m['search.place.cookbook'](),
+      href: resolve('/(app)/cookbooks/[cookbookId]', { cookbookId: cookbook.id })
+    })),
+    ...(shopping.householdId === householdId ? shopping.items : [])
+      .filter((item) => !item.isChecked)
+      .map((item) => ({
+        key: `item-${item.itemId}`,
+        label: item.name,
+        detail: m['plan.onList'](),
+        href: resolve('/(app)/shopping')
+      }))
+  ]);
+
+  /** Other words for a page, so "Liste" finds the shopping list and "Plan" the week. */
+  const placeWords: Record<string, () => string[]> = {
+    shopping: () => [m['search.place.list']()],
+    plan: () => [m['search.place.plan']()],
+    settings: () => [m['search.place.settings']()]
+  };
   const shelving = createShelving(() => householdId);
 
   const interpretation = $derived(session.asking ? recipes.interpretation : null);
+
+  const leadsSomewhere = $derived(session.options.some((option) => option.kind === 'place'));
 
   /** This search as the cookbook that would ask the same question; offered only when a shelf could ask any of it, naming what it could not. */
   const shelf = $derived(shelfFrom(interpretation, session.tags));
@@ -58,6 +106,9 @@
   $effect(() => {
     if (open) {
       recent = recentSearches(userId);
+      // What the places can point at; both stores skip a read they already have answered.
+      void cookbooks.list(householdId);
+      void shopping.load(householdId);
       void tick().then(() => field?.focus());
     } else {
       session.reset();
@@ -82,7 +133,14 @@
   }
 </script>
 
-<Sheet {open} title={m['search.title']()} hideTitle closeLabel={m['search.close']()} {onclose}>
+<Sheet
+  {open}
+  title={m['search.title']()}
+  hideTitle
+  anchor="top"
+  closeLabel={m['search.close']()}
+  {onclose}
+>
   <div class="search" data-fills-dialog>
     <div class="field">
       <svg
@@ -147,7 +205,8 @@
       </div>
     {/if}
 
-    {#if session.asking && recipes.status === 'ready'}
+    <!-- "No recipe for 'eink'" says nothing useful when the word named a place to go instead. -->
+    {#if session.asking && recipes.status === 'ready' && !(recipes.total === 0 && leadsSomewhere)}
       <SearchNotice
         {interpretation}
         total={recipes.total}

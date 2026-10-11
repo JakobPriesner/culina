@@ -14,6 +14,8 @@
     footer?: Snippet;
     closeLabel: string;
     hideTitle?: boolean;
+    /** See `Dialog`: `top` keeps a growing panel's top edge still on wide screens. */
+    anchor?: 'centre' | 'top';
     onclose?: () => void;
   }
 

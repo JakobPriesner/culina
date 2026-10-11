@@ -58,6 +58,10 @@ function answer(url: string, reasoned: { code: string; subject: string | null } 
     return json({ items: [] });
   }
 
+  if (url.includes('/meal-plan')) {
+    return json({ from: '2026-10-05', days: [] });
+  }
+
   // Six in the library, the first two on this page: a library this small would not lead with a suggestion.
   return json({
     items: [summary('r1', 'Linsensuppe'), summary('r2', 'Omelette')],
@@ -88,16 +92,18 @@ beforeEach(() => {
 });
 
 describe('opening the library', () => {
-  it('asks each of its three questions exactly once', async () => {
+  it('asks each of its questions exactly once', async () => {
     const fetched = serverAnswers({ code: 'rediscovery', subject: null });
 
     renderWithProviders(LibraryPage);
     await settle();
 
-    // Exactly three calls (list, shortlist, saved searches): every extra one is an effect re-triggering itself.
+    // Exactly five calls (list, shortlist, saved searches, and this week and next for tonight's meal):
+    // every extra one is an effect re-triggering itself.
     const asked = (part: string) => fetched.mock.calls.filter(([r]) => r.url.includes(part)).length;
 
-    expect(fetched).toHaveBeenCalledTimes(3);
+    expect(fetched).toHaveBeenCalledTimes(5);
+    expect(asked('/meal-plan')).toBe(2);
     expect(asked('/suggestions')).toBe(1);
     expect(asked('/searches')).toBe(1);
     expect(asked('/recipes?')).toBe(1);
@@ -196,6 +202,10 @@ describe('opening the library', () => {
 
         if (input.url.includes('/searches')) {
           return Promise.resolve(json({ items: [] }));
+        }
+
+        if (input.url.includes('/meal-plan')) {
+          return Promise.resolve(json({ from: '2026-10-05', days: [] }));
         }
 
         return Promise.resolve(

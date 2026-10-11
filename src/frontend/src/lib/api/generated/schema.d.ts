@@ -2180,6 +2180,12 @@ export interface components {
             /** @description What that recipe is called, so a resume bar needs no second request. */
             recipeTitle: string;
             /**
+             * Format: uuid
+             * @description The household it is cooked in, so a resume bar can say so when another household is on
+             *     screen: a session belongs to the person, not to the household they are looking at.
+             */
+            householdId: string;
+            /**
              * Format: double
              * @description The scaling in force.
              */

@@ -2,6 +2,7 @@
   import { Button } from '$ds';
   import IngredientFields, {
     emptyDraft,
+    fromLine,
     toIngredient,
     type IngredientDraft
   } from '$features/recipes/editor/IngredientFields.svelte';
@@ -21,7 +22,9 @@
 
   /** Adds one line using the recipe editor's ingredient fields, so household units and known names are offered too. */
   async function add() {
-    const line = toIngredient(typed, '');
+    // "500 g Hackfleisch" in the name field is read into its parts, the same way the recipe editor reads it.
+    const draft = fromLine(typed, units.own);
+    const line = toIngredient(draft, '');
 
     // The name is the item; an amount alone is dropped.
     if (!line.name || !householdId) {
@@ -29,7 +32,7 @@
     }
 
     // Remembered on submit, not per keystroke, so partial typing ("S", "Sc") doesn't become a unit.
-    const unit = unitFor(typed.unit);
+    const unit = unitFor(draft.unit);
 
     if (unit) {
       units.remember(unit);

@@ -41,6 +41,12 @@ public sealed record Response
     /// <summary>What that recipe is called, so a resume bar needs no second request.</summary>
     public required string RecipeTitle { get; init; }
 
+    /// <summary>
+    /// The household it is cooked in, so a resume bar can say so when another household is on
+    /// screen: a session belongs to the person, not to the household they are looking at.
+    /// </summary>
+    public required Guid HouseholdId { get; init; }
+
     /// <summary>The scaling in force.</summary>
     public required decimal Servings { get; init; }
 

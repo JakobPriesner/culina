@@ -8746,6 +8746,7 @@
           "sessionId",
           "recipeId",
           "recipeTitle",
+          "householdId",
           "servings",
           "currentStepIndex",
           "startedAt",
@@ -8767,6 +8768,11 @@
           "recipeTitle": {
             "type": "string",
             "description": "What that recipe is called, so a resume bar needs no second request."
+          },
+          "householdId": {
+            "type": "string",
+            "description": "The household it is cooked in, so a resume bar can say so when another household is on\nscreen: a session belongs to the person, not to the household they are looking at.",
+            "format": "uuid"
           },
           "servings": {
             "type": "number",
