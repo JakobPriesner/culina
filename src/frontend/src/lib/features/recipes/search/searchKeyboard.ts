@@ -22,7 +22,9 @@ export function searchKeydown(
 
     if (options.length > 0) {
       const step = event.key === 'ArrowDown' ? 1 : -1;
-      session.highlighted = (session.highlighted + step + options.length) % options.length;
+      // From nothing highlighted, up starts at the last option, as down starts at the first.
+      const from = session.highlighted < 0 && step < 0 ? 0 : session.highlighted;
+      session.highlighted = (from + step + options.length) % options.length;
       document
         .getElementById(`${id}-${options[session.highlighted]!.key}`)
         ?.scrollIntoView({ block: 'nearest' });
