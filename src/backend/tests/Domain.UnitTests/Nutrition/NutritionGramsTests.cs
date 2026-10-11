@@ -262,6 +262,123 @@ public class NutritionGramsTests
         Assert.Equal(GramsRefusal.NoAmount, reading.Refusal);
     }
 
+    private static readonly IReadOnlyDictionary<string, decimal> OnionIs150 =
+        new Dictionary<string, decimal> { ["piece"] = 150m, ["tbsp"] = 9m, ["ml"] = 99m, ["g"] = 99m };
+
+    [Fact]
+    public void Read_ShouldPreferAHouseholdWeight_OverATypicalWeight_ADensityAndEggSize()
+    {
+        // Act
+        var onion = NutritionGrams.Read(Measured(2m, null), Onion, OnionIs150, useTypicalWeights: true);
+        var oil = NutritionGrams.Read(Measured(1m, "tbsp"), Oil, new Dictionary<string, decimal> { ["tbsp"] = 10m }, useTypicalWeights: true);
+        var egg = NutritionGrams.Read(Measured(2m, "Stück"), Egg, new Dictionary<string, decimal> { ["piece"] = 70m });
+
+        // Assert
+        Assert.Equal(300m, onion.Grams);
+        Assert.Equal(GramsBasis.HouseholdWeight, onion.Basis);
+        Assert.Equal(10m, oil.Grams);
+        Assert.Equal(GramsBasis.HouseholdWeight, oil.Basis);
+        Assert.Equal(140m, egg.Grams);
+        Assert.Equal(GramsBasis.HouseholdWeight, egg.Basis);
+    }
+
+    [Theory]
+    [InlineData("g")]
+    [InlineData("kg")]
+    [InlineData("ml")]
+    [InlineData("l")]
+    [InlineData("cup")]
+    [InlineData("fl oz")]
+    public void Read_ShouldNeverUseAHouseholdOrTypicalWeight_ForAMassOrAVolume(string unit)
+    {
+        // Arrange
+        var weights = new Dictionary<string, decimal> { [unit] = 5000m };
+
+        // Act
+        var reading = NutritionGrams.Read(Measured(1m, unit), Onion, weights, useTypicalWeights: true);
+
+        // Assert
+        Assert.NotEqual(GramsBasis.HouseholdWeight, reading.Basis);
+        Assert.NotEqual(GramsBasis.TypicalWeight, reading.Basis);
+    }
+
+    [Fact]
+    public void Read_ShouldKeepTheDensity_ForAVolumeOfAFoodThatPours_EvenWithAHouseholdWeight()
+    {
+        // Act
+        var reading = NutritionGrams.Read(Measured(100m, "ml"), Milk, new Dictionary<string, decimal> { ["ml"] = 1m }, useTypicalWeights: true);
+
+        // Assert
+        Assert.Equal(103.1m, reading.Grams);
+        Assert.Equal(GramsBasis.Density, reading.Basis);
+    }
+
+    [Fact]
+    public void Read_ShouldCountByATypicalWeight_OnlyWhenAllowed_AndCarryItsSource()
+    {
+        // Act
+        var allowed = NutritionGrams.Read(Measured(3m, "Stk."), Onion, useTypicalWeights: true);
+        var refused = NutritionGrams.Read(Measured(3m, "Stk."), Onion);
+
+        // Assert
+        Assert.Equal(330m, allowed.Grams);
+        Assert.Equal(GramsBasis.TypicalWeight, allowed.Basis);
+        Assert.StartsWith("FDC", allowed.Typical!.Source, StringComparison.Ordinal);
+        Assert.Null(refused.Grams);
+        Assert.Equal(GramsRefusal.Count, refused.Refusal);
+    }
+
+    [Fact]
+    public void Read_ShouldPreferDensityAndEggSize_OverATypicalWeight()
+    {
+        // Act
+        var oil = NutritionGrams.Read(Measured(1m, "tbsp"), Oil, useTypicalWeights: true);
+        var egg = NutritionGrams.Read(Measured(1m, null), Egg, useTypicalWeights: true);
+
+        // Assert
+        Assert.Equal(GramsBasis.Density, oil.Basis);
+        Assert.Equal(GramsBasis.EggSize, egg.Basis);
+    }
+
+    [Theory]
+    [InlineData("Päckchen", "pack")]
+    [InlineData("Pck.", "pack")]
+    [InlineData("Packung", "pack")]
+    [InlineData("pack", "pack")]
+    [InlineData("Blatt", "leaf")]
+    [InlineData("leaves", "leaf")]
+    [InlineData("Würfel", "cube")]
+    [InlineData("cube", "cube")]
+    [InlineData("Zehe", "clove")]
+    [InlineData("clove", "clove")]
+    [InlineData("EL", "tbsp")]
+    [InlineData("tbsp", "tbsp")]
+    [InlineData("Stück", "piece")]
+    [InlineData("Stk", "piece")]
+    [InlineData("Stk.", "piece")]
+    [InlineData("piece", "piece")]
+    [InlineData("pcs", "piece")]
+    [InlineData("Handvoll", "handvoll")]
+    public void UnitKeys_ShouldMapEverySpellingToOneKey(string written, string key)
+    {
+        // Act & Assert
+        Assert.Equal(key, UnitKeys.Of(written));
+    }
+
+    [Fact]
+    public void UnitKeys_ShouldCallABareCountAPiece()
+    {
+        // Act & Assert
+        Assert.Equal("piece", UnitKeys.Of((Unit?)null));
+    }
+
+    [Fact]
+    public void UnitKeys_ShouldKeepEveryKeyOfTheTypicalWeightsKnown()
+    {
+        // Act & Assert
+        Assert.All(TypicalWeights.All, row => Assert.Contains(row.UnitKey, UnitKeys.All));
+    }
+
     private static Quantity Measured(decimal amount, string? unit)
     {
         var resolved = unit is null ? null : Unit.Create(unit).Match<Unit?>(one => one, _ => null);

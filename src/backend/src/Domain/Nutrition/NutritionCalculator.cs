@@ -36,6 +36,9 @@ public enum LineStatus
 /// <param name="Refusal">Why the unit is not counted, for <see cref="LineStatus.AmountNotInGrams"/>; otherwise <see cref="GramsRefusal.None"/>.</param>
 /// <param name="LabelDe">What a reader calls the food in German, or the BLS name of a food nobody wrote a label for; null with no food.</param>
 /// <param name="LabelEn">The same in English.</param>
+/// <param name="UnitKey">The canonical unit a household's weight for this line is stored under (see <see cref="UnitKeys"/>); null when the line has no amount, a mass or a volume.</param>
+/// <param name="Source">Where the typical weight comes from, for <see cref="GramsBasis.TypicalWeight"/>; null otherwise.</param>
+/// <param name="Variants">The alternatives to the food, itself included; null when it has none or the line has no food.</param>
 public sealed record NutritionLine(
     Guid IngredientId,
     LineStatus Status,
@@ -46,7 +49,10 @@ public sealed record NutritionLine(
     decimal? EnergyKcal,
     GramsRefusal Refusal = GramsRefusal.None,
     string? LabelDe = null,
-    string? LabelEn = null)
+    string? LabelEn = null,
+    string? UnitKey = null,
+    string? Source = null,
+    IReadOnlyList<FoodVariantEnergy>? Variants = null)
 {
     /// <summary>
     /// Whether this line, left out of the figure, could still add energy to it: it is not counted,
@@ -68,10 +74,18 @@ public sealed record NutritionLine(
     };
 }
 
+/// <summary>One alternative to a line's food, with its energy for comparing.</summary>
+/// <param name="Code">The BLS code.</param>
+/// <param name="LabelDe">What a reader calls it in German.</param>
+/// <param name="LabelEn">What a reader calls it in English.</param>
+/// <param name="EnergyKcal">Kilocalories per 100 g, from the table; null when it has none.</param>
+public sealed record FoodVariantEnergy(string Code, string LabelDe, string LabelEn, decimal? EnergyKcal);
+
 /// <summary>A value of the label, and whether it is only a lower bound.</summary>
 /// <param name="Value">What was summed, unrounded.</param>
 /// <param name="AtLeast">True when something left out could only have added to it.</param>
-public readonly record struct LabelValue(decimal Value, bool AtLeast);
+/// <param name="Estimated">True when a line that adds to it was counted by a typical weight, not by an amount or the household's own weight.</param>
+public readonly record struct LabelValue(decimal Value, bool AtLeast, bool Estimated = false);
 
 /// <summary>The label values of one portion or piece.</summary>
 public sealed record LabelValues(
@@ -129,18 +143,28 @@ public static class NutritionCalculator
     /// This household's choices, keyed by <see cref="ItemName.Fold"/> of the name: a BLS code, or
     /// null for "do not count".
     /// </param>
+    /// <param name="weights">
+    /// What this household says one unit of an ingredient weighs: grams by unit key (<see cref="UnitKeys"/>),
+    /// keyed by <see cref="ItemName.Fold"/> of the name.
+    /// </param>
+    /// <param name="useTypicalWeights">Whether <see cref="TypicalWeights"/> may count a line nothing else counts.</param>
     public static NutritionResult Calculate(
         IEnumerable<RecipeIngredient> ingredients,
         Yield yield,
         Func<string, Food?> findFood,
-        IReadOnlyDictionary<string, string?> corrections)
+        IReadOnlyDictionary<string, string?> corrections,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, decimal>> weights,
+        bool useTypicalWeights)
     {
         ArgumentNullException.ThrowIfNull(ingredients);
         ArgumentNullException.ThrowIfNull(yield);
         ArgumentNullException.ThrowIfNull(findFood);
         ArgumentNullException.ThrowIfNull(corrections);
+        ArgumentNullException.ThrowIfNull(weights);
 
-        var lines = ingredients.Select(line => Read(line, findFood, corrections, yield.Amount)).ToList();
+        var lines = ingredients
+            .Select(line => Read(line, findFood, corrections, weights, useTypicalWeights, yield.Amount))
+            .ToList();
 
         return new NutritionResult(yield.Kind, yield.Amount, Sum(lines, yield.Amount), lines);
     }
@@ -163,12 +187,15 @@ public static class NutritionCalculator
         RecipeIngredient ingredient,
         Func<string, Food?> findFood,
         IReadOnlyDictionary<string, string?> corrections,
+        IReadOnlyDictionary<string, IReadOnlyDictionary<string, decimal>> weights,
+        bool useTypicalWeights,
         decimal yield)
     {
         var uncounted = (LineStatus status, bool corrected) =>
             new NutritionLine(ingredient.Id, status, null, null, GramsBasis.None, corrected, null);
 
-        var corrected = corrections.TryGetValue(ItemName.Fold(ingredient.Name), out var code);
+        var nameKey = ItemName.Fold(ingredient.Name);
+        var corrected = corrections.TryGetValue(nameKey, out var code);
 
         if (corrected && code is null)
         {
@@ -189,13 +216,34 @@ public static class NutritionCalculator
         }
 
         // A food nobody wrote density, egg words or a label for counts by mass only and is named by BLS.
-        name ??= new FoodName(food.Code, [], [], Density: null, EggPart.None, food.NameDe, food.NameEn);
+        name ??= Unnamed(food);
+
+        var reading = NutritionGrams.Read(
+            ingredient.Quantity, name, weights.GetValueOrDefault(nameKey), useTypicalWeights);
+        var unitKey = NutritionGrams.WeighedUnitKey(ingredient.Quantity, name);
+
+        // A can of "Tomaten" is canned tomatoes: the typical weight says which food the line is.
+        if (reading.Typical?.CountAs is { } countedAs && findFood(countedAs) is { } counted)
+        {
+            food = counted;
+            name = FoodNames.All.FirstOrDefault(one => one.Code == countedAs) ?? Unnamed(counted);
+        }
 
         var known = (LineStatus status, decimal? grams, GramsBasis basis, decimal? energy, GramsRefusal refusal) =>
             new NutritionLine(
-                ingredient.Id, status, food, grams, basis, corrected, energy, refusal, name.LabelDe, name.LabelEn);
-
-        var reading = NutritionGrams.Read(ingredient.Quantity, name);
+                ingredient.Id,
+                status,
+                food,
+                grams,
+                basis,
+                corrected,
+                energy,
+                refusal,
+                name.LabelDe,
+                name.LabelEn,
+                unitKey,
+                reading.Typical?.Source,
+                VariantsOf(food, findFood));
 
         if (reading.Grams is not { } grams)
         {
@@ -220,6 +268,19 @@ public static class NutritionCalculator
             GramsRefusal.None);
     }
 
+    private static FoodName Unnamed(Food food) =>
+        new(food.Code, [], [], Density: null, EggPart.None, food.NameDe, food.NameEn);
+
+    private static List<FoodVariantEnergy>? VariantsOf(Food food, Func<string, Food?> findFood)
+    {
+        var group = FoodVariants.For(food.Code);
+
+        return group.Count == 0
+            ? null
+            : [.. group.Select(one => new FoodVariantEnergy(
+                one.Code, one.LabelDe, one.LabelEn, findFood(one.Code)?.Per100Grams.EnergyKcal))];
+    }
+
     private static LabelValues Sum(List<NutritionLine> lines, decimal yield)
     {
         var counted = lines.Where(line => line.Status == LineStatus.Counted).ToList();
@@ -229,12 +290,14 @@ public static class NutritionCalculator
         {
             var total = 0m;
             var missing = nothingToGoOn || lines.Any(line => line.CanRaise(value));
+            var estimated = false;
 
             foreach (var line in counted)
             {
                 if (Share(line.Grams!.Value, value(line.Food!.Per100Grams), yield) is { } share)
                 {
                     total += share;
+                    estimated |= share > 0m && line.Via == GramsBasis.TypicalWeight;
                 }
                 else
                 {
@@ -242,7 +305,7 @@ public static class NutritionCalculator
                 }
             }
 
-            return new LabelValue(total, missing);
+            return new LabelValue(total, missing, estimated);
         }
 
         return new LabelValues(

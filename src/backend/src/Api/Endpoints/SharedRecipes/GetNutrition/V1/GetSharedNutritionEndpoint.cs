@@ -32,8 +32,8 @@ internal sealed class GetSharedNutritionEndpoint : IEndpoint
             .WithSummary("Read a shared recipe's nutrition")
             .WithDescription(
                 "No account needed: the token in the path is the whole of the authorisation. The same "
-                + "figure as a recipe's own nutrition, but with no household corrections, since the "
-                + "reader is in no household. Unrounded, with atLeast on any value that is a lower "
+                + "figure as a recipe's own nutrition, but with no household corrections or weights, since "
+                + "the reader is in no household; typical weights count, as estimates. Unrounded, with atLeast on any value that is a lower "
                 + "bound. The source block must be shown wherever the numbers are (CC BY 4.0).")
             .Produces<Response>()
             .Produces(StatusCodes.Status304NotModified)

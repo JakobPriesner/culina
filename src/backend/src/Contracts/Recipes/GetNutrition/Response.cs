@@ -64,6 +64,12 @@ public sealed record NutritionValue
 
     /// <summary>True when a line left out, or a food without this value, could only have added to it.</summary>
     public required bool AtLeast { get; init; }
+
+    /// <summary>
+    /// True when a line that adds to this value was counted by a typical weight (<c>via</c> is <c>typicalWeight</c>),
+    /// so the figure is partly an estimate. Always sent; a client written before this field may ignore it.
+    /// </summary>
+    public bool Estimated { get; init; }
 }
 
 /// <summary>What became of one ingredient line.</summary>
@@ -87,7 +93,10 @@ public sealed record NutritionIngredient
     /// <summary>The grams counted, unrounded; when the status is <c>implausible</c>, the grams it would have been.</summary>
     public decimal? Grams { get; init; }
 
-    /// <summary>How the grams were reached: <c>mass</c>, <c>density</c> or <c>eggSize</c>; whenever there are grams.</summary>
+    /// <summary>
+    /// How the grams were reached: <c>mass</c>, <c>density</c>, <c>eggSize</c>, <c>householdWeight</c> (the household's own
+    /// weight for the ingredient and unit) or <c>typicalWeight</c> (an estimate, see <c>source</c>); whenever there are grams.
+    /// </summary>
     public string? Via { get; init; }
 
     /// <summary>Whether the household chose the food (or to leave it out) instead of the default.</summary>
@@ -100,6 +109,38 @@ public sealed record NutritionIngredient
     public required bool CanRaiseEnergy { get; init; }
 
     /// <summary>This line's energy per portion, in kilocalories, unrounded; the lines add up to the energy value.</summary>
+    public decimal? EnergyKcal { get; init; }
+
+    /// <summary>
+    /// The canonical unit a household weight for this line is set under (<c>PUT /households/{id}/ingredients/{name}/units/{unit}</c>):
+    /// <c>piece</c>, <c>clove</c>, <c>tbsp</c> and so on, or a household's own word, folded. Absent when the line has no
+    /// amount, a mass or a volume, which have a size of their own.
+    /// </summary>
+    public string? UnitKey { get; init; }
+
+    /// <summary>Where a typical weight comes from, written as a citation; only when <c>via</c> is <c>typicalWeight</c>.</summary>
+    public string? Source { get; init; }
+
+    /// <summary>
+    /// The food's obvious alternatives, the food itself included, in the order they are offered; absent when it has none.
+    /// Choosing one is the household's food correction (<c>PUT /households/{id}/ingredients/{name}</c>).
+    /// </summary>
+    public IReadOnlyList<NutritionVariant>? Variants { get; init; }
+}
+
+/// <summary>One alternative to a line's food.</summary>
+public sealed record NutritionVariant
+{
+    /// <summary>The BLS code, to send as <c>food</c> when it is chosen.</summary>
+    public required string Code { get; init; }
+
+    /// <summary>What a reader calls it in German.</summary>
+    public required string LabelDe { get; init; }
+
+    /// <summary>What a reader calls it in English.</summary>
+    public required string LabelEn { get; init; }
+
+    /// <summary>Kilocalories per 100 g, so the choices can be compared; absent when the table has none.</summary>
     public decimal? EnergyKcal { get; init; }
 }
 
