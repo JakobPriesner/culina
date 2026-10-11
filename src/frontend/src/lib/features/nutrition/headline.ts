@@ -1,7 +1,7 @@
 import { everyIngredient, type Ingredient, type RecipeReading } from '$features/recipes/types';
 import { formatList, formatNumber, m } from '$shell/i18n';
 
-import { labelNumber, withBound } from './format';
+import { labelNumber, withBound, withEstimate } from './format';
 import type { Nutrition, NutritionLine, NutritionReason, NutritionStatus } from './types';
 
 /** A recipe that makes one serving: "per serving" would be the whole pot, so it says so. */
@@ -21,18 +21,28 @@ export function perWords(nutrition: Pick<Nutrition, 'per' | 'yield'>): string {
 export const columnWords = (nutrition: Pick<Nutrition, 'per' | 'yield'>): string =>
   isWholeRecipe(nutrition) ? m['nutrition.perRecipeColumn']() : perWords(nutrition);
 
-/** "520 kcal", or "at least 520 kcal" when something left out could only have added to it. */
-export const energyFigure = (nutrition: Nutrition): string =>
-  withBound(
+/** Whether the energy figure rests partly on typical weights. */
+export const isEstimated = (nutrition: Pick<Nutrition, 'values'>): boolean =>
+  nutrition.values.energyKcal.estimated === true;
+
+/** "520 kcal", or "at least 520 kcal" when something left out could only have added to it; "partly estimated" is said after it, for a reader who cannot see the "≈". */
+export function energyFigure(nutrition: Nutrition): string {
+  const figure = withBound(
     m['nutrition.energyLine']({ kcal: labelNumber('energy', nutrition.values.energyKcal) }),
     nutrition.values.energyKcal.atLeast
   );
+
+  return isEstimated(nutrition) ? `${figure}, ${m['nutrition.partlyEstimated']()}` : figure;
+}
 
 /** The line in the recipe's meta line, short: the figure and what it is for, when it is not a single serving. */
 export function metaFigure(nutrition: Nutrition, qualifier = false): string {
   const figure = qualifier
     ? energyFigure(nutrition)
-    : m['nutrition.energyLine']({ kcal: labelNumber('energy', nutrition.values.energyKcal) });
+    : withEstimate(
+        m['nutrition.energyLine']({ kcal: labelNumber('energy', nutrition.values.energyKcal) }),
+        isEstimated(nutrition)
+      );
 
   return isWholeRecipe(nutrition) ? m['nutrition.meta.whole']({ figure }) : figure;
 }
@@ -64,21 +74,44 @@ export const missingNames = (nutrition: Nutrition, recipe: RecipeReading): strin
         .map(({ ingredient }) => ingredient.name)
     : [];
 
-/** "without onion", "without onion and salt", "without onion, salt and 2 more"; null when nothing is missing. */
-export function withoutWords(names: readonly string[]): string | null {
+/** Names of the lines counted by a typical weight, as the recipe writes them. */
+export const estimatedNames = (nutrition: Nutrition, recipe: RecipeReading): string[] =>
+  writtenLines(nutrition, recipe)
+    .filter(({ line }) => line.status === 'counted' && line.via === 'typicalWeight')
+    .map(({ ingredient }) => ingredient.name);
+
+/** At most two names, then how many more; the one rule every list of lines in a headline follows. */
+function namedWords(
+  names: readonly string[],
+  few: (names: string) => string,
+  many: (names: string, count: string) => string
+): string | null {
   switch (names.length) {
     case 0:
       return null;
     case 1:
     case 2:
-      return m['nutrition.without']({ names: formatList(names) });
+      return few(formatList(names));
     default:
-      return m['nutrition.withoutMore']({
-        names: names.slice(0, 2).join(', '),
-        count: formatNumber(names.length - 2)
-      });
+      return many(names.slice(0, 2).join(', '), formatNumber(names.length - 2));
   }
 }
+
+/** "without onion", "without onion and salt", "without onion, salt and 2 more"; null when nothing is missing. */
+export const withoutWords = (names: readonly string[]): string | null =>
+  namedWords(
+    names,
+    (list) => m['nutrition.without']({ names: list }),
+    (list, count) => m['nutrition.withoutMore']({ names: list, count })
+  );
+
+/** "partly estimated: onion", the same rule; null when no line was counted by a typical weight. */
+export const estimatedWords = (names: readonly string[]): string | null =>
+  namedWords(
+    names,
+    (list) => m['nutrition.estimated']({ names: list }),
+    (list, count) => m['nutrition.estimatedMore']({ names: list, count })
+  );
 
 /** The lines whose amount is too unlikely to count, in the recipe's order. */
 export const implausibleLines = (nutrition: Nutrition, recipe: RecipeReading) =>

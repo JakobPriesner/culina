@@ -1,6 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { coverageWords, metaFigureOf, missingNames, withoutWords } from './headline';
+import {
+  coverageWords,
+  estimatedNames,
+  estimatedWords,
+  metaFigureOf,
+  missingNames,
+  withoutWords
+} from './headline';
 import type { Nutrition } from './types';
 import { preferences } from '$shell/preferences.svelte';
 
@@ -141,5 +148,62 @@ describe('what counts, for the editor', () => {
       )
     ).toBe('Nährwerte: 1 von 2 Zeilen zählen · salt: keine Menge');
     expect(coverageWords(answer({ counted: 0, lines: 0 }), recipe)).toBeNull();
+  });
+});
+
+describe('estimates', () => {
+  const recipe = {
+    groups: [
+      {
+        ingredients: ['butter', 'onion', 'salt'].map((name) => ({ id: name, name }))
+      }
+    ]
+  } as never;
+
+  const line = (ingredientId: string, status: string, via: string | null) =>
+    ({ ingredientId, status, via, canRaiseEnergy: false }) as never;
+
+  it('marks the meta figure with a sign, and says it for a screen reader after the figure', () => {
+    const rough = answer({
+      values: { energyKcal: { value: 520.4, atLeast: false, estimated: true } } as never
+    });
+
+    expect(plain(metaFigureOf(rough))).toBe('≈ 520 kcal');
+    expect(plain(metaFigureOf(rough, true))).toBe('520 kcal, partly estimated');
+    expect(
+      plain(
+        metaFigureOf(
+          answer({
+            values: { energyKcal: { value: 520.9, atLeast: true, estimated: true } } as never
+          }),
+          true
+        )
+      )
+    ).toBe('at least 520 kcal, partly estimated');
+  });
+
+  it('names the lines counted by a typical weight, in the recipe order, and not the others', () => {
+    const rough = answer({
+      ingredients: [
+        line('butter', 'counted', 'householdWeight'),
+        line('onion', 'counted', 'typicalWeight'),
+        line('salt', 'counted', 'typicalWeight')
+      ] as never
+    });
+
+    expect(estimatedNames(rough, recipe)).toEqual(['onion', 'salt']);
+  });
+
+  it('words them by the same rule as what is missing', () => {
+    expect(estimatedWords([])).toBeNull();
+    expect(estimatedWords(['onion'])).toBe('partly estimated: onion');
+    expect(estimatedWords(['onion', 'salt'])).toBe('partly estimated: onion and salt');
+    expect(estimatedWords(['a', 'b', 'c', 'd'])).toBe('partly estimated: a, b and 2 more');
+
+    preferences.setLocale('de');
+
+    expect(estimatedWords(['Zwiebel', 'Salz', 'Öl'])).toBe(
+      'teils geschätzt: Zwiebel, Salz und 1 weitere'
+    );
   });
 });

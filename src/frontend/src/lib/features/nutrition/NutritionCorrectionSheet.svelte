@@ -9,24 +9,43 @@
   import { roundForLabel } from './rounding';
   import { searchFoods } from './stores/foods';
   import type { FoodHit, NutritionFood, NutritionLine } from './types';
+  import UnitWeightForm from './UnitWeightForm.svelte';
+  import { gramsWords } from './weights';
 
   /**
    * What an ingredient name really is, answered in one tap, like the shopping list's "move to section":
-   * the current choice first with a checkmark, then a search of the table. It says plainly that the answer
-   * holds for every recipe of the household, and nothing in it blocks the page: a search that fails only says so.
+   * the food's usual kinds first (the current one ticked), what one unit of it weighs when the recipe counts
+   * in units, then a search of the table. It says plainly that the answer holds for every recipe of the
+   * household, and nothing in it blocks the page: a search that fails only says so.
    */
   interface Props {
     /** The ingredient as written; null while the sheet is shut. */
     name: string | null;
     /** What the line is now: its food, and whether the household chose it. */
     line: NutritionLine | null;
+    /** The recipe's own word for the unit of the line ("clove", "tbsp"); null when it has none to weigh. */
+    unit?: string | null;
+    /** What one unit weighs on this line now, as far as the line says. */
+    perUnit?: number | null;
     onchoose: (food: FoodHit) => void;
     onexclude: () => void;
     onreset: () => void;
+    /** Says what one unit weighs, or (null) forgets what the household said. */
+    onweigh?: (grams: number | null) => void;
     onclose: () => void;
   }
 
-  let { name, line, onchoose, onexclude, onreset, onclose }: Props = $props();
+  let {
+    name,
+    line,
+    unit = null,
+    perUnit = null,
+    onchoose,
+    onexclude,
+    onreset,
+    onweigh,
+    onclose
+  }: Props = $props();
 
   const delayMs = 250;
 
@@ -97,6 +116,31 @@
   const excluded = $derived(line?.status === 'excluded');
   const current = $derived(line?.food ?? null);
   const corrected = $derived(line?.corrected ?? false);
+  const variants = $derived(line?.variants ?? []);
+  const variantIsCurrent = $derived(variants.some((one) => one.code === current?.code));
+
+  const variantLabel = (variant: { labelDe: string; labelEn: string }) =>
+    preferences.locale === 'de' ? variant.labelDe : variant.labelEn;
+
+  const chooseVariant = (variant: (typeof variants)[number]) =>
+    onchoose({
+      code: variant.code,
+      nameDe: variant.labelDe,
+      nameEn: variant.labelEn,
+      energyKcal: variant.energyKcal
+    });
+
+  /** The weight section: only for a line counted in units, with a way to say it. */
+  const weighing = $derived(Boolean(onweigh && unit && line?.unitKey));
+  const householdWeight = $derived(line?.via === 'householdWeight');
+  const typicalWeight = $derived(line?.via === 'typicalWeight');
+  const typicalHint = $derived(
+    typicalWeight && perUnit !== null
+      ? [m['nutrition.weight.typical']({ grams: gramsWords(perUnit) }), line?.source]
+          .filter(Boolean)
+          .join(' · ')
+      : undefined
+  );
 
   /** The food on show above is not offered a second time. */
   const others = $derived(foods.filter((food) => food.code !== current?.code));
@@ -133,7 +177,32 @@
   <div class="body">
     <p class="reach">{m['nutrition.correct.reach']({ name: name ?? '' })}</p>
 
-    {#if current || excluded}
+    {#if variants.length > 0}
+      <h3 class="sectionTitle">{m['nutrition.variants.title']()}</h3>
+      <ul class="foods variantsList" aria-label={m['nutrition.variants.title']()}>
+        {#each variants as variant (variant.code)}
+          {@const here = variant.code === current?.code}
+          <li>
+            <button
+              type="button"
+              class="food"
+              aria-current={here ? 'true' : undefined}
+              onclick={() => (here ? onclose() : chooseVariant(variant))}
+            >
+              {@render mark(here)}
+              <span class="words">
+                <span class="name">{variantLabel(variant)}</span>
+                {#if variant.energyKcal !== null}
+                  <span class="quiet">{per100(variant.energyKcal)}</span>
+                {/if}
+              </span>
+            </button>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+
+    {#if (current || excluded) && !variantIsCurrent}
       <h3 class="sectionTitle">{m['nutrition.correct.now']()}</h3>
       <ul class="foods" aria-label={m['nutrition.correct.now']()}>
         <li>
@@ -156,11 +225,36 @@
       </ul>
     {/if}
 
+    {#if weighing && unit && name !== null}
+      <section class="weight" aria-labelledby="nutrition-weight-title">
+        <h3 id="nutrition-weight-title" class="sectionTitle">
+          {m['nutrition.weight.title']({ unit, name })}
+        </h3>
+        <p class="quiet">{m['nutrition.weight.reach']({ unit, name })}</p>
+
+        {#key `${name}:${line?.unitKey}`}
+          <UnitWeightForm
+            label={m['nutrition.weight.field']()}
+            initial={householdWeight || typicalWeight ? perUnit : null}
+            hint={typicalHint}
+            saveLabel={m['nutrition.weight.save']()}
+            removeLabel={householdWeight ? m['nutrition.weight.remove']() : undefined}
+            onsave={(grams) => onweigh?.(grams)}
+            onremove={() => onweigh?.(null)}
+          />
+        {/key}
+      </section>
+    {/if}
+
     <SearchField
       id="nutrition-food-search"
       bind:value={typed}
-      label={m['nutrition.correct.search']()}
-      placeholder={m['nutrition.correct.search']()}
+      label={variants.length > 0
+        ? m['nutrition.correct.searchOther']()
+        : m['nutrition.correct.search']()}
+      placeholder={variants.length > 0
+        ? m['nutrition.correct.searchOther']()
+        : m['nutrition.correct.search']()}
       clearLabel={m['nutrition.correct.clear']()}
       oninput={typing}
     />
@@ -266,7 +360,15 @@
     background: var(--surface-accent-subtle);
   }
 
-  .results .foods > li + li {
+  .weight {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+  }
+
+  .results .foods > li + li,
+  .variantsList > li + li {
     border-top: 1px solid var(--border);
   }
 

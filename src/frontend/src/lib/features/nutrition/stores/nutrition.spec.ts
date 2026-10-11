@@ -291,3 +291,146 @@ describe('an answer this client cannot read', () => {
     expect(nutrition.statusFor('r1', 'h1')).toBe('failed');
   });
 });
+
+describe('a household weight', () => {
+  const line = (ingredientId: string, unitKey: string | null, via: string) => ({
+    ingredientId,
+    status: 'counted',
+    food: { code: 'G1', nameDe: 'Zwiebel', nameEn: 'Onion', labelDe: 'Zwiebel', labelEn: 'Onion' },
+    grams: 110,
+    via,
+    source: via === 'typicalWeight' ? 'USDA FoodData Central' : null,
+    unitKey,
+    corrected: false,
+    canRaiseEnergy: false,
+    energyKcal: 44
+  });
+
+  const withLines = (...lines: unknown[]) => ({ ...answer(700), ingredients: lines });
+
+  it('shows the lines of that unit as the household’s own at once, and tells the server unit and grams', async () => {
+    const calls: { method: string; url: string; body: string }[] = [];
+    let release: (() => void) | undefined;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) => {
+        calls.push({ method: input.method, url: input.url, body: await input.clone().text() });
+
+        if (input.method === 'PUT') {
+          await new Promise<void>((resume) => (release = resume));
+
+          return new Response(null, { status: 204 });
+        }
+
+        return json(
+          withLines(line('a', 'piece', 'typicalWeight'), line('b', 'clove', 'typicalWeight'))
+        );
+      })
+    );
+
+    await nutrition.load('r1', 'h1');
+
+    const done = nutrition.weigh('r1', 'h1', 'Zwiebel / rot', 'piece', ['a'], 150);
+
+    await vi.waitFor(() => expect(release).toBeDefined());
+
+    const [first, other] = nutrition.answerFor('r1', 'h1')!.ingredients;
+
+    expect(first?.via).toBe('householdWeight');
+    expect(first?.source).toBeNull();
+    // Another unit of the same name is not that weight.
+    expect(other?.via).toBe('typicalWeight');
+
+    release?.();
+
+    expect(await done).toBeNull();
+
+    const put = calls.find((call) => call.method === 'PUT')!;
+
+    expect(put.url).toContain('/households/h1/ingredients/Zwiebel%20%2F%20rot/units/piece');
+    expect(JSON.parse(put.body)).toEqual({ grams: 150 });
+    expect(calls.filter((call) => call.method === 'GET')).toHaveLength(2);
+  });
+
+  it('puts the lines back when the server refuses, and hands the failure over', async () => {
+    let release: (() => void) | undefined;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) => {
+        if (input.method === 'PUT') {
+          await new Promise<void>((resume) => (release = resume));
+
+          return new Response(
+            JSON.stringify({ code: 'nutrition.invalid_grams', title: 'x', status: 400 }),
+            { status: 400, headers: { 'Content-Type': 'application/problem+json' } }
+          );
+        }
+
+        return json(withLines(line('a', 'piece', 'typicalWeight')));
+      })
+    );
+
+    await nutrition.load('r1', 'h1');
+
+    const done = nutrition.weigh('r1', 'h1', 'Zwiebel', 'piece', ['a'], 150);
+
+    await vi.waitFor(() => expect(release).toBeDefined());
+    expect(nutrition.answerFor('r1', 'h1')?.ingredients[0]?.via).toBe('householdWeight');
+
+    release?.();
+
+    expect(await done).not.toBeNull();
+    expect(nutrition.answerFor('r1', 'h1')?.ingredients[0]?.via).toBe('typicalWeight');
+  });
+
+  it('forgets a weight with a DELETE, and reads the answer again', async () => {
+    const calls: { method: string; url: string }[] = [];
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) => {
+        calls.push({ method: input.method, url: input.url });
+
+        return input.method === 'DELETE'
+          ? new Response(null, { status: 204 })
+          : json(withLines(line('a', 'piece', 'householdWeight')));
+      })
+    );
+
+    await nutrition.load('r1', 'h1');
+
+    expect(await nutrition.weigh('r1', 'h1', 'Zwiebel', 'piece', ['a'], null)).toBeNull();
+
+    expect(calls.find((call) => call.method === 'DELETE')?.url).toContain(
+      '/households/h1/ingredients/Zwiebel/units/piece'
+    );
+    expect(calls.filter((call) => call.method === 'GET')).toHaveLength(2);
+  });
+
+  it('reads what a typical weight and its source and the kinds of a food are', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          json(
+            withLines({
+              ...line('a', 'piece', 'typicalWeight'),
+              variants: [{ code: 'H2', labelDe: 'a', labelEn: 'b' }]
+            })
+          )
+        )
+      )
+    );
+
+    await nutrition.load('r1', 'h1');
+
+    const read = nutrition.answerFor('r1', 'h1')!.ingredients[0]!;
+
+    expect(read.via).toBe('typicalWeight');
+    expect(read.source).toBe('USDA FoodData Central');
+    expect(read.unitKey).toBe('piece');
+    expect(read.variants).toEqual([{ code: 'H2', labelDe: 'a', labelEn: 'b', energyKcal: null }]);
+  });
+});

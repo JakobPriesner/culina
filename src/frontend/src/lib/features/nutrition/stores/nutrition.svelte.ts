@@ -87,12 +87,68 @@ class NutritionStore {
    * server is told; when it refuses, the rows go back to what they were. On success the answer is read
    * again, since its totals are the server's to give (its ETag changed with the correction).
    */
-  async correct(
+  correct(
     recipeId: string,
     householdId: string,
     name: string,
     ingredientIds: readonly string[],
     correction: Correction
+  ): Promise<AppError | null> {
+    const path = { householdId, name };
+
+    return this.#change(
+      recipeId,
+      householdId,
+      ingredientIds,
+      (line) => corrected(line, correction),
+      () =>
+        correction.kind === 'default'
+          ? http.DELETE('/api/v1/households/{householdId}/ingredients/{name}', { params: { path } })
+          : http.PUT('/api/v1/households/{householdId}/ingredients/{name}', {
+              params: { path },
+              body: { food: correction.kind === 'food' ? correction.food.code : null }
+            })
+    );
+  }
+
+  /**
+   * Says what one unit of an ingredient weighs in the household, or (null) forgets it, for every recipe that
+   * uses the name in that unit. The lines in that unit show the household's own weight at once; their grams and
+   * energy are the server's to work out, so they follow the next reading.
+   */
+  weigh(
+    recipeId: string,
+    householdId: string,
+    name: string,
+    unit: string,
+    ingredientIds: readonly string[],
+    grams: number | null
+  ): Promise<AppError | null> {
+    const path = { householdId, name, unit };
+
+    return this.#change(
+      recipeId,
+      householdId,
+      ingredientIds,
+      (line) => (grams === null ? line : { ...line, via: 'householdWeight', source: null }),
+      () =>
+        grams === null
+          ? http.DELETE('/api/v1/households/{householdId}/ingredients/{name}/units/{unit}', {
+              params: { path }
+            })
+          : http.PUT('/api/v1/households/{householdId}/ingredients/{name}/units/{unit}', {
+              params: { path },
+              body: { grams }
+            })
+    );
+  }
+
+  async #change(
+    recipeId: string,
+    householdId: string,
+    ingredientIds: readonly string[],
+    change: (line: NutritionLine) => NutritionLine,
+    send: Parameters<typeof request<unknown>>[0]
   ): Promise<AppError | null> {
     const key = keyOf(recipeId, householdId);
     const snapshot = this.#answer;
@@ -101,20 +157,12 @@ class NutritionStore {
       this.#answer = {
         ...snapshot,
         ingredients: snapshot.ingredients.map((line) =>
-          ingredientIds.includes(line.ingredientId) ? corrected(line, correction) : line
+          ingredientIds.includes(line.ingredientId) ? change(line) : line
         )
       };
     }
 
-    const path = { householdId, name };
-    const result = await request(() =>
-      correction.kind === 'default'
-        ? http.DELETE('/api/v1/households/{householdId}/ingredients/{name}', { params: { path } })
-        : http.PUT('/api/v1/households/{householdId}/ingredients/{name}', {
-            params: { path },
-            body: { food: correction.kind === 'food' ? correction.food.code : null }
-          })
-    );
+    const result = await request(send);
 
     if (!result.ok) {
       if (this.#key === key) {

@@ -4,6 +4,7 @@
   import { m } from '$shell/i18n';
 
   import CalorieInfo from './CalorieInfo.svelte';
+  import EstimateMark from './EstimateMark.svelte';
   import { labelNumber, nbsp } from './format';
   import { perWords } from './headline';
 
@@ -21,7 +22,10 @@
     <span>
       {#if recipe.calories.atLeast}<VisuallyHidden>{m['nutrition.atLeast']()}{nbsp}</VisuallyHidden
         >{/if}
-      {labelNumber('energy', recipe.calories)}{nbsp}kcal
+      <EstimateMark estimated={recipe.calories.estimated} />{labelNumber(
+        'energy',
+        recipe.calories
+      )}{nbsp}kcal
     </span>
     <CalorieInfo atLeast={recipe.calories.atLeast} estimated={recipe.calories.estimated} {basis} />
   </span>

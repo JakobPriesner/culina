@@ -11481,7 +11481,9 @@
             "enum": [
               "mass",
               "density",
-              "eggSize"
+              "eggSize",
+              "householdWeight",
+              "typicalWeight"
             ],
             "type": "string",
             "description": "How the grams were reached: `mass`, `density`, `eggSize`, `householdWeight` (the household's own\nweight for the ingredient and unit) or `typicalWeight` (an estimate, see `source`); whenever there are grams.",

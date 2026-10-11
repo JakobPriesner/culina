@@ -35,7 +35,7 @@ public static class RecipeVocabulary
         ["spoonOfSolid", "volumeOfSolid", "count", "householdUnit"];
 
     /// <summary>How the grams of a counted line were reached.</summary>
-    public static readonly IReadOnlyList<string> NutritionGramsBases = ["mass", "density", "eggSize"];
+    public static readonly IReadOnlyList<string> NutritionGramsBases = ["mass", "density", "eggSize", "householdWeight", "typicalWeight"];
 
     /// <summary>The two kinds of piece a step's text is made of.</summary>
     public static readonly IReadOnlyList<string> StepSegmentKinds = ["text", "ingredient"];

@@ -33,11 +33,13 @@ you straight back.
 ## What it deliberately does not do
 
 No pantry inventory (nobody maintains one, so it goes stale and poisons
-everything built on it). No calorie estimates (a wrong number is worse than
-none): nutrition is a lookup in the German food composition table, cited on the
-page, and when it cannot count a line it says "at least" and names what it left
-out, rather than guessing what an onion weighs. No social feed, ratings or
-comments — this is your kitchen, not a network.
+everything built on it). No hidden calorie estimates (a wrong number is worse
+than none): nutrition is a lookup in the German food composition table, cited on
+the page. Where a recipe gives no weight, a cited typical weight ("1 Zwiebel ≈
+110 g", USDA) may count it, always marked as an estimate; your household can set
+its own weights or switch typical ones off, and what still cannot be counted
+makes the figure "at least" and is named. No social feed, ratings or comments —
+this is your kitchen, not a network.
 
 ## The assistant
 
