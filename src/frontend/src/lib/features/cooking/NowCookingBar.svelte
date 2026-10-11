@@ -3,21 +3,54 @@
   import { page } from '$app/state';
   import { IconButton } from '$ds';
 
+  import { session as account } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
-  import { kitchenWakeLock } from './kitchen.svelte';
+  import { kitchenTimers, kitchenWakeLock } from './kitchen.svelte';
   import { cooking } from './stores/cooking.svelte';
   import CookingRemoteToggle from './CookingRemoteToggle.svelte';
 
-  /** The way back into what you are cooking, from any page: one line, two actions (resume or end). Hidden on the cooking screen itself. */
+  /**
+   * The way back into what you are cooking, from any page: a small floating pill, like a live activity,
+   * with two actions (resume or end). Hidden on the cooking screen itself, and for a session that was
+   * only opened and left: on its first step, with no timer, started moments ago.
+   */
   const session = $derived(cooking.session);
+
+  /** How long a session on its first step, with no timer, counts as only looked at. */
+  const glance = 2 * 60 * 1000;
 
   const onTheCookingScreen = $derived(
     session ? page.url.pathname === `/recipes/${session.recipeId}/cook` : false
   );
+
+  // Read again on every navigation, which is when a glance turns into cooking worth returning to.
+  const underWay = $derived.by(() => {
+    void page.url.pathname;
+
+    return (
+      session !== null &&
+      (session.currentStepIndex > 0 ||
+        kitchenTimers.timers.length > 0 ||
+        Date.now() - Date.parse(session.startedAt) > glance)
+    );
+  });
+
+  /** A session belongs to the person, so it can be from a household other than the one on screen; then say which. */
+  const elsewhere = $derived(
+    session?.householdId && session.householdId !== account.activeHouseholdId
+      ? (account.households.find((h) => h.householdId === session.householdId) ?? null)
+      : null
+  );
+
+  function resume() {
+    if (elsewhere) {
+      account.selectHousehold(elsewhere.householdId);
+    }
+  }
 </script>
 
-{#if session && !onTheCookingScreen}
-  <aside class="bar" aria-label={m['cooking.nowCooking']({ title: session.recipeTitle })}>
+{#if session && underWay && !onTheCookingScreen}
+  <aside class="pill" aria-label={m['cooking.nowCooking']({ title: session.recipeTitle })}>
     <span
       class="dot"
       class:held={kitchenWakeLock.held}
@@ -31,8 +64,14 @@
       href="{resolve('/(app)/recipes/[recipeId]/cook', {
         recipeId: session.recipeId
       })}?yield={session.servings}"
+      onclick={resume}
     >
-      <span class="title">{m['cooking.nowCooking']({ title: session.recipeTitle })}</span>
+      <span class="title">
+        <span class="recipe">{m['cooking.nowCooking']({ title: session.recipeTitle })}</span>
+        {#if elsewhere}
+          <span class="household">{m['cooking.inHousehold']({ household: elsewhere.name })}</span>
+        {/if}
+      </span>
 
       <span class="resume">{m['cooking.resume']()}</span>
     </a>
@@ -49,15 +88,22 @@
 {/if}
 
 <style>
-  .bar {
+  /* A capsule floating above the bottom bar, not a band across the page: it says what is under way and gets out of the way. */
+  .pill {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
+    gap: var(--space-2);
+    width: fit-content;
+    max-width: min(32rem, calc(100% - var(--layout-gutter) * 2));
     min-height: var(--control-sm);
-    padding-block: var(--space-2);
-    padding-inline: var(--layout-gutter-start) var(--layout-gutter-end);
-    background: var(--surface-accent-subtle);
+    margin: 0 auto var(--space-3);
+    padding: var(--space-1) var(--space-1) var(--space-1) var(--space-4);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-full);
+    background: var(--surface-overlay-glass);
     color: var(--text);
+    box-shadow: var(--shadow-glass);
+    backdrop-filter: blur(16px) saturate(140%);
   }
 
   /* A steady mark, not a pulse: a blinking light in the corner of the eye for twenty minutes is a nuisance. */
@@ -88,16 +134,29 @@
     text-decoration: none;
   }
 
+  /* Only the recipe's name gives way: which household it is in must stay readable. */
   .title {
+    display: flex;
     flex: 1;
+    min-width: 0;
+    font-size: var(--text-sm);
+    white-space: nowrap;
+  }
+
+  .recipe {
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: var(--text-sm);
   }
 
-  /* Weight, not colour: accent text on an accent tint is 3.7:1 in light and 2.9:1 in dark. */
+  /* A flex item drops its leading space, so the gap is drawn here. */
+  .household {
+    flex: none;
+    margin-inline-start: var(--space-1);
+    color: var(--text-muted);
+  }
+
+  /* Weight, not colour: the pill's glass can sit over any part of the page. */
   .resume {
     flex: none;
     font-size: var(--text-sm);

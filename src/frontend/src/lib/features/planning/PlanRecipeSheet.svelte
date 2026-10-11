@@ -1,7 +1,6 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import type { AppError } from '$api';
   import { Button, SegmentedControl, Sheet, Skeleton } from '$ds';
 
   import { explain } from '$shell/explain';
@@ -9,8 +8,9 @@
   import { preferences } from '$shell/preferences.svelte';
   import { toaster } from '$shell/toaster.svelte';
 
-  import { asDate, mealPlan, readWeek, type MealSlot, type PlannedDay } from './mealPlan.svelte';
+  import { asDate, mealPlan, type MealSlot, type PlannedDay } from './mealPlan.svelte';
   import { mealSlots, slotLabel } from './slots';
+  import { upcoming } from './upcoming.svelte';
   import { dayOf, mondayOf } from './weekDates';
 
   /**
@@ -28,56 +28,29 @@
 
   let { open, householdId, recipeId, title, servings, onclose }: Props = $props();
 
-  let days = $state<readonly PlannedDay[]>([]);
-  let failure = $state<AppError | null>(null);
   let date = $state('');
   let slot = $state<MealSlot>('dinner');
   let saving = $state(false);
 
-  /** Plain, not state: which look-ahead is the latest, so an older answer cannot replace a newer one. */
-  let asked = 0;
-
   const today = asDate(new Date());
+  const days = $derived(upcoming.days);
 
   $effect(() => {
     if (!open) {
       return;
     }
 
-    days = [];
-    failure = null;
     date = '';
     slot = 'dinner';
-    void lookAhead(householdId);
+    void upcoming.load(householdId);
   });
 
-  // Reads no state before its first await, so the effect that calls it does not depend on what it writes.
-  async function lookAhead(household: string) {
-    const ask = ++asked;
-    const [thisWeek, nextWeek] = await Promise.all([
-      readWeek(household, mondayOf(0)),
-      readWeek(household, mondayOf(1))
-    ]);
-
-    if (ask !== asked) {
-      return;
+  // Today, or the first day there is, until the person chooses; their answer stays while the plan reloads.
+  $effect(() => {
+    if (open && !days.some((day) => day.date === date)) {
+      date = days[0]?.date ?? '';
     }
-
-    if (!thisWeek.ok) {
-      failure = thisWeek.error;
-
-      return;
-    }
-
-    if (!nextWeek.ok) {
-      failure = nextWeek.error;
-
-      return;
-    }
-
-    days = [...thisWeek.value.days, ...nextWeek.value.days].filter((day) => day.date >= today);
-    date = days[0]?.date ?? '';
-  }
+  });
 
   const longDay = $derived(
     new Intl.DateTimeFormat(preferences.locale, { weekday: 'long', day: 'numeric', month: 'long' })
@@ -102,6 +75,9 @@
     saving = true;
     const ok = await mealPlan.plan(householdId, { date, recipeId, servings, slot });
     saving = false;
+
+    // The recipe page and the library read what is coming up; tell them.
+    void upcoming.load(householdId);
 
     if (!ok) {
       toaster.show({
@@ -135,8 +111,8 @@
   closeLabel={m['plan.recipe.close']()}
   {onclose}
 >
-  {#if failure}
-    <p class="failure">{explain(failure)}</p>
+  {#if upcoming.error && days.length === 0}
+    <p class="failure">{explain(upcoming.error)}</p>
   {:else if days.length === 0}
     <div class="loading" aria-label={m['plan.recipe.loading']()} aria-busy="true">
       <Skeleton width="100%" height="4.5rem" />

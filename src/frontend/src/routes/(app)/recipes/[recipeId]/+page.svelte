@@ -12,6 +12,7 @@
   import DietQuestion from '$features/recipes/DietQuestion.svelte';
   import RecipeBackLink from '$features/recipes/detail/RecipeBackLink.svelte';
   import RecipeSheets, { type RecipeSheet } from '$features/recipes/detail/RecipeSheets.svelte';
+  import RecipeWhereabouts from '$features/recipes/detail/RecipeWhereabouts.svelte';
   import { useDietAnswer } from '$features/recipes/detail/useDietAnswer.svelte';
   import { useRecipeActions } from '$features/recipes/detail/useRecipeActions.svelte';
   import { useRecipeDeletion } from '$features/recipes/detail/useRecipeDeletion.svelte';
@@ -165,7 +166,13 @@
       ontitleview={(visible) => (titleInView = visible)}
       cookbooks={shelves}
       nutrition={nutritionLink}
-    />
+    >
+      {#snippet whereabouts()}
+        {#if session.activeHouseholdId}
+          <RecipeWhereabouts {recipeId} householdId={session.activeHouseholdId} />
+        {/if}
+      {/snippet}
+    </RecipeSurface>
 
     <NutritionPanel
       recipe={recipes.detail}

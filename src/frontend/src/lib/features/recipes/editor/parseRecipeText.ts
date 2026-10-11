@@ -1,3 +1,4 @@
+import { foldText } from '../foldText';
 import type { YieldKind } from '../types';
 
 import { parseIngredientLine, type ParsedIngredient } from './parseIngredientLine';
@@ -49,14 +50,7 @@ const bare = (line: string): string =>
     .replace(/[:：.\s]+$/, '')
     .trim();
 
-const fold = (line: string): string =>
-  bare(line)
-    .toLowerCase()
-    .replaceAll('ä', 'a')
-    .replaceAll('ö', 'o')
-    .replaceAll('ü', 'u')
-    .replaceAll('ß', 'ss')
-    .replace(/['’]/g, '');
+const fold = (line: string): string => foldText(bare(line)).replace(/['’]/g, '');
 
 const headingKind = (line: string): 'ingredients' | 'steps' | null => {
   const key = fold(line);

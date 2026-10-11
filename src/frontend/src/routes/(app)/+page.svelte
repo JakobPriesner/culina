@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Button, EmptyState, ErrorState } from '$ds';
   import { session } from '$features/auth/session.svelte';
+  import TodayMeal from '$features/planning/TodayMeal.svelte';
   import EmptyLibrary from '$features/recipes/library/EmptyLibrary.svelte';
   import { focusSearchOnFind } from '$features/recipes/library/focusSearchOnFind';
   import LibrarySummary from '$features/recipes/library/LibrarySummary.svelte';
@@ -51,6 +52,8 @@
 
 <Page>
   <PageHeader title={m['recipes.title']()} subtitle={m['recipes.collection.subtitle']()} />
+
+  {#if householdId}<TodayMeal {householdId} />{/if}
 
   <LibraryToolbar
     id={searchId}

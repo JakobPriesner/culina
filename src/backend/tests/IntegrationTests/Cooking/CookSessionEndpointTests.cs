@@ -37,6 +37,12 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
         // The title travels with it, so the resume bar is one request.
         Assert.Equal("Lemon orzo", response.Json!.Value.GetProperty("recipeTitle").GetString());
         Assert.Equal(0, response.Json!.Value.GetProperty("currentStepIndex").GetInt32());
+
+        // And the household it is cooked in, so a bar seen from another household can say so.
+        var recipe = await client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
+        Assert.Equal(
+            recipe.Json!.Value.GetProperty("householdId").GetGuid(),
+            response.Json!.Value.GetProperty("householdId").GetGuid());
     }
 
     [Fact]

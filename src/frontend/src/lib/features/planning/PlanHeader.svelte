@@ -3,6 +3,8 @@
 
   import { m } from '$shell/i18n';
 
+  import { weekTitle } from './weekDates';
+
   interface Props {
     /** The week on screen, worded. */
     range: string;
@@ -17,7 +19,7 @@
 
 <header class="head">
   <div class="heading">
-    <h1 class="title">{m['plan.title']()}</h1>
+    <h1 class="title">{weekTitle(offset)}</h1>
     <p class="range">{range}</p>
   </div>
 

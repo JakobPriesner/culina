@@ -1,6 +1,7 @@
 <script lang="ts" module>
   import { unitFor, unitLabel } from '../quantityLabels';
   import type { Ingredient } from '../types';
+  import { parseIngredientLine } from './parseIngredientLine';
 
   /**
    * An ingredient while being typed; the amount stays a string so half-typed values like "1,"
@@ -26,6 +27,33 @@
     const value = Number(written.replace(',', '.'));
 
     return written.trim() && Number.isFinite(value) && value > 0 ? value : null;
+  };
+
+  /**
+   * A whole line typed into the name field ("200 g Mehl, gesiebt") is read into its parts, as people
+   * write it; only when amount and unit were left empty, so parts typed separately always win, and only
+   * when the line starts with an amount, so "Salz, eine Prise" stays a name. `own` is the household's units.
+   */
+  export const fromLine = (
+    draft: IngredientDraft,
+    own: readonly string[] = []
+  ): IngredientDraft => {
+    if (draft.amount.trim() || draft.unit.trim()) {
+      return draft;
+    }
+
+    const parsed = parseIngredientLine(draft.name, own);
+
+    if (parsed.quantity.value === null) {
+      return draft;
+    }
+
+    return {
+      amount: String(parsed.quantity.value),
+      unit: parsed.quantity.unit ? unitLabel(parsed.quantity.unit) : '',
+      name: parsed.name,
+      note: draft.note.trim() || parsed.note || ''
+    };
   };
 
   export const toIngredient = (draft: IngredientDraft, id: string): Ingredient => ({
@@ -80,18 +108,19 @@
 
   const typedUnit = $derived(value.unit.trim().toLowerCase());
 
+  /** How well a unit matches what was typed: itself first, then units starting with it, then the rest. */
+  const rank = (folded: string) =>
+    folded === typedUnit ? 0 : folded.startsWith(typedUnit) ? 1 : 2;
+
   /**
-   * The units on offer, narrowed by what was typed; a unit already written out in full is not
-   * offered back.
+   * The units on offer, narrowed by what was typed. A unit written out in full stays on offer, first:
+   * leaving it out made "g" look invalid while "kg" and "Packung" were suggested.
    */
   const unitOptions = $derived<readonly Suggestion[]>(
     units.all
       .map((one) => unitLabel(one))
-      .filter((word) => {
-        const folded = word.toLowerCase();
-
-        return folded !== typedUnit && (!typedUnit || folded.includes(typedUnit));
-      })
+      .filter((word) => !typedUnit || word.toLowerCase().includes(typedUnit))
+      .sort((a, b) => rank(a.toLowerCase()) - rank(b.toLowerCase()))
       // The word is the value as well as the label; `toIngredient` turns it back into a unit.
       .map((word) => ({ value: word, label: word }))
   );

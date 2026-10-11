@@ -3,12 +3,15 @@
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
 
+  /** Without handlers (somewhere other than the new-recipe page) each door is a link that opens that form there. */
   interface Props {
-    onpaste: () => void;
-    ondescribe: () => void;
+    onpaste?: () => void;
+    ondescribe?: () => void;
   }
 
   let { onpaste, ondescribe }: Props = $props();
+
+  const newRecipe = resolve('/(app)/recipes/new');
 
   /** One stroke path each, drawn on the 24px grid the app's other icons use. */
   const icons = {
@@ -58,9 +61,16 @@
 
   <div class="ways">
     <!-- The whole tile is the control, so there is one label to read. -->
-    <button type="button" class="way" onclick={onpaste}>
-      {@render way(icons.paste, m['import.paste.title'](), m['import.paste.hint']())}
-    </button>
+    {#if onpaste}
+      <button type="button" class="way" onclick={onpaste}>
+        {@render way(icons.paste, m['import.paste.title'](), m['import.paste.hint']())}
+      </button>
+    {:else}
+      <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- The route is resolved; only the form to open is appended. -->
+      <a class="way" href="{newRecipe}?start=paste">
+        {@render way(icons.paste, m['import.paste.title'](), m['import.paste.hint']())}
+      </a>
+    {/if}
 
     <a class="way" href={resolve('/(app)/recipes/import')}>
       {@render way(icons.source, m['import.source.title'](), m['import.source.hint']())}
@@ -68,15 +78,29 @@
 
     <!-- Only where an assistant is connected. -->
     {#if session.user?.assistance.draft}
-      <button type="button" class="way" onclick={ondescribe}>
-        {@render way(icons.idea, m['assist.idea.title'](), m['assist.idea.hint']())}
-      </button>
+      {#if ondescribe}
+        <button type="button" class="way" onclick={ondescribe}>
+          {@render way(icons.idea, m['assist.idea.title'](), m['assist.idea.hint']())}
+        </button>
+      {:else}
+        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- The route is resolved; only the form to open is appended. -->
+        <a class="way" href="{newRecipe}?start=idea">
+          {@render way(icons.idea, m['assist.idea.title'](), m['assist.idea.hint']())}
+        </a>
+      {/if}
     {/if}
 
     {#if session.user?.assistance.read}
-      <button type="button" class="way" onclick={onpaste}>
-        {@render way(icons.photo, m['assist.photo.title'](), m['assist.photo.hint']())}
-      </button>
+      {#if onpaste}
+        <button type="button" class="way" onclick={onpaste}>
+          {@render way(icons.photo, m['assist.photo.title'](), m['assist.photo.hint']())}
+        </button>
+      {:else}
+        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- The route is resolved; only the form to open is appended. -->
+        <a class="way" href="{newRecipe}?start=paste">
+          {@render way(icons.photo, m['assist.photo.title'](), m['assist.photo.hint']())}
+        </a>
+      {/if}
     {/if}
   </div>
 </section>
