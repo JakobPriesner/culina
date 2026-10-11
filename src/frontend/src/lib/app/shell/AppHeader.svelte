@@ -5,6 +5,8 @@
 
   import HouseholdSwitcher from '$features/auth/HouseholdSwitcher.svelte';
   import { session } from '$features/auth/session.svelte';
+  import { libraryView } from '$features/recipes/stores/libraryView.svelte';
+  import { recipes } from '$features/recipes/stores/recipes.svelte';
 
   import { connection } from '../connection.svelte';
   import { m } from '$shell/i18n';
@@ -23,7 +25,12 @@
 
   let { searchable, height = $bindable() }: Props = $props();
 
-  const creating = $derived(offersNewRecipe(page.url.pathname));
+  /** An empty library's own invitation is the one way to create there, so the header does not offer a second, equally loud one. */
+  const emptyLibrary = $derived(
+    recipes.status === 'ready' && recipes.items.length === 0 && !libraryView.filtered
+  );
+
+  const creating = $derived(offersNewRecipe(page.url.pathname) && !emptyLibrary);
 
   /** Lists stay put on a household change; a page for one thing (route with a param) belongs to the old household, so go to the library. */
   function switched() {
@@ -145,11 +152,9 @@
     }
   }
 
-  /* Guided cooking has its own way back; compact screens need the space for the instructions. */
-  @media (width < 64rem) {
-    :global(.shell.focused-cooking) .header {
-      display: none;
-    }
+  /* Guided cooking is a focused mode with its own way back: no navigation, at any width, so nothing pulls the cook away from the step. */
+  :global(.shell.focused-cooking) .header {
+    display: none;
   }
 
   /* A recipe on a phone brings its own sticky bar (back, title) and needs the height for the photo; the bottom bar still navigates. */

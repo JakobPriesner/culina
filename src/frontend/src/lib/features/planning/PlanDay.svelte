@@ -12,6 +12,8 @@
   interface Props {
     day: PlannedDay;
     today: boolean;
+    /** Already over: still editable (people note what they ate), but quieter than the days ahead. */
+    past: boolean;
     householdId: string | null;
     drag: WeekDrag;
     ondrop: OnDrop;
@@ -20,12 +22,19 @@
     onremove: (meal: PlannedMeal) => void;
   }
 
-  let { day, today, householdId, drag, ondrop, onadd, onmove, onremove }: Props = $props();
+  let { day, today, past, householdId, drag, ondrop, onadd, onmove, onremove }: Props = $props();
 
   const landing = $derived(drag.landing?.date === day.date ? drag.landing : null);
 </script>
 
-<li class="day" class:today class:over={landing !== null} data-plan-day={day.date}>
+<li
+  class="day"
+  class:today
+  class:past
+  class:over={landing !== null}
+  aria-current={today ? 'date' : undefined}
+  data-plan-day={day.date}
+>
   <h2 class="name">
     {weekdayName(day.date, preferences.locale)}
     <span class="number">{Number(day.date.slice(-2))}</span>
@@ -76,10 +85,18 @@
     padding: var(--space-3);
     border-radius: var(--radius-md);
     background: var(--surface-sunken);
+    /* Lands clear of the floating header when the week scrolls to today. */
+    scroll-margin-top: var(--header-inset);
   }
 
   .today {
     background: var(--surface-accent-subtle);
+  }
+
+  /* Quieter than the days ahead: no fill, a hairline instead, so the eye starts at today. */
+  .past {
+    background: none;
+    box-shadow: inset 0 0 0 1px var(--border);
   }
 
   /* Outlined (today owns the fill) and inset so columns do not shift by a border width. */
@@ -97,20 +114,41 @@
 
   .name {
     display: flex;
-    align-items: baseline;
+    align-items: center;
     flex-wrap: wrap;
     gap: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+
+  .past .name {
     color: var(--text-subtle);
-    font-size: var(--text-xs);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
   }
 
   .number {
-    color: var(--text-muted);
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    border-radius: var(--radius-full);
+    color: var(--text);
     font-size: var(--text-sm);
     font-variant-numeric: tabular-nums;
-    letter-spacing: normal;
+  }
+
+  .past .number {
+    color: var(--text-subtle);
+  }
+
+  /* Today's date in a filled circle, the way Calendar marks it. */
+  .today .name {
+    color: var(--accent);
+  }
+
+  .today .number {
+    background: var(--accent);
+    color: var(--accent-contrast);
   }
 
   .meals {
@@ -126,6 +164,8 @@
   @media (min-width: 80rem) {
     .name {
       flex-direction: column;
+      align-items: flex-start;
+      gap: var(--space-1);
     }
   }
 </style>

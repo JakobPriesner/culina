@@ -44,7 +44,12 @@ describe('describeSave', () => {
   });
 
   it('never reads Saved for work that only exists on this device', () => {
-    expect(at({ unsent: true, saved: true })).toBe('local');
+    expect(at({ failure: offline, unsent: true, saved: true })).toBe('local');
     expect(at({ recovered: true, saved: true })).toBe('local');
+  });
+
+  it('reads unsent work as saving while online, not as kept on this device', () => {
+    expect(at({ unsent: true })).toBe('saving');
+    expect(at({ unsent: true, saved: true })).toBe('saving');
   });
 });

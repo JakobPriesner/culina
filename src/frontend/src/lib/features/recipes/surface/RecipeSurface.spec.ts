@@ -191,6 +191,13 @@ describe('reading a recipe', () => {
     expect(screen.getByRole('button', { name: 'Add to the shopping list' })).toBeInTheDocument();
   });
 
+  it('puts planning and editing beside the title, the next steps a recipe leads to', () => {
+    render({ editable: true, onaddtoplan: () => {} });
+
+    expect(screen.getByRole('button', { name: 'Add to plan' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Edit' })).toHaveAttribute('href', '/recipes/r1/edit');
+  });
+
   it('keeps the occasional actions in one menu, closed until it is asked for', () => {
     render({
       editable: true,
@@ -207,35 +214,31 @@ describe('reading a recipe', () => {
     const hidden = { hidden: true } as const;
 
     expect(screen.getByRole('button', { name: 'Add to cookbook', ...hidden })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add to plan', ...hidden })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Share', ...hidden })).toBeInTheDocument();
-
-    expect(screen.getByRole('link', { name: 'Edit', ...hidden })).toHaveAttribute(
-      'href',
-      '/recipes/r1/edit'
-    );
   });
 
-  it('offers deleting on the page, last and outside the menu', async () => {
+  it('keeps deleting in the menu, last, apart and in red', async () => {
     const ondelete = vi.fn();
-    render({ editable: true, onaddtoplan: () => {}, ondelete });
+    render({ editable: true, onaddtoplan: () => {}, onshare: () => {}, ondelete });
 
-    const remove = screen.getByRole('button', { name: 'Delete recipe' });
-    const more = screen.getByRole('button', { name: 'More actions' });
+    expect(screen.queryByRole('button', { name: 'Delete recipe' })).not.toBeInTheDocument();
 
+    const remove = screen.getByRole('button', { name: 'Delete recipe', hidden: true });
+
+    expect(remove).toHaveClass('danger');
     expect(remove.parentElement?.lastElementChild).toBe(remove);
-    expect(more.closest('.actions')).toBe(remove.parentElement);
+    expect(remove.previousElementSibling).toHaveClass('separator');
 
     await fireEvent.click(remove);
 
     expect(ondelete).toHaveBeenCalledOnce();
   });
 
-  it('offers deleting even when there is nothing for the menu to hold', () => {
+  it('opens a menu for deleting even when it is the only thing in it', () => {
     render({ ondelete: () => {} });
 
-    expect(screen.getByRole('button', { name: 'Delete recipe' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'More actions' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'More actions' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete recipe', hidden: true })).toBeInTheDocument();
   });
 
   it('offers a copy instead of editing, for a recipe the household only inherits', async () => {

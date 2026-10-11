@@ -1,17 +1,21 @@
 <script lang="ts">
-  import { Button, RadioGroup, Sheet, Skeleton, type RadioOption } from '$ds';
+  import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
+  import type { AppError } from '$api';
+  import { Button, SegmentedControl, Sheet, Skeleton } from '$ds';
 
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
   import { toaster } from '$shell/toaster.svelte';
 
-  import { asDate, mealPlan, type MealSlot } from './mealPlan.svelte';
+  import { asDate, mealPlan, readWeek, type MealSlot, type PlannedDay } from './mealPlan.svelte';
   import { mealSlots, slotLabel } from './slots';
+  import { dayOf, mondayOf } from './weekDates';
 
   /**
-   * Short path from choosing a recipe to the week, reusing the plan page's week and slots;
-   * servings come from the detail page's scaling.
+   * Short path from choosing a recipe to the week: the days from today on (this week and the next,
+   * so a Sunday still has a week ahead), and the meal; servings come from the detail page's scaling.
    */
   interface Props {
     open: boolean;
@@ -24,59 +28,71 @@
 
   let { open, householdId, recipeId, title, servings, onclose }: Props = $props();
 
+  let days = $state<readonly PlannedDay[]>([]);
+  let failure = $state<AppError | null>(null);
   let date = $state('');
   let slot = $state<MealSlot>('dinner');
   let saving = $state(false);
+
+  /** Plain, not state: which look-ahead is the latest, so an older answer cannot replace a newer one. */
+  let asked = 0;
+
+  const today = asDate(new Date());
 
   $effect(() => {
     if (!open) {
       return;
     }
 
+    days = [];
+    failure = null;
     date = '';
     slot = 'dinner';
-    void mealPlan.load(householdId);
+    void lookAhead(householdId);
   });
 
-  // Prefer today when it is in this week, then the first day. Once the person
-  // chooses, keep that answer while the store changes around it.
-  $effect(() => {
-    if (!open || mealPlan.days.length === 0 || mealPlan.days.some((day) => day.date === date)) {
+  // Reads no state before its first await, so the effect that calls it does not depend on what it writes.
+  async function lookAhead(household: string) {
+    const ask = ++asked;
+    const [thisWeek, nextWeek] = await Promise.all([
+      readWeek(household, mondayOf(0)),
+      readWeek(household, mondayOf(1))
+    ]);
+
+    if (ask !== asked) {
       return;
     }
 
-    const today = asDate(new Date());
-    date = mealPlan.days.some((day) => day.date === today) ? today : (mealPlan.days[0]?.date ?? '');
-  });
+    if (!thisWeek.ok) {
+      failure = thisWeek.error;
 
-  const weekdays = $derived(
-    new Intl.DateTimeFormat(preferences.locale, {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long'
-    })
+      return;
+    }
+
+    if (!nextWeek.ok) {
+      failure = nextWeek.error;
+
+      return;
+    }
+
+    days = [...thisWeek.value.days, ...nextWeek.value.days].filter((day) => day.date >= today);
+    date = days[0]?.date ?? '';
+  }
+
+  const longDay = $derived(
+    new Intl.DateTimeFormat(preferences.locale, { weekday: 'long', day: 'numeric', month: 'long' })
   );
+  const shortWeekday = $derived(new Intl.DateTimeFormat(preferences.locale, { weekday: 'short' }));
+  const dayNumber = $derived(new Intl.DateTimeFormat(preferences.locale, { day: 'numeric' }));
 
-  /** Midday keeps a bare date on the date it names in every time zone. */
-  const dayOf = (day: string) => new Date(`${day}T12:00:00`);
+  const plannedOn = (day: PlannedDay) =>
+    day.meals.length > 0
+      ? day.meals.map((meal) => meal.title).join(', ')
+      : m['plan.move.freeDay']();
 
-  const dayOptions = $derived<readonly RadioOption[]>(
-    mealPlan.days.map((day) => ({
-      value: day.date,
-      label: weekdays.format(dayOf(day.date)),
-      description:
-        day.meals.length > 0
-          ? day.meals.map((meal) => meal.title).join(', ')
-          : m['plan.move.freeDay']()
-    }))
-  );
+  const chosen = $derived(days.find((day) => day.date === date));
 
-  const slotOptions = $derived<readonly RadioOption[]>(
-    mealSlots.map((which) => ({
-      value: which,
-      label: slotLabel[which]()
-    }))
-  );
+  const segments = $derived(mealSlots.map((which) => ({ id: which, label: slotLabel[which]() })));
 
   async function confirm() {
     if (!date || saving) {
@@ -96,9 +112,18 @@
       return;
     }
 
+    const day = longDay.format(dayOf(date));
+    // The week page opens on this week; a day in the next one needs saying.
+    const weekOf = date >= mondayOf(1) ? '?week=1' : '';
+
     toaster.show({
-      message: () => m['plan.recipe.done']({ day: weekdays.format(dayOf(date)) }),
-      tone: 'success'
+      message: () => m['plan.recipe.done']({ day }),
+      tone: 'success',
+      action: {
+        label: () => m['plan.recipe.showWeek'](),
+        // eslint-disable-next-line svelte/no-navigation-without-resolve -- The route is resolved; only the week query is appended.
+        run: () => void goto(`${resolve('/(app)/plan')}${weekOf}`)
+      }
     });
     onclose();
   }
@@ -110,36 +135,62 @@
   closeLabel={m['plan.recipe.close']()}
   {onclose}
 >
-  {#if mealPlan.loading && mealPlan.days.length === 0}
+  {#if failure}
+    <p class="failure">{explain(failure)}</p>
+  {:else if days.length === 0}
     <div class="loading" aria-label={m['plan.recipe.loading']()} aria-busy="true">
-      <Skeleton width="70%" height="1.5rem" />
-      <Skeleton width="85%" height="1.5rem" />
-      <Skeleton width="60%" height="1.5rem" />
+      <Skeleton width="100%" height="4.5rem" />
+      <Skeleton width="60%" height="1.25rem" />
+      <Skeleton width="80%" height="2.75rem" />
     </div>
-  {:else if mealPlan.error && mealPlan.days.length === 0}
-    <p class="failure">{explain(mealPlan.error)}</p>
   {:else}
     <div class="answers">
       <fieldset>
         <legend>{m['plan.recipe.day']()}</legend>
-        <RadioGroup name="plan-recipe-day" bind:value={date} options={dayOptions} />
+
+        <!-- Native radios, so arrow keys move between days; each one's name says the whole date and what is planned on it. -->
+        <div class="strip">
+          {#each days as day (day.date)}
+            <label class="day" class:today={day.date === today}>
+              <input
+                type="radio"
+                name="plan-recipe-day"
+                value={day.date}
+                bind:group={date}
+                aria-label="{longDay.format(dayOf(day.date))}: {plannedOn(day)}"
+              />
+              <span class="weekday" aria-hidden="true">
+                {day.date === today ? m['plan.today']() : shortWeekday.format(dayOf(day.date))}
+              </span>
+              <span class="number" aria-hidden="true">{dayNumber.format(dayOf(day.date))}</span>
+              <span class="busy" class:planned={day.meals.length > 0} aria-hidden="true"></span>
+            </label>
+          {/each}
+        </div>
+
+        {#if chosen}
+          <p class="planned" aria-hidden="true">
+            <span class="chosen">{longDay.format(dayOf(chosen.date))}</span>
+            {plannedOn(chosen)}
+          </p>
+        {/if}
       </fieldset>
 
-      <fieldset>
-        <legend>{m['plan.pick.slot']()}</legend>
-        <RadioGroup name="plan-recipe-slot" bind:value={slot} options={slotOptions} />
-      </fieldset>
+      <div class="slot">
+        <span class="caption">{m['plan.pick.slot']()}</span>
+        <SegmentedControl
+          {segments}
+          selected={slot}
+          label={m['plan.pick.slot']()}
+          onselect={(id) => (slot = id as MealSlot)}
+        />
+      </div>
     </div>
   {/if}
 
   {#snippet footer()}
     <Button onclick={onclose}>{m['plan.recipe.cancel']()}</Button>
-    <Button
-      variant="primary"
-      disabled={!date || mealPlan.loading}
-      loading={saving}
-      onclick={confirm}
-    >
+    <Button variant="primary" disabled={!date} loading={saving} onclick={confirm}>
       {m['plan.recipe.confirm']()}
     </Button>
   {/snippet}
@@ -159,15 +210,130 @@
     border: 0;
   }
 
-  legend {
+  legend,
+  .caption {
     margin-bottom: var(--space-2);
-    color: var(--text-subtle);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* One row of days that scrolls sideways, like a calendar's week strip; the edges bleed so a cut-off day says "there is more". */
+  .strip {
+    display: flex;
+    gap: var(--space-2);
+    margin-inline: calc(var(--space-1) * -1);
+    padding: var(--space-1);
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  .day {
+    position: relative;
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-1);
+    min-width: 3.5rem;
+    padding: var(--space-2) var(--space-1);
+    border-radius: var(--radius-lg);
+    background: var(--surface-sunken);
+    color: var(--text);
+    cursor: pointer;
+    scroll-snap-align: start;
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      color var(--duration-fast) var(--ease-out);
+  }
+
+  .day:hover {
+    background: var(--surface-hover);
+  }
+
+  /* The input stays in the tab order and in the accessibility tree; the label is what you see. */
+  .day input {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .day:has(input:focus-visible) {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+
+  .weekday {
+    color: var(--text-muted);
     font-size: var(--text-xs);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-weight: var(--weight-medium);
+  }
+
+  .today .weekday {
+    color: var(--accent);
+  }
+
+  .number {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-semibold);
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+
+  /* A dot for a day that already has a meal; empty space otherwise, so every day is the same height. */
+  .busy {
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: var(--radius-full);
+  }
+
+  .busy.planned {
+    background: var(--text-muted);
+  }
+
+  .day:has(input:checked) {
+    background: var(--accent);
+    color: var(--accent-contrast);
+  }
+
+  .day:has(input:checked) .weekday {
+    color: var(--accent-contrast);
+  }
+
+  .day:has(input:checked) .busy.planned {
+    background: var(--accent-contrast);
+  }
+
+  .planned {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 var(--space-2);
+    margin-top: var(--space-3);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .chosen {
+    color: var(--text);
+    font-weight: var(--weight-medium);
+  }
+
+  .slot {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .failure {
     color: var(--text-danger);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .day {
+      transition: none;
+    }
   }
 </style>

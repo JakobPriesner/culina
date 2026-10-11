@@ -107,11 +107,9 @@
     scroll-margin-top: var(--space-24);
   }
 
-  /* Guided cooking has its own way back, and needs the space on compact screens. */
-  @media (width < 64rem) {
-    .focused-cooking .content {
-      padding-top: env(safe-area-inset-top, 0px);
-    }
+  /* Guided cooking hides the header at every width (it has its own way back), so the page clears the notch itself. */
+  .focused-cooking .content {
+    padding-top: env(safe-area-inset-top, 0px);
   }
 
   /* A recipe on a phone has no header above it, and its sticky back bar brings its own top padding. */
