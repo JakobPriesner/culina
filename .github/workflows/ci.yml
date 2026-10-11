@@ -228,6 +228,15 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
         working-directory: src/frontend
 
+      # The runner's default faces are DejaVu, a seventh wider than anything a
+      # phone or desktop shows, and the layout specs measure lines and heights.
+      # Liberation keeps Arial's and Times' metrics; the file says the rest.
+      - name: Fonts with device metrics
+        run: |
+          mkdir -p ~/.config/fontconfig
+          cp src/frontend/tests/e2e/fonts.conf ~/.config/fontconfig/fonts.conf
+          fc-match sans-serif && fc-match serif
+
       # The real image against a real database, so the suite exercises what
       # ships rather than a development arrangement that resembles it.
       - name: Start the stack
