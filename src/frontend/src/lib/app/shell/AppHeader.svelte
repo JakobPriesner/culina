@@ -50,14 +50,15 @@
 
     <!-- Re-enables pointer events: the household menu opens inside and would inherit the header's "none". -->
     <div class="actions">
+      <!-- Creating comes first, so search and the household stay pinned to the edge whether or not a page offers it. -->
+      {#if creating}
+        <NewRecipeLink />
+      {/if}
       {#if session.activeHousehold}
         <div class="tools">
           {#if searchable}<SearchButton />{/if}
           <HouseholdSwitcher onswitch={switched} />
         </div>
-      {/if}
-      {#if creating}
-        <NewRecipeLink />
       {/if}
     </div>
     {#if !connection.online}

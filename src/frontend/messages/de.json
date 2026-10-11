@@ -479,7 +479,7 @@
   "cookbooks.addRecipes.added": "{title} ist im Kochbuch.",
   "cookbooks.recipe.inLabel": "Abgelegt in",
   "cookbooks.picker.all": "Alle Rezepte",
-  "cookbooks.shopping.add": "Zur Einkaufsliste hinzufügen",
+  "cookbooks.shopping.add": "Auf die Einkaufsliste",
   "cookbooks.shopping.empty": "Hier gibt es nichts hinzuzufügen.",
   "cookbooks.shopping.done": [
     {
@@ -1670,5 +1670,8 @@
   "household.ingredients.editLabel": "„{name}“: {what} ändern",
   "household.ingredients.removeLabel": "„{name}“: {what} entfernen",
   "plan.today": "Heute",
-  "plan.recipe.showWeek": "Woche ansehen"
+  "plan.recipe.showWeek": "Woche ansehen",
+  "auth.register.eyebrow": "Neu bei Culina",
+  "auth.register.subtitle": "Deine Rezepte, deine Woche und deine Einkaufsliste an einem Ort.",
+  "household.manage": "Haushalt verwalten"
 }

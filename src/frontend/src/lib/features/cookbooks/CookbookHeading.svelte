@@ -49,9 +49,8 @@
 
   .eyebrow {
     color: var(--text-muted);
-    font-size: var(--text-xs);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
   }
 
   .title {
@@ -61,10 +60,12 @@
     letter-spacing: -0.03em;
   }
 
+  /* Secondary text, the size of every page subtitle. */
   .subtitle {
     color: var(--text-muted);
     margin-top: var(--space-1);
     max-width: 42ch;
+    font-size: var(--text-sm);
   }
 
   .rules {
@@ -104,7 +105,6 @@
     background: var(--surface-accent-subtle);
     color: var(--accent);
     font-size: var(--text-xs);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-weight: var(--weight-semibold);
   }
 </style>

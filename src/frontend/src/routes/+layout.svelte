@@ -113,7 +113,7 @@
     min-height: var(--control-md);
     padding-inline: var(--space-4);
     border: 1px solid var(--border-strong);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-full);
     background: var(--surface-raised);
     color: var(--text);
     font: inherit;

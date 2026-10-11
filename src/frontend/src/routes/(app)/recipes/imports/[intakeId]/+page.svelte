@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
 
   import { page } from '$app/state';
+  import { Chevron } from '$ds';
   import IntakeComparison from '$features/import/IntakeComparison.svelte';
   import IntakeStatus from '$features/import/IntakeStatus.svelte';
   import { intakes } from '$features/import/intakes.svelte';
@@ -21,7 +22,7 @@
 <svelte:head><title>{m['intake.activity']()} · {m['app.name']()}</title></svelte:head>
 
 <div class="intake-page">
-  <a class="back" href="/recipes">← {m['intake.back']()}</a>
+  <a class="back" href="/recipes"><Chevron direction="back" /> {m['intake.back']()}</a>
   {#if job}
     <IntakeStatus {job} />
     <IntakeComparison {job} />

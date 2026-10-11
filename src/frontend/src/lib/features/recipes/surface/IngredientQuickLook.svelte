@@ -252,7 +252,7 @@
     margin-top: var(--space-2);
     padding: var(--space-2) var(--space-3);
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-full);
     background: var(--surface-hover);
     color: var(--text);
     font: inherit;

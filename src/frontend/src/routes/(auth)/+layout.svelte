@@ -123,11 +123,10 @@
     padding: var(--space-8) var(--space-12);
   }
   .eyebrow {
-    font-size: var(--text-xs);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-size: var(--text-sm);
     color: var(--text-on-feature);
     margin-bottom: var(--space-3);
+    font-weight: var(--weight-semibold);
   }
   h2 {
     font-family: var(--font-editorial);

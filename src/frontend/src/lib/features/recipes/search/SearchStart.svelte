@@ -60,10 +60,8 @@
   .heading {
     padding-block: var(--space-3) var(--space-1);
     color: var(--text-muted);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     font-weight: var(--weight-medium);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
   }
 
   .quick {

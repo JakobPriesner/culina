@@ -21,7 +21,7 @@
     align-items: center;
     gap: var(--space-2);
     color: var(--text);
-    font-family: var(--font-editorial);
+    font-family: var(--font-brand);
     font-size: 2rem;
     font-weight: var(--weight-regular);
     letter-spacing: -0.055em;

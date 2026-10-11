@@ -145,8 +145,7 @@
   .eyebrow {
     color: var(--text-muted);
     font-size: var(--text-xs);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-weight: var(--weight-semibold);
   }
 
   .title {

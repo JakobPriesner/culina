@@ -91,8 +91,6 @@
     color: var(--text-subtle);
     font-size: var(--text-xs);
     font-weight: var(--weight-semibold);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
   }
 
   @media print {

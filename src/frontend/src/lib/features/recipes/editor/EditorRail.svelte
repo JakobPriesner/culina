@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Chevron } from '$ds';
   import RailSectionNav from './RailSectionNav.svelte';
   import SaveState, { type SaveTone } from './SaveState.svelte';
   import { createSectionWatch } from './sectionWatch.svelte';
@@ -28,7 +29,7 @@
   <!-- Already resolved by the page; the lint rule cannot follow a route through a prop. -->
   <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
   <a class="back" href={backHref}>
-    <span class="arrow" aria-hidden="true">←</span>
+    <span class="arrow" aria-hidden="true"><Chevron direction="back" /></span>
     {backLabel}
   </a>
 

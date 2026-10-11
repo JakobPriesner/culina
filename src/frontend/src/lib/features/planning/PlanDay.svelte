@@ -83,7 +83,7 @@
     gap: var(--space-2);
     min-width: 0;
     padding: var(--space-3);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     background: var(--surface-sunken);
     /* Lands clear of the floating header when the week scrolls to today. */
     scroll-margin-top: var(--header-inset);

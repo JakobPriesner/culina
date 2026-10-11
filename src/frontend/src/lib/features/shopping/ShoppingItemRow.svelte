@@ -217,7 +217,7 @@
     min-height: var(--control-sm);
     padding: 0 var(--space-2);
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-full);
     background: none;
     color: var(--text-muted);
     font: inherit;

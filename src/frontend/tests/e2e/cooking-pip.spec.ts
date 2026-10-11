@@ -137,6 +137,8 @@ test.describe('floating kitchen companion @offline', () => {
     await child.setViewportSize({ width: 420, height: 560 });
     await expect(child.locator('body')).toHaveCSS('background-color', 'rgb(250, 249, 246)');
     await child.screenshot({ path: testInfo.outputPath('companion.png'), fullPage: true });
+    // Cook mode has no navigation of its own: leave through the recipe, as a cook would.
+    await page.getByRole('link', { name: 'Back to recipe', exact: true }).click();
     await page
       .locator('nav:visible')
       .getByRole('link', { name: /shopping/i })

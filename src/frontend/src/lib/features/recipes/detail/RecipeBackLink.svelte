@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Chevron } from '$ds';
   import { resolve } from '$app/paths';
   import { m } from '$shell/i18n';
 
@@ -14,7 +15,7 @@
 
 <div class="bar" class:condensed>
   <a class="back" href={resolve('/(app)')} aria-label={m['recipe.back']()}>
-    <span aria-hidden="true">←</span>
+    <span aria-hidden="true"><Chevron direction="back" /></span>
     <span class="back-label">{m['recipe.back']()}</span>
   </a>
   <!-- Visual repeat of the heading below, so it stays out of the accessibility tree. -->

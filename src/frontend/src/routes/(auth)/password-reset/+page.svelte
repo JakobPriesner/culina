@@ -4,6 +4,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { ErrorCodes } from '$api';
+  import AuthIntro from '$features/auth/AuthIntro.svelte';
   import FormField from '$features/auth/FormField.svelte';
   import FormFailure from '$features/auth/FormFailure.svelte';
   import SubmitButton from '$features/auth/SubmitButton.svelte';
@@ -41,10 +42,7 @@
 <svelte:head><title>{m['auth.reset.title']()}</title></svelte:head>
 
 <form class="form" onsubmit={submit} novalidate>
-  <header class="intro">
-    <h1 class="title">{m['auth.reset.title']()}</h1>
-    <p class="subtitle">{m['auth.reset.intro']()}</p>
-  </header>
+  <AuthIntro title={m['auth.reset.title']()} subtitle={m['auth.reset.intro']()} />
 
   <!-- One message for unknown address and wrong, used or expired code: telling them apart reveals registered addresses. -->
   <FormFailure
@@ -96,24 +94,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
-  }
-
-  .title {
-    font-family: var(--font-editorial);
-    font-size: var(--text-display);
-    font-weight: var(--weight-regular);
-    letter-spacing: -0.04em;
-  }
-
-  .intro {
-    margin-bottom: var(--space-6);
-  }
-
-  .subtitle {
-    margin-top: var(--space-3);
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    line-height: var(--leading-relaxed);
   }
 
   .alternative {

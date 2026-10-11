@@ -106,7 +106,8 @@
     justify-content: center;
     gap: var(--space-2);
     border: 1px solid transparent;
-    border-radius: var(--radius-md);
+    /* A capsule, like every control a finger presses; cards and fields keep their corners. */
+    border-radius: var(--radius-full);
     font: inherit;
     font-weight: var(--weight-medium);
     text-decoration: none;
@@ -247,7 +248,7 @@
 
   .button:active:not([aria-disabled='true']) {
     box-shadow: none;
-    transform: scale(0.985);
+    transform: scale(var(--press-scale));
   }
   .primary:active:not([aria-disabled='true']) {
     background: var(--accent-active);

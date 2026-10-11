@@ -142,10 +142,9 @@
   }
   .eyebrow {
     color: var(--text-subtle);
-    font-size: var(--text-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    font-size: var(--text-sm);
     margin-bottom: var(--space-2);
+    font-weight: var(--weight-semibold);
   }
   .stage {
     font-weight: var(--weight-medium);
@@ -164,7 +163,7 @@
     align-items: center;
   }
   .primary {
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-full);
     background: var(--text);
     color: var(--surface-raised);
     text-decoration: none;

@@ -65,10 +65,8 @@
   }
 
   .label {
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     font-weight: var(--weight-semibold);
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
     color: var(--text-muted);
   }
 
