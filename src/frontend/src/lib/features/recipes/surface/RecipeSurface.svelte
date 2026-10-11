@@ -197,60 +197,6 @@
     }
   }
 
-  /* Wide screens put the photo beside the title and servings, so the ingredients and steps start on the first screen. */
-  @media screen and (width >= 72rem) {
-    .photographed {
-      display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-      /* Title, servings and the loop chips share the photo's height; the last row takes what is left. */
-      grid-template-rows: auto auto 1fr;
-      column-gap: var(--layout-section-gap);
-      row-gap: var(--space-4);
-    }
-
-    .photographed > :global(.hero) {
-      grid-row: 1 / 4;
-      aspect-ratio: 4 / 3;
-      max-height: none;
-    }
-
-    .photographed > :global(.head) {
-      align-self: end;
-    }
-
-    .photographed > :global(.servings) {
-      padding-block: var(--space-4);
-    }
-
-    /* The actions sit under the title, not beside it, so a long title keeps the column's full width. */
-    .photographed > :global(.head .titleRow) {
-      grid-template-columns: minmax(0, 1fr);
-      align-items: start;
-      gap: var(--space-3);
-    }
-
-    /* A half-width column, so the title takes the phone's size. */
-    .photographed > :global(.head .title) {
-      font-size: var(--text-3xl);
-      line-height: var(--leading-tight);
-    }
-
-    /* The grid's row gap spaces it here, so its own top padding would only push the steps down. */
-    .photographed > .whereabouts {
-      grid-column: 2;
-      align-self: start;
-    }
-
-    .photographed > .whereabouts > :global(*) {
-      padding-top: 0;
-    }
-
-    .photographed > .body,
-    .photographed > .body ~ :global(*) {
-      grid-column: 1 / -1;
-    }
-  }
-
   @media (width < 52rem) {
     .surface {
       position: relative;
