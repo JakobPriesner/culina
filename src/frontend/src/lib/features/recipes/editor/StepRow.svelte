@@ -77,9 +77,10 @@
   <MentionField
     id="step-{index}"
     label={m['editor.stepLabel']({ number: index + 1 })}
-    value={toText(step)}
+    value={toText(step, ingredients)}
     {ingredients}
-    oninput={(text) => onchange({ ...step, segments: toSegments(text, ingredients) })}
+    oninput={(text) =>
+      onchange({ ...step, segments: toSegments(text, ingredients, step.segments) })}
     onadd={onaddingredient}
   />
 

@@ -102,6 +102,46 @@ describe('finding the mentions in a sentence', () => {
   });
 });
 
+describe('editing a step that already has mentions', () => {
+  const doughSugar = ingredient('i-sugar-dough', 'Zucker');
+  const glazeSugar = ingredient('i-sugar-glaze', 'Zucker', 50);
+  const mention = (one: Ingredient) =>
+    ({ kind: 'ingredient', ingredientId: one.id, name: one.name, quantity: one.quantity }) as const;
+
+  it('keeps pointing at the second of two same-named ingredients', () => {
+    const glazing = step([{ kind: 'text', text: 'Stir ' }, mention(glazeSugar)]);
+    const edited = toText(glazing, [doughSugar, glazeSugar]) + ' in.';
+
+    const segments = toSegments(edited, [doughSugar, glazeSugar], glazing.segments);
+
+    expect(segments[1]).toMatchObject({ kind: 'ingredient', ingredientId: glazeSugar.id });
+  });
+
+  it('shows a renamed ingredient by its new name and keeps the link while typing', () => {
+    const melting = step([{ kind: 'text', text: 'Melt ' }, mention(butter)]);
+    const renamed = { ...butter, name: 'brown butter' };
+
+    const text = toText(melting, [renamed, oil]);
+    const segments = toSegments(text + ' slowly.', [renamed, oil], melting.segments);
+
+    expect(text).toBe('Melt @brown butter');
+    expect(segments[1]).toMatchObject({ ingredientId: butter.id, name: 'brown butter' });
+  });
+
+  it('still looks a newly typed mention up by name', () => {
+    const glazing = step([{ kind: 'text', text: 'Stir ' }, mention(glazeSugar)]);
+
+    const segments = toSegments(
+      'Stir @Zucker and @Zucker',
+      [doughSugar, glazeSugar],
+      glazing.segments
+    );
+
+    expect(segments[1]).toMatchObject({ ingredientId: glazeSugar.id });
+    expect(segments[3]).toMatchObject({ ingredientId: doughSugar.id });
+  });
+});
+
 describe('linking a mention once its ingredient has an id', () => {
   const saffron = ingredient('i-saffron', 'saffron', null);
 
