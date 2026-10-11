@@ -643,7 +643,9 @@ public class RecipeEndpointTests(PostgresFixture postgres)
         var read = await client.GetAsync($"/api/v1/recipes/{recipe.Id}", Token);
 
         // Assert
-        Assert.NotEqual(HttpStatusCode.OK, broken.StatusCode);
+        // Corrupt stored rows are a server fault, never the caller's.
+        Assert.Equal(HttpStatusCode.InternalServerError, broken.StatusCode);
+        Assert.Equal("server.unexpected", broken.Json!.Value.GetProperty("code").GetString());
         Assert.Equal(HttpStatusCode.OK, read.StatusCode);
         Assert.Equal(1m, read.Json!.Value.GetProperty("yieldAmount").GetDecimal());
         var ingredient = read.Json!.Value.GetProperty("groups")[0].GetProperty("ingredients")[0];
