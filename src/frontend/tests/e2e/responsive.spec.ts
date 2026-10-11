@@ -37,7 +37,8 @@ test.describe('responsive production layouts @offline', () => {
             await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
             await expectReflow(page);
             if (path === '/login' || path === '/register') return;
-            const focusedCooking = path.endsWith('/cook') && width < 1024;
+            // Cooking is a focused mode at every width: no header, no navigation.
+            const focusedCooking = path.endsWith('/cook');
             await expect(page.locator('nav.nav:visible')).toHaveCount(focusedCooking ? 0 : 1);
             if (focusedCooking) {
               await expect(page.locator('.shell > header.header')).toBeHidden();
@@ -45,7 +46,7 @@ test.describe('responsive production layouts @offline', () => {
               await expect(page.locator(width < 1024 ? 'nav.bottom' : 'nav.top')).toBeVisible();
             }
             // A recipe on a phone has no shell header: its back bar is sticky instead.
-            if (path === `/recipes/${recipeId}` && width < 832) {
+            if ((path === `/recipes/${recipeId}` && width < 832) || focusedCooking) {
               await expect(page.locator('.shell > header.header')).toBeHidden();
             } else {
               // A name, on one line: at 1024px its dot once wrapped below it.
@@ -501,7 +502,7 @@ test.describe('responsive production layouts @offline', () => {
     });
   }
 
-  test('mobile cooking hides app navigation and returns to the recipe without losing its place', async ({
+  test('cooking hides app navigation at every width and returns to the recipe without losing its place', async ({
     page
   }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport transitions.');
@@ -521,24 +522,19 @@ test.describe('responsive production layouts @offline', () => {
     for (const width of [390, 1023, 1024, 390]) {
       await page.setViewportSize({ width, height: 844 });
       const header = page.locator('.shell > header.header');
-      if (width < 1024) {
-        await expect(header).toBeHidden();
-        await expect(page.locator('nav.nav:visible')).toHaveCount(0);
-        await expect
-          .poll(() =>
-            page.locator('.shell').evaluate((element) => {
-              const style = getComputedStyle(element);
-              return [
-                style.getPropertyValue('--header-inset'),
-                style.getPropertyValue('--bar-inset')
-              ];
-            })
-          )
-          .toEqual(['0px', '0px']);
-      } else {
-        await expect(header).toBeVisible();
-        await expect(page.locator('nav.top')).toBeVisible();
-      }
+      await expect(header).toBeHidden();
+      await expect(page.locator('nav.nav:visible')).toHaveCount(0);
+      await expect
+        .poll(() =>
+          page.locator('.shell').evaluate((element) => {
+            const style = getComputedStyle(element);
+            return [
+              style.getPropertyValue('--header-inset'),
+              style.getPropertyValue('--bar-inset')
+            ];
+          })
+        )
+        .toEqual(['0px', '0px']);
       await expectReflow(page);
     }
 
