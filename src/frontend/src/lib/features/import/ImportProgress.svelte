@@ -207,9 +207,8 @@
 
   dt {
     color: var(--text-muted);
-    font-size: var(--text-xs);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
   }
 
   dd {

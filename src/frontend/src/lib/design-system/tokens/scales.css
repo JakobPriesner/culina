@@ -17,18 +17,29 @@
   --control-md: 3rem;
   --control-lg: 3.5rem;
 
-  /* Radius. Photos and cards share one value so nothing looks almost-aligned. */
-  --radius-sm: 0.25rem;
-  --radius-md: 0.625rem;
-  --radius-lg: 1rem;
+  /*
+   * Radius by role, nested concentrically (an inner corner is the outer one minus the padding between them):
+   * sm for tags inside text, md for fields and list cells, lg for cards, photos and popovers, xl for sheets
+   * and dialogs, full for every control a finger presses (buttons, chips, segmented controls, icon buttons).
+   * Photos and cards share one value so nothing looks almost-aligned.
+   */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.75rem;
   --radius-full: 9999px;
 
-  /* Type: fluid, so no breakpoint per size. */
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: clamp(1.25rem, 1.15rem + 0.4vw, 1.5rem);
+  /*
+   * Type, after Apple's text styles: caption 13, footnote/subhead 15, body 17, title 3 20–22.
+   * 13px is the floor: nothing a cook has to read is smaller. Body is 17px because a recipe is
+   * read at arm's length, and inputs stay above Safari's 16px zoom-on-focus threshold.
+   * The larger steps are fluid, so no breakpoint per size.
+   */
+  --text-xs: 0.8125rem;
+  --text-sm: 0.9375rem;
+  --text-base: 1.0625rem;
+  --text-lg: 1.25rem;
+  --text-xl: clamp(1.25rem, 1.15rem + 0.4vw, 1.375rem);
   --text-2xl: clamp(1.5rem, 1.3rem + 0.8vw, 2rem);
   --text-3xl: clamp(1.875rem, 1.5rem + 1.4vw, 2.75rem);
 
@@ -74,7 +85,14 @@
 
   /* Height of the floating header; AppShell overrides with the measured value, this is today's figure so markup is placed right before it lands. */
   --header-inset: 5.625rem;
-  --font-editorial: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+  /*
+   * The serif is Culina's voice for content: page titles, recipe and cookbook names, sections inside a recipe.
+   * `ui-serif` is New York on Apple platforms, drawn to sit beside SF and with lining figures; Georgia elsewhere.
+   * Never set digits in it next to counts: Georgia's figures are old-style and its 0 reads as an o.
+   */
+  --font-editorial: ui-serif, Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+  /* The wordmark is a logo, so it keeps one face on every platform. */
+  --font-brand: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
 
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
@@ -89,6 +107,14 @@
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-spatial: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
+
+  /*
+   * States every pressable thing shares: hover tints with --surface-hover, pressed adds --surface-selected
+   * (or the accent's -active) and sinks by this much, focus is the app-wide ring. Small controls sink more,
+   * since a 44px circle moved by 2% does not visibly move at all.
+   */
+  --press-scale: 0.98;
+  --press-scale-small: 0.94;
 
   --z-sticky: 10;
   --z-overlay: 100;

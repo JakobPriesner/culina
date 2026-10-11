@@ -5,6 +5,7 @@
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import { ErrorCodes } from '$api';
+  import AuthIntro from '$features/auth/AuthIntro.svelte';
   import FormField from '$features/auth/FormField.svelte';
   import ColdStove from '$features/auth/ColdStove.svelte';
   import FamilySecret from '$features/auth/FamilySecret.svelte';
@@ -88,11 +89,12 @@
     <div class="moment"><FamilySecret /></div>
   {/if}
 
-  <header class="intro">
-    <p class="eyebrow">{m['auth.signIn.welcome']()}</p>
-    <h1 class="title" class:long={moment !== null}>{heading.title}</h1>
-    <p class="subtitle">{heading.body}</p>
-  </header>
+  <AuthIntro
+    eyebrow={m['auth.signIn.welcome']()}
+    title={heading.title}
+    subtitle={heading.body}
+    long={moment !== null}
+  />
 
   <!-- One message for "no such account" and "wrong password", so the form cannot reveal which addresses are registered. -->
   <FormFailure
@@ -141,34 +143,6 @@
     gap: var(--space-4);
   }
 
-  .title {
-    font-family: var(--font-editorial);
-    font-size: var(--text-display);
-    font-weight: var(--weight-regular);
-    letter-spacing: -0.04em;
-  }
-
-  .intro {
-    margin-bottom: var(--space-6);
-  }
-  .eyebrow {
-    color: var(--accent);
-    font-size: var(--text-xs);
-    font-weight: var(--weight-semibold);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin-bottom: var(--space-3);
-  }
-  .subtitle {
-    margin-top: var(--space-3);
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    line-height: var(--leading-relaxed);
-  }
-  .title.long {
-    font-size: var(--text-3xl);
-    text-wrap: balance;
-  }
   .moment {
     display: grid;
     justify-items: center;

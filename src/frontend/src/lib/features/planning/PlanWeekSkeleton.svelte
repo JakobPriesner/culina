@@ -67,7 +67,7 @@
     min-width: 0;
     min-height: 12rem;
     padding: var(--space-3);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     background: var(--surface-sunken);
   }
 

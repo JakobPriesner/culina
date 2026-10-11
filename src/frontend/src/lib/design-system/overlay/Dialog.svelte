@@ -243,7 +243,7 @@
 
   .centre .panel {
     max-height: calc(100dvh - var(--space-16));
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-xl);
   }
 
   .sheet {
@@ -254,8 +254,8 @@
 
   .sheet .panel {
     max-height: 85dvh;
-    border-start-start-radius: var(--radius-lg);
-    border-start-end-radius: var(--radius-lg);
+    border-start-start-radius: var(--radius-xl);
+    border-start-end-radius: var(--radius-xl);
     padding-bottom: env(safe-area-inset-bottom, 0);
     padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
   }
@@ -273,7 +273,7 @@
 
     .sheet .panel {
       max-height: calc(100dvh - var(--space-16));
-      border-radius: var(--radius-lg);
+      border-radius: var(--radius-xl);
       padding-bottom: 0;
     }
   }

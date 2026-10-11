@@ -79,7 +79,8 @@ export function autoScrollStep(root: HTMLElement, initial: Options) {
     }
 
     const maximum = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-    const start = Math.min(maximum, Math.max(0, window.scrollY + box.top - top));
+    // Floored: a step can sit on a half pixel (17px text at 1.5 leading), and a scroll position rounded up would tuck it under its inset.
+    const start = Math.min(maximum, Math.max(0, Math.floor(window.scrollY + box.top - top)));
     const end = Math.min(maximum, Math.max(start, window.scrollY + box.bottom - bottom));
     const dwell = reduced.matches ? 8000 : 5000;
 

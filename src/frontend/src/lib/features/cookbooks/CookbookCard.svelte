@@ -101,7 +101,6 @@
     background: var(--surface-accent-subtle);
     color: var(--accent);
     font-size: var(--text-xs);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
+    font-weight: var(--weight-semibold);
   }
 </style>

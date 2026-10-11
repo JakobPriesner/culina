@@ -171,8 +171,7 @@
   }
 
   h1 {
-    font-size: var(--text-2xl);
-    font-weight: var(--weight-semibold);
+    font-size: var(--text-3xl);
     line-height: var(--leading-tight);
   }
 
@@ -248,10 +247,8 @@
       margin-bottom: var(--space-3);
       padding-inline: var(--space-4);
       color: var(--text-subtle);
-      font-size: var(--text-xs);
+      font-size: var(--text-sm);
       font-weight: var(--weight-semibold);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
     }
 
     .categories {

@@ -101,11 +101,9 @@
 
   h3 {
     margin-top: var(--space-2);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     font-weight: var(--weight-semibold);
     color: var(--text-subtle);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
   }
 
   .fresh {

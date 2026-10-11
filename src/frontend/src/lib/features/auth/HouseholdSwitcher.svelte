@@ -9,6 +9,7 @@
   /**
    * Which kitchen is on screen and the way to another; an icon since the header has no room for a
    * name (it is in the label and tooltip), shown even with one household for "New household".
+   * The header is capped at the content width, so a wider screen never makes that room.
    */
   interface Props {
     onswitch: () => void;
@@ -110,7 +111,7 @@
 
     <a class="item" href={resolve('/(app)/me/household')}>
       <span class="mark" aria-hidden="true"></span>
-      <span class="title">{m['me.household']()}</span>
+      <span class="title">{m['household.manage']()}</span>
     </a>
   </ActionMenu>
 

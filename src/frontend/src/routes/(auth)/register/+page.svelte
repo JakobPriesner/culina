@@ -4,6 +4,7 @@
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
+  import AuthIntro from '$features/auth/AuthIntro.svelte';
   import FormField from '$features/auth/FormField.svelte';
   import FormFailure from '$features/auth/FormFailure.svelte';
   import SubmitButton from '$features/auth/SubmitButton.svelte';
@@ -70,13 +71,17 @@
 
 {#if closed}
   <div class="closed">
-    <h1 class="title">{m['auth.register.closed.title']()}</h1>
+    <AuthIntro title={m['auth.register.closed.title']()} />
     <p class="body">{m['auth.register.closed.body']()}</p>
     <a href={loginHref}>{m['auth.register.signIn']()}</a>
   </div>
 {:else}
   <form class="form" onsubmit={submit} novalidate>
-    <h1 class="title">{m['auth.register.title']()}</h1>
+    <AuthIntro
+      eyebrow={m['auth.register.eyebrow']()}
+      title={m['auth.register.title']()}
+      subtitle={m['auth.register.subtitle']()}
+    />
 
     <FormFailure failure={submission.failure} />
 
@@ -144,10 +149,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
-  }
-
-  .title {
-    font-size: var(--text-2xl);
   }
 
   .body {

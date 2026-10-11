@@ -68,7 +68,7 @@
     gap: var(--space-3);
     padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
     border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
     background: var(--surface-overlay);
     box-shadow: var(--shadow-overlay);
   }
@@ -112,7 +112,7 @@
     min-height: var(--control-sm);
     padding-inline: var(--space-3);
     border: none;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-full);
     background: transparent;
     color: var(--accent);
     font: inherit;

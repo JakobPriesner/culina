@@ -9,7 +9,48 @@
   }
 
   let { onpaste, ondescribe }: Props = $props();
+
+  /** One stroke path each, drawn on the 24px grid the app's other icons use. */
+  const icons = {
+    paste:
+      'M8 4.5H6.5a1.5 1.5 0 0 0-1.5 1.5v13a1.5 1.5 0 0 0 1.5 1.5h11a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H16M9 3h6v3H9zM9 11h6M9 15h6',
+    source: 'M12 3.5v11M7.5 10l4.5 4.5 4.5-4.5M4.5 15v3a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3',
+    idea: 'M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1 1.2 1 2v.2h5.2v-.2c0-.8.4-1.5 1-2A6 6 0 0 0 12 3Z',
+    photo:
+      'M4 8a2 2 0 0 1 2-2h2l1.5-2h5L16 6h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2ZM15.5 12.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z'
+  };
 </script>
+
+{#snippet way(icon: string, title: string, body: string)}
+  <svg
+    class="way-icon"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <path d={icon} />
+  </svg>
+  <span class="way-text">
+    <span class="way-title">{title}</span>
+    <span class="way-body">{body}</span>
+  </span>
+  <svg
+    class="way-chevron"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <path d="m9 6 6 6-6 6" />
+  </svg>
+{/snippet}
 
 <!-- Offered after the name field, as doors not forms, so quick creation doesn't feel like a migration. -->
 <section class="others" aria-labelledby="other-ways">
@@ -18,27 +59,23 @@
   <div class="ways">
     <!-- The whole tile is the control, so there is one label to read. -->
     <button type="button" class="way" onclick={onpaste}>
-      <span class="way-title">{m['import.paste.title']()}</span>
-      <span class="way-body">{m['import.paste.hint']()}</span>
+      {@render way(icons.paste, m['import.paste.title'](), m['import.paste.hint']())}
     </button>
 
     <a class="way" href={resolve('/(app)/recipes/import')}>
-      <span class="way-title">{m['import.source.title']()}</span>
-      <span class="way-body">{m['import.source.hint']()}</span>
+      {@render way(icons.source, m['import.source.title'](), m['import.source.hint']())}
     </a>
 
     <!-- Only where an assistant is connected. -->
     {#if session.user?.assistance.draft}
       <button type="button" class="way" onclick={ondescribe}>
-        <span class="way-title">{m['assist.idea.title']()}</span>
-        <span class="way-body">{m['assist.idea.hint']()}</span>
+        {@render way(icons.idea, m['assist.idea.title'](), m['assist.idea.hint']())}
       </button>
     {/if}
 
     {#if session.user?.assistance.read}
       <button type="button" class="way" onclick={onpaste}>
-        <span class="way-title">{m['assist.photo.title']()}</span>
-        <span class="way-body">{m['assist.photo.hint']()}</span>
+        {@render way(icons.photo, m['assist.photo.title'](), m['assist.photo.hint']())}
       </button>
     {/if}
   </div>
@@ -65,11 +102,12 @@
     min-width: 0;
   }
 
+  /* A row like a settings cell: what it is (icon), what it does (words), and that it leads on (chevron). */
   .way {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-1);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-3);
     min-width: 0;
     padding: var(--space-4);
     border: 1px solid var(--border);
@@ -82,12 +120,37 @@
     cursor: pointer;
     transition:
       border-color var(--duration-fast) var(--ease-out),
-      background-color var(--duration-fast) var(--ease-out);
+      background-color var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out);
   }
 
   .way:hover {
     border-color: var(--border-strong);
     background: var(--surface-raised);
+  }
+
+  .way:active {
+    background: var(--surface-selected);
+    transform: scale(var(--press-scale));
+  }
+
+  .way-icon {
+    width: var(--space-6);
+    height: var(--space-6);
+    color: var(--accent);
+  }
+
+  .way-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+
+  .way-chevron {
+    width: var(--space-4);
+    height: var(--space-4);
+    color: var(--text-subtle);
   }
 
   .way-title {

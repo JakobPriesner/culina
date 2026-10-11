@@ -63,7 +63,7 @@
   }
 
   .icon-button:active:not(:disabled) {
-    transform: scale(0.94);
+    transform: scale(var(--press-scale-small));
     background: var(--surface-selected);
   }
 

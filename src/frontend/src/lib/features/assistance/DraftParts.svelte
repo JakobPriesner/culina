@@ -81,10 +81,8 @@
 
   .which {
     color: var(--text-subtle);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     font-weight: var(--weight-semibold);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
   }
 
   .was {

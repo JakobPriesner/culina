@@ -74,8 +74,12 @@ h4 {
   text-wrap: balance;
 }
 
+/* Every page title speaks in the editorial face, so no page can drift into the sans (Account and Register once did). */
 h1 {
+  font-family: var(--font-editorial);
   font-size: var(--text-3xl);
+  font-weight: var(--weight-regular);
+  letter-spacing: -0.02em;
 }
 
 h2 {
@@ -100,10 +104,14 @@ img {
   display: block;
 }
 
-/* One focus ring app-wide; :focus-visible so a mouse click leaves none. */
+/* One focus ring app-wide; :focus-visible so a mouse click leaves none. It follows the element's own corners, so a capsule's ring is a capsule. */
 :focus-visible {
   outline: 2px solid var(--border-focus);
   outline-offset: 2px;
+}
+
+/* Text links have no corners of their own; a slight one keeps their ring from looking like a selection box. */
+a:focus-visible {
   border-radius: var(--radius-sm);
 }
 

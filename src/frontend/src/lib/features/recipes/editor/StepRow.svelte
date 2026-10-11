@@ -149,15 +149,12 @@
     padding-inline: var(--space-2);
     margin-inline-start: calc(var(--space-2) * -1);
     color: var(--accent);
-    font-size: var(--text-xs);
+    font-size: var(--text-sm);
     font-weight: var(--weight-semibold);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
   }
 
   .name :global(.ds-control::placeholder) {
     color: var(--text-subtle);
-    text-transform: uppercase;
   }
 
   .controls {
