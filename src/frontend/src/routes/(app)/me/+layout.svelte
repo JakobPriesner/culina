@@ -78,7 +78,7 @@
 </svelte:head>
 
 <Page>
-  <div class="settings">
+  <div class="settings" class:crowded={admin.length > 0}>
     <nav class="rail" aria-label={m['me.title']()}>
       <!-- Not a heading: it would land between the page's own heading and its sections. -->
       <p class="legend">{m['me.title']()}</p>
@@ -207,8 +207,9 @@
   }
 
   /*
-   * Phone: sticky under the header on an opaque band bled to the gutter (the row wraps to two lines),
-   * above the header's layer so its scrim fades the page, not the pills.
+   * Phone, and a tablet whose header has no room for an administrator's six categories: sticky under the header
+   * on an opaque band bled to the gutter (the row wraps to two lines), above the header's layer so its scrim fades
+   * the page, not the pills.
    */
   @media (max-width: 47.999rem) {
     .rail {
@@ -227,11 +228,21 @@
    * The offset is the measured header middle (the wordmark's font metrics set the line); the token is a placeholder until then.
    */
   @media (min-width: 48rem) and (max-width: 63.999rem) {
-    .settings {
+    .crowded > .rail {
+      position: sticky;
+      z-index: var(--z-sticky);
+      top: var(--header-inset);
+      margin-inline: calc(-1 * var(--layout-gutter-start)) calc(-1 * var(--layout-gutter-end));
+      padding: var(--space-2) var(--layout-gutter-end) var(--space-2) var(--layout-gutter-start);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .settings:not(.crowded) {
       gap: 0;
     }
 
-    .rail {
+    .settings:not(.crowded) > .rail {
       position: sticky;
       /* The header's scrim is opaque where these pills land. */
       z-index: var(--z-sticky);
@@ -244,7 +255,7 @@
     }
 
     /* The navbar's own container: the pills need a surface once the page scrolls under them. */
-    .categories {
+    .settings:not(.crowded) .categories {
       flex-wrap: nowrap;
       padding: var(--space-1);
       border: 1px solid var(--border);
