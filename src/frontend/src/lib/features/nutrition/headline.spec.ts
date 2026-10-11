@@ -23,8 +23,9 @@ const answer = (over: Partial<Nutrition>): Nutrition =>
 beforeEach(() => preferences.setLocale('en'));
 
 describe('the short figure for the meta line', () => {
-  it('is the figure with its qualifier', () => {
-    expect(plain(metaFigureOf(answer({})))).toBe('at least 520 kcal');
+  it('keeps the visible figure simple and can qualify its accessible name', () => {
+    expect(plain(metaFigureOf(answer({})))).toBe('520 kcal');
+    expect(plain(metaFigureOf(answer({}), true))).toBe('at least 520 kcal');
     expect(
       plain(metaFigureOf(answer({ values: { energyKcal: value(520.4, false) } as never })))
     ).toBe('520 kcal');

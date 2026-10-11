@@ -187,12 +187,17 @@ const show = (servings = 2) =>
 
 const headline = () =>
   waitFor(() => {
-    const summary = document.querySelector('summary');
+    const summary = document.querySelector<HTMLElement>('.summaryOverview');
 
     expect(summary).not.toBeNull();
 
     return summary!;
   });
+
+const toggle = async () => {
+  await headline();
+  await userEvent.click(document.querySelector('#nutrition summary')!);
+};
 
 beforeEach(() => preferences.setLocale('en'));
 
@@ -246,13 +251,18 @@ describe('the closed line', () => {
     expect(await headline()).toHaveTextContent('521 kcal');
   });
 
-  it('writes a lower bound as one, rounded down, with what it covers', async () => {
+  it('keeps the lower bound accessible and moves its explanation into calorie info', async () => {
     serverAnswers(partial(520.9));
     show();
 
     const summary = await headline();
 
-    expect(summary).toHaveTextContent('at least 520 kcal per serving · without salt and olive oil');
+    expect(summary.querySelector('.energyNumber')).toHaveTextContent('520');
+    expect(summary.querySelector('.bound')).toHaveTextContent('at least');
+    expect(summary.querySelector('.info .explanation')).toHaveTextContent(
+      'without salt and olive oil'
+    );
+    expect(summary.querySelector('.info button')).toHaveAttribute('popovertarget');
     expect(summary).not.toHaveTextContent('≥');
   });
 
@@ -281,9 +291,12 @@ describe('the closed line', () => {
     const summary = await headline();
 
     expect(summary).toHaveTextContent('Nährwerte');
-    expect(summary).toHaveTextContent('mind. 520 kcal pro Portion · ohne salt und olive oil');
+    expect(summary.querySelector('.energyNumber')).toHaveTextContent('520');
+    expect(summary.querySelector('.info .explanation')).toHaveTextContent(
+      'ohne salt und olive oil'
+    );
 
-    await userEvent.click(summary);
+    await toggle();
 
     expect(
       screen.getByRole('rowheader', { name: 'davon gesättigte Fettsäuren' })
@@ -298,7 +311,7 @@ describe('opened', () => {
   it('shows the label, row by row, with a lower bound as one', async () => {
     serverAnswers(partial(520.9));
     show();
-    await userEvent.click(await headline());
+    await toggle();
 
     const table = screen.getByRole('table');
     const row = (name: string) =>
@@ -317,7 +330,7 @@ describe('opened', () => {
   it('rounds an exact label the way a package does', async () => {
     serverAnswers(complete());
     show();
-    await userEvent.click(await headline());
+    await toggle();
 
     const cell = (name: string) =>
       screen.getByRole('rowheader', { name }).closest('tr')!.querySelector('td')!;
@@ -330,7 +343,7 @@ describe('opened', () => {
   it('shows what was counted as what, and what was not and why', async () => {
     serverAnswers(partial());
     show();
-    await userEvent.click(await headline());
+    await toggle();
 
     const counted = screen.getByRole('heading', { name: 'Counted (3)' })
       .nextElementSibling as HTMLElement;
@@ -361,7 +374,7 @@ describe('opened', () => {
   it('says nothing about missing lines when every line is counted', async () => {
     serverAnswers(complete());
     show();
-    await userEvent.click(await headline());
+    await toggle();
 
     expect(screen.queryByText(/missing from the sum/)).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Not counted (2)' })).not.toBeInTheDocument();
@@ -375,7 +388,7 @@ describe('opened', () => {
       )
     });
     show();
-    await userEvent.click(await headline());
+    await toggle();
 
     expect(screen.getByText('excluded by your household')).toBeInTheDocument();
   });
@@ -383,7 +396,7 @@ describe('opened', () => {
   it('has the label out of the way when nothing could be counted, and still says why', async () => {
     serverAnswers(nothing());
     show();
-    await userEvent.click(await headline());
+    await toggle();
 
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.getAllByText('not in the food table')).toHaveLength(5);
@@ -392,7 +405,7 @@ describe('opened', () => {
   it('credits the table, linking its source', async () => {
     serverAnswers(partial());
     show();
-    await userEvent.click(await headline());
+    await toggle();
 
     const credit = screen.getAllByText(/Nutrition values:/)[0]!.closest('p')!;
 
@@ -415,7 +428,7 @@ describe('opened', () => {
 
     expect(document.querySelectorAll('.paper')).toHaveLength(1);
 
-    await userEvent.click(await headline());
+    await toggle();
 
     expect(document.querySelectorAll('.paper')).toHaveLength(0);
   });
@@ -425,7 +438,7 @@ describe('servings', () => {
   it('scales what is counted with the ingredient list, never the figures per portion', async () => {
     serverAnswers(partial(520.9));
     show(4);
-    await userEvent.click(await headline());
+    await toggle();
 
     const counted = screen.getByRole('heading', { name: 'Counted (3)' })
       .nextElementSibling as HTMLElement;
@@ -521,21 +534,27 @@ describe('the headline names what is missing', () => {
     serverAnswers(flagged(partial(), salt));
     show();
 
-    expect(await headline()).toHaveTextContent('at least 520 kcal per serving · without salt');
+    expect((await headline()).querySelector('.info .explanation')).toHaveTextContent(
+      'without salt'
+    );
   });
 
   it('names two lines in recipe order, joined the way the language joins', async () => {
     serverAnswers(flagged(partial(), oil, onion));
     show();
 
-    expect(await headline()).toHaveTextContent('· without onion and olive oil');
+    expect((await headline()).querySelector('.info .explanation')).toHaveTextContent(
+      'without onion and olive oil'
+    );
   });
 
   it('names two and counts the rest', async () => {
     serverAnswers(flagged(partial(), onion, salt, oil));
     show();
 
-    expect(await headline()).toHaveTextContent('· without onion, salt and 1 more');
+    expect((await headline()).querySelector('.info .explanation')).toHaveTextContent(
+      'without onion, salt and 1 more'
+    );
   });
 
   it('speaks German', async () => {
@@ -543,8 +562,8 @@ describe('the headline names what is missing', () => {
     serverAnswers(flagged(partial(), onion, salt, oil, egg));
     show();
 
-    expect(await headline()).toHaveTextContent(
-      'mind. 520 kcal pro Portion · ohne onion, salt und 2 weitere'
+    expect((await headline()).querySelector('.info .explanation')).toHaveTextContent(
+      'ohne onion, salt und 2 weitere'
     );
   });
 
@@ -571,7 +590,7 @@ describe('a recipe that makes one portion', () => {
     expect(summary).toHaveTextContent('520 kcal for the whole recipe');
     expect(summary).not.toHaveTextContent('per serving');
 
-    await userEvent.click(summary);
+    await toggle();
 
     expect(screen.getByRole('columnheader', { name: 'whole recipe' })).toBeInTheDocument();
     expect(screen.getByText(/The recipe says 1 serving\./)).toBeInTheDocument();
@@ -584,7 +603,7 @@ describe('a recipe that makes one portion', () => {
   it('does not say it for pieces, or for a recipe of several servings', async () => {
     serverAnswers({ ...complete(), per: 'piece', yield: 1 });
     show();
-    await userEvent.click(await headline());
+    await toggle();
 
     expect(screen.queryByText(/whole recipe/)).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Set servings' })).not.toBeInTheDocument();
@@ -603,7 +622,7 @@ describe('an implausible amount', () => {
 
     expect(summary).toHaveTextContent(/Is this amount right\? .*olive oil/);
 
-    await userEvent.click(summary);
+    await toggle();
 
     const not = screen.getByRole('heading', { name: /Not counted/ })
       .nextElementSibling as HTMLElement;
@@ -617,7 +636,8 @@ describe('an implausible amount', () => {
 
     const summary = await headline();
 
-    expect(summary).toHaveTextContent('· without salt · Is this amount right?');
+    expect(summary.querySelector('.info .explanation')).toHaveTextContent('without salt');
+    expect(summary).toHaveTextContent('Is this amount right?');
     expect(summary).not.toHaveTextContent('olive oil ·');
     expect(summary).not.toHaveTextContent('and 1 more');
   });
@@ -625,7 +645,7 @@ describe('an implausible amount', () => {
   it('is a calm notice at the top of the open panel, linking to that line in the editor', async () => {
     serverAnswers(milk());
     show();
-    await userEvent.click(await headline());
+    await toggle();
 
     const link = screen.getByRole('link', { name: 'Fix in the recipe' });
 
@@ -637,7 +657,7 @@ describe('an implausible amount', () => {
   it('is absent when every amount is believable', async () => {
     serverAnswers(partial());
     show();
-    await userEvent.click(await headline());
+    await toggle();
 
     expect(screen.queryByText(/Is this amount right/)).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Fix in the recipe' })).not.toBeInTheDocument();
@@ -668,7 +688,7 @@ describe('why a line is not counted', () => {
 
       const view = show();
 
-      await userEvent.click(await headline());
+      await toggle();
       expect(screen.getByText(words)).toBeInTheDocument();
 
       view.unmount();
@@ -696,7 +716,7 @@ describe('why a line is not counted', () => {
       ]
     });
     show();
-    await userEvent.click(await headline());
+    await toggle();
 
     expect(screen.getByText('not in the food table')).toBeInTheDocument();
     expect(screen.getByText('excluded by your household')).toBeInTheDocument();
@@ -716,7 +736,7 @@ describe('a bound that says nothing', () => {
       }
     });
     show();
-    await userEvent.click(await headline());
+    await toggle();
 
     const cell = (name: string) =>
       screen.getByRole('rowheader', { name }).closest('tr')!.querySelector('td')!;
@@ -730,7 +750,7 @@ describe('a bound that says nothing', () => {
   it('is still a zero when the value is exact', async () => {
     serverAnswers({ ...complete(), values: { ...values(520.4, false), fat: value(0, false) } });
     show();
-    await userEvent.click(await headline());
+    await toggle();
 
     expect(screen.getByRole('rowheader', { name: 'Fat' }).closest('tr')).toHaveTextContent(/0\s*g/);
     expect(screen.queryByText('not known')).not.toBeInTheDocument();
@@ -752,7 +772,7 @@ describe('friendly names', () => {
   it('counts as the label, with the table name quietly under it', async () => {
     serverAnswers(minced());
     show();
-    await userEvent.click(await headline());
+    await toggle();
 
     const row = screen.getAllByRole('listitem')[0]!;
 
@@ -765,7 +785,7 @@ describe('friendly names', () => {
     preferences.setLocale('de');
     serverAnswers(minced());
     show();
-    await userEvent.click(await headline());
+    await toggle();
 
     const row = screen.getAllByRole('listitem')[0]!;
 
@@ -776,7 +796,7 @@ describe('friendly names', () => {
   it('does not repeat the table name when the label is the same words', async () => {
     serverAnswers(partial());
     show();
-    await userEvent.click(await headline());
+    await toggle();
 
     expect(screen.queryByText(/BLS:/)).not.toBeInTheDocument();
   });
@@ -819,7 +839,7 @@ describe('a shared recipe, read by a visitor', () => {
     // Still asks whether the amount is right, but only as a question: there is nothing to follow.
     expect(summary).toHaveTextContent(/Is this amount right\? .*olive oil/);
 
-    await userEvent.click(summary);
+    await toggle();
 
     expect(screen.getByText(/The recipe says 1 serving\./)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^What is / })).not.toBeInTheDocument();
@@ -840,7 +860,7 @@ describe('an inherited recipe', () => {
     renderWithProviders(NutritionPanel, {
       props: { recipe, servings: 2, householdId: 'heir', editable: false }
     });
-    await userEvent.click(await headline());
+    await toggle();
 
     expect(screen.getByText(/The recipe says 1 serving\./)).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /^What is / })).toHaveLength(5);

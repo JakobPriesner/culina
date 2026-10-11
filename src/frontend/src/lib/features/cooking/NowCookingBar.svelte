@@ -17,7 +17,7 @@
 </script>
 
 {#if session && !onTheCookingScreen}
-  <div class="bar">
+  <aside class="bar" aria-label={m['cooking.nowCooking']({ title: session.recipeTitle })}>
     <span
       class="dot"
       class:held={kitchenWakeLock.held}
@@ -45,7 +45,7 @@
         <path d="M6 6l12 12M18 6 6 18" stroke-linecap="round" />
       </svg>
     </IconButton>
-  </div>
+  </aside>
 {/if}
 
 <style>

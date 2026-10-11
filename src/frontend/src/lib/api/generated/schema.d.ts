@@ -3335,6 +3335,7 @@ export interface components {
         };
         /** @description A recipe as it appears in a list. */
         RecipesGetAllRecipeSummary: {
+            calories?: (null) | components["schemas"]["RecipesGetNutritionNutritionValue"];
             /**
              * Format: uuid
              * @description The recipe's id.
@@ -4467,6 +4468,11 @@ export interface components {
              */
             maxMinutes?: number | null;
             /**
+             * Format: int32
+             * @description Maximum kcal per serving or piece, or omit.
+             */
+            maxKcal?: number | null;
+            /**
              * @description The order to read in, or omit for the default. One of `relevance`, `suggested`, `-updatedAt`,
              *     `title`, `totalMinutes` or `-cookCount` (not `cookbookOrder`, which needs a cookbook).
              */
@@ -5202,6 +5208,7 @@ export interface components {
         };
         /** @description One recipe, and why it is here. */
         SuggestionsGetAllSuggestion: {
+            calories?: (null) | components["schemas"]["RecipesGetNutritionNutritionValue"];
             /**
              * Format: uuid
              * @description The recipe's id.
@@ -7689,6 +7696,7 @@ export interface operations {
                 householdId?: string;
                 query?: string;
                 maxMinutes?: number;
+                maxKcal?: number;
                 cookbookId?: string;
                 sort?: string;
                 cursor?: string;

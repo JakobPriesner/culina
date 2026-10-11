@@ -17,7 +17,8 @@ internal sealed class GetSuggestionsQueryHandler(
     ISuggestionRanker ranker,
     IHouseholdRepository households,
     IRecipeRepository recipes,
-    RankingWeights weights)
+    RankingWeights weights,
+    IRecipeCalories calories)
     : IQueryHandler<GetSuggestionsQuery, Response>
 {
     public async Task<Result<Response>> Handle(
@@ -69,6 +70,13 @@ internal sealed class GetSuggestionsQueryHandler(
         }
 
         var ranked = await ranker.RankAsync(context, cancellationToken).ConfigureAwait(false);
+
+        var figures = await calories.ReadAsync(context.HouseholdId, library,
+            ranked.Select(item => item.Recipe.RecipeId).ToArray(), cancellationToken).ConfigureAwait(false);
+        ranked = [.. ranked.Select(item => item with
+        {
+            Recipe = item.Recipe with { Calories = figures.TryGetValue(item.Recipe.RecipeId, out var energy) ? energy : null }
+        })];
 
         SuggestionMetrics.Returned(ranked.Count, context);
         tracked.Tag("culina.suggestion.count", ranked.Count);

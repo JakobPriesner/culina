@@ -1,3 +1,5 @@
+import type { NutritionValue } from '$features/nutrition/types';
+
 import type { components } from '$api/generated/schema';
 
 import type { Unit } from './units';
@@ -52,6 +54,8 @@ export interface Step {
 
 /** What the list shows; smaller than a recipe. */
 export interface RecipeSummary {
+  /** Per serving or piece; absent in older offline responses. */
+  readonly calories?: NutritionValue | null;
   readonly id: string;
   /** The owning household, when another than the one viewed (inherited recipe). */
   readonly householdId?: string;

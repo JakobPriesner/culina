@@ -19,16 +19,16 @@
   import { labelNumber, nbsp } from './format';
   import { roundForLabel } from './rounding';
   import type { NutritionValue } from './types';
+  import CalorieInfo from './CalorieInfo.svelte';
   import NutritionBreakdown from './NutritionBreakdown.svelte';
   import NutritionLabel from './NutritionLabel.svelte';
   import NutritionSkeleton from './NutritionSkeleton.svelte';
   import { nutrition } from './stores/nutrition.svelte';
 
   /**
-   * What a recipe has in it per portion, in one closed line that already says the headline, and open as the
-   * label from a package and the working out behind it. It says what it covers: a figure for part of the
-   * recipe is a lower bound and is written as one. Not part of the recipe surface, which keeps its layout
-   * still while cooking.
+   * A calm overview with independently accessible calorie info and a disclosure for the full label and
+   * ingredient breakdown. Lower bounds stay in accessible names and the info panel. Per-portion values
+   * do not change when the ingredients and servings are scaled together.
    */
   interface Props {
     /** A shared recipe is read as it is, with the token for its id. */
@@ -122,78 +122,79 @@
       <Button size="sm" variant="secondary" onclick={ask}>{m['error.retry']()}</Button>
     </div>
   {:else if answer}
-    <Disclosure bind:open>
-      {#snippet summary()}
-        <span class="line">
-          <span class="heading">
-            <span class="label">{m['nutrition.title']()}</span>
-            <span class="status"
-              >{answer.complete
-                ? m['nutrition.status.complete']()
-                : m['nutrition.status.partial']()}</span
-            >
-          </span>
-
-          {#if nothingCounted}
-            <span class="nothing">{m['nutrition.nothing']()}</span>
-          {:else}
-            <span class="overview">
-              <span class="headline">
-                <span class="figure">
-                  {#if answer.values.energyKcal.atLeast}<span class="bound"
-                      >{m['nutrition.atLeast']()}</span
-                    >
-                    <span class="energyNumber"
-                      >{labelNumber('energy', answer.values.energyKcal)}</span
-                    >{:else}<span class="energyNumber"
-                      >{labelNumber('energy', answer.values.energyKcal)}</span
-                    >{/if}
-                  <span class="energyUnit">kcal</span>
-                </span>
-                <span class="per">{perWords(answer)}</span>
-                {#if without}
-                  <span class="without">· {without}</span>
-                {/if}
-                {@render amountHint()}
-              </span>
-
-              <span class="macros">
-                {#each macros as macro (macro.label)}
-                  <span class="macro">
-                    <span class="macroLabel">{macro.label}</span>
-                    <span class="macroFigure">
-                      {#if unknownMacro(macro.value)}
-                        <span class="macroNumber" aria-hidden="true">–</span>
-                        <VisuallyHidden>{m['nutrition.notKnown']()}</VisuallyHidden>
-                      {:else}
-                        {#if macro.value.atLeast}
-                          <span class="macroBound">{m['nutrition.atLeast']()}</span>
-                          <span class="macroNumber"
-                            >{labelNumber('macro', macro.value)}{nbsp}<span class="macroUnit"
-                              >g</span
-                            ></span
-                          >
-                        {:else}
-                          <span class="macroNumber"
-                            >{labelNumber('macro', macro.value)}{nbsp}<span class="macroUnit"
-                              >g</span
-                            ></span
-                          >
-                        {/if}
-                      {/if}
-                    </span>
-                  </span>
-                {/each}
-              </span>
-            </span>
-          {/if}
-
-          {#if nothingCounted}{@render amountHint()}{/if}
-
-          <span class="affordance"
-            >{open ? m['nutrition.details.hide']() : m['nutrition.details.show']()}</span
+    <div class="summaryOverview">
+      <span class="line">
+        <span class="heading">
+          <span class="label">{m['nutrition.title']()}</span>
+          <span class="status"
+            >{answer.complete
+              ? m['nutrition.status.complete']()
+              : m['nutrition.status.partial']()}</span
           >
         </span>
+
+        {#if nothingCounted}
+          <span class="nothing">{m['nutrition.nothing']()}</span>
+        {:else}
+          <span class="overview">
+            <span class="headline">
+              <span class="figure">
+                {#if answer.values.energyKcal.atLeast}
+                  <span class="bound"
+                    ><VisuallyHidden>{m['nutrition.atLeast']()}{nbsp}</VisuallyHidden></span
+                  >
+                {/if}
+                <span class="energyNumber">{labelNumber('energy', answer.values.energyKcal)}</span>
+                <span class="energyUnit">kcal</span>
+                <CalorieInfo
+                  atLeast={answer.values.energyKcal.atLeast}
+                  estimated={answer.values.energyKcal.estimated}
+                  basis={perWords(answer)}
+                  detail={without}
+                />
+              </span>
+              <span class="per">{perWords(answer)}</span>
+              {@render amountHint()}
+            </span>
+
+            <span class="macros">
+              {#each macros as macro (macro.label)}
+                <span class="macro">
+                  <span class="macroLabel">{macro.label}</span>
+                  <span class="macroFigure">
+                    {#if unknownMacro(macro.value)}
+                      <span class="macroNumber" aria-hidden="true">–</span>
+                      <VisuallyHidden>{m['nutrition.notKnown']()}</VisuallyHidden>
+                    {:else}
+                      {#if macro.value.atLeast}
+                        <span class="macroBound">{m['nutrition.atLeast']()}</span>
+                        <span class="macroNumber"
+                          >{labelNumber('macro', macro.value)}{nbsp}<span class="macroUnit">g</span
+                          ></span
+                        >
+                      {:else}
+                        <span class="macroNumber"
+                          >{labelNumber('macro', macro.value)}{nbsp}<span class="macroUnit">g</span
+                          ></span
+                        >
+                      {/if}
+                    {/if}
+                  </span>
+                </span>
+              {/each}
+            </span>
+          </span>
+        {/if}
+
+        {#if nothingCounted}{@render amountHint()}{/if}
+      </span>
+    </div>
+
+    <Disclosure bind:open>
+      {#snippet summary()}
+        <span class="affordance"
+          >{open ? m['nutrition.details.hide']() : m['nutrition.details.show']()}</span
+        >
       {/snippet}
 
       <div class="open">
@@ -267,7 +268,7 @@
       </div>
     </Disclosure>
 
-    <!-- A closed disclosure prints only its summary, and the data may not travel without its credit. -->
+    <!-- The closed overview still prints with its source. -->
     {#if !open}
       <p class="source paper">{@render attribution()}</p>
     {/if}
@@ -298,19 +299,23 @@
     background: var(--surface-raised);
   }
 
+  .summaryOverview {
+    padding: var(--space-8) var(--space-8) var(--space-6);
+  }
+
   .nutrition :global(.summary) {
     position: relative;
-    padding: var(--space-8);
-    gap: 0;
-    border-radius: var(--space-6);
+    margin-inline: var(--space-8);
+    padding: var(--space-4) 0 var(--space-6);
+    border-top: 1px solid var(--border);
+    gap: var(--space-2);
+    border-radius: 0 0 var(--space-6) var(--space-6);
   }
 
   .nutrition :global(.chevron) {
     flex: none;
     order: 1;
-    position: absolute;
-    inset-inline-end: var(--space-8);
-    bottom: var(--space-8);
+    margin-inline-start: auto;
     color: var(--accent);
   }
 
@@ -378,10 +383,6 @@
     margin-inline-start: var(--space-2);
   }
 
-  .without {
-    font-size: var(--text-sm);
-  }
-
   .status {
     font-size: var(--text-xs);
     font-weight: var(--weight-regular);
@@ -436,9 +437,7 @@
   }
 
   .affordance {
-    padding-top: var(--space-4);
-    padding-inline-end: var(--space-6);
-    border-top: 1px solid var(--border);
+    flex: 1;
     color: var(--accent);
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
@@ -450,7 +449,6 @@
   }
 
   .per,
-  .without,
   .hint,
   .nothing {
     color: var(--text-muted);
@@ -559,11 +557,6 @@
       margin: var(--space-1) 0 0;
     }
 
-    .headline .without {
-      display: block;
-      margin-top: var(--space-1);
-    }
-
     .details:not(.empty) {
       grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
       gap: var(--space-12);
@@ -571,13 +564,13 @@
   }
 
   @container (width < 32rem) {
-    .nutrition :global(.summary) {
-      padding: var(--space-6);
+    .summaryOverview {
+      padding: var(--space-6) var(--space-6) var(--space-4);
     }
 
-    .nutrition :global(.chevron) {
-      inset-inline-end: var(--space-6);
-      bottom: var(--space-6);
+    .nutrition :global(.summary) {
+      margin-inline: var(--space-6);
+      padding: var(--space-3) 0 var(--space-5);
     }
 
     .open {
@@ -592,11 +585,6 @@
     .headline .per {
       display: block;
       margin: var(--space-1) 0 0;
-    }
-
-    .headline .without {
-      display: block;
-      margin-top: var(--space-1);
     }
 
     .macros {
@@ -629,7 +617,11 @@
       background: none;
     }
 
-    .nutrition :global(.summary),
+    .nutrition :global(.summary) {
+      display: none;
+    }
+
+    .summaryOverview,
     .open {
       padding: var(--space-3) 0;
     }

@@ -2,6 +2,7 @@
   import { resolve } from '$app/paths';
 
   import { Image } from '$ds';
+  import RecipeCalories from '$features/nutrition/RecipeCalories.svelte';
 
   import { m } from '$shell/i18n';
   import { imageSrcset, imageUrl } from './recipeImage';
@@ -60,7 +61,10 @@
   </h3>
 
   <div class="details">
-    <p class="meta">{meta}</p>
+    <div class="facts">
+      <p class="meta">{meta}</p>
+      <RecipeCalories {recipe} />
+    </div>
     <span class="open" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
         <path d="M5 12h14m-5-5 5 5-5 5" stroke-linecap="round" stroke-linejoin="round" />
@@ -82,6 +86,13 @@
 </article>
 
 <style>
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 var(--space-3);
+    color: var(--text-muted);
+  }
   .recipe {
     position: relative;
     display: flex;

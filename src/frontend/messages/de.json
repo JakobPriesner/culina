@@ -1626,6 +1626,14 @@
   "editor.addIngredientToGroup": "Zutat zu Gruppe {number} hinzufügen",
   "nutrition.details.show": "Details anzeigen",
   "nutrition.details.hide": "Details ausblenden",
+  "nutrition.calories.info": "Hinweise zu den Kalorien",
+  "nutrition.calories.lowerBound": "Das ist ein Mindestwert: Einige Zutaten konnten nicht berücksichtigt werden. Das vollständige Rezept kann mehr Kalorien enthalten.",
+  "nutrition.calories.calculated": "Aus den Zutatenmengen und Lebensmittelreferenzwerten berechnet.",
+  "nutrition.calories.estimated": "Enthält geschätzte Zutatengewichte.",
+  "filters.calories": "Kalorien",
+  "filters.calories.hint": "Höchstwert pro Portion oder Stück. Rezepte mit fehlenden Kalorienangaben werden nicht angezeigt.",
+  "filters.calories.any": "Alle Kalorienwerte",
+  "filters.calories.upTo": "Bis {count} kcal",
   "problem.nutrition.invalid_grams": "Ein Gewicht muss größer als 0 g und höchstens 10.000 g sein.",
   "problem.nutrition.unit_has_a_size": "Diese Einheit hat schon eine feste Größe. Ein Gewicht lässt sich für Stück, Zehe, Löffel, Dose und Ähnliches festlegen."
 }

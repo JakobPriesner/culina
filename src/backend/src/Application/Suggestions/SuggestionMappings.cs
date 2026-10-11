@@ -21,6 +21,9 @@ internal static class SuggestionMappings
 
         return new Suggestion
         {
+            Calories = scored.Recipe.Calories is { } energy
+                ? new Contracts.Recipes.GetNutrition.NutritionValue { Value = energy.Value, AtLeast = energy.AtLeast, Estimated = energy.Estimated }
+                : null,
             RecipeId = scored.Recipe.RecipeId,
             HouseholdId = scored.Recipe.HouseholdId,
             Title = scored.Recipe.Title,

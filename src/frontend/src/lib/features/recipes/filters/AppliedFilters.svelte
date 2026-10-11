@@ -2,7 +2,7 @@
   import { m } from '$shell/i18n';
 
   import type { RecipeQuery, RecipeSort } from '../stores/libraryView.svelte';
-  import { sortLabel, timeLabel } from './labels';
+  import { calorieLabel, sortLabel, timeLabel } from './labels';
 
   interface Props {
     view: RecipeQuery;
@@ -14,7 +14,7 @@
   let { view, named, order }: Props = $props();
 </script>
 
-{#if view.tags.length > 0 || view.maxMinutes !== null || view.sort !== null}
+{#if view.tags.length > 0 || view.maxMinutes !== null || view.maxKcal !== null || view.sort !== null}
   <ul class="applied" aria-label={m['filters.applied']()}>
     {#each view.tags as slug (slug)}
       <li>
@@ -41,6 +41,18 @@
           {timeLabel(view.maxMinutes)}
           <span aria-hidden="true">×</span>
         </button>
+      </li>
+    {/if}
+
+    {#if view.maxKcal !== null}
+      <li>
+        <button
+          type="button"
+          class="chip"
+          aria-label={m['filters.chip.remove']({ name: calorieLabel(view.maxKcal) })}
+          onclick={() => (view.maxKcal = null)}
+          >{calorieLabel(view.maxKcal)}<span aria-hidden="true">×</span></button
+        >
       </li>
     {/if}
 

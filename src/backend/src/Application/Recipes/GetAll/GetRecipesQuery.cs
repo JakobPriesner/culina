@@ -196,6 +196,9 @@ internal static class RecipeListMappings
 
     private static RecipeSummary ToSummary(this RecipeSearchRow row, int requestedIngredients) => new()
     {
+        Calories = row.Calories is { } energy
+            ? new Contracts.Recipes.GetNutrition.NutritionValue { Value = energy.Value, AtLeast = energy.AtLeast, Estimated = energy.Estimated }
+            : null,
         RecipeId = row.RecipeId,
         HouseholdId = row.HouseholdId,
         Title = row.Title,

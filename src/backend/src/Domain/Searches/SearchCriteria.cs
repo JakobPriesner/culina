@@ -18,11 +18,12 @@ public sealed record SearchCriteria
     /// <summary>A week, in minutes.</summary>
     public const int MaxMinutesCeiling = 10_080;
 
-    private SearchCriteria(string? query, IReadOnlyList<string> tags, int? maxMinutes, string? sort)
+    private SearchCriteria(string? query, IReadOnlyList<string> tags, int? maxMinutes, string? sort, int? maxKcal)
     {
         Query = query;
         Tags = tags;
         MaxMinutes = maxMinutes;
+        MaxKcal = maxKcal;
         Sort = sort;
     }
 
@@ -35,18 +36,22 @@ public sealed record SearchCriteria
     /// <summary>The longest a recipe may take, or null for any length.</summary>
     public int? MaxMinutes { get; }
 
+    /// <summary>Maximum kcal per serving or piece, or null.</summary>
+    public int? MaxKcal { get; }
+
     /// <summary>The order it was read in, or null for whatever the library would choose.</summary>
     public string? Sort { get; }
 
     /// <summary>Whether this asks for nothing at all, which is the whole library.</summary>
-    public bool Empty => Query is null && Tags.Count == 0 && MaxMinutes is null && Sort is null;
+    public bool Empty => Query is null && Tags.Count == 0 && MaxMinutes is null && MaxKcal is null && Sort is null;
 
     /// <summary>Parses a set of filters, returning a failure rather than throwing.</summary>
     public static Result<SearchCriteria> Create(
         string? query,
         IReadOnlyList<string>? tags,
         int? maxMinutes,
-        string? sort)
+        string? sort,
+        int? maxKcal = null)
     {
         var words = Normalise(query);
         var cleaned = Clean(tags);
@@ -62,7 +67,7 @@ public sealed record SearchCriteria
             return SavedSearchErrors.InvalidCriteria;
         }
 
-        if (maxMinutes is <= 0 or > MaxMinutesCeiling)
+        if (maxKcal is <= 0 or > 100_000 || maxMinutes is <= 0 or > MaxMinutesCeiling)
         {
             return SavedSearchErrors.InvalidCriteria;
         }
@@ -72,7 +77,7 @@ public sealed record SearchCriteria
             return SavedSearchErrors.InvalidCriteria;
         }
 
-        var criteria = new SearchCriteria(words, cleaned, maxMinutes, order);
+        var criteria = new SearchCriteria(words, cleaned, maxMinutes, order, maxKcal);
 
         return criteria.Empty ? SavedSearchErrors.CriteriaRequired : criteria;
     }
@@ -82,8 +87,9 @@ public sealed record SearchCriteria
         string? query,
         IReadOnlyList<string> tags,
         int? maxMinutes,
-        string? sort) =>
-        new(query, tags, maxMinutes, sort);
+        string? sort,
+        int? maxKcal = null) =>
+        new(query, tags, maxMinutes, sort, maxKcal);
 
     /// <summary>An empty string and nothing typed are the same thing.</summary>
     private static string? Normalise(string? value)

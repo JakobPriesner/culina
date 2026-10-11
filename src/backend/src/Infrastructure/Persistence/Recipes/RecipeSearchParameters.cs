@@ -55,6 +55,7 @@ internal sealed partial class RecipeSearchParameters(TimeProvider time, RankingW
             ingredients,
             ingredientCount = ingredients.Length,
             maxMinutes = search.MaxMinutes,
+            filterCalories = search.MaxKcal is not null,
             cookbookId = search.CookbookId,
             ruleTags = search.Rules?.Tags.Distinct(StringComparer.Ordinal).ToArray() ?? [],
             ruleIngredients = search.Rules?.Ingredients.ToArray() ?? [],
@@ -64,6 +65,8 @@ internal sealed partial class RecipeSearchParameters(TimeProvider time, RankingW
             k1 = KeyAt(cursor, 1),
             k2 = KeyAt(cursor, 2)
         });
+
+        parameters.Add("calorieIds", Array.Empty<Guid>());
 
         if (scored)
         {

@@ -458,6 +458,7 @@ export async function responsiveData(
       return reply({
         items: Array.from({ length: 6 }, (_, i) => ({
           ...recipe,
+          calories: nutritionLines ? { value: 520.9, atLeast: true, estimated: false } : undefined,
           recipeId: i === 0 ? recipeId : `recipe-${i}`,
           imageId: i < 4 ? 'image-1' : null,
           cookCount: 0
@@ -471,6 +472,7 @@ export async function responsiveData(
       return reply({
         items: Array.from({ length: suggestions }, (_, i) => ({
           ...recipe,
+          calories: nutritionLines ? { value: 520.9, atLeast: true, estimated: false } : undefined,
           recipeId: i === 0 ? recipeId : `recipe-${i}`,
           cookCount: 0
         }))

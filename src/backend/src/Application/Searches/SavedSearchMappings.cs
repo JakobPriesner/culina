@@ -20,6 +20,7 @@ internal static class SavedSearchMappings
             Query = search.Criteria.Query,
             Tags = search.Criteria.Tags,
             MaxMinutes = search.Criteria.MaxMinutes,
+            MaxKcal = search.Criteria.MaxKcal,
             Sort = search.Criteria.Sort
         },
         CreatedBy = search.CreatedBy,
@@ -32,5 +33,5 @@ internal static class SavedSearchMappings
     internal static Result<SearchCriteria> ToCriteria(SearchCriteriaContract? wire) =>
         wire is null
             ? SavedSearchErrors.CriteriaRequired
-            : SearchCriteria.Create(wire.Query, wire.Tags, wire.MaxMinutes, wire.Sort);
+            : SearchCriteria.Create(wire.Query, wire.Tags, wire.MaxMinutes, wire.Sort, wire.MaxKcal);
 }

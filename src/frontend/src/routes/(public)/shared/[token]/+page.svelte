@@ -28,7 +28,9 @@
     nutritionFigure
       ? {
           label: nutritionFigure,
-          ariaLabel: m['nutrition.meta.open']({ figure: nutritionFigure }),
+          ariaLabel: m['nutrition.meta.open']({
+            figure: metaFigureOf(nutrition.answerForShared(token), true) ?? nutritionFigure
+          }),
           onopen: showNutrition
         }
       : null

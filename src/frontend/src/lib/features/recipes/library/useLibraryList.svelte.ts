@@ -24,6 +24,7 @@ export function useLibraryList(page: Page) {
     query: libraryView.query,
     tags: libraryView.tags,
     maxMinutes: libraryView.maxMinutes ?? undefined,
+    maxKcal: libraryView.maxKcal ?? undefined,
     asTyped: asTypedFor !== null && asTypedFor === libraryView.query,
     // Always explicit so the label above the grid can't drift from the request.
     sort: order

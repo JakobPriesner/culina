@@ -32,7 +32,7 @@
 
   /** Whether a shelf could ask the same question: cookbooks fill from tags and a time limit, not words. */
   const shelvable = (search: SavedSearch): boolean =>
-    search.tags.length > 0 || search.maxMinutes !== null;
+    search.maxKcal == null && (search.tags.length > 0 || search.maxMinutes !== null);
 
   async function save() {
     const trimmed = name.trim();

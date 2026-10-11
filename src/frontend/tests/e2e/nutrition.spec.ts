@@ -10,7 +10,7 @@ test.describe('nutrition on a recipe @offline', () => {
 
   const words = {
     de: {
-      headline: /mind\.\s520\skcal\spro\sPortion\s·\sohne\sZwiebel/,
+      headline: /520\skcal\spro\sPortion/,
       energy: /mind\.\s2\.179\skJ\s\/\s520\skcal/,
       counted: 'Gezählt (3)',
       notCounted: 'Nicht gezählt (2)',
@@ -19,7 +19,7 @@ test.describe('nutrition on a recipe @offline', () => {
       credit: 'Nährwerte: Max Rubner-Institut, Bundeslebensmittelschlüssel 4.0 (CC BY 4.0)'
     },
     en: {
-      headline: /at\sleast\s520\skcal\sper\sserving\s·\swithout\sZwiebel/,
+      headline: /520\skcal\sper\sserving/,
       energy: /at\sleast\s2,179\skJ\s\/\s520\skcal/,
       counted: 'Counted (3)',
       notCounted: 'Not counted (2)',
@@ -36,10 +36,27 @@ test.describe('nutrition on a recipe @offline', () => {
       await responsiveData(page, locale, { nutritionLines: true });
       await page.goto(`/recipes/${recipeId}`);
 
-      const summary = page.locator('summary', { hasText: said.headline });
+      const summary = page.locator('#nutrition summary');
+      const overview = page.locator('#nutrition .summaryOverview');
 
+      await expect(overview.locator('.energyNumber')).toHaveText('520');
       await expect(summary).toBeVisible();
       await expect(page.getByRole('table')).toBeHidden();
+      await expect(overview.locator('.bound')).toHaveText(
+        locale === 'de' ? 'mind.\u00a0' : 'at least\u00a0'
+      );
+      await overview
+        .getByRole('button', {
+          name: locale === 'de' ? 'Hinweise zu den Kalorien' : 'About calorie values'
+        })
+        .click();
+      await expect(overview.locator('.explanation')).toBeVisible();
+      await expect(overview.locator('.explanation')).toContainText(
+        locale === 'de' ? 'Mindestwert' : 'minimum'
+      );
+      await expect(page.getByRole('table')).toBeHidden();
+      await page.keyboard.press('Escape');
+      await expect(overview.locator('.explanation')).toBeHidden();
 
       await summary.click();
 
@@ -71,7 +88,7 @@ test.describe('nutrition on a recipe @offline', () => {
         .locator('#nutrition')
         .screenshot({ path: testInfo.outputPath('nutrition-overview-desktop.png') });
     }
-    await page.locator('summary', { hasText: 'Nährwerte' }).click();
+    await page.locator('#nutrition summary').click();
 
     await expect(page.getByText(/als Vollkornbrot$/).first()).toBeVisible();
     await expect(page.getByText(/^BLS: Vollkornbrot, handwerklich gebacken/).first()).toBeVisible();
@@ -94,13 +111,13 @@ test.describe('nutrition on a recipe @offline', () => {
 
       const meta = page.locator('p.meta');
 
-      await expect(meta).toContainText(/35 Min\..*2 Portionen.*mind\.\s520\skcal/);
+      await expect(meta).toContainText(/35 Min\..*2 Portionen.*520\skcal/);
       await expect(page.getByRole('table')).toBeHidden();
 
       await meta.getByRole('button', { name: /mind\.\s520\skcal/ }).click();
 
       await expect(page.getByRole('table')).toBeVisible();
-      await expect(page.locator('summary', { hasText: 'Nährwerte' })).toBeFocused();
+      await expect(page.locator('#nutrition summary')).toBeFocused();
       await expect(page.locator('#nutrition')).toBeInViewport();
     });
 
@@ -108,14 +125,14 @@ test.describe('nutrition on a recipe @offline', () => {
       await responsiveData(page, 'de', { nutritionLines: true, nutritionVariant: 'whole' });
       await page.goto(`/recipes/${recipeId}`);
 
-      await expect(page.locator('p.meta')).toContainText(/ganzes Rezept: mind\.\s520\skcal/);
+      await expect(page.locator('p.meta')).toContainText(/ganzes Rezept: 520\skcal/);
     });
 
     test('is absent while cooking', async ({ page }) => {
       await responsiveData(page, 'de', { nutritionLines: true });
       await page.goto(`/recipes/${recipeId}/cook`);
 
-      await expect(page.locator('summary', { hasText: 'Nährwerte' })).toHaveCount(0);
+      await expect(page.locator('#nutrition summary')).toHaveCount(0);
       await expect(page.getByRole('button', { name: /Nährwerte anzeigen/ })).toHaveCount(0);
     });
   });
@@ -127,10 +144,12 @@ test.describe('nutrition on a recipe @offline', () => {
       await responsiveData(page, 'de', { nutritionLines: true, nutritionVariant: 'implausible' });
       await page.goto(`/recipes/${recipeId}`);
 
-      const summary = page.locator('summary', { hasText: 'Nährwerte' });
+      const summary = page.locator('#nutrition summary');
 
-      await expect(summary).toContainText(/ohne Zwiebel\s·\sStimmt die Menge/);
-      await expect(summary).toContainText(/Stimmt die Menge\?\s1\.800\sl\sMilch/);
+      await expect(page.locator('#nutrition .summaryOverview')).toContainText(/Stimmt die Menge/);
+      await expect(page.locator('#nutrition .summaryOverview')).toContainText(
+        /Stimmt die Menge\?\s1\.800\sl\sMilch/
+      );
 
       await summary.click();
       await page.getByRole('link', { name: 'Im Rezept ändern' }).click();
@@ -148,7 +167,7 @@ test.describe('nutrition on a recipe @offline', () => {
 
       await responsiveData(page, 'de', { nutritionLines: true, nutritionVariant: 'implausible' });
       await page.goto(`/recipes/${recipeId}`);
-      await page.locator('summary', { hasText: 'Nährwerte' }).click();
+      await page.locator('#nutrition summary').click();
       await expect(page.getByRole('link', { name: 'Im Rezept ändern' })).toBeVisible();
 
       const result = await new AxeBuilder({ page })
@@ -164,9 +183,9 @@ test.describe('nutrition on a recipe @offline', () => {
       await page.setViewportSize({ width: 320, height: 720 });
       await responsiveData(page, 'de', { nutritionLines: true, nutritionVariant: 'implausible' });
       await page.goto(`/recipes/${recipeId}`);
-      await expect(page.locator('summary', { hasText: 'Nährwerte' })).toBeVisible();
+      await expect(page.locator('#nutrition summary')).toBeVisible();
       await expectReflow(page);
-      await page.locator('summary', { hasText: 'Nährwerte' }).click();
+      await page.locator('#nutrition summary').click();
       await expectReflow(page);
     });
   });
@@ -176,9 +195,9 @@ test.describe('nutrition on a recipe @offline', () => {
       await responsiveData(page, 'de', { nutritionLines: true, nutritionVariant: 'whole' });
       await page.goto(`/recipes/${recipeId}`);
 
-      const summary = page.locator('summary', { hasText: 'Nährwerte' });
+      const summary = page.locator('#nutrition summary');
 
-      await expect(summary).toContainText(/mind\.\s520\skcal\sfür das ganze Rezept/);
+      await expect(page.locator('#nutrition .energyNumber')).toHaveText('520');
       await summary.click();
       await expect(page.getByRole('columnheader', { name: 'ganzes Rezept' })).toBeVisible();
       await expect(page.getByText('Laut Rezept 1 Portion.')).toBeVisible();
@@ -195,7 +214,7 @@ test.describe('nutrition on a recipe @offline', () => {
     await responsiveData(page, 'en', { nutritionLines: true });
     await page.goto(`/recipes/${recipeId}`);
 
-    const summary = page.locator('summary', { hasText: 'Nutrition' });
+    const summary = page.locator('#nutrition summary');
 
     await expect(summary).toBeVisible();
 
@@ -221,7 +240,7 @@ test.describe('nutrition on a recipe @offline', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto(`/recipes/${recipeId}`);
 
-    const summary = page.locator('summary', { hasText: 'Nährwerte' });
+    const summary = page.locator('#nutrition summary');
 
     await expect(summary).toBeVisible();
     await expectReflow(page);
@@ -259,7 +278,7 @@ test.describe('nutrition on a recipe @offline', () => {
       }, mode);
       await responsiveData(page, 'de', { nutritionLines: true });
       await page.goto(`/recipes/${recipeId}`);
-      await page.locator('summary', { hasText: 'Nährwerte' }).click();
+      await page.locator('#nutrition summary').click();
       await expect(page.getByRole('table')).toBeVisible();
 
       const result = await new AxeBuilder({ page })
@@ -276,10 +295,11 @@ test.describe('nutrition on a recipe @offline', () => {
   }) => {
     await responsiveData(page, 'de', { nutritionLines: true });
     await page.goto(`/recipes/${recipeId}`);
-    await expect(page.locator('summary', { hasText: 'Nährwerte' })).toBeVisible();
+    await expect(page.locator('#nutrition summary')).toBeVisible();
     await page.emulateMedia({ media: 'print' });
 
-    await expect(page.locator('summary', { hasText: /mind\.\s520\skcal/ })).toBeVisible();
+    await expect(page.locator('#nutrition .summaryOverview')).toBeVisible();
+    await expect(page.locator('#nutrition summary')).toBeHidden();
     await expect(page.locator('p.source:visible')).toHaveCount(1);
     await expect(page.locator('p.source:visible')).toContainText('Max Rubner-Institut');
     await expect(page.locator('summary .chevron')).toBeHidden();
@@ -290,7 +310,7 @@ test.describe('nutrition on a recipe @offline', () => {
     const open = async (page: Page, options: { refuseCorrections?: boolean } = {}) => {
       await responsiveData(page, 'en', { nutritionLines: true, ...options });
       await page.goto(`/recipes/${recipeId}`);
-      await page.locator('summary', { hasText: 'Nutrition' }).click();
+      await page.locator('#nutrition summary').click();
       await page
         .getByRole('button', {
           name: 'What is “Olivenöl”? Change'
@@ -318,7 +338,8 @@ test.describe('nutrition on a recipe @offline', () => {
       await expect(sheet).toBeHidden();
       await expect(page.getByText('“Olivenöl” now counts as Rapeseed oil.')).toBeVisible();
       await expect(page.locator('.detail', { hasText: 'as Rapeseed oil' })).toBeVisible();
-      await expect(page.locator('summary', { hasText: /560 kcal/ })).toBeVisible();
+      await expect(page.locator('#nutrition .energyNumber')).toHaveText('560');
+      await expect(page.locator('#nutrition summary')).toBeVisible();
 
       // Reopened, it is the household's choice, and it can be given back.
       await page.getByRole('button', { name: 'What is “Olivenöl”? Change' }).click();
@@ -327,7 +348,8 @@ test.describe('nutrition on a recipe @offline', () => {
       ).toHaveAttribute('aria-current', 'true');
       await page.getByRole('button', { name: 'Back to the default' }).click();
       await expect(page.getByText('“Olivenöl” counts as the default again.')).toBeVisible();
-      await expect(page.locator('summary', { hasText: /520 kcal/ })).toBeVisible();
+      await expect(page.locator('#nutrition .energyNumber')).toHaveText('520');
+      await expect(page.locator('#nutrition summary')).toBeVisible();
     });
 
     test('moves a line to not counted', async ({ page }) => {
@@ -349,7 +371,8 @@ test.describe('nutrition on a recipe @offline', () => {
       ).toBeVisible();
       await expect(page.locator('.detail', { hasText: 'as Olive oil' })).toBeVisible();
       await expect(page.locator('.detail', { hasText: 'as Rapeseed oil' })).toBeHidden();
-      await expect(page.locator('summary', { hasText: /520 kcal/ })).toBeVisible();
+      await expect(page.locator('#nutrition .energyNumber')).toHaveText('520');
+      await expect(page.locator('#nutrition summary')).toBeVisible();
     });
   });
 
@@ -462,10 +485,12 @@ test.describe('nutrition on a recipe @offline', () => {
       });
       await page.goto(`/shared/${shareToken}`);
 
-      const summary = page.locator('summary', { hasText: 'Nährwerte' });
+      const summary = page.locator('#nutrition summary');
 
-      await expect(summary).toContainText(/mind\.\s520\skcal\spro\sPortion/);
-      await expect(summary).toContainText(/Stimmt die Menge\?\s1\.800\sl\sMilch/);
+      await expect(page.locator('#nutrition .energyNumber')).toHaveText('520');
+      await expect(page.locator('#nutrition .summaryOverview')).toContainText(
+        /Stimmt die Menge\?\s1\.800\sl\sMilch/
+      );
 
       await summary.click();
 

@@ -45,6 +45,9 @@ public sealed record SearchCriteriaContract
     /// <summary>The longest a recipe may take, or omit for any length.</summary>
     public int? MaxMinutes { get; init; }
 
+    /// <summary>Maximum kcal per serving or piece, or omit.</summary>
+    public int? MaxKcal { get; init; }
+
     /// <summary>
     /// The order to read in, or omit for the default. One of <c>relevance</c>, <c>suggested</c>, <c>-updatedAt</c>,
     /// <c>title</c>, <c>totalMinutes</c> or <c>-cookCount</c> (not <c>cookbookOrder</c>, which needs a cookbook).

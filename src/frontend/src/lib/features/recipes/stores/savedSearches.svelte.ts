@@ -11,6 +11,7 @@ export interface SavedSearch {
   readonly query: string;
   readonly tags: readonly string[];
   readonly maxMinutes: number | null;
+  readonly maxKcal?: number | null;
   readonly sort: RecipeSort | null;
 }
 
@@ -18,6 +19,7 @@ export interface SearchCriteria {
   readonly query: string;
   readonly tags: readonly string[];
   readonly maxMinutes: number | null;
+  readonly maxKcal?: number | null;
   readonly sort: RecipeSort | null;
 }
 
@@ -25,6 +27,7 @@ export const worthSaving = (criteria: SearchCriteria): boolean =>
   criteria.query.trim().length > 0 ||
   criteria.tags.length > 0 ||
   criteria.maxMinutes !== null ||
+  criteria.maxKcal != null ||
   criteria.sort !== null;
 
 /** Household-owned (unlike recent searches, which stay in the browser) so a search saved on a laptop exists on the kitchen phone. */
@@ -156,6 +159,7 @@ function toSaved(wire: WireSavedSearch): SavedSearch {
     query: wire.criteria.query ?? '',
     tags: wire.criteria.tags ?? [],
     maxMinutes: wire.criteria.maxMinutes ?? null,
+    maxKcal: wire.criteria.maxKcal ?? null,
     sort: fromWireSort(wire.criteria.sort)
   };
 }
@@ -168,6 +172,7 @@ function toWire(criteria: SearchCriteria) {
     query: words.length > 0 ? words : undefined,
     tags: [...criteria.tags],
     maxMinutes: criteria.maxMinutes ?? undefined,
+    maxKcal: criteria.maxKcal ?? undefined,
     // `shelf` is dropped: it is a cookbook's own order, and the library has no cookbook.
     sort:
       criteria.sort === null || criteria.sort === 'shelf' ? undefined : toWireSort(criteria.sort)
