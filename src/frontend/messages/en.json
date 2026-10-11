@@ -1539,6 +1539,7 @@
   "problem.request.invalid_parameter": "Culina couldn't handle that request. Reload the page and try again.",
   "nutrition.title": "Nutrition",
   "nutrition.perServing": "per serving",
+  "nutrition.short.perPerson": "per person",
   "nutrition.perPiece": "per piece",
   "nutrition.atLeast": "at least",
   "nutrition.nothing": "Nothing in this recipe can be counted",

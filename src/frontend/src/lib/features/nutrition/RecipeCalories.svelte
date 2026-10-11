@@ -15,6 +15,10 @@
       yield: recipe.yieldAmount
     })
   );
+  /** Said after the figure, so a card that leaves the yield out still says what it counts. */
+  const per = $derived(
+    recipe.yieldKind === 'pieces' ? m['nutrition.perPiece']() : m['nutrition.short.perPerson']()
+  );
 </script>
 
 {#if recipe.calories}
@@ -25,7 +29,7 @@
       <EstimateMark estimated={recipe.calories.estimated} />{labelNumber(
         'energy',
         recipe.calories
-      )}{nbsp}kcal
+      )}{nbsp}kcal {per}
     </span>
     <CalorieInfo atLeast={recipe.calories.atLeast} estimated={recipe.calories.estimated} {basis} />
   </span>
