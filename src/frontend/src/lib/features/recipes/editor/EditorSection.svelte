@@ -69,11 +69,21 @@
     min-width: 0;
   }
 
-  /* Tabular, so a list going from 9 to 10 does not nudge the heading. */
+  /* The sans, never the editorial face: Georgia's old-style 0 reads as the letter o. Tabular, so a list going from 9 to 10 does not nudge the heading. */
   .count {
+    display: inline-block;
     margin-inline-start: var(--space-3);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-full);
+    background: var(--surface-sunken);
     color: var(--text-muted);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    letter-spacing: 0;
+    line-height: 1;
     font-variant-numeric: tabular-nums;
+    vertical-align: middle;
   }
 
   .description {

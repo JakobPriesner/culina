@@ -279,10 +279,9 @@
     margin-block-end: var(--space-4);
   }
 
-  @media (width < 64rem) {
-    .cook {
-      --step-top-inset: calc(env(safe-area-inset-top, 0px) + var(--space-4));
-    }
+  /* No header in cook mode at any width, so a step lands just below the top edge. */
+  .cook {
+    --step-top-inset: calc(env(safe-area-inset-top, 0px) + var(--space-4));
   }
 
   @media screen and (max-height: 32rem) {

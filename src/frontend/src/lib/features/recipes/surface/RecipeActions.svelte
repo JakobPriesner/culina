@@ -30,15 +30,36 @@
     ondelete
   }: Props = $props();
 
-  const inMenu = $derived(
-    !cooking && Boolean(editable || onaddtocookbook || onaddtoplan || onshare || oncopy)
+  const inMenu = $derived(!cooking && Boolean(onaddtocookbook || onshare || oncopy || ondelete));
+  const hasActions = $derived(
+    !cooking && Boolean(inMenu || onaddtolist || onaddtoplan || editable)
   );
-  const hasActions = $derived(inMenu || Boolean(!cooking && (onaddtolist || ondelete)));
 </script>
 
-<!-- The shopping list is the frequent action and stays outside the menu; the occasional ones go in it. -->
+<!-- The loop's next steps (plan, shop) and editing stay outside the menu; the occasional ones go in it, and deleting comes last there, apart and in red. -->
 {#if hasActions}
   <div class="actions">
+    {#if onaddtoplan}
+      <Button label={m['plan.recipe.action']()} onclick={onaddtoplan}>
+        {#snippet icon()}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3.5" y="5.5" width="17" height="15" rx="2" />
+            <path d="M8 3.5v4M16 3.5v4M3.5 10h17" />
+            <path d="m9 15 2 2 4-4" />
+          </svg>
+        {/snippet}
+
+        {m['plan.recipe.action']()}
+      </Button>
+    {/if}
+
     {#if onaddtolist}
       <Button label={m['shopping.addToList']()} onclick={onaddtolist}>
         {#snippet icon()}
@@ -59,6 +80,30 @@
       </Button>
     {/if}
 
+    <!-- A link, so the editor can open in a second tab. -->
+    {#if editable}
+      <Button
+        label={m['editor.edit']()}
+        href={resolve('/(app)/recipes/[recipeId]/edit', { recipeId })}
+      >
+        {#snippet icon()}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z" />
+            <path d="m15 6 3 3" />
+          </svg>
+        {/snippet}
+
+        {m['editor.edit']()}
+      </Button>
+    {/if}
+
     {#if inMenu}
       <ActionMenu>
         {#snippet trigger({ popovertarget })}
@@ -70,26 +115,6 @@
             </svg>
           </IconButton>
         {/snippet}
-
-        {#if onaddtoplan}
-          <button class="item" type="button" onclick={onaddtoplan}>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <rect x="3.5" y="5.5" width="17" height="15" rx="2" />
-              <path d="M8 3.5v4M16 3.5v4M3.5 10h17" />
-              <path d="m9 15 2 2 4-4" />
-            </svg>
-
-            {m['plan.recipe.action']()}
-          </button>
-        {/if}
 
         {#if onaddtocookbook}
           <button class="item" type="button" onclick={onaddtocookbook}>
@@ -153,9 +178,13 @@
           </button>
         {/if}
 
-        <!-- A link, so the editor can open in a second tab. -->
-        {#if editable}
-          <a class="item" href={resolve('/(app)/recipes/[recipeId]/edit', { recipeId })}>
+        <!-- Last, apart and in red; "Edit" is outside the menu, so a reach for it never lands here. -->
+        {#if ondelete}
+          {#if onaddtocookbook || onshare || oncopy}
+            <hr class="separator" />
+          {/if}
+
+          <button class="item danger" type="button" onclick={ondelete}>
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -165,32 +194,15 @@
               stroke-linejoin="round"
               aria-hidden="true"
             >
-              <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z" />
-              <path d="m15 6 3 3" />
+              <path d="M4 7h16M10 11v6M14 11v6" />
+              <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" />
+              <path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7" />
             </svg>
 
-            {m['editor.edit']()}
-          </a>
+            {m['recipe.delete.action']()}
+          </button>
         {/if}
       </ActionMenu>
-    {/if}
-
-    <!-- Last and outside the menu so a reach for "Edit" never lands on it. -->
-    {#if ondelete}
-      <IconButton bordered label={m['recipe.delete.action']()} onclick={ondelete}>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-        >
-          <path d="M4 7h16M10 11v6M14 11v6" />
-          <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12" />
-          <path d="M9 7V4.5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1V7" />
-        </svg>
-      </IconButton>
     {/if}
   </div>
 {/if}
@@ -200,6 +212,19 @@
     display: flex;
     align-items: center;
     gap: var(--space-2);
+  }
+
+  /* Three labelled buttons need the room; narrower, each collapses to a circle like the menu's, and its aria-label stays the full name. */
+  @media (width < 64rem) {
+    .actions :global(.button) {
+      width: var(--control-md);
+      padding-inline: 0;
+      border-radius: var(--radius-full);
+    }
+
+    .actions :global(.button .label) {
+      display: none;
+    }
   }
 
   @media (width < 52rem) {
@@ -213,16 +238,6 @@
       inset-block-start: var(--space-2);
       inset-inline-end: var(--space-2);
       z-index: var(--z-sticky);
-    }
-
-    /* Collapse the labelled button to an icon; its aria-label stays the full name. */
-    .actions :global(.button) {
-      width: var(--control-md);
-      padding-inline: 0;
-    }
-
-    .actions :global(.button .label) {
-      display: none;
     }
   }
 

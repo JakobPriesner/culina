@@ -18,6 +18,16 @@
   }
 
   let { meal, onremove, onpress, onmove, lifted = false }: Props = $props();
+
+  // Joined here, not in markup: Svelte trims the space at the start of an {#if} block, which made "Abendessen· 4 Portionen".
+  const meta = $derived(
+    [
+      slotLabel[meal.slot as MealSlot]?.(),
+      meal.servings ? m['recipes.meta.servings']({ count: meal.servings }) : undefined
+    ]
+      .filter(Boolean)
+      .join(' · ')
+  );
 </script>
 
 <!-- A press anywhere can become a drag (the phone gesture); the real button is the grip.
@@ -53,10 +63,7 @@
 
     <div class="words">
       <span class="name">{meal.title}</span>
-      <span class="meta">
-        {slotLabel[meal.slot as MealSlot]?.() ?? ''}{#if meal.servings}
-          · {m['recipes.meta.servings']({ count: meal.servings })}{/if}
-      </span>
+      <span class="meta">{meta}</span>
       {#if meal.isOnShoppingList}
         <span class="listed">
           <svg

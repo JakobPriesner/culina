@@ -39,6 +39,10 @@
   );
 
   const searchId = 'recipe-search';
+
+  /** Below this a "suggestion" is just one of a handful of recipes, and the panel would show it twice: featured and in the grid. */
+  const leadFrom = 6;
+  const suggesting = $derived(arranged && lead.lead.length > 0 && recipes.total >= leadFrom);
 </script>
 
 <svelte:head><title>{m['recipes.title']()}</title></svelte:head>
@@ -87,7 +91,7 @@
   {:else if recipes.status === 'ready' && recipes.items.length === 0}
     <EmptyLibrary />
   {:else}
-    {#if arranged && lead.lead.length > 0}
+    {#if suggesting}
       <SuggestionDeck
         items={lead.lead}
         ondismiss={lead.shortlist.length > 0 ? (recipeId) => void lead.hide(recipeId) : undefined}

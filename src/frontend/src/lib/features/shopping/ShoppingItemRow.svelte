@@ -195,7 +195,9 @@
     text-decoration: line-through;
   }
 
+  /* Placed by column, not by order: a line without an amount would otherwise pull the recipe link next to its name. */
   .amount {
+    grid-column: 2;
     justify-self: start;
     color: var(--text-muted);
     font-size: var(--text-sm);
@@ -208,6 +210,7 @@
   }
 
   .source-toggle {
+    grid-column: 3;
     display: inline-flex;
     align-items: center;
     gap: var(--space-1);
@@ -272,9 +275,13 @@
   }
 
   /* Held back until the line is reached: a column of crosses reads as the thing to press, and removing cannot be undone; moving waits too. */
+  /* Room for both buttons even when a bought line has only one, so the recipe link above stays in one column. */
   .actions {
+    grid-column: 4;
     display: inline-flex;
     align-items: center;
+    justify-content: flex-end;
+    min-width: calc(var(--control-sm) * 2);
     opacity: 0;
     transition: opacity var(--duration-fast) var(--ease-out);
   }
@@ -302,7 +309,16 @@
     }
 
     .amount {
+      grid-column: 1;
       padding-inline-start: calc(var(--control-sm) + var(--space-3));
+    }
+
+    .source-toggle {
+      grid-column: 2;
+    }
+
+    .actions {
+      grid-column: 3;
     }
   }
 </style>

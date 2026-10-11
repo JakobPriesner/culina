@@ -2,6 +2,7 @@
   import { onDestroy } from 'svelte';
 
   import { resolve } from '$app/paths';
+  import { page } from '$app/state';
   import { Button, EmptyState, ErrorState } from '$ds';
 
   import CarriedMeal from '$features/planning/CarriedMeal.svelte';
@@ -34,8 +35,8 @@
    */
   const householdId = $derived(session.activeHouseholdId);
 
-  /** Which Monday is on screen, as an offset in weeks from this one. */
-  let offset = $state(0);
+  /** Which Monday is on screen, as an offset in weeks from this one; `?week=1` opens on next week, as "See the week" does after planning ahead. */
+  let offset = $state(Number.parseInt(page.url.searchParams.get('week') ?? '', 10) || 0);
 
   /** The day an "add" was pressed for, which is also what opens the picker. */
   let adding = $state<string | null>(null);

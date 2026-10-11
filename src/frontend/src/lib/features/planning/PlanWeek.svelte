@@ -16,13 +16,34 @@
   let { days, householdId, drag, ondrop, onadd, onmove, onremove }: Props = $props();
 
   const today = asDate(new Date());
+
+  /** Plain, not state: the week opens at today once per visit, never again while someone scrolls. */
+  let shownToday = false;
+
+  // On a phone the days stack, so today can sit below a screen of days already over; start there instead.
+  // An attachment re-runs when `days` changes, which is how it waits for the week to arrive.
+  function startAtToday(list: HTMLOListElement) {
+    if (shownToday || !days.some((day) => day.date === today)) {
+      return;
+    }
+
+    shownToday = true;
+
+    if (!matchMedia('(min-width: 40rem)').matches) {
+      // After the days have rendered, which happens in the same update as this run.
+      requestAnimationFrame(() =>
+        list.querySelector<HTMLElement>('[aria-current="date"]')?.scrollIntoView({ block: 'start' })
+      );
+    }
+  }
 </script>
 
-<ol class="week" class:dragging={drag.held !== null}>
+<ol class="week" class:dragging={drag.held !== null} {@attach startAtToday}>
   {#each days as day (day.date)}
     <PlanDay
       {day}
       today={day.date === today}
+      past={day.date < today}
       {householdId}
       {drag}
       {ondrop}

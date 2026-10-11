@@ -1668,5 +1668,7 @@
   "household.ingredients.edit": "Ändern",
   "household.ingredients.remove": "Entfernen",
   "household.ingredients.editLabel": "„{name}“: {what} ändern",
-  "household.ingredients.removeLabel": "„{name}“: {what} entfernen"
+  "household.ingredients.removeLabel": "„{name}“: {what} entfernen",
+  "plan.today": "Heute",
+  "plan.recipe.showWeek": "Woche ansehen"
 }
