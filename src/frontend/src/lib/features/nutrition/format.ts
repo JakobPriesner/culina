@@ -23,3 +23,7 @@ export const withBound = (text: string, atLeast: boolean): string =>
 /** Grams on a line: tenths below 10 g, whole numbers above. A line is only ever an estimate of this, so no false precision. */
 export const wholeOrTenth = (grams: number): string =>
   formatNumber(grams, { maximumFractionDigits: grams < 10 ? 1 : 0 });
+
+/** An estimate is marked where it is shown, not only where it is explained; the words come with it for a screen reader. */
+export const withEstimate = (text: string, estimated: boolean): string =>
+  estimated ? `≈${nbsp}${text}` : text;

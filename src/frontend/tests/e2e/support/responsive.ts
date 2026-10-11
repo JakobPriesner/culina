@@ -73,6 +73,19 @@ const cookbook: components['schemas']['CookbooksCookbookDetail'] = {
   version: 1
 };
 
+/** The household's side of the weights: whether typical ones count, and what it said one unit weighs ("zwiebel|piece"). */
+type Weighing = { typical: boolean; weights: ReadonlyMap<string, number> };
+
+/** The kinds of milk the fixture offers, per 100 g. */
+const milks = [
+  { code: 'H1', labelDe: 'Vollmilch 3,5 %', labelEn: 'whole milk 3.5 %', kcal: 65 },
+  { code: 'H2', labelDe: 'fettarme Milch 1,5 %', labelEn: 'low-fat milk 1.5 %', kcal: 47 },
+  { code: 'H3', labelDe: 'Magermilch', labelEn: 'skimmed milk', kcal: 35 }
+];
+
+/** What the server makes of a name: one key for every spelling. */
+const fold = (name: string) => name.trim().toLowerCase().replace('ü', 'ue');
+
 type WireIngredient = {
   ingredientId?: string | null;
   quantity?: number | null;
@@ -88,13 +101,91 @@ type WireIngredient = {
 function nutrition(
   ingredients: WireIngredient[],
   corrections: ReadonlyMap<string, string | null> = new Map(),
-  yieldAmount = 2
+  yieldAmount = 2,
+  weighing?: Weighing
 ): components['schemas']['RecipesGetNutritionResponse'] {
   const kcal = [240, 200, 80.9];
   const zeroEnergy = ['Salz'];
   let counted = 0;
+  // What the milk and the onion add to the figure, which depends on the kind and on the weight.
+  let extraKcal = 0;
+  let estimated = false;
   const lines = ingredients.map((one) => {
     const ingredientId = one.ingredientId as string;
+
+    // Milk comes in kinds, one tap apart; a litre of it per pot is the implausible case, not this.
+    if (weighing && one.name === 'Milch' && one.unit === 'ml') {
+      const chosen = corrections.get('Milch') ?? 'H1';
+      const kind = milks.find((milk) => milk.code === chosen)!;
+      const grams = one.quantity! * 1.03;
+
+      counted += 1;
+      extraKcal += (grams * kind.kcal) / 100;
+
+      return {
+        ingredientId,
+        status: 'counted' as const,
+        food: {
+          code: kind.code,
+          nameDe: kind.labelDe,
+          nameEn: kind.labelEn,
+          labelDe: kind.labelDe,
+          labelEn: kind.labelEn
+        },
+        grams,
+        via: 'density' as const,
+        corrected: corrections.has('Milch'),
+        canRaiseEnergy: false,
+        energyKcal: (grams * kind.kcal) / 100,
+        variants: milks.map((milk) => ({
+          code: milk.code,
+          labelDe: milk.labelDe,
+          labelEn: milk.labelEn,
+          energyKcal: milk.kcal
+        }))
+      };
+    }
+
+    // A count is the household's weight, else a typical one (an estimate) unless that is off, else not counted.
+    if (weighing && one.unit === 'piece' && one.quantity != null) {
+      const own = weighing.weights.get(`${fold(one.name)}|piece`);
+      const per = own ?? (weighing.typical ? 110 : null);
+
+      if (per === null)
+        return {
+          ingredientId,
+          status: 'amountNotInGrams' as const,
+          reason: 'count' as const,
+          unitKey: 'piece',
+          corrected: false,
+          canRaiseEnergy: true
+        };
+
+      const grams = per * one.quantity;
+
+      counted += 1;
+      extraKcal += grams * 0.4;
+      estimated ||= own === undefined;
+
+      return {
+        ingredientId,
+        status: 'counted' as const,
+        food: {
+          code: 'G410100',
+          nameDe: 'Zwiebel, roh',
+          nameEn: 'Onion, raw',
+          labelDe: 'Zwiebel',
+          labelEn: 'onion'
+        },
+        grams,
+        via: own === undefined ? ('typicalWeight' as const) : ('householdWeight' as const),
+        source: own === undefined ? 'USDA FoodData Central' : undefined,
+        unitKey: 'piece',
+        corrected: false,
+        canRaiseEnergy: false,
+        energyKcal: grams * 0.4
+      };
+    }
 
     // What the household said the name is: a food, or null for not counting it.
     if (corrections.has(one.name)) {
@@ -203,7 +294,11 @@ function nutrition(
     };
   });
   const complete = counted === ingredients.length;
-  const value = (amount: number) => ({ value: amount, atLeast: !complete });
+  const value = (amount: number, rough = false) => ({
+    value: amount,
+    atLeast: !complete,
+    estimated: rough
+  });
 
   return {
     per: 'serving',
@@ -214,7 +309,10 @@ function nutrition(
     values: {
       energyKj: value(2179.5),
       // A correction moves the total, as the server's answer would.
-      energyKcal: value(corrections.size > 0 ? 560.2 : 520.9),
+      energyKcal: value(
+        weighing ? 520.9 + extraKcal : corrections.size > 0 ? 560.2 : 520.9,
+        estimated
+      ),
       fat: value(31.62),
       saturatedFat: value(19.04),
       carbohydrate: value(7.46),
@@ -248,6 +346,8 @@ export async function responsiveData(
     refuseCorrections = false,
     // What the panel has to say besides the usual: an amount that cannot be right, or a recipe for one portion.
     nutritionVariant = 'usual' as 'usual' | 'implausible' | 'whole',
+    // A count is counted by a typical weight, milk comes in kinds, and the household can say what a unit weighs.
+    estimates = false,
     // A visitor with a share link and no account: the app asks who is signed in and is told nobody.
     signedOut = false,
     // An imported recipe's shape: the lines split into named groups, the second holding the apples.
@@ -280,6 +380,9 @@ export async function responsiveData(
                 { ingredientId: 'oil', name: 'Olivenöl', quantity: 2, unit: 'tbsp' },
                 { ingredientId: 'onion', name: 'Zwiebel', quantity: 1, unit: 'piece' },
                 { ingredientId: 'salt', name: 'Salz' },
+                ...(estimates
+                  ? [{ ingredientId: 'milk', name: 'Milch', quantity: 200, unit: 'ml' }]
+                  : []),
                 ...(nutritionVariant === 'implausible'
                   ? [{ ingredientId: 'milk', name: 'Milch', quantity: 1800, unit: 'l' }]
                   : [])
@@ -318,10 +421,52 @@ export async function responsiveData(
     version: 1
   };
   const corrections = new Map<string, string | null>();
+  const household = { typical: true, weights: new Map<string, number>() };
   await page.route('**/api/v1/**', async (route) => {
     const url = new URL(route.request().url());
     const path = url.pathname.replace('/api/v1', '');
     const method = route.request().method();
+    const weighed = /^\/households\/[^/]+\/ingredients\/([^/]+)\/units\/([^/]+)$/.exec(path);
+    if (weighed && (method === 'PUT' || method === 'DELETE')) {
+      const key = `${fold(decodeURIComponent(weighed[1]!))}|${decodeURIComponent(weighed[2]!)}`;
+      if (method === 'DELETE') household.weights.delete(key);
+      else household.weights.set(key, route.request().postDataJSON().grams);
+      return route.fulfill({ status: 204 });
+    }
+    if (/^\/households\/[^/]+\/nutrition$/.test(path)) {
+      if (method === 'PUT') household.typical = route.request().postDataJSON().useTypicalWeights;
+      return route.fulfill({ json: { useTypicalWeights: household.typical } });
+    }
+    // What the household has said, by folded name: the foods it chose and the weights it set.
+    if (/^\/households\/[^/]+\/nutrition\/ingredients$/.test(path)) {
+      const names = new Set([
+        ...[...corrections.keys()].map(fold),
+        ...[...household.weights.keys()].map((key) => key.split('|')[0]!)
+      ]);
+      return route.fulfill({
+        json: {
+          items: [...names].sort().map((name) => {
+            const code = [...corrections].find(([written]) => fold(written) === name)?.[1];
+            const kind = milks.find((milk) => milk.code === code);
+            return {
+              name,
+              corrected:
+                code !== undefined || [...corrections.keys()].some((k) => fold(k) === name),
+              food: kind && {
+                code: kind.code,
+                nameDe: kind.labelDe,
+                nameEn: kind.labelEn,
+                labelDe: kind.labelDe,
+                labelEn: kind.labelEn
+              },
+              weights: [...household.weights]
+                .filter(([key]) => key.startsWith(`${name}|`))
+                .map(([key, grams]) => ({ unit: key.split('|')[1]!, grams }))
+            };
+          })
+        }
+      });
+    }
     const said = /^\/households\/[^/]+\/ingredients\/(.+)$/.exec(path);
     if (said && (method === 'PUT' || method === 'DELETE')) {
       if (refuseCorrections)
@@ -449,7 +594,8 @@ export async function responsiveData(
         nutrition(
           detail.groups.flatMap((group) => group.ingredients),
           corrections,
-          detail.yieldAmount
+          detail.yieldAmount,
+          estimates ? household : undefined
         )
       );
     if (path.endsWith('/notes')) return reply({ overall: '', steps: [] });

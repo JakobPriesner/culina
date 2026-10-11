@@ -868,3 +868,216 @@ describe('an inherited recipe', () => {
     expect(screen.queryByRole('link', { name: 'Set servings' })).not.toBeInTheDocument();
   });
 });
+
+/** Counted by a typical weight (the onion), the household's own (the egg), and the rest by grams. */
+const estimated = (names: string[] = [onion]) => {
+  const flagged = complete().ingredients.map((line) =>
+    names.includes(line.ingredientId)
+      ? {
+          ...line,
+          via: 'typicalWeight',
+          grams: 110,
+          source: 'USDA FoodData Central',
+          unitKey: 'piece'
+        }
+      : line.ingredientId === egg
+        ? { ...line, via: 'householdWeight', grams: 60, unitKey: 'piece' }
+        : line
+  );
+
+  return {
+    ...complete(),
+    ingredients: flagged,
+    values: {
+      ...values(520.6, false),
+      energyKcal: { ...value(520.6, false), estimated: true },
+      protein: { ...value(9.2, false), estimated: true }
+    }
+  };
+};
+
+describe('estimates are said where they are shown', () => {
+  it('names the estimated lines in the headline, marks the numbers and rounds them the usual way', async () => {
+    serverAnswers(estimated());
+    show();
+
+    const summary = await headline();
+
+    expect(summary).toHaveTextContent('partly estimated: onion');
+    expect(summary.querySelector('.energyNumber')).toHaveTextContent('≈ estimated 521');
+    // Only the estimated macros carry the sign.
+    expect(within(summary).getByText('Protein').closest('.macro')).toHaveTextContent(
+      '≈ estimated 9.2 g'
+    );
+    expect(within(summary).getByText('Fat').closest('.macro')).not.toHaveTextContent('≈');
+    expect(summary.querySelector('.info .explanation')).toHaveTextContent(
+      'Includes estimated ingredient weights.'
+    );
+  });
+
+  it('names at most two lines, then how many more', async () => {
+    serverAnswers(estimated([onion, oil, salt]));
+    show();
+
+    expect(await headline()).toHaveTextContent('partly estimated: onion, salt and 1 more');
+  });
+
+  it('keeps a lower bound a lower bound, rounded down, with the estimate named too', async () => {
+    serverAnswers({
+      ...estimated(),
+      values: {
+        ...values(520.9, true),
+        energyKcal: { ...value(520.9, true), estimated: true }
+      }
+    });
+    show();
+
+    const summary = await headline();
+
+    expect(summary.querySelector('.energyNumber')).toHaveTextContent('520');
+    expect(summary.querySelector('.bound')).toHaveTextContent('at least');
+    expect(summary).toHaveTextContent('partly estimated: onion');
+  });
+
+  it('says nothing about estimates for an exact figure', async () => {
+    serverAnswers(complete());
+    show();
+
+    const summary = await headline();
+
+    expect(summary).not.toHaveTextContent('estimated');
+    expect(summary).not.toHaveTextContent('≈');
+  });
+
+  it('speaks German', async () => {
+    preferences.setLocale('de');
+    serverAnswers(estimated());
+    show();
+
+    expect(await headline()).toHaveTextContent('teils geschätzt: onion');
+  });
+
+  it('marks the estimated values of the label', async () => {
+    serverAnswers(estimated());
+    show();
+    await toggle();
+
+    const table = screen.getByRole('table');
+    const row = (name: string) =>
+      within(within(table).getByRole('rowheader', { name }).closest('tr')!);
+
+    expect(row('Energy').getByRole('cell')).toHaveTextContent('≈ estimated 2,178 kJ / 521 kcal');
+    expect(row('Protein').getByRole('cell')).toHaveTextContent('≈ estimated 9.2 g');
+    expect(row('Fat').getByRole('cell')).not.toHaveTextContent('≈');
+  });
+
+  it('reads a row as the weight it was counted at, from where, and whose it is', async () => {
+    serverAnswers(estimated());
+    show();
+    await toggle();
+
+    const rows = screen.getAllByRole('listitem');
+    const rowOf = (name: string) => rows.find((row) => row.textContent?.includes(name))!;
+
+    expect(rowOf('onion')).toHaveTextContent('≈ 110 g · typical');
+    expect(rowOf('onion')).toHaveTextContent('Source: USDA FoodData Central');
+    expect(rowOf('egg')).toHaveTextContent('60 g · your value');
+    expect(rowOf('egg')).not.toHaveTextContent('Source');
+  });
+
+  it('follows the servings on the page for the weight of a row', async () => {
+    serverAnswers(estimated());
+    show(4);
+    await toggle();
+
+    expect(
+      screen.getAllByRole('listitem').find((row) => row.textContent?.includes('onion'))
+    ).toHaveTextContent('≈ 220 g · typical');
+  });
+});
+
+describe('saying what a unit weighs, from the breakdown', () => {
+  let calls: { method: string; url: string; body: string }[];
+
+  beforeEach(() => {
+    HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+      this.open = true;
+    };
+    HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+      this.open = false;
+    };
+    calls = [];
+  });
+
+  const serve = (body: unknown) =>
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) => {
+        calls.push({ method: input.method, url: input.url, body: await input.clone().text() });
+
+        if (input.method !== 'GET') {
+          return new Response(null, { status: 204 });
+        }
+
+        return new Response(JSON.stringify(input.url.includes('/foods') ? { items: [] } : body), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      })
+    );
+
+  const spoon = () => withLine(partial(), oil, { unitKey: 'tbsp', reason: 'spoonOfSolid' });
+
+  it('offers it on a row that is not counted by grams, and sets it for the unit as written', async () => {
+    serve(spoon());
+    show();
+    await toggle();
+
+    await userEvent.click(screen.getByRole('button', { name: /Set weight/ }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'How much does 1 tbsp of “olive oil” weigh?' })
+    ).toBeInTheDocument();
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Weight in grams' }), '15');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(calls.some((call) => call.method === 'PUT')).toBe(true));
+
+    const put = calls.find((call) => call.method === 'PUT')!;
+
+    expect(put.url).toContain('/households/h1/ingredients/olive%20oil/units/tbsp');
+    expect(JSON.parse(put.body)).toEqual({ grams: 15 });
+  });
+
+  it('offers nothing for a line with no unit to weigh', async () => {
+    serve(partial());
+    show();
+    await toggle();
+
+    expect(screen.queryByRole('button', { name: /Set weight/ })).not.toBeInTheDocument();
+  });
+
+  it('turns a kind of food into a food choice in one tap', async () => {
+    serve(
+      withLine(partial(), butter, {
+        variants: [
+          { code: 'M110100', labelDe: 'Butter', labelEn: 'Butter', energyKcal: 741 },
+          { code: 'M2', labelDe: 'Sauerrahmbutter', labelEn: 'Sour cream butter', energyKcal: 740 }
+        ]
+      })
+    );
+    show();
+    await toggle();
+
+    await userEvent.click(screen.getByRole('button', { name: 'What is “butter”? Change' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Sour cream butter/ }));
+
+    await waitFor(() => expect(calls.some((call) => call.method === 'PUT')).toBe(true));
+
+    const put = calls.find((call) => call.method === 'PUT')!;
+
+    expect(put.url).toContain('/households/h1/ingredients/butter');
+    expect(JSON.parse(put.body)).toEqual({ food: 'M2' });
+  });
+});

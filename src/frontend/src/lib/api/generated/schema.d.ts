@@ -3569,7 +3569,7 @@ export interface components {
              *     weight for the ingredient and unit) or `typicalWeight` (an estimate, see `source`); whenever there are grams.
              * @enum {string|null}
              */
-            via?: "mass" | "density" | "eggSize" | null;
+            via?: "mass" | "density" | "eggSize" | "householdWeight" | "typicalWeight" | null;
             /** @description Whether the household chose the food (or to leave it out) instead of the default. */
             corrected: boolean;
             /**

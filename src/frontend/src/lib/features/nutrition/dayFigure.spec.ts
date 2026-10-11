@@ -4,8 +4,11 @@ import { dayFigure, dayWords, type PlannedFigure } from './dayFigure';
 import type { Nutrition } from './types';
 import { preferences } from '$shell/preferences.svelte';
 
-const answer = (kcal: number, over: Partial<Nutrition> & { atLeast?: boolean } = {}): Nutrition => {
-  const { atLeast = false, ...rest } = over;
+const answer = (
+  kcal: number,
+  over: Partial<Nutrition> & { atLeast?: boolean; estimated?: boolean } = {}
+): Nutrition => {
+  const { atLeast = false, estimated = false, ...rest } = over;
 
   return {
     per: 'serving',
@@ -13,7 +16,7 @@ const answer = (kcal: number, over: Partial<Nutrition> & { atLeast?: boolean } =
     complete: !atLeast,
     counted: 3,
     lines: 3,
-    values: { energyKcal: { value: kcal, atLeast } },
+    values: { energyKcal: { value: kcal, atLeast, estimated } },
     ingredients: [],
     ...rest
   } as unknown as Nutrition;
@@ -38,6 +41,24 @@ describe('what one person has on a planned day', () => {
     ]);
 
     expect(plain(words)).toBe('at least 1,150 kcal per person');
+  });
+
+  it('says it is partly estimated when a meal is, and rounds the sum the usual way', () => {
+    const words = dayWords([
+      meal('Soup', answer(450.5, { estimated: true })),
+      meal('Pasta', answer(700))
+    ]);
+
+    expect(plain(words)).toBe('1,151 kcal per person · partly estimated');
+  });
+
+  it('says both: a part left out and a part estimated', () => {
+    const words = dayWords([
+      meal('Soup', answer(450, { estimated: true })),
+      meal('Cake', answer(300, { per: 'piece', yield: 12 }))
+    ]);
+
+    expect(plain(words)).toBe('at least 450 kcal per person · without Cake · partly estimated');
   });
 
   it('leaves out a recipe of pieces, and says so', () => {
