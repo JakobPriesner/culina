@@ -23,6 +23,7 @@ type WireRelated = components['schemas']['RecipesGetRelatedRelatedRecipe'];
 type WireShared = components['schemas']['RecipesGetSharedResponse'];
 
 export const toSummary = (wire: WireSummary): RecipeSummary => ({
+  calories: 'calories' in wire ? (wire.calories ?? null) : null,
   id: wire.recipeId,
   householdId: wire.householdId,
   title: wire.title,
@@ -48,6 +49,7 @@ export const toSummary = (wire: WireSummary): RecipeSummary => ({
 });
 
 export const toSuggestion = (wire: WireSuggestion): Suggestion => ({
+  calories: 'calories' in wire ? (wire.calories ?? null) : null,
   id: wire.recipeId,
   householdId: wire.householdId,
   title: wire.title,

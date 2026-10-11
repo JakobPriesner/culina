@@ -97,6 +97,21 @@ describe('the library toolbar', () => {
     expect(view.maxMinutes).toBeNull();
   });
 
+  it('counts and removes the calorie limit independently of other filters', async () => {
+    serverAnswers();
+    const view = new RecipeQuery();
+    view.maxMinutes = 30;
+    view.maxKcal = 500;
+    show(view);
+    await settle();
+    expect(screen.getByRole('button', { name: /Filter \(2\)/ })).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove the filter “Up to 500 kcal”' })
+    );
+    expect(view.maxKcal).toBeNull();
+    expect(view.maxMinutes).toBe(30);
+  });
+
   it('names a tag chip by the household’s own word once it knows it', async () => {
     serverAnswers();
 
@@ -144,6 +159,7 @@ describe('the library toolbar', () => {
       query: 'auflauf',
       tags: ['vegetarisch'],
       maxMinutes: 15,
+      maxKcal: null,
       sort: null
     });
   });

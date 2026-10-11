@@ -20,6 +20,8 @@ internal sealed record SavedSearchRow
 
     public int? MaxMinutes { get; init; }
 
+    public int? MaxKcal { get; init; }
+
     public string? Sort { get; init; }
 
     public Guid CreatedBy { get; init; }
@@ -39,7 +41,7 @@ internal sealed class SavedSearchRepository(DbExecutor executor) : ISavedSearchR
     private const string NamedOnce = "saved_searches_named_once_idx";
 
     private const string Columns =
-        "id, household_id, name, query, tags, max_minutes, sort, created_by, created_at, updated_at";
+        "id, household_id, name, query, tags, max_minutes, max_kcal, sort, created_by, created_at, updated_at";
 
     public async Task<Result<SavedSearch>> FindAsync(
         Guid searchId,
@@ -78,9 +80,9 @@ internal sealed class SavedSearchRepository(DbExecutor executor) : ISavedSearchR
             await executor.ExecuteAsync(
                 """
                 insert into saved_searches
-                    (id, household_id, name, query, tags, max_minutes, sort,
+                    (id, household_id, name, query, tags, max_minutes, max_kcal, sort,
                      created_by, created_at, updated_at)
-                values (@id, @householdId, @name, @query, @tags, @maxMinutes, @sort,
+                values (@id, @householdId, @name, @query, @tags, @maxMinutes, @maxKcal, @sort,
                         @createdBy, @createdAt, @updatedAt);
                 """,
                 Parameters(search),
@@ -106,7 +108,7 @@ internal sealed class SavedSearchRepository(DbExecutor executor) : ISavedSearchR
                 """
                 update saved_searches
                 set name = @name, query = @query, tags = @tags,
-                    max_minutes = @maxMinutes, sort = @sort, updated_at = @updatedAt
+                    max_minutes = @maxMinutes, max_kcal = @maxKcal, sort = @sort, updated_at = @updatedAt
                 where id = @id;
                 """,
                 Parameters(search),
@@ -135,6 +137,7 @@ internal sealed class SavedSearchRepository(DbExecutor executor) : ISavedSearchR
         query = search.Criteria.Query,
         tags = search.Criteria.Tags.ToArray(),
         maxMinutes = search.Criteria.MaxMinutes,
+        maxKcal = search.Criteria.MaxKcal,
         sort = search.Criteria.Sort,
         createdBy = search.CreatedBy,
         createdAt = search.CreatedAt,
@@ -146,7 +149,7 @@ internal sealed class SavedSearchRepository(DbExecutor executor) : ISavedSearchR
             row.Id,
             row.HouseholdId,
             Unwrap(SavedSearchName.Create(row.Name)),
-            SearchCriteria.Restore(row.Query, row.Tags, row.MaxMinutes, row.Sort),
+            SearchCriteria.Restore(row.Query, row.Tags, row.MaxMinutes, row.Sort, row.MaxKcal),
             row.CreatedBy,
             row.CreatedAt,
             row.UpdatedAt);

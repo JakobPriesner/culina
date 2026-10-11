@@ -34,6 +34,7 @@ export function useCookbookShelf(page: Page) {
     query: view.query,
     tags: view.tags,
     maxMinutes: view.maxMinutes ?? undefined,
+    maxKcal: view.maxKcal ?? undefined,
     cookbookId: page.cookbookId(),
     sort: order,
     asTyped: asTypedFor !== null && asTypedFor === view.query

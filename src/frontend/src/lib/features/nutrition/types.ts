@@ -6,6 +6,8 @@ export type NutritionStatus =
 export type NutritionReason = 'spoonOfSolid' | 'volumeOfSolid' | 'count' | 'householdUnit';
 
 export interface NutritionValue {
+  /** Some ingredient weights come from typical amounts. */
+  readonly estimated?: boolean;
   /** Unrounded; presentation rounds it (`rounding.ts`). */
   readonly value: number;
   /** A lower bound: something left out, or a food without this value, could only have added to it. */

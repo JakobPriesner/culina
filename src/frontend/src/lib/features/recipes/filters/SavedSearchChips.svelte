@@ -23,6 +23,7 @@
     return (
       search.query === view.query &&
       search.maxMinutes === view.maxMinutes &&
+      (search.maxKcal ?? null) === view.maxKcal &&
       search.sort === view.sort &&
       search.tags.length === view.tags.length &&
       search.tags.every((slug) => view.tags.includes(slug))

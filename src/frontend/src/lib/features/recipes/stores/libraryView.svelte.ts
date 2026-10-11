@@ -89,6 +89,7 @@ export function fromWireSort(wire: string | null | undefined): RecipeSort | null
 
 /** Time ceiling buckets: "about half an hour" is the thought, not 37 minutes. */
 export const timeCeilings = [15, 30, 45, 60] as const;
+export const calorieCeilings = [300, 500, 700, 900] as const;
 
 /** One object for the question the page, cookbook page, filter panel and saved searches all ask, so they cannot diverge. */
 export class RecipeQuery {
@@ -99,16 +100,28 @@ export class RecipeQuery {
 
   maxMinutes = $state<number | null>(null);
 
+  maxKcal = $state<number | null>(null);
+
   /** The chosen order; null means the page decides (`effectiveSort`), so a pick sticks even when ranking would take over. */
   sort = $state<RecipeSort | null>(null);
 
   /** Filters on, for the trigger badge; words are excluded as they are visible in the box. */
   get activeCount(): number {
-    return this.tags.length + (this.maxMinutes === null ? 0 : 1) + (this.sort === null ? 0 : 1);
+    return (
+      this.tags.length +
+      (this.maxMinutes === null ? 0 : 1) +
+      (this.maxKcal === null ? 0 : 1) +
+      (this.sort === null ? 0 : 1)
+    );
   }
 
   get filtered(): boolean {
-    return this.query.trim().length > 0 || this.tags.length > 0 || this.maxMinutes !== null;
+    return (
+      this.query.trim().length > 0 ||
+      this.tags.length > 0 ||
+      this.maxMinutes !== null ||
+      this.maxKcal !== null
+    );
   }
 
   toggleTag(slug: string): void {
@@ -121,11 +134,13 @@ export class RecipeQuery {
     query?: string;
     tags?: readonly string[];
     maxMinutes?: number | null;
+    maxKcal?: number | null;
     sort?: RecipeSort | null;
   }): void {
     this.query = next.query ?? '';
     this.tags = next.tags ?? [];
     this.maxMinutes = next.maxMinutes ?? null;
+    this.maxKcal = next.maxKcal ?? null;
     this.sort = next.sort ?? null;
   }
 
@@ -133,12 +148,14 @@ export class RecipeQuery {
     query: string;
     tags: readonly string[];
     maxMinutes: number | null;
+    maxKcal: number | null;
     sort: RecipeSort | null;
   } {
     return {
       query: this.query,
       tags: this.tags,
       maxMinutes: this.maxMinutes,
+      maxKcal: this.maxKcal,
       sort: this.sort
     };
   }
@@ -147,6 +164,7 @@ export class RecipeQuery {
     this.query = '';
     this.tags = [];
     this.maxMinutes = null;
+    this.maxKcal = null;
     this.sort = null;
   }
 }

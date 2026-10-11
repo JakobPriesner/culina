@@ -29,15 +29,17 @@ export const energyFigure = (nutrition: Nutrition): string =>
   );
 
 /** The line in the recipe's meta line, short: the figure and what it is for, when it is not a single serving. */
-export function metaFigure(nutrition: Nutrition): string {
-  const figure = energyFigure(nutrition);
+export function metaFigure(nutrition: Nutrition, qualifier = false): string {
+  const figure = qualifier
+    ? energyFigure(nutrition)
+    : m['nutrition.energyLine']({ kcal: labelNumber('energy', nutrition.values.energyKcal) });
 
   return isWholeRecipe(nutrition) ? m['nutrition.meta.whole']({ figure }) : figure;
 }
 
 /** Null while there is no answer, or nothing in it was counted: the meta line shows no figure rather than an empty one. */
-export const metaFigureOf = (nutrition: Nutrition | null): string | null =>
-  nutrition && nutrition.counted > 0 ? metaFigure(nutrition) : null;
+export const metaFigureOf = (nutrition: Nutrition | null, qualifier = false): string | null =>
+  nutrition && nutrition.counted > 0 ? metaFigure(nutrition, qualifier) : null;
 
 /** The ingredient lines, in the recipe's order, with what was written; a line whose ingredient was just edited away waits for the next answer. */
 function writtenLines(

@@ -1626,6 +1626,14 @@
   "editor.addIngredientToGroup": "Add ingredient to group {number}",
   "nutrition.details.show": "Show details",
   "nutrition.details.hide": "Hide details",
+  "nutrition.calories.info": "About calorie values",
+  "nutrition.calories.lowerBound": "This is a minimum: some ingredients could not be included. The complete recipe may contain more calories.",
+  "nutrition.calories.calculated": "Calculated from the ingredient amounts and food reference values.",
+  "nutrition.calories.estimated": "Includes estimated ingredient weights.",
+  "filters.calories": "Calories",
+  "filters.calories.hint": "Maximum per serving or piece. Values with missing calorie information are excluded.",
+  "filters.calories.any": "Any calories",
+  "filters.calories.upTo": "Up to {count} kcal",
   "problem.nutrition.invalid_grams": "A weight must be more than 0 g and at most 10,000 g.",
   "problem.nutrition.unit_has_a_size": "That unit already has a size. A weight can be set for a piece, a clove, a spoon, a can and the like."
 }

@@ -18,11 +18,13 @@ describe('the library view', () => {
     libraryView.forHousehold('one');
     libraryView.query = 'tomato';
     libraryView.maxMinutes = 30;
+    libraryView.maxKcal = 500;
     libraryView.toggleTag('vegetarisch');
     libraryView.sort = 'title';
     libraryView.forHousehold('one');
     expect(libraryView.query).toBe('tomato');
     expect(libraryView.maxMinutes).toBe(30);
+    expect(libraryView.maxKcal).toBe(500);
     expect(libraryView.tags).toEqual(['vegetarisch']);
     expect(libraryView.sort).toBe('title');
   });
@@ -31,10 +33,12 @@ describe('the library view', () => {
     libraryView.forHousehold('one');
     libraryView.query = 'tomato';
     libraryView.maxMinutes = 30;
+    libraryView.maxKcal = 500;
     libraryView.toggleTag('vegetarisch');
     libraryView.forHousehold('two');
     expect(libraryView.query).toBe('');
     expect(libraryView.maxMinutes).toBeNull();
+    expect(libraryView.maxKcal).toBeNull();
     // A tag slug is one kitchen's word; carrying it across would filter by something unused and look broken, not empty.
     expect(libraryView.tags).toEqual([]);
   });
@@ -43,9 +47,11 @@ describe('the library view', () => {
     libraryView.forHousehold('one');
     libraryView.query = 'tomato';
     libraryView.maxMinutes = 30;
+    libraryView.maxKcal = 500;
     resetAllStores();
     expect(libraryView.query).toBe('');
     expect(libraryView.maxMinutes).toBeNull();
+    expect(libraryView.maxKcal).toBeNull();
   });
 });
 
@@ -68,6 +74,7 @@ describe('what the library is being asked', () => {
       query: 'auflauf',
       tags: ['vegetarisch'],
       maxMinutes: 30,
+      maxKcal: 500,
       sort: 'quickest' as const
     };
 
@@ -78,10 +85,16 @@ describe('what the library is being asked', () => {
   it('empties every dimension, not only the one that was last touched', () => {
     const view = new RecipeQuery();
 
-    view.assign({ query: 'x', tags: ['y'], maxMinutes: 15, sort: 'title' });
+    view.assign({ query: 'x', tags: ['y'], maxMinutes: 15, maxKcal: 500, sort: 'title' });
     view.clear();
 
-    expect(view.snapshot()).toEqual({ query: '', tags: [], maxMinutes: null, sort: null });
+    expect(view.snapshot()).toEqual({
+      query: '',
+      tags: [],
+      maxMinutes: null,
+      maxKcal: null,
+      sort: null
+    });
     expect(view.filtered).toBe(false);
   });
 });

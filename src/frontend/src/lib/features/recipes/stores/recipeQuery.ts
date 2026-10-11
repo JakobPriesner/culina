@@ -11,6 +11,7 @@ export interface RecipeFilters {
   /** Ranked by fit, not filtered. */
   readonly ingredients?: readonly string[];
   readonly maxMinutes?: number;
+  readonly maxKcal?: number;
   /** A cookbook is a filter like any other, so its page reuses the grid, search and paging. */
   readonly cookbookId?: string;
   /** `toWireSort` maps these to the query string; 'suggested' ranks the whole collection, so it composes with every filter. */
@@ -38,6 +39,7 @@ export async function fetchRecipePage(
           tag: filters.tags?.length ? [...filters.tags] : undefined,
           ingredient: filters.ingredients?.length ? [...filters.ingredients] : undefined,
           maxMinutes: filters.maxMinutes,
+          maxKcal: filters.maxKcal,
           cookbookId: filters.cookbookId,
           sort: filters.sort ? toWireSort(filters.sort) : undefined,
           cursor: cursor ?? undefined,
