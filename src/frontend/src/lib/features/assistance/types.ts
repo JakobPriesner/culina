@@ -70,6 +70,20 @@ export interface Use {
   model: string;
   /** The server's default, used when the model is empty. */
   defaultModel: string;
+  /** What Culina's own list says the model this job uses costs; null when it has no price (or the model is local). */
+  listedPrice: Price | null;
+}
+
+/** A model's price in US dollars; a part nobody knows (or nobody set) is null. */
+export interface Price {
+  inputPerMillion: number | null;
+  outputPerMillion: number | null;
+  perImage: number | null;
+}
+
+/** What the administrator pays for one model, named exactly; wins over Culina's list. */
+export interface SetPrice extends Price {
+  model: string;
 }
 
 export interface Assistance {
@@ -78,6 +92,9 @@ export interface Assistance {
   uses: Use[];
   monthlyBudget: number | null;
   personalBudget: number | null;
+  prices: SetPrice[];
+  /** When Culina's own list was last checked against the providers (YYYY-MM-DD). */
+  pricesRecordedOn: string;
 }
 
 export interface Model {
@@ -106,6 +123,20 @@ export interface Usage {
   unpriced: number;
   byPerson: PersonUsage[];
   byCapability: CapabilityUsage[];
+  byModel: ModelUsage[];
+  /** When Culina's own list was last checked against the providers (YYYY-MM-DD). */
+  pricesRecordedOn: string;
+}
+
+/** Whose price a figure was worked out with; null when the model had none. */
+export type PricedBy = 'culina' | 'administrator' | null;
+
+export interface ModelUsage {
+  provider: string;
+  model: string;
+  pricedBy: PricedBy;
+  calls: number;
+  cost: number;
 }
 
 export interface PersonUsage {
@@ -158,9 +189,24 @@ export function toAssistance(wire: AssistanceWire): Assistance {
         enabled: one.enabled,
         provider: isProvider(one.provider) ? one.provider : '',
         model: one.model,
-        defaultModel: one.defaultModel
+        defaultModel: one.defaultModel,
+        listedPrice: one.listedPrice ? toPrice(one.listedPrice) : null
       })),
     monthlyBudget: wire.monthlyBudget ?? null,
-    personalBudget: wire.personalBudget ?? null
+    personalBudget: wire.personalBudget ?? null,
+    prices: wire.prices.map((one) => ({ model: one.model, ...toPrice(one) })),
+    pricesRecordedOn: wire.pricesRecordedOn
+  };
+}
+
+function toPrice(wire: {
+  inputPerMillion?: number | null;
+  outputPerMillion?: number | null;
+  perImage?: number | null;
+}): Price {
+  return {
+    inputPerMillion: wire.inputPerMillion ?? null,
+    outputPerMillion: wire.outputPerMillion ?? null,
+    perImage: wire.perImage ?? null
   };
 }

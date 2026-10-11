@@ -37,7 +37,12 @@ internal sealed class UpdateAssistanceSettingsEndpoint : IEndpoint
                 + "put in the box and omitting it is what saving an unrelated change looks "
                 + "like.\n\n"
                 + "Turning the assistant on without a key stores it as off — there is nothing "
-                + "for it to be on with.")
+                + "for it to be on with.\n\n"
+                + "`prices` are the administrator's own, per model named exactly, and win over "
+                + "Culina's list (as recorded on `pricesRecordedOn`) for every call made after "
+                + "the save. A part left empty is Culina's to answer, and so is a token price "
+                + "until both input and output are given: half a price would make a total that "
+                + "looks right and is not.")
             .Produces<Response>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)

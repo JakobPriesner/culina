@@ -1687,5 +1687,21 @@
   "search.place.list": "List",
   "search.place.plan": "Plan",
   "search.place.settings": "Account",
-  "me.administration": "Administration"
+  "me.administration": "Administration",
+  "ai.prices": "Prices",
+  "ai.prices.hint": "Culina's own prices were recorded on {date} and go out of date. Where you pay something else, enter it in US dollars. An empty box keeps Culina's price.",
+  "ai.prices.input": "Input, per million tokens",
+  "ai.prices.output": "Output, per million tokens",
+  "ai.prices.image": "Per image",
+  "ai.prices.unlisted": "Not listed",
+  "ai.prices.listed.tokens": "Culina's list: {input} input and {output} output per million tokens.",
+  "ai.prices.listed.image": "Culina's list: {price} per image.",
+  "ai.prices.listed.none": "Not on Culina's list. Without your price, its cost is not counted.",
+  "ai.prices.half": "Enter both the input and the output price. Until then, Culina's is used.",
+  "ai.usage.model": "Model",
+  "ai.usage.pricedBy": "Price from",
+  "ai.usage.pricedBy.culina": "Culina's list ({date})",
+  "ai.usage.pricedBy.administrator": "Your price",
+  "ai.usage.pricedBy.none": "No price",
+  "problem.assistance.invalid_price": "A price can't be less than nothing, and no model costs a thousand dollars or more."
 }

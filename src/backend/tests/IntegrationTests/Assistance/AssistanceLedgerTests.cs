@@ -55,6 +55,27 @@ public class AssistanceLedgerTests(PostgresFixture postgres)
             result => result.ShouldBeFailure(AssistanceErrors.PersonalBudgetExhausted));
     }
 
+    [Fact]
+    public async Task SettleAsync_ShouldRecordWhosePriceTheCostCameFrom()
+    {
+        var userId = await SeedUserAsync();
+        var id = (await ReserveAsync(Reservation(userId, monthlyBudget: null, personalBudget: null)))
+            .ShouldBeSuccess();
+
+        await using var session = postgres.NewSession();
+        var ledger = new AssistanceLedger(new DbExecutor(session), new UnitOfWork(session), TimeProvider.System);
+
+        await ledger.SettleAsync(
+            new Settlement(id, new ModelUsage(10, 20, 0), 0.03m, "ok", PricedBy.Administrator),
+            Token);
+        var summary = await ledger.SummariseAsync(Since, Token);
+
+        // Recorded per call: a price changed later must not relabel what was already counted.
+        Assert.Equal(
+            new ModelUsageLine("openai", "gpt-4o", PricedBy.Administrator, 1, 0.03m),
+            Assert.Single(summary.ByModel));
+    }
+
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     private static Reservation Reservation(Guid userId, decimal? monthlyBudget, decimal? personalBudget) => new(

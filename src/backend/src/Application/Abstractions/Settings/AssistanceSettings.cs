@@ -30,6 +30,9 @@ public sealed record AssistanceSettings : IInstanceSettings<AssistanceSettings>
     /// <summary>What any one person may spend of it, or null for no share.</summary>
     public decimal? PersonalBudget { get; set; }
 
+    /// <summary>The administrator's own prices, which win over Culina's list for the models they name.</summary>
+    public IReadOnlyList<AssistancePrice> Prices { get; set; } = [];
+
     /// <inheritdoc/>
     public void CopyFrom(AssistanceSettings other)
     {
@@ -41,6 +44,17 @@ public sealed record AssistanceSettings : IInstanceSettings<AssistanceSettings>
         Uses = [.. other.Uses.Select(one => one with { })];
         MonthlyBudget = other.MonthlyBudget;
         PersonalBudget = other.PersonalBudget;
+        Prices = [.. other.Prices.Select(one => one with { })];
+    }
+
+    /// <summary>The administrator's price for this model, or null if they set none.</summary>
+    /// <param name="model">Which model, exactly as it is named; case does not matter.</param>
+    public AssistancePrice? PriceFor(string model)
+    {
+        ArgumentNullException.ThrowIfNull(model);
+
+        return Prices.FirstOrDefault(one =>
+            string.Equals(one.Model, model.Trim(), StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>How to reach this provider, or null if it is not connected.</summary>
@@ -121,4 +135,20 @@ public sealed record CapabilityUse
 
     /// <summary>Which of its models, or empty for the current default.</summary>
     public string Model { get; set; } = string.Empty;
+}
+
+/// <summary>What the administrator pays for one model; a part left empty is not theirs to say, and Culina's list answers for it.</summary>
+public sealed record AssistancePrice
+{
+    /// <summary>The model, exactly as the provider names it; no prefix matching, so one price never silently covers another model.</summary>
+    public string Model { get; set; } = string.Empty;
+
+    /// <summary>Dollars per million input tokens; used only together with <see cref="OutputPerMillion"/>, never half a price.</summary>
+    public decimal? InputPerMillion { get; set; }
+
+    /// <summary>Dollars per million output tokens.</summary>
+    public decimal? OutputPerMillion { get; set; }
+
+    /// <summary>Dollars per image.</summary>
+    public decimal? PerImage { get; set; }
 }

@@ -351,7 +351,8 @@ public class CurrentUserEndpointTests(PostgresFixture postgres)
             new { capability = "read", enabled = true, provider = "openai", model = "" }
         },
         monthlyBudget = (decimal?)null,
-        personalBudget = (decimal?)null
+        personalBudget = (decimal?)null,
+        prices = Array.Empty<object>()
     };
 
     private static async Task<ApiResponse> RevalidateAsync(ApiClient client, string etag)

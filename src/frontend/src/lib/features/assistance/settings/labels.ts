@@ -1,6 +1,6 @@
-import { m } from '$shell/i18n';
+import { formatDate, m } from '$shell/i18n';
 
-import type { Capability, Provider } from '../types';
+import type { Capability, PricedBy, Provider } from '../types';
 
 // Static maps, not computed `m[...]` keys, so Paraglide can tree-shake unused messages.
 
@@ -29,3 +29,17 @@ export const providerName = (provider: Provider): string => providerNames[provid
 export const jobLabel = (capability: Capability): string => jobLabels[capability]();
 
 export const jobHint = (capability: Capability): string => jobHints[capability]();
+
+/** The day Culina's price list was recorded, as a date: a calendar day, so read and shown in UTC. */
+export const recordedOn = (day: string): string =>
+  formatDate(new Date(`${day}T00:00:00Z`), { dateStyle: 'long', timeZone: 'UTC' });
+
+/** Where a cost figure's price came from, in words. */
+export function pricedByLabel(pricedBy: PricedBy, pricesRecordedOn: string): string {
+  if (pricedBy === 'administrator') return m['ai.usage.pricedBy.administrator']();
+  if (pricedBy === 'culina') {
+    return m['ai.usage.pricedBy.culina']({ date: recordedOn(pricesRecordedOn) });
+  }
+
+  return m['ai.usage.pricedBy.none']();
+}
