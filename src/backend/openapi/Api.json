@@ -10038,6 +10038,12 @@
             "description": "The route as the router names it (`/recipes/[recipeId]`), never with the id. At most 200 characters.",
             "nullable": true
           },
+          "occurrences": {
+            "type": "integer",
+            "description": "How many times it happened since it was last reported, this one included; absent means once. The app sends a\nrepeat once, with its count, instead of once per time it happened.",
+            "format": "int32",
+            "nullable": true
+          },
           "occurredAt": {
             "type": "string",
             "description": "When it happened, by the device's clock.",

@@ -141,14 +141,61 @@ describe('context', () => {
 });
 
 describe('restraint', () => {
-  it('sends the same failure once', async () => {
+  it('sends the same failure once, saying how often it happened', async () => {
     report('render_failed', new Error('same'));
     report('render_failed', new Error('same'));
 
     flush();
     await vi.runAllTimersAsync();
 
-    expect((await bodies())[0]?.records).toHaveLength(1);
+    expect((await bodies())[0]?.records).toEqual([expect.objectContaining({ occurrences: 2 })]);
+  });
+
+  it('counts a repeat and sends it once with the next batch', async () => {
+    report('render_failed', new Error('same'));
+    flush();
+    await vi.runAllTimersAsync();
+
+    for (let index = 0; index < 500; index++) {
+      report('render_failed', new Error('same'));
+    }
+
+    report('uncaught_error', new Error('new'));
+    await vi.runAllTimersAsync();
+
+    const [first, second] = (await bodies()) as unknown as {
+      records: { message: string; occurrences?: number }[];
+    }[];
+
+    expect(first?.records).toEqual([
+      expect.not.objectContaining({ occurrences: expect.anything() })
+    ]);
+    expect(second?.records).toHaveLength(2);
+    expect(second?.records).toContainEqual(
+      expect.objectContaining({ message: 'Error: same', occurrences: 500 })
+    );
+    expect(second?.records).toContainEqual(
+      expect.not.objectContaining({ occurrences: expect.anything() })
+    );
+  });
+
+  it('starts over after an hour, so a tab open for days still reports', async () => {
+    for (let index = 0; index < 50; index++) {
+      report('uncaught_error', new Error(`loop ${index}`));
+    }
+
+    report('uncaught_error', new Error('too many'));
+    await vi.advanceTimersByTimeAsync(60 * 60_000);
+    report('uncaught_error', new Error('an hour later'));
+    flush();
+    await vi.runAllTimersAsync();
+
+    const messages = (await bodies()).flatMap((body) =>
+      body.records.map((record) => (record as { message?: string }).message)
+    );
+
+    expect(messages).not.toContain('Error: too many');
+    expect(messages).toContain('Error: an hour later');
   });
 
   it('stops after a few dozen, however long a page keeps failing', async () => {

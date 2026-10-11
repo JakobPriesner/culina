@@ -56,6 +56,7 @@ internal static class CreateLogRecordsRequestExtensions
 
     private static List<KeyValuePair<string, object>> ToAttributes(this Record record) =>
         Present(
+            ("culina.web.occurrences", record.Occurrences),
             ("culina.web.occurred_at", record.OccurredAt?.ToString("O", CultureInfo.InvariantCulture)),
             ("culina.web.page_age", record.PageAge),
             ("culina.web.online", record.Online),
