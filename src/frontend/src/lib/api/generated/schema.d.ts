@@ -803,7 +803,7 @@ export interface paths {
         };
         /**
          * Read a recipe's nutrition
-         * @description Per portion (or per piece, when the recipe makes pieces), worked out on every read from the recipe's ingredient lines and the Bundeslebensmittelschlüssel; nothing is stored. Each of the eight values carries atLeast: true when a line could not be counted or a counted food lacks that value, so the figure is a true lower bound, never a guess. Numbers are **unrounded**; rounding is the client's business, lower bounds downward. A separate resource, not a field of the recipe: the recipe's ETag is its version alone, so a household's correction or a data update would hide behind a 304 there. This tag also covers the data version and the corrections that apply. householdId names whose corrections apply, for a recipe that household inherits; left out, the recipe's own household. The source block must be shown wherever the numbers are (CC BY 4.0).
+         * @description Per portion (or per piece, when the recipe makes pieces), worked out on every read from the recipe's ingredient lines and the Bundeslebensmittelschlüssel; nothing is stored. Each of the eight values carries atLeast: true when a line could not be counted or a counted food lacks that value, so the figure is a true lower bound, never a guess. Numbers are **unrounded**; rounding is the client's business, lower bounds downward. A separate resource, not a field of the recipe: the recipe's ETag is its version alone, so a household's correction or a data update would hide behind a 304 there. A count, a spoon of a solid or a household unit is counted by the household's own weight (via householdWeight) or, unless the household turned that off, a typical weight (via typicalWeight, with its source): an estimate, so the value says estimated: true. Each line with a food lists its variants, the food's usual alternatives, to choose one by a food correction. This tag also covers the data version, the corrections, the weights and the typical-weights switch that apply. householdId names whose corrections apply, for a recipe that household inherits; left out, the recipe's own household. The source block must be shown wherever the numbers are (CC BY 4.0).
          */
         get: operations["getRecipeNutritionV1"];
         put?: never;
@@ -1184,7 +1184,7 @@ export interface paths {
         };
         /**
          * Read a shared recipe's nutrition
-         * @description No account needed: the token in the path is the whole of the authorisation. The same figure as a recipe's own nutrition, but with no household corrections, since the reader is in no household. Unrounded, with atLeast on any value that is a lower bound. The source block must be shown wherever the numbers are (CC BY 4.0).
+         * @description No account needed: the token in the path is the whole of the authorisation. The same figure as a recipe's own nutrition, but with no household corrections or weights, since the reader is in no household; typical weights count, as estimates. Unrounded, with atLeast on any value that is a lower bound. The source block must be shown wherever the numbers are (CC BY 4.0).
          */
         get: operations["getSharedRecipeNutritionV1"];
         put?: never;
@@ -1422,6 +1422,74 @@ export interface paths {
          * @description Forgets this household's choice for the name, so the table's default applies again. 204 also when there was no choice. `{name}` is encoded as for PUT.
          */
         delete: operations["removeHouseholdIngredientFoodV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/ingredients/{name}/units/{unit}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Say what one unit of an ingredient weighs
+         * @description States what one `{unit}` of the ingredient `{name}` weighs in this household: `{ "grams": 150 }` for "bei uns wiegt 1 Zwiebel 150 g". It counts every line of this household with that name in that unit, ahead of a typical weight, a density and the egg size, and never in another household, including the one this household inherits from. `{name}` is encoded as for the food correction, a slash is `%2F`. `{unit}` is a spelling of a known unit (`piece`, `Stück`, `Zehe`, `EL` ...) or the household's own word; all spellings of one unit share one weight (see `unitKey` of a nutrition line). Grams (g, kg) and volumes (ml, l, cup, fl oz) already have a size and are refused (`nutrition.unit_has_a_size`); grams must be more than 0 and at most 10000 (`nutrition.invalid_grams`). Any member may. Idempotent; 204.
+         */
+        put: operations["setHouseholdIngredientUnitWeightV1"];
+        post?: never;
+        /**
+         * Forget what one unit of an ingredient weighs
+         * @description Forgets this household's weight for the ingredient in that unit, so a typical weight (or none) applies again. 204 also when there was none. `{name}` and `{unit}` are encoded as for PUT.
+         */
+        delete: operations["removeHouseholdIngredientUnitWeightV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/nutrition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read how a household's nutrition is worked out
+         * @description `useTypicalWeights` is true until the household turns typical weights off. Any member.
+         */
+        get: operations["getHouseholdNutritionV1"];
+        /**
+         * Choose whether typical weights count
+         * @description `{ "useTypicalWeights": false }` makes this household's nutrition count only what an amount, a density, an egg size or the household's own weight can: a count of onions is then not counted unless the household set a weight. It applies to every recipe of this household and never to another household. Any member may. Idempotent; 200 with the new state.
+         */
+        put: operations["setHouseholdNutritionV1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/nutrition/ingredients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List what a household said about its ingredients
+         * @description One entry per ingredient name that has a food the household chose (or chose not to count) or a weight it set, by name. `name` is the folded form every spelling shares. `corrected` is true for a food choice; `food` is then the chosen food, absent for "do not count". `weights` lists the household's weight per unit. Not paged: a household has tens of these. Not the suggestions at `GET .../ingredients`, which are what to type, not what was said.
+         */
+        get: operations["getHouseholdNutritionIngredientsV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2845,10 +2913,51 @@ export interface components {
             /** @description The foods, best first. */
             items: components["schemas"]["NutritionFoodSummary"][];
         };
+        /** @description What a household has said about one ingredient name. */
+        NutritionIngredientFact: {
+            /** @description The name, in the folded form every spelling of it shares: lower case, `ü` written `ue`. */
+            name: string;
+            /** @description Whether the household chose the food, or chose to leave the ingredient out. */
+            corrected: boolean;
+            food?: (null) | components["schemas"]["RecipesGetNutritionNutritionFood"];
+            /** @description The weights the household set, by unit. */
+            weights: components["schemas"]["NutritionUnitWeight"][];
+        };
+        /** @description What a household has said about its ingredients, for the nutrition figures. */
+        NutritionIngredientFactsResponse: {
+            /** @description One entry per ingredient name with a food choice or a weight, by name. */
+            items: components["schemas"]["NutritionIngredientFact"][];
+        };
+        /** @description How a household's nutrition figures are worked out. */
+        NutritionNutritionSettings: {
+            /**
+             * @description Whether a typical weight (`via: typicalWeight`) may count a line nothing else counts: an onion, a clove,
+             *     a spoon of butter. True until a household says otherwise.
+             */
+            useTypicalWeights: boolean;
+        };
         /** @description What a household means by an ingredient name. */
         NutritionSetFoodRequest: {
             /** @description A BLS code such as `Q611000`, or null for "do not count this". */
             food?: string | null;
+        };
+        /** @description What a household says one unit of an ingredient weighs. */
+        NutritionSetUnitWeightRequest: {
+            /**
+             * Format: double
+             * @description Grams of one unit: more than 0, at most 10000.
+             */
+            grams?: number;
+        };
+        /** @description What one unit weighs, as a household says. */
+        NutritionUnitWeight: {
+            /** @description The canonical unit key: `piece`, `clove`, `tbsp`, or a household's own word, folded. */
+            unit: string;
+            /**
+             * Format: double
+             * @description Grams of one unit.
+             */
+            grams: number;
         };
         /** @description A new password for an account, unlocked by a recovery code. */
         PasswordResetsCreateRequest: {
@@ -3455,7 +3564,8 @@ export interface components {
              */
             grams?: number | null;
             /**
-             * @description How the grams were reached: `mass`, `density` or `eggSize`; whenever there are grams.
+             * @description How the grams were reached: `mass`, `density`, `eggSize`, `householdWeight` (the household's own
+             *     weight for the ingredient and unit) or `typicalWeight` (an estimate, see `source`); whenever there are grams.
              * @enum {string|null}
              */
             via?: "mass" | "density" | "eggSize" | null;
@@ -3471,6 +3581,19 @@ export interface components {
              * @description This line's energy per portion, in kilocalories, unrounded; the lines add up to the energy value.
              */
             energyKcal?: number | null;
+            /**
+             * @description The canonical unit a household weight for this line is set under (`PUT /households/{id}/ingredients/{name}/units/{unit}`):
+             *     `piece`, `clove`, `tbsp` and so on, or a household's own word, folded. Absent when the line has no
+             *     amount, a mass or a volume, which have a size of their own.
+             */
+            unitKey?: string | null;
+            /** @description Where a typical weight comes from, written as a citation; only when `via` is `typicalWeight`. */
+            source?: string | null;
+            /**
+             * @description The food's obvious alternatives, the food itself included, in the order they are offered; absent when it has none.
+             *     Choosing one is the household's food correction (`PUT /households/{id}/ingredients/{name}`).
+             */
+            variants?: components["schemas"]["RecipesGetNutritionNutritionVariant"][] | null;
         };
         /** @description Where the data comes from, for attribution (CC BY 4.0 requires it wherever it is shown). */
         RecipesGetNutritionNutritionSource: {
@@ -3492,6 +3615,11 @@ export interface components {
             value: number;
             /** @description True when a line left out, or a food without this value, could only have added to it. */
             atLeast: boolean;
+            /**
+             * @description True when a line that adds to this value was counted by a typical weight (`via` is `typicalWeight`),
+             *     so the figure is partly an estimate. Always sent; a client written before this field may ignore it.
+             */
+            estimated?: boolean;
         };
         /** @description The label values of one portion or piece. */
         RecipesGetNutritionNutritionValues: {
@@ -3503,6 +3631,20 @@ export interface components {
             sugars: components["schemas"]["RecipesGetNutritionNutritionValue"];
             protein: components["schemas"]["RecipesGetNutritionNutritionValue"];
             salt: components["schemas"]["RecipesGetNutritionNutritionValue"];
+        };
+        /** @description One alternative to a line's food. */
+        RecipesGetNutritionNutritionVariant: {
+            /** @description The BLS code, to send as `food` when it is chosen. */
+            code: string;
+            /** @description What a reader calls it in German. */
+            labelDe: string;
+            /** @description What a reader calls it in English. */
+            labelEn: string;
+            /**
+             * Format: double
+             * @description Kilocalories per 100 g, so the choices can be compared; absent when the table has none.
+             */
+            energyKcal?: number | null;
         };
         /** @description A recipe's nutrition per portion or per piece, with the lines it covers. */
         RecipesGetNutritionResponse: {
@@ -9836,6 +9978,241 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    setHouseholdIngredientUnitWeightV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                name: string;
+                unit: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NutritionSetUnitWeightRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    removeHouseholdIngredientUnitWeightV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                name: string;
+                unit: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getHouseholdNutritionV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NutritionNutritionSettings"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    setHouseholdNutritionV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NutritionNutritionSettings"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NutritionNutritionSettings"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getHouseholdNutritionIngredientsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NutritionIngredientFactsResponse"];
                 };
             };
             /** @description Unauthorized */

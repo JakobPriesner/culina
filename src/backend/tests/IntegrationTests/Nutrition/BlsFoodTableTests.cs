@@ -137,6 +137,27 @@ public partial class BlsFoodTableTests
         Assert.Empty(missing);
     }
 
+    [Fact]
+    public void TypicalWeights_ShouldOnlyPointAtFoodsThatExist_AlsoThoseTheyAreCountedAs()
+    {
+        // Act
+        var codes = TypicalWeights.All.Select(row => row.Code).Concat(TypicalWeights.All.Select(row => row.CountAs).OfType<string>());
+        var missing = codes.Where(code => Table.Find(code) is null).Distinct();
+
+        // Assert
+        Assert.Empty(missing);
+    }
+
+    [Fact]
+    public void FoodVariants_ShouldOnlyHoldFoodsThatExist()
+    {
+        // Act
+        var missing = FoodVariants.All.SelectMany(group => group).Where(member => Table.Find(member.Code) is null).Select(member => member.Code);
+
+        // Assert
+        Assert.Empty(missing);
+    }
+
     [Theory]
     [InlineData("code\tde\ten\tkj\tkcal\tfat\tsat\tcho\tsug\tprot\tsalt\nA000001\tx\ty\t1\t2")]
     [InlineData("code\nA000001\tx\ty\t1\t2\t3\t4\t5\t6\t7\t8\nA000001\tx\ty\t1\t2\t3\t4\t5\t6\t7\t8")]

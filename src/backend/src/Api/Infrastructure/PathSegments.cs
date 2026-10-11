@@ -16,7 +16,17 @@ internal static class PathSegments
     /// </remarks>
     /// <param name="context">The request.</param>
     /// <param name="routeValue">What routing made of the segment, used when no raw target is known.</param>
-    internal static string LastDecoded(HttpContext context, string routeValue)
+    internal static string LastDecoded(HttpContext context, string routeValue) =>
+        DecodedFromEnd(context, routeValue, 0);
+
+    /// <summary>
+    /// A segment of the request path counted from the end, percent-decoded: 0 is the last, 2 the one
+    /// two segments before it (<c>.../{name}/units/{unit}</c>). See <see cref="LastDecoded"/>.
+    /// </summary>
+    /// <param name="context">The request.</param>
+    /// <param name="routeValue">What routing made of the segment, used when no raw target is known.</param>
+    /// <param name="segmentsFromEnd">How many segments lie after it.</param>
+    internal static string DecodedFromEnd(HttpContext context, string routeValue, int segmentsFromEnd)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -28,8 +38,8 @@ internal static class PathSegments
             return routeValue.Replace("%2F", "/", StringComparison.OrdinalIgnoreCase);
         }
 
-        var path = target.Split('?', 2)[0];
+        var segments = target.Split('?', 2)[0].Split('/');
 
-        return Uri.UnescapeDataString(path[(path.LastIndexOf('/') + 1)..]);
+        return Uri.UnescapeDataString(segments[^(segmentsFromEnd + 1)]);
     }
 }

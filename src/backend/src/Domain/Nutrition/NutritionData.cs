@@ -11,13 +11,14 @@ public static class NutritionData
 
     /// <summary>
     /// Raise when <c>bls.tsv</c> or the rules in <see cref="NutritionGrams"/> change; a change to
-    /// <see cref="FoodNames"/> raises <see cref="Version"/> through its own version.
+    /// <see cref="FoodNames"/>, <see cref="TypicalWeights"/> or <see cref="FoodVariants"/> raises
+    /// <see cref="Version"/> through its own version.
     /// </summary>
-    private const int ExtractAndRulesVersion = 3;
+    private const int ExtractAndRulesVersion = 4;
 
     /// <summary>
     /// What an ETag over a nutrition figure includes, so a deploy with new data is never answered
     /// with a 304 from before it.
     /// </summary>
-    public const int Version = ExtractAndRulesVersion + FoodNames.Version;
+    public const int Version = ExtractAndRulesVersion + FoodNames.Version + TypicalWeights.Version + FoodVariants.Version;
 }

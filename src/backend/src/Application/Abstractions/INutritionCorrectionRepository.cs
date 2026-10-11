@@ -12,6 +12,9 @@ public interface INutritionCorrectionRepository
         IReadOnlyCollection<string> nameKeys,
         CancellationToken cancellationToken);
 
+    /// <summary>Every choice the household has made, by folded name: a BLS code, or null for "do not count".</summary>
+    Task<IReadOnlyDictionary<string, string?>> AllAsync(Guid householdId, CancellationToken cancellationToken);
+
     /// <summary>Remembers the choice for a folded name, replacing any earlier one.</summary>
     Task SetAsync(
         Guid householdId,

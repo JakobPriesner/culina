@@ -11,7 +11,8 @@ namespace Application.Recipes.GetSharedNutrition;
 /// <summary>Reads a shared recipe's nutrition, for somebody who has nothing but the link.</summary>
 /// <remarks>
 /// Like <c>GetSharedRecipeQuery</c> there is no user behind it, and no household: the reader has
-/// none, so no household's corrections apply and every line is read as the name table reads it.
+/// none, so no household's corrections or weights apply and every line is read as the name table
+/// reads it. Typical weights count, as they do for a household that has not turned them off.
 /// </remarks>
 public sealed record GetSharedNutritionQuery(string Token);
 
@@ -28,6 +29,9 @@ internal sealed class GetSharedNutritionQueryHandler(
     : IQueryHandler<GetSharedNutritionQuery, SharedNutrition>
 {
     private static readonly IReadOnlyDictionary<string, string?> NoCorrections = new Dictionary<string, string?>();
+
+    private static readonly IReadOnlyDictionary<string, IReadOnlyDictionary<string, decimal>> NoWeights =
+        new Dictionary<string, IReadOnlyDictionary<string, decimal>>();
 
     public async Task<Result<SharedNutrition>> Handle(
         GetSharedNutritionQuery query,
@@ -47,7 +51,9 @@ internal sealed class GetSharedNutritionQueryHandler(
             .ConfigureAwait(false);
 
         var result = found.Map(recipe => new SharedNutrition(
-            NutritionCalculator.Calculate(recipe.Ingredients, recipe.Yield, foods.Find, NoCorrections).ToResponse(),
+            NutritionCalculator
+                .Calculate(recipe.Ingredients, recipe.Yield, foods.Find, NoCorrections, NoWeights, useTypicalWeights: true)
+                .ToResponse(),
             recipe.Version,
             NutritionData.Version));
 

@@ -34,7 +34,7 @@ internal sealed class GetNutritionEndpoint : IEndpoint
                                 nutrition.Body,
                                 nutrition.RecipeVersion,
                                 nutrition.HouseholdId,
-                                $"n{nutrition.DataVersion}-{ETag.Fingerprint(nutrition.Corrections)}"),
+                                $"n{nutrition.DataVersion}-{ETag.Fingerprint(nutrition.Facts)}"),
                             CustomResults.Problem);
                     },
                     error => Task.FromResult(CustomResults.Problem(error))).ConfigureAwait(false);
@@ -50,7 +50,13 @@ internal sealed class GetNutritionEndpoint : IEndpoint
                 + "Numbers are **unrounded**; rounding is the client's business, lower bounds downward. "
                 + "A separate resource, not a field of the recipe: the recipe's ETag is its version "
                 + "alone, so a household's correction or a data update would hide behind a 304 there. "
-                + "This tag also covers the data version and the corrections that apply. householdId "
+                + "A count, a spoon of a solid or a household unit is counted by the household's own "
+                + "weight (via householdWeight) or, unless the household turned that off, a typical "
+                + "weight (via typicalWeight, with its source): an estimate, so the value says "
+                + "estimated: true. Each line with a food lists its variants, the food's usual "
+                + "alternatives, to choose one by a food correction. "
+                + "This tag also covers the data version, the corrections, the weights and the "
+                + "typical-weights switch that apply. householdId "
                 + "names whose corrections apply, for a recipe that household inherits; left out, the "
                 + "recipe's own household. The source block must be shown wherever the numbers are "
                 + "(CC BY 4.0).")

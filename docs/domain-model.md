@@ -596,6 +596,33 @@ version column: a row is an idempotent fact at a known address. A recipe's
 nutrition reads the rows for its own folded names in one query, and its ETag
 carries a fingerprint of the rows that applied (see `api.md`).
 
+### Household weights and the typical-weights switch
+
+What one unit of an ingredient weighs in a household:
+`nutrition_unit_weights(household_id, name_key, unit_key, grams, updated_at)`,
+primary key `(household_id, name_key, unit_key)`, `grams numeric(10,3) > 0`,
+`on delete cascade` from `households_with_deleted`. `name_key` is
+`ItemName.Fold(name)` as for corrections; `unit_key` is the canonical key of
+`UnitKeys` (every spelling of a unit is one key; a household's own word is its
+folded self). The same properties as a correction: per household, never
+inherited, no version column, the nutrition ETag fingerprints the rows that
+applied.
+
+Whether typical weights may count lines is
+`nutrition_household_settings(household_id, use_typical_weights, updated_at)`,
+one row per household that ever said, none meaning true (a new household needs no
+write). A table beside the household rather than a column on it: the households
+table is read through views that a new column would have to recreate, the switch
+has no `Version` and no reason to bump the household's, and it is not part of the
+household aggregate.
+
+The typical weights themselves are code, not data: `TypicalWeights` in
+`Domain/Nutrition`, one cited row per (BLS food, unit key), generated from the
+reviewed table, and `FoodVariants` beside it, the groups of foods that stand for
+one another (Vollmilch, fettarme Milch, Magermilch...). Both raise
+`NutritionData.Version` when they change. See `docs/nutrition-design.md` and the
+nutrition section of `api.md`.
+
 ## Planning
 
 ### MealPlanEntry

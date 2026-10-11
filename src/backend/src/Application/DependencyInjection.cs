@@ -193,6 +193,11 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<UndoCookedCommand>, UndoCookedCommandHandler>()
             .AddScoped<ICommandHandler<SetFoodCorrectionCommand>, SetFoodCorrectionCommandHandler>()
             .AddScoped<ICommandHandler<RemoveFoodCorrectionCommand>, RemoveFoodCorrectionCommandHandler>()
+            .AddScoped<ICommandHandler<SetUnitWeightCommand>, SetUnitWeightCommandHandler>()
+            .AddScoped<ICommandHandler<RemoveUnitWeightCommand>, RemoveUnitWeightCommandHandler>()
+            .AddScoped<IQueryHandler<GetNutritionSettingsQuery, Contracts.Nutrition.NutritionSettings>, GetNutritionSettingsQueryHandler>()
+            .AddScoped<ICommandHandler<SetNutritionSettingsCommand, Contracts.Nutrition.NutritionSettings>, SetNutritionSettingsCommandHandler>()
+            .AddScoped<IQueryHandler<GetIngredientFactsQuery, Contracts.Nutrition.IngredientFactsResponse>, GetIngredientFactsQueryHandler>()
             .AddScoped<IQueryHandler<GetFoodsQuery, Contracts.Nutrition.FoodsResponse>, GetFoodsQueryHandler>()
             .AddScoped<IQueryHandler<GetShoppingListQuery,
                 Contracts.Shopping.Response>, GetShoppingListQueryHandler>()

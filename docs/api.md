@@ -91,6 +91,11 @@ look on.
 | `GET` | `/foods` | Search the Bundeslebensmittelschlüssel: `?q=` and `?limit=` (default 20, max 50; no paging). `{ items: [{ code, nameDe, nameEn, energyKcal }] }`, best first; `energyKcal` is per 100 g and may be null. Any signed-in person; the ETag is the nutrition data version. `400` for an invalid `limit` or an unknown parameter. |
 | `PUT` | `/households/{householdId}/ingredients/{name}` | `{ "food": "Q611000" }` says what this household means by the ingredient; `{ "food": null }` says do not count it. `204`. See below. |
 | `DELETE` | `/households/{householdId}/ingredients/{name}` | Back to the table's default. `204`, also when there was no choice. |
+| `PUT` | `/households/{householdId}/ingredients/{name}/units/{unit}` | `{ "grams": 150 }`: what one unit of the ingredient weighs in this household ("bei uns wiegt 1 Zwiebel 150 g"). `204`. See below. |
+| `DELETE` | `/households/{householdId}/ingredients/{name}/units/{unit}` | Forget that weight. `204`, also when there was none. |
+| `GET` | `/households/{householdId}/nutrition/ingredients` | What the household said: `{ items: [{ name, corrected, food?, weights: [{ unit, grams }] }] }`, by name. |
+| `GET` | `/households/{householdId}/nutrition` | `{ useTypicalWeights }`, true until turned off. Any member. |
+| `PUT` | `/households/{householdId}/nutrition` | `{ "useTypicalWeights": false }`. `200` with the new state. Any member. |
 | `GET` | `/recipes/{recipeId}/cook-log` | Your "made it" entries, newest first. |
 | `POST` | `/recipes/{recipeId}/cook-log` | `201`. Body may be empty — one tap is the whole interaction. |
 
@@ -103,7 +108,7 @@ each ingredient line up in the Bundeslebensmittelschlüssel and sums it.
 - `complete` is true when every ingredient line is counted; `counted` and
   `lines` say how many of how many.
 - `values` holds energy (kJ and kcal), fat, saturated fat, carbohydrate,
-  sugars, protein and salt, each `{ value, atLeast }`. `atLeast` is true when a
+  sugars, protein and salt, each `{ value, atLeast, estimated }`. `atLeast` is true when a
   line that could still raise it was left out, or when a counted food has no
   figure for that value (23 foods lack saturated fat), so the number is a lower
   bound and never a guess. A left-out line whose food is known to have exactly 0
@@ -115,10 +120,39 @@ each ingredient line up in the Bundeslebensmittelschlüssel and sums it.
 - `ingredients` has one entry per line, in recipe order: `status` is `counted`,
   `amountNotInGrams`, `noAmount`, `unknownFood`, `excluded` or `implausible`; a
   line with a known food carries the `food` (`code`, `nameDe`, `nameEn`, `labelDe`,
-  `labelEn`); a counted one also the `grams`, `via` (`mass`, `density` or
-  `eggSize`) and its own `energyKcal` per portion, so the rows add up to the
-  headline. `corrected` is true when a household chose the food. `counted`,
+  `labelEn`); a counted one also the `grams`, `via` (`mass`, `density`,
+  `eggSize`, `householdWeight` or `typicalWeight`) and its own `energyKcal` per
+  portion, so the rows add up to the headline. `corrected` is true when a household chose the food. `counted`,
   `lines` and `complete` count counted lines only.
+- **Weights for what has no weight of its own.** The order for one line: no amount;
+  mass (`g`, `kg`); the household's weight for the ingredient in this unit
+  (`via: householdWeight`, exact as far as the household is concerned, for any
+  unit but a mass or a volume; ml, l, US cup and fl oz keep the density rule); a
+  volume or spoon of a food that pours, at its density; eggs by count at size M; a
+  **typical weight** for the food and unit, only if the household allows it
+  (`via: typicalWeight`, an estimate); otherwise the `reason`s below. A typical
+  weight is a curated, cited value (USDA FoodData Central, or a pack size printed
+  on the pack or can) per BLS food and unit (piece, clove, tbsp and tsp of
+  solids, bunch, can, pack, slice, leaf, pinch...); its citation is the line's
+  `source`, which a client shows. Every spelling of a unit is one `unitKey`
+  (`Stück`, `Stk.`, `pcs` and a bare count are `piece`; `Zehe` is `clove`; `EL` is
+  `tbsp`; `Päckchen`, `Pck.` and `Packung` are `pack`); a household's own word is
+  its own key, folded. `unitKey` is the key a household weight for the line is set
+  under, and is absent for a line with no amount, a mass, a volume, or no food. A
+  bare count or `piece` of a name that already says its unit ("Knoblauchzehen",
+  "garlic cloves") is that unit, so "3 Knoblauchzehen" is three cloves; a bare
+  "1 Knoblauch" is not counted (it can be a bulb). A typical weight can name the
+  food a line really is: a can of "Tomaten" is counted as canned tomatoes at 400 g,
+  and the line's `food` says so, like a broth's resolved liquid.
+- `estimated` on a value is true when a line that adds to it was counted by a
+  typical weight, so a client says "partly estimated". A household's own weight
+  and every other basis leave it false. It is always sent.
+- `variants` on a line with a food lists the food's usual alternatives, itself
+  included, in the order to offer them: `[{ code, labelDe, labelEn, energyKcal }]`
+  (`energyKcal` per 100 g, may be null). Absent when the food has no group (82
+  groups: the milks, creams, flours, minced meats, oils...). Choosing one is the
+  existing food correction, `PUT .../ingredients/{name}` with `{ "food": code }`; the
+  server applies nothing by itself. Counted or not, corrected or not.
 - `food` is the food the line was **resolved** to, which for a broth depends on
   its unit: `ml`, `l`, US `cup` and `fl oz` are the liquid (counted at its
   density), `g` and `kg` up to and including 50 g the powder and above 50 g the
@@ -159,14 +193,17 @@ each ingredient line up in the Bundeslebensmittelschlüssel and sums it.
   ETag is the recipe's version alone. This one is the recipe's version, the
   asking household, the version of the nutrition data and a fingerprint of the
   corrections that apply, so a data update or a correction is never answered
-  with a `304`.
+  with a `304`. The corrections, the household's weights for the recipe's
+  names and the typical-weights switch are all in the fingerprint.
 
 ### `GET /shared-recipes/{token}/nutrition`
 
 The same figure for a shared recipe, to whoever holds the link: no session, the
 token is the whole authorisation, rate-limited like the shared recipe. The
-reader is in no household, so no household's corrections apply (`corrected` is
-false on every line). `200` + ETag (recipe version and nutrition data version,
+reader is in no household, so no household's corrections or weights apply
+(`corrected` is false on every line, `householdWeight` never occurs), and typical
+weights count, as they do for a household that has not turned them off.
+`variants` are carried as above. `200` + ETag (recipe version and nutrition data version,
 no recipe id), `304` on `If-None-Match`; an unknown or revoked token is the
 shared recipe's own `404` (`recipes.share_not_found`). `Cache-Control: private,
 no-store`, as on the recipe itself. The `source` attribution applies as above.
@@ -192,6 +229,48 @@ verb and no extra segment.
   corrects for itself, and the household it inherits from is not affected.
 - Afterwards `GET /recipes/{id}/nutrition` has a new ETag for every recipe of the
   household that uses the name.
+
+### `PUT` and `DELETE /households/{householdId}/ingredients/{name}/units/{unit}`
+
+A household's weight for one unit of an ingredient: "bei uns wiegt 1 Zwiebel
+150 g". A member of the same ingredient collection, one level down, as the
+correction is; no verb.
+
+- `{name}` is encoded as for the correction (a slash is `%2F`), and so is `{unit}`.
+  `{unit}` is a spelling of a known unit or the household's own word
+  (1-16 letters, spaces and full stops); every spelling of a unit shares one weight,
+  keyed by `unitKey`.
+- `{ "grams": 150 }`: more than 0 and at most 10000, else `400`
+  `nutrition.invalid_grams`. Grams, kilograms, millilitres, litres, US cups and fl
+  oz already have a size: `400` `nutrition.unit_has_a_size`. A name too long or blank
+  is the correction's `400`.
+- The weight counts every line of this household with that name (folded) in that
+  unit, ahead of a typical weight, a density and the egg size, and also when
+  typical weights are off. It belongs to exactly that household: an heir sets its
+  own, and the household it inherits from is not affected.
+- `DELETE` removes it; deleting nothing is `204`. Both are idempotent, no
+  `If-Match`. Any member; anyone else gets `404`.
+- Afterwards `GET /recipes/{id}/nutrition` has a new ETag for every recipe of the
+  household that uses the name.
+
+### `GET` and `PUT /households/{householdId}/nutrition`
+
+How a household's nutrition is worked out: `{ "useTypicalWeights": true }`. A
+sub-resource of the household like `/inheritance` (there is no household settings
+resource yet), and it holds this one switch. Off, a count of onions or a spoon of
+butter is counted only by the household's own weight, else not at all. Any member
+may read and set it; `PUT` is a full replacement and answers `200` with the state.
+Changing it changes the ETag of every recipe nutrition of the household.
+
+### `GET /households/{householdId}/nutrition/ingredients`
+
+What the household has said about its ingredients, for a settings page. One entry
+per name with a food choice or a weight, ordered by name: `name` is the folded
+form (lower case, `ü` as `ue`), the key every spelling shares; `corrected` is true
+for a food choice and `food` (`code`, names and labels as in the nutrition
+answer) is then the chosen food, absent for "do not count"; `weights` lists
+`{ unit, grams }` by unit key. Not paged. Distinct from `GET .../ingredients`,
+which suggests what to type.
 
 ### `GET /recipes` query parameters
 

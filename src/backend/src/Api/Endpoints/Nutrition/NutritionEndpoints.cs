@@ -1,6 +1,11 @@
 using Api.Endpoints.Nutrition.GetFoods.V1;
+using Api.Endpoints.Nutrition.GetIngredientFacts.V1;
+using Api.Endpoints.Nutrition.GetSettings.V1;
 using Api.Endpoints.Nutrition.RemoveFood.V1;
+using Api.Endpoints.Nutrition.RemoveUnitWeight.V1;
 using Api.Endpoints.Nutrition.SetFood.V1;
+using Api.Endpoints.Nutrition.SetSettings.V1;
+using Api.Endpoints.Nutrition.SetUnitWeight.V1;
 
 namespace Api.Endpoints.Nutrition;
 
@@ -11,5 +16,10 @@ internal static class NutritionEndpoints
         services
             .AddSingleton<IEndpoint, GetFoodsEndpoint>()
             .AddSingleton<IEndpoint, SetFoodEndpoint>()
-            .AddSingleton<IEndpoint, RemoveFoodEndpoint>();
+            .AddSingleton<IEndpoint, RemoveFoodEndpoint>()
+            .AddSingleton<IEndpoint, SetUnitWeightEndpoint>()
+            .AddSingleton<IEndpoint, RemoveUnitWeightEndpoint>()
+            .AddSingleton<IEndpoint, GetNutritionSettingsEndpoint>()
+            .AddSingleton<IEndpoint, SetNutritionSettingsEndpoint>()
+            .AddSingleton<IEndpoint, GetIngredientFactsEndpoint>();
 }

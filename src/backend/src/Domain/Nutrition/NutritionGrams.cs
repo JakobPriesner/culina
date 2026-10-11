@@ -15,7 +15,13 @@ public enum GramsBasis
     Density = 2,
 
     /// <summary>Eggs by count, at EU size class M.</summary>
-    EggSize = 3
+    EggSize = 3,
+
+    /// <summary>The household's own weight for this ingredient and unit: exact as far as the household is concerned.</summary>
+    HouseholdWeight = 4,
+
+    /// <summary>A typical weight of the food in that unit (<see cref="TypicalWeights"/>): an estimate.</summary>
+    TypicalWeight = 5
 }
 
 /// <summary>Why an amount is not counted.</summary>
@@ -43,11 +49,12 @@ public enum GramsRefusal
 /// <summary>Either the grams a line stands for and how they were reached, or why it counts nothing.</summary>
 public sealed record GramsReading
 {
-    private GramsReading(decimal? grams, GramsBasis basis, GramsRefusal refusal)
+    private GramsReading(decimal? grams, GramsBasis basis, GramsRefusal refusal, TypicalWeight? typical)
     {
         Grams = grams;
         Basis = basis;
         Refusal = refusal;
+        Typical = typical;
     }
 
     /// <summary>The grams, or null when the line is not counted.</summary>
@@ -59,9 +66,13 @@ public sealed record GramsReading
     /// <summary>Why the line is not counted; <see cref="GramsRefusal.None"/> when it is.</summary>
     public GramsRefusal Refusal { get; }
 
-    internal static GramsReading Counted(decimal grams, GramsBasis basis) => new(grams, basis, GramsRefusal.None);
+    /// <summary>The typical weight the grams came from, for <see cref="GramsBasis.TypicalWeight"/>; null otherwise.</summary>
+    public TypicalWeight? Typical { get; }
 
-    internal static GramsReading Refused(GramsRefusal refusal) => new(null, GramsBasis.None, refusal);
+    internal static GramsReading Counted(decimal grams, GramsBasis basis, TypicalWeight? typical = null) =>
+        new(grams, basis, GramsRefusal.None, typical);
+
+    internal static GramsReading Refused(GramsRefusal refusal) => new(null, GramsBasis.None, refusal, null);
 }
 
 /// <summary>
@@ -72,12 +83,18 @@ public sealed record GramsReading
 /// millilitres: that rule protects an amount shown to a cook and a shopping-list merge. Here the
 /// grams are added into a figure whose own uncertainty is far larger than a spoon's size, and the
 /// reading says how they were reached. A spoon or a volume counts only for a food that pours
-/// (<see cref="FoodName.Density"/>); a spoon of flour never counts. A bare count counts only for eggs,
-/// which are sold in legally defined sizes. A US cup (236.588 ml) and a US fluid ounce (29.5735 ml)
+/// (<see cref="FoodName.Density"/>); a spoon of flour counts only by a typical weight. A bare count counts
+/// for eggs, which are sold in legally defined sizes, and otherwise only by a household's weight or a
+/// typical weight. A US cup (236.588 ml) and a US fluid ounce (29.5735 ml)
 /// count like millilitres for a food that pours, for the same reason as spoons: unlike a German
 /// "Tasse", "Becher" or "Glas" they have a standard size. Everything else is not counted, and the
-/// refusal says which rule refused it. Any change here must
-/// raise <see cref="NutritionData.Version"/>.
+/// refusal says which rule refused it.
+/// <para>
+/// The order, for one line: no amount; mass; the household's weight for the ingredient in this unit
+/// (never for a volume, which keeps the density rule); volume and spoons by density; eggs by count; a
+/// typical weight, only when the household allows it; the refusals. Any change here must raise
+/// <see cref="NutritionData.Version"/>.
+/// </para>
 /// </remarks>
 public static class NutritionGrams
 {
@@ -93,6 +110,9 @@ public static class NutritionGrams
     /// powder, "500 g Brühe" is the liquid, counted by mass.
     /// </summary>
     internal const decimal MostGramsOfPowder = 50m;
+
+    /// <summary>The most one unit may be said to weigh: no onion, can or pack weighs 10 kg.</summary>
+    public const decimal MostGramsPerUnit = 10_000m;
 
     /// <summary>
     /// The edible weight of one EU size class M egg: Regulation (EC) 589/2008 gives M as 53 to 63 g
@@ -134,10 +154,44 @@ public static class NutritionGrams
         return food.Resolved(asLiquid);
     }
 
+    /// <summary>
+    /// The unit key a line's amount is weighed in (see <see cref="UnitKeys"/>), which is the key a household's
+    /// weight or a typical weight is stored under; null when the line has no amount, a mass, or a volume,
+    /// which have a size of their own. A bare count or a piece of a name that says its unit ("Knoblauchzehen")
+    /// is that unit.
+    /// </summary>
+    /// <param name="quantity">How much the recipe calls for.</param>
+    /// <param name="food">The food it was recognised as.</param>
+    public static string? WeighedUnitKey(Quantity quantity, FoodName food)
+    {
+        ArgumentNullException.ThrowIfNull(quantity);
+        ArgumentNullException.ThrowIfNull(food);
+
+        if (quantity.Amount is null || HasOwnSize(quantity.Unit))
+        {
+            return null;
+        }
+
+        var key = UnitKeys.Of(quantity.Unit);
+
+        return key == UnitKeys.Piece && food.ImpliedUnit is { } implied ? implied : key;
+    }
+
+    /// <summary>Whether a unit is a mass or a volume, which has a size of its own that no household weight overrides.</summary>
+    /// <param name="unit">The unit, or null for none.</param>
+    public static bool HasOwnSize(Unit? unit) =>
+        Units.FamilyOf(unit) is UnitFamily.Mass or UnitFamily.Volume || MillilitresOfUsMeasure(unit) is not null;
+
     /// <summary>Reads the grams a recipe line stands for, or says why not.</summary>
     /// <param name="quantity">How much the recipe calls for.</param>
     /// <param name="food">The food it was recognised as.</param>
-    public static GramsReading Read(Quantity quantity, FoodName food)
+    /// <param name="householdWeights">What the household says one unit of this ingredient weighs, by unit key; null for none.</param>
+    /// <param name="useTypicalWeights">Whether a typical weight may count a line nothing else counts.</param>
+    public static GramsReading Read(
+        Quantity quantity,
+        FoodName food,
+        IReadOnlyDictionary<string, decimal>? householdWeights = null,
+        bool useTypicalWeights = false)
     {
         ArgumentNullException.ThrowIfNull(quantity);
         ArgumentNullException.ThrowIfNull(food);
@@ -152,9 +206,9 @@ public static class NutritionGrams
             UnitFamily.Mass => GramsReading.Counted(amount * Units.ToCanonicalFactor(quantity.Unit), GramsBasis.Mass),
             UnitFamily.Volume => ByDensity(
                 amount * Units.ToCanonicalFactor(quantity.Unit), food, GramsRefusal.VolumeOfSolid),
-            UnitFamily.Spoon => ByDensity(
-                amount * MillilitresPerSpoon(quantity.Unit!), food, GramsRefusal.SpoonOfSolid),
-            _ => ByCount(quantity, amount, food)
+            _ when MillilitresOfUsMeasure(quantity.Unit) is { } millilitres => ByDensity(
+                amount * millilitres, food, GramsRefusal.VolumeOfSolid),
+            var family => ByItem(quantity, amount, food, family == UnitFamily.Spoon, householdWeights, useTypicalWeights)
         };
     }
 
@@ -175,9 +229,28 @@ public static class NutritionGrams
             ? GramsReading.Counted(millilitres * density, GramsBasis.Density)
             : GramsReading.Refused(withoutDensity);
 
-    private static GramsReading ByCount(Quantity quantity, decimal amount, FoodName food)
+    // Spoons and every count unit: the household's weight, then density (spoons), then eggs (a count), then a typical weight.
+    private static GramsReading ByItem(
+        Quantity quantity,
+        decimal amount,
+        FoodName food,
+        bool spoon,
+        IReadOnlyDictionary<string, decimal>? householdWeights,
+        bool useTypicalWeights)
     {
-        var eggGrams = food.Egg switch
+        var unitKey = WeighedUnitKey(quantity, food)!;
+
+        if (householdWeights is not null && householdWeights.TryGetValue(unitKey, out var own))
+        {
+            return GramsReading.Counted(amount * own, GramsBasis.HouseholdWeight);
+        }
+
+        if (spoon && food.Density is { } density)
+        {
+            return GramsReading.Counted(amount * MillilitresPerSpoon(quantity.Unit!) * density, GramsBasis.Density);
+        }
+
+        var eggGrams = unitKey != UnitKeys.Piece ? 0m : food.Egg switch
         {
             EggPart.Whole => WholeEggGrams,
             EggPart.Yolk => YolkGrams,
@@ -185,18 +258,18 @@ public static class NutritionGrams
             _ => 0m
         };
 
-        if (MillilitresOfUsMeasure(quantity.Unit) is { } millilitres)
+        if (eggGrams > 0)
         {
-            return ByDensity(amount * millilitres, food, GramsRefusal.VolumeOfSolid);
+            return GramsReading.Counted(amount * eggGrams, GramsBasis.EggSize);
         }
 
-        if (quantity.Unit is not null && quantity.Unit != Unit.Piece)
+        if (useTypicalWeights && TypicalWeights.Find(food.Code, unitKey) is { } typical)
         {
-            return GramsReading.Refused(GramsRefusal.HouseholdUnit);
+            return GramsReading.Counted(amount * typical.Grams, GramsBasis.TypicalWeight, typical);
         }
 
-        return eggGrams > 0
-            ? GramsReading.Counted(amount * eggGrams, GramsBasis.EggSize)
-            : GramsReading.Refused(GramsRefusal.Count);
+        return GramsReading.Refused(spoon ? GramsRefusal.SpoonOfSolid
+            : unitKey == UnitKeys.Piece ? GramsRefusal.Count
+            : GramsRefusal.HouseholdUnit);
     }
 }

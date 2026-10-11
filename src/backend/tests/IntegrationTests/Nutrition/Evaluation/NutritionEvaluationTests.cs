@@ -46,7 +46,7 @@ public class NutritionEvaluationTests
 
         if (entry is null)
         {
-            return new Outcome(line, null, Right: false, Counted: false, WithoutEggs: false, WithoutDensity: false, WithNeither: false);
+            return new Outcome(line, null, Right: false, Counted: false, WithoutEggs: false, WithoutDensity: false, WithNeither: false, CountedWithTypical: false);
         }
 
         // The food the calculator counts for this line's unit: a broth by the spoon or by weight is the
@@ -54,6 +54,7 @@ public class NutritionEvaluationTests
         var food = NutritionGrams.Resolve(line.Quantity, entry);
         var basis = NutritionGrams.Read(line.Quantity, food);
         var counted = basis.Grams is not null;
+        var withTypical = NutritionGrams.Read(line.Quantity, food, householdWeights: null, useTypicalWeights: true).Grams is not null;
 
         return new Outcome(
             line,
@@ -62,7 +63,8 @@ public class NutritionEvaluationTests
             counted,
             counted && basis.Basis != GramsBasis.EggSize,
             counted && basis.Basis != GramsBasis.Density,
-            counted && basis.Basis == GramsBasis.Mass);
+            counted && basis.Basis == GramsBasis.Mass,
+            withTypical);
     }
 
     private static string Report(List<Outcome> outcomes)
@@ -75,9 +77,13 @@ public class NutritionEvaluationTests
             .Select(group => group.Count(one => one.Counted) / (double)group.Count())
             .Order()
             .ToList();
-        var median = shares.Count % 2 == 1
-            ? shares[shares.Count / 2]
-            : (shares[(shares.Count / 2) - 1] + shares[shares.Count / 2]) / 2;
+        var median = Median(shares);
+
+        var sharesWithTypical = recipes
+            .Select(group => group.Count(one => one.CountedWithTypical) / (double)group.Count())
+            .Order()
+            .ToList();
+        var medianWithTypical = Median(sharesWithTypical);
 
         var report = new StringBuilder();
         report.AppendLine(CultureInfo.InvariantCulture, $"Nutrition evaluation over {outcomes.Count} lines of {recipes.Count} recipes");
@@ -89,6 +95,9 @@ public class NutritionEvaluationTests
         report.AppendLine(CultureInfo.InvariantCulture, $"  counted with neither:     {outcomes.Count(one => one.WithNeither)}/{outcomes.Count}");
         report.AppendLine(CultureInfo.InvariantCulture, $"  recipes counted fully:    {recipes.Count(group => group.All(one => one.Counted))}/{recipes.Count}");
         report.AppendLine(CultureInfo.InvariantCulture, $"  median share counted:     {median:P0}");
+        report.AppendLine(CultureInfo.InvariantCulture, $"  counted with typical weights:          {outcomes.Count(one => one.CountedWithTypical)}/{outcomes.Count}");
+        report.AppendLine(CultureInfo.InvariantCulture, $"  recipes counted fully with typical:    {recipes.Count(group => group.All(one => one.CountedWithTypical))}/{recipes.Count}");
+        report.AppendLine(CultureInfo.InvariantCulture, $"  median share counted with typical:     {medianWithTypical:P0}");
 
         foreach (var one in wrong)
         {
@@ -97,6 +106,11 @@ public class NutritionEvaluationTests
 
         return report.ToString();
     }
+
+    private static double Median(List<double> sorted) =>
+        sorted.Count % 2 == 1
+            ? sorted[sorted.Count / 2]
+            : (sorted[(sorted.Count / 2) - 1] + sorted[sorted.Count / 2]) / 2;
 
     private static List<Line> Load()
     {
@@ -129,5 +143,6 @@ public class NutritionEvaluationTests
         bool Counted,
         bool WithoutEggs,
         bool WithoutDensity,
-        bool WithNeither);
+        bool WithNeither,
+        bool CountedWithTypical);
 }

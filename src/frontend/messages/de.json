@@ -1625,5 +1625,7 @@
   "editor.addGroup": "+ Gruppe",
   "editor.addIngredientToGroup": "Zutat zu Gruppe {number} hinzufügen",
   "nutrition.details.show": "Details anzeigen",
-  "nutrition.details.hide": "Details ausblenden"
+  "nutrition.details.hide": "Details ausblenden",
+  "problem.nutrition.invalid_grams": "Ein Gewicht muss größer als 0 g und höchstens 10.000 g sein.",
+  "problem.nutrition.unit_has_a_size": "Diese Einheit hat schon eine feste Größe. Ein Gewicht lässt sich für Stück, Zehe, Löffel, Dose und Ähnliches festlegen."
 }

@@ -1625,5 +1625,7 @@
   "editor.addGroup": "+ Group",
   "editor.addIngredientToGroup": "Add ingredient to group {number}",
   "nutrition.details.show": "Show details",
-  "nutrition.details.hide": "Hide details"
+  "nutrition.details.hide": "Hide details",
+  "problem.nutrition.invalid_grams": "A weight must be more than 0 g and at most 10,000 g.",
+  "problem.nutrition.unit_has_a_size": "That unit already has a size. A weight can be set for a piece, a clove, a spoon, a can and the like."
 }

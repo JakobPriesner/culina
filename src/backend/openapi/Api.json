@@ -3147,7 +3147,7 @@
           "Recipes"
         ],
         "summary": "Read a recipe's nutrition",
-        "description": "Per portion (or per piece, when the recipe makes pieces), worked out on every read from the recipe's ingredient lines and the Bundeslebensmittelschlüssel; nothing is stored. Each of the eight values carries atLeast: true when a line could not be counted or a counted food lacks that value, so the figure is a true lower bound, never a guess. Numbers are **unrounded**; rounding is the client's business, lower bounds downward. A separate resource, not a field of the recipe: the recipe's ETag is its version alone, so a household's correction or a data update would hide behind a 304 there. This tag also covers the data version and the corrections that apply. householdId names whose corrections apply, for a recipe that household inherits; left out, the recipe's own household. The source block must be shown wherever the numbers are (CC BY 4.0).",
+        "description": "Per portion (or per piece, when the recipe makes pieces), worked out on every read from the recipe's ingredient lines and the Bundeslebensmittelschlüssel; nothing is stored. Each of the eight values carries atLeast: true when a line could not be counted or a counted food lacks that value, so the figure is a true lower bound, never a guess. Numbers are **unrounded**; rounding is the client's business, lower bounds downward. A separate resource, not a field of the recipe: the recipe's ETag is its version alone, so a household's correction or a data update would hide behind a 304 there. A count, a spoon of a solid or a household unit is counted by the household's own weight (via householdWeight) or, unless the household turned that off, a typical weight (via typicalWeight, with its source): an estimate, so the value says estimated: true. Each line with a food lists its variants, the food's usual alternatives, to choose one by a food correction. This tag also covers the data version, the corrections, the weights and the typical-weights switch that apply. householdId names whose corrections apply, for a recipe that household inherits; left out, the recipe's own household. The source block must be shown wherever the numbers are (CC BY 4.0).",
         "operationId": "getRecipeNutritionV1",
         "parameters": [
           {
@@ -4805,7 +4805,7 @@
           "SharedRecipes"
         ],
         "summary": "Read a shared recipe's nutrition",
-        "description": "No account needed: the token in the path is the whole of the authorisation. The same figure as a recipe's own nutrition, but with no household corrections, since the reader is in no household. Unrounded, with atLeast on any value that is a lower bound. The source block must be shown wherever the numbers are (CC BY 4.0).",
+        "description": "No account needed: the token in the path is the whole of the authorisation. The same figure as a recipe's own nutrition, but with no household corrections or weights, since the reader is in no household; typical weights count, as estimates. Unrounded, with atLeast on any value that is a lower bound. The source block must be shown wherever the numbers are (CC BY 4.0).",
         "operationId": "getSharedRecipeNutritionV1",
         "parameters": [
           {
@@ -5753,6 +5753,335 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/ingredients/{name}/units/{unit}": {
+      "put": {
+        "tags": [
+          "Nutrition"
+        ],
+        "summary": "Say what one unit of an ingredient weighs",
+        "description": "States what one `{unit}` of the ingredient `{name}` weighs in this household: `{ \"grams\": 150 }` for \"bei uns wiegt 1 Zwiebel 150 g\". It counts every line of this household with that name in that unit, ahead of a typical weight, a density and the egg size, and never in another household, including the one this household inherits from. `{name}` is encoded as for the food correction, a slash is `%2F`. `{unit}` is a spelling of a known unit (`piece`, `Stück`, `Zehe`, `EL` ...) or the household's own word; all spellings of one unit share one weight (see `unitKey` of a nutrition line). Grams (g, kg) and volumes (ml, l, cup, fl oz) already have a size and are refused (`nutrition.unit_has_a_size`); grams must be more than 0 and at most 10000 (`nutrition.invalid_grams`). Any member may. Idempotent; 204.",
+        "operationId": "setHouseholdIngredientUnitWeightV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unit",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NutritionSetUnitWeightRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Nutrition"
+        ],
+        "summary": "Forget what one unit of an ingredient weighs",
+        "description": "Forgets this household's weight for the ingredient in that unit, so a typical weight (or none) applies again. 204 also when there was none. `{name}` and `{unit}` are encoded as for PUT.",
+        "operationId": "removeHouseholdIngredientUnitWeightV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "unit",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/nutrition": {
+      "get": {
+        "tags": [
+          "Nutrition"
+        ],
+        "summary": "Read how a household's nutrition is worked out",
+        "description": "`useTypicalWeights` is true until the household turns typical weights off. Any member.",
+        "operationId": "getHouseholdNutritionV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NutritionNutritionSettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Nutrition"
+        ],
+        "summary": "Choose whether typical weights count",
+        "description": "`{ \"useTypicalWeights\": false }` makes this household's nutrition count only what an amount, a density, an egg size or the household's own weight can: a count of onions is then not counted unless the household set a weight. It applies to every recipe of this household and never to another household. Any member may. Idempotent; 200 with the new state.",
+        "operationId": "setHouseholdNutritionV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NutritionNutritionSettings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NutritionNutritionSettings"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/nutrition/ingredients": {
+      "get": {
+        "tags": [
+          "Nutrition"
+        ],
+        "summary": "List what a household said about its ingredients",
+        "description": "One entry per ingredient name that has a food the household chose (or chose not to count) or a weight it set, by name. `name` is the folded form every spelling shares. `corrected` is true for a food choice; `food` is then the chosen food, absent for \"do not count\". `weights` lists the household's weight per unit. Not paged: a household has tens of these. Not the suggestions at `GET .../ingredients`, which are what to type, not what was said.",
+        "operationId": "getHouseholdNutritionIngredientsV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NutritionIngredientFactsResponse"
                 }
               }
             }
@@ -9812,6 +10141,74 @@
         },
         "description": "Foods that fit what was typed."
       },
+      "NutritionIngredientFact": {
+        "required": [
+          "name",
+          "corrected",
+          "weights"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name, in the folded form every spelling of it shares: lower case, `ü` written `ue`."
+          },
+          "corrected": {
+            "type": "boolean",
+            "description": "Whether the household chose the food, or chose to leave the ingredient out."
+          },
+          "food": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/RecipesGetNutritionNutritionFood"
+              }
+            ]
+          },
+          "weights": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NutritionUnitWeight"
+            },
+            "description": "The weights the household set, by unit."
+          }
+        },
+        "description": "What a household has said about one ingredient name."
+      },
+      "NutritionIngredientFactsResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NutritionIngredientFact"
+            },
+            "description": "One entry per ingredient name with a food choice or a weight, by name."
+          }
+        },
+        "description": "What a household has said about its ingredients, for the nutrition figures."
+      },
+      "NutritionNutritionSettings": {
+        "required": [
+          "useTypicalWeights"
+        ],
+        "type": "object",
+        "properties": {
+          "useTypicalWeights": {
+            "type": "boolean",
+            "description": "Whether a typical weight (`via: typicalWeight`) may count a line nothing else counts: an onion, a clove,\na spoon of butter. True until a household says otherwise."
+          }
+        },
+        "description": "How a household's nutrition figures are worked out."
+      },
       "NutritionSetFoodRequest": {
         "type": "object",
         "properties": {
@@ -9822,6 +10219,36 @@
           }
         },
         "description": "What a household means by an ingredient name."
+      },
+      "NutritionSetUnitWeightRequest": {
+        "type": "object",
+        "properties": {
+          "grams": {
+            "type": "number",
+            "description": "Grams of one unit: more than 0, at most 10000.",
+            "format": "double"
+          }
+        },
+        "description": "What a household says one unit of an ingredient weighs."
+      },
+      "NutritionUnitWeight": {
+        "required": [
+          "unit",
+          "grams"
+        ],
+        "type": "object",
+        "properties": {
+          "unit": {
+            "type": "string",
+            "description": "The canonical unit key: `piece`, `clove`, `tbsp`, or a household's own word, folded."
+          },
+          "grams": {
+            "type": "number",
+            "description": "Grams of one unit.",
+            "format": "double"
+          }
+        },
+        "description": "What one unit weighs, as a household says."
       },
       "PasswordResetsCreateRequest": {
         "required": [
@@ -11036,7 +11463,7 @@
               "eggSize"
             ],
             "type": "string",
-            "description": "How the grams were reached: `mass`, `density` or `eggSize`; whenever there are grams.",
+            "description": "How the grams were reached: `mass`, `density`, `eggSize`, `householdWeight` (the household's own\nweight for the ingredient and unit) or `typicalWeight` (an estimate, see `source`); whenever there are grams.",
             "nullable": true
           },
           "corrected": {
@@ -11051,6 +11478,24 @@
             "type": "number",
             "description": "This line's energy per portion, in kilocalories, unrounded; the lines add up to the energy value.",
             "format": "double",
+            "nullable": true
+          },
+          "unitKey": {
+            "type": "string",
+            "description": "The canonical unit a household weight for this line is set under (`PUT /households/{id}/ingredients/{name}/units/{unit}`):\n`piece`, `clove`, `tbsp` and so on, or a household's own word, folded. Absent when the line has no\namount, a mass or a volume, which have a size of their own.",
+            "nullable": true
+          },
+          "source": {
+            "type": "string",
+            "description": "Where a typical weight comes from, written as a citation; only when `via` is `typicalWeight`.",
+            "nullable": true
+          },
+          "variants": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipesGetNutritionNutritionVariant"
+            },
+            "description": "The food's obvious alternatives, the food itself included, in the order they are offered; absent when it has none.\nChoosing one is the household's food correction (`PUT /households/{id}/ingredients/{name}`).",
             "nullable": true
           }
         },
@@ -11099,6 +11544,10 @@
           "atLeast": {
             "type": "boolean",
             "description": "True when a line left out, or a food without this value, could only have added to it."
+          },
+          "estimated": {
+            "type": "boolean",
+            "description": "True when a line that adds to this value was counted by a typical weight (`via` is `typicalWeight`),\nso the figure is partly an estimate. Always sent; a client written before this field may ignore it."
           }
         },
         "description": "One label value."
@@ -11142,6 +11591,35 @@
           }
         },
         "description": "The label values of one portion or piece."
+      },
+      "RecipesGetNutritionNutritionVariant": {
+        "required": [
+          "code",
+          "labelDe",
+          "labelEn"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The BLS code, to send as `food` when it is chosen."
+          },
+          "labelDe": {
+            "type": "string",
+            "description": "What a reader calls it in German."
+          },
+          "labelEn": {
+            "type": "string",
+            "description": "What a reader calls it in English."
+          },
+          "energyKcal": {
+            "type": "number",
+            "description": "Kilocalories per 100 g, so the choices can be compared; absent when the table has none.",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "description": "One alternative to a line's food."
       },
       "RecipesGetNutritionResponse": {
         "required": [

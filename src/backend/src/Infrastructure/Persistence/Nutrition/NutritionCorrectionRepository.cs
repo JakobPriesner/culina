@@ -27,6 +27,18 @@ internal sealed class NutritionCorrectionRepository(DbExecutor executor, TimePro
         return rows.ToDictionary(row => row.NameKey, row => row.FoodCode, StringComparer.Ordinal);
     }
 
+    public async Task<IReadOnlyDictionary<string, string?>> AllAsync(
+        Guid householdId,
+        CancellationToken cancellationToken)
+    {
+        var rows = await executor.QueryAsync<CorrectionRow>(
+            "select name_key, food_code from nutrition_food_overrides where household_id = @householdId;",
+            new { householdId },
+            cancellationToken).ConfigureAwait(false);
+
+        return rows.ToDictionary(row => row.NameKey, row => row.FoodCode, StringComparer.Ordinal);
+    }
+
     public async Task SetAsync(
         Guid householdId,
         string nameKey,
