@@ -39,7 +39,26 @@ describe('a recipe in the list', () => {
   it('says nothing about a time the recipe does not give', () => {
     renderWithProviders(RecipeCard, { props: { recipe: recipe({ totalMinutes: null }) } });
 
-    expect(screen.getByText('4 servings')).toBeInTheDocument();
+    expect(screen.queryByText(/min/)).not.toBeInTheDocument();
+  });
+
+  it('leaves the servings out and gives the calories per person instead', () => {
+    renderWithProviders(RecipeCard, {
+      props: { recipe: recipe({ calories: { value: 520, atLeast: false } }) }
+    });
+
+    expect(screen.queryByText(/servings/)).not.toBeInTheDocument();
+    expect(screen.getByText(/520\skcal per person/)).toBeInTheDocument();
+  });
+
+  it('gives the calories per piece for a recipe that makes pieces', () => {
+    renderWithProviders(RecipeCard, {
+      props: {
+        recipe: recipe({ yieldKind: 'pieces', calories: { value: 180, atLeast: false } })
+      }
+    });
+
+    expect(screen.getByText(/180\skcal per piece/)).toBeInTheDocument();
   });
 
   it('mentions how often it has been made, only once it has been', () => {

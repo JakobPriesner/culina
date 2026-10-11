@@ -1539,6 +1539,7 @@
   "problem.request.invalid_parameter": "Diese Anfrage konnte Culina nicht verarbeiten. Lade die Seite neu und versuch es noch einmal.",
   "nutrition.title": "Nährwerte",
   "nutrition.perServing": "pro Portion",
+  "nutrition.short.perPerson": "p. P.",
   "nutrition.perPiece": "pro Stück",
   "nutrition.atLeast": "mind.",
   "nutrition.nothing": "Für dieses Rezept lässt sich nichts zählen",
