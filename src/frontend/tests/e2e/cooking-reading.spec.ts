@@ -21,10 +21,10 @@ test.describe('hands-free cooking reading @offline', () => {
       await expect(stop).toBeInViewport({ ratio: 1 });
       await expectReflow(page);
       await page.clock.runFor(1200);
-      // Nothing is pinned above the step on a phone (the shell header is hidden while cooking), so it rests at the page's own top inset, --space-4.
+      // Nothing is pinned above the step on a phone (the shell header is hidden while cooking), so it rests at the page's own top inset, --space-4 (to within a pixel: the scroll position is a whole number and the step's offset may not be, so it can land up to half a pixel short, as 15.5 with Linux's wider fonts).
       expect(
         await page.locator('.step.current').evaluate((el) => el.getBoundingClientRect().top)
-      ).toBeGreaterThanOrEqual(16);
+      ).toBeGreaterThanOrEqual(15);
       await page.screenshot({ path: testInfo.outputPath('auto-scroll.png') });
       const initial = await page.evaluate(() => scrollY);
       const lastLine = page.locator('.step.current p').last();
@@ -54,8 +54,9 @@ test.describe('hands-free cooking reading @offline', () => {
       await page.clock.runFor(1200);
       await expect(page.getByText('Schritt 2 von 4', { exact: true })).toBeVisible();
       const step = page.locator('.step.current');
+      // The same inset, to within the same pixel.
       expect(await step.evaluate((el) => el.getBoundingClientRect().top)).toBeGreaterThanOrEqual(
-        16
+        15
       );
       await stop.focus();
       await page.keyboard.press('Space');
