@@ -522,7 +522,11 @@ const flagged = (answer: ReturnType<typeof partial>, ...ids: string[]) => ({
   }))
 });
 
-const withLine = (answer: ReturnType<typeof partial>, id: string, change: object) => ({
+const withLine = <Answer extends { ingredients: { ingredientId: string }[] }>(
+  answer: Answer,
+  id: string,
+  change: object
+) => ({
   ...answer,
   ingredients: answer.ingredients.map((line) =>
     line.ingredientId === id ? { ...line, ...change } : line
