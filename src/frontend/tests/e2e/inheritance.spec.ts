@@ -49,11 +49,11 @@ test.describe('a household that inherits another', () => {
         .getByRole('button', { name: /^(create a household|haushalt erstellen)$/i })
         .click();
 
-      // The new household is the one on screen.
+      // The new household is the one on screen; its row also names the kitchen it inherits from.
       await page
         .getByRole('button', { name: /^(your account and settings|dein konto und einstellungen)/i })
         .click();
-      await expect(page.getByRole('button', { name: flat, exact: true })).toHaveAttribute(
+      await expect(page.getByRole('button', { name: new RegExp(`^${flat} `) })).toHaveAttribute(
         'aria-current',
         'true'
       );
