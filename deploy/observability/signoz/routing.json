@@ -1,0 +1,4 @@
+{
+  "critical": ["culina-ntfy", "culina-telegram", "culina-ntfy-mail"],
+  "warning": ["culina-ntfy-mail"]
+}

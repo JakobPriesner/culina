@@ -1,0 +1,62 @@
+{
+  "alert": "Culina: refused recovery codes",
+  "alertType": "METRIC_BASED_ALERT",
+  "labels": {
+    "area": "security",
+    "service": "${CULINA_API_SERVICE}"
+  },
+  "annotations": {
+    "summary": "{{$value}} refused recovery codes in 15 minutes (threshold {{$threshold}})",
+    "description": "Recovery codes are being guessed. Event 1003 names the ClientAddress of each attempt; ban it, and consider regenerating the targeted account's codes. docs/operations.md, section Alerts."
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "15m",
+      "frequency": "1m"
+    }
+  },
+  "condition": {
+    "compositeQuery": {
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "signal": "metrics",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "metricName": "culina.auth.recovery_failures",
+                "temporality": "cumulative",
+                "timeAggregation": "increase",
+                "spaceAggregation": "sum"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}'"
+            }
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "A",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "critical",
+          "target": 20,
+          "op": "above",
+          "matchType": "in_total"
+        },
+        {
+          "name": "warning",
+          "target": 5,
+          "op": "above",
+          "matchType": "in_total"
+        }
+      ]
+    }
+  }
+}

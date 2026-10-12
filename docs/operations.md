@@ -350,7 +350,9 @@ previous release's dump.
   carries `ClientAddress` and never the email address that was tried, so
   fail2ban or CrowdSec can ban on it. 1501 is an AI provider refusing a call,
   with the provider's own reason attached; 1502 is every settled assistant
-  call with its tokens, cost and duration.
+  call with its tokens, cost and duration. Exported, the id is the log
+  attribute `logrecord.event.id`. Ready-made rules for SigNoz are under
+  [Alerts](#alerts).
 - **The database pool running dry, before it does.** 1970 is a request that
   waited longer than half a second for a database connection; 1971 is a
   connection kept out of the pool for longer than five seconds, naming the use
@@ -386,6 +388,103 @@ previous release's dump.
   to PostgreSQL with a password, so nothing needs it. Two lines at startup and
   never again; adding six system libraries to the image to silence them is not a
   trade worth making.
+
+## Alerts
+
+The rules under `deploy/observability/signoz/` turn what the section above says
+to look for into alerts in [SigNoz](https://signoz.io), which evaluates traces,
+metrics and logs in one place, so you hear about a problem before the people
+cooking do. Jaeger, when the collector mirrors traces to it, stays a
+trace viewer: it has no alerting, and every trace an alert links to in SigNoz
+is the same trace in Jaeger, by its `TraceId`.
+
+**Two tiers.** Most rules have a `warning` and a `critical` threshold; the
+critical one silences the warning while both hold. `routing.json` decides who
+hears what:
+
+| Tier | Goes to | Meaning |
+| --- | --- | --- |
+| `critical` | push on ntfy topic `culina-alerts` (urgent), Telegram, email | Users are affected now, or will be within the hour |
+| `warning` | email | Worth a look today |
+
+Email goes through ntfy too: the channel posts to the topic `culina-mail`, which
+nobody subscribes to, with `email=` set, so it only ever arrives as mail. SigNoz
+then needs no mail server of its own; your ntfy server does (its `smtp-sender-*`
+settings).
+
+**What is covered.**
+
+| Area | Rules |
+| --- | --- |
+| Availability | no telemetry from the API for 10 minutes; share of failed requests |
+| Performance | API p95 latency; p95 per use case (imports, AI calls and archives excluded: slow by design) |
+| Security | refused sign-ins, recovery codes, CSRF, origin and rate-limit rejections |
+| Resources | memory against the container limit; storage per directory; thread pool backlog |
+| Database | pool in use, requests waiting, timeouts, a connection held too long (1971) |
+| Errors and jobs | error and critical lines; failed imports, session sweeps and trash purges |
+| Assistant | an AI provider refusing calls (1501) |
+| Web app | bursts of browser reports (1700), as a warning only: anybody can send one |
+| Configuration | started without a database (1600) or with insecure cookies (1603) |
+
+Thresholds are starting points for a household, not a fleet. Each is a number in
+its file; change it there and apply again rather than in the SigNoz UI, which the
+next apply would overwrite.
+
+**Dashboards.** The same apply keeps five dashboards in `dashboards/`, each a
+file: *Culina · API* (traffic, failures, latency per route and use case, outbound
+calls), *Database* (pool, waits, timeouts, query duration, long holds),
+*Security* (refusals over time, by reason and by client address), *Resources*
+(memory, storage, CPU, .NET heap, GC, thread pool, connections) and *Logs and
+jobs* (lines by level and event, background work, the assistant, browser
+reports). A panel with an alert behind it draws the alert's thresholds. Edit
+the file rather than the dashboard in SigNoz: apply replaces the whole
+dashboard, and leaves alone only one made by hand or locked. Panels about events
+stay empty until the event first happens.
+
+**Setting it up.**
+
+1. **ntfy.** The server's address, reachable from the SigNoz container, and an
+   access token if its topics are protected (one token for both topics).
+   Subscribe your phone to `culina-alerts`, not to `culina-mail`. The channels
+   ask ntfy (2.14 or later) to format each message with its built-in
+   `alertmanager` template. The topic names are in `channels/ntfy*.json`.
+2. **Telegram.** SigNoz has no Telegram channel, so a relay turns its webhook into
+   bot messages. [prometheus_bot](https://github.com/inCaller/prometheus_bot) is
+   a small one: run `ghcr.io/incaller/prometheus_bot` beside SigNoz, pinned by
+   digest, with a `config.yaml` holding the bot token, and point the channel at
+   `http://prometheus-bot:9087/alert/<chat id>`. Leave it out and the critical
+   tier goes to ntfy and email only.
+3. **An API key.** SigNoz → Settings → Service Accounts: an account with the
+   Admin role (creating notification channels is admin-only) and a key for it.
+4. **Apply.**
+
+   ```bash
+   export SIGNOZ_URL=http://signoz.home.arpa:7890 SIGNOZ_API_KEY=…
+   export CULINA_ALERT_NTFY_URL=https://ntfy.example.com CULINA_ALERT_NTFY_TOKEN=…
+   export CULINA_ALERT_EMAIL_TO=you@example.com
+   export CULINA_ALERT_TELEGRAM_RELAY_URL=http://prometheus-bot:9087/alert/123456
+   scripts/signoz-alerts.sh plan    # what would change
+   make alerts-apply                # change it
+   ```
+
+   A channel is skipped while a variable it uses is unset, and rules route to the
+   ones that are set. SigNoz refuses a tier that routes nowhere, so without
+   `CULINA_ALERT_EMAIL_TO` the warning tier is left out, and a rule with only a
+   warning is skipped; apply says which. Running it again updates in place. Rules it made carry
+   `managed_by=culina-repo`; one of those without a file any more is deleted, and
+   a rule made by hand is never touched, even when its name matches.
+   `CULINA_API_SERVICE` and `CULINA_WEB_SERVICE` follow `OTEL_SERVICE_NAME` when
+   that is not `culina-api`.
+5. **Try it.** *Test* on each channel's page in SigNoz sends a message through
+   it; *Test notification* on a rule's page sends that rule's alert through its
+   channels. Wrong passwords alone are a poor test: past five a minute for one
+   account the rate limit refuses them first, and those count as rate-limit
+   rejections, not refused sign-ins.
+
+The log rules need the event id exported, which Culina does by default
+(`OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES`, configuration.md).
+`make alerts-check` validates the files without a network; run it after editing
+one.
 
 ## What works without a network, and what does not
 

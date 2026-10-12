@@ -1,0 +1,98 @@
+{
+  "alert": "Culina: memory close to the limit",
+  "alertType": "METRIC_BASED_ALERT",
+  "labels": {
+    "area": "resources",
+    "service": "${CULINA_API_SERVICE}"
+  },
+  "annotations": {
+    "summary": "Memory at {{$value}}% of the limit (threshold {{$threshold}}%)",
+    "description": "The container is close to its memory limit and will be killed when it reaches it. Compare process.memory.usage and the dotnet.gc.* metrics in SigNoz; raise the limit or look for an import or assistant run holding pictures. docs/operations.md, section Alerts."
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "10m",
+      "frequency": "1m"
+    }
+  },
+  "condition": {
+    "compositeQuery": {
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "signal": "metrics",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "metricName": "system.memory.usage",
+                "temporality": "cumulative",
+                "timeAggregation": "avg",
+                "spaceAggregation": "max"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}' AND system.memory.state = 'used'"
+            },
+            "groupBy": [
+              {
+                "name": "service.instance.id"
+              }
+            ]
+          }
+        },
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "B",
+            "signal": "metrics",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "metricName": "system.memory.limit",
+                "temporality": "cumulative",
+                "timeAggregation": "avg",
+                "spaceAggregation": "max"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}'"
+            },
+            "groupBy": [
+              {
+                "name": "service.instance.id"
+              }
+            ]
+          }
+        },
+        {
+          "type": "builder_formula",
+          "spec": {
+            "name": "F1",
+            "expression": "A / B * 100"
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "F1",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "critical",
+          "target": 92,
+          "op": "above",
+          "matchType": "all_the_times"
+        },
+        {
+          "name": "warning",
+          "target": 80,
+          "op": "above",
+          "matchType": "all_the_times"
+        }
+      ]
+    }
+  }
+}

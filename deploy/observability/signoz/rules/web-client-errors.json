@@ -1,0 +1,53 @@
+{
+  "alert": "Culina: web app errors in browsers",
+  "alertType": "LOGS_BASED_ALERT",
+  "labels": {
+    "area": "web",
+    "service": "${CULINA_WEB_SERVICE}"
+  },
+  "annotations": {
+    "summary": "{{$value}} browser error reports in 15 minutes (threshold {{$threshold}})",
+    "description": "Event 1700 under ${CULINA_WEB_SERVICE}: anybody can send these, so this never pages. A burst after a release usually means a broken build or a CSP violation; group by culina.web.app_version and the route. docs/operations.md, section Alerts."
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "15m",
+      "frequency": "1m"
+    }
+  },
+  "condition": {
+    "compositeQuery": {
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "signal": "logs",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "expression": "count()"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_WEB_SERVICE}' AND attribute.logrecord.event.id = 1700"
+            }
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "A",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "warning",
+          "target": 20,
+          "op": "above",
+          "matchType": "in_total"
+        }
+      ]
+    }
+  }
+}

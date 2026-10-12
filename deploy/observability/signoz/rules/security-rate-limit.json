@@ -1,0 +1,62 @@
+{
+  "alert": "Culina: requests refused by rate limits",
+  "alertType": "METRIC_BASED_ALERT",
+  "labels": {
+    "area": "security",
+    "service": "${CULINA_API_SERVICE}"
+  },
+  "annotations": {
+    "summary": "{{$value}} requests refused by a rate limit in 5 minutes (threshold {{$threshold}})",
+    "description": "Event 1801 carries the reason and ClientAddress. One address is a client looping or a scraper (ban it); many after a release can mean a limit too tight for real use (RateLimits__* in docs/configuration.md). docs/operations.md, section Alerts."
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "5m",
+      "frequency": "1m"
+    }
+  },
+  "condition": {
+    "compositeQuery": {
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "signal": "metrics",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "metricName": "culina.ratelimit.rejections",
+                "temporality": "cumulative",
+                "timeAggregation": "increase",
+                "spaceAggregation": "sum"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}'"
+            }
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "A",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "critical",
+          "target": 300,
+          "op": "above",
+          "matchType": "in_total"
+        },
+        {
+          "name": "warning",
+          "target": 50,
+          "op": "above",
+          "matchType": "in_total"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "alert": "Culina: slow use case",
+  "alertType": "METRIC_BASED_ALERT",
+  "labels": {
+    "area": "performance",
+    "service": "${CULINA_API_SERVICE}"
+  },
+  "annotations": {
+    "summary": "{{$labels.usecase}} p95 {{$value}} (threshold {{$threshold}})",
+    "description": "One handler has been slow for 15 minutes. Filter traces by span name {{$labels.usecase}} and compare its child spans; event 1971 names a use case that held a database connection too long. Imports, AI calls, the model list and archive export/restore are left out: they wait on other servers or move everything, so they are slow by design. docs/operations.md, section Alerts."
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "15m",
+      "frequency": "1m"
+    }
+  },
+  "condition": {
+    "compositeQuery": {
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "signal": "metrics",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "metricName": "culina.usecase.duration.bucket",
+                "temporality": "cumulative",
+                "timeAggregation": "",
+                "spaceAggregation": "p95"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}' AND usecase NOT IN ('Recipes.ImportRun', 'Recipes.Import', 'Sources.Import', 'Recipes.ComposeDraft', 'Recipes.DrawImage', 'Settings.GetAssistanceModels', 'Archive.Export', 'Archive.Restore')"
+            },
+            "groupBy": [
+              {
+                "name": "usecase"
+              }
+            ]
+          }
+        }
+      ],
+      "unit": "ms"
+    },
+    "selectedQueryName": "A",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "critical",
+          "target": 8000,
+          "op": "above",
+          "matchType": "all_the_times",
+          "targetUnit": "ms"
+        },
+        {
+          "name": "warning",
+          "target": 2000,
+          "op": "above",
+          "matchType": "all_the_times",
+          "targetUnit": "ms"
+        }
+      ]
+    }
+  }
+}

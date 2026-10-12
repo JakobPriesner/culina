@@ -1,0 +1,15 @@
+{
+  "name": "culina-ntfy-mail",
+  "webhook_configs": [
+    {
+      "url": "${CULINA_ALERT_NTFY_URL}/culina-mail?template=alertmanager&priority=low&email=${CULINA_ALERT_EMAIL_TO}",
+      "send_resolved": true,
+      "http_config": {
+        "authorization": {
+          "type": "Bearer",
+          "credentials": "${CULINA_ALERT_NTFY_TOKEN}"
+        }
+      }
+    }
+  ]
+}

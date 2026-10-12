@@ -1,0 +1,62 @@
+{
+  "alert": "Culina: requests refused by the CSRF check",
+  "alertType": "METRIC_BASED_ALERT",
+  "labels": {
+    "area": "security",
+    "service": "${CULINA_API_SERVICE}"
+  },
+  "annotations": {
+    "summary": "{{$value}} requests failed the CSRF check in 5 minutes (threshold {{$threshold}})",
+    "description": "Event 1801 carries the reason and the ClientAddress. One address is a forged-request attempt or a broken client; many at once after a deploy usually means a proxy stripped the CSRF header or cookie. docs/operations.md, section Alerts."
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "5m",
+      "frequency": "1m"
+    }
+  },
+  "condition": {
+    "compositeQuery": {
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "signal": "metrics",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "metricName": "culina.csrf.rejections",
+                "temporality": "cumulative",
+                "timeAggregation": "increase",
+                "spaceAggregation": "sum"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}'"
+            }
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "A",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "critical",
+          "target": 50,
+          "op": "above",
+          "matchType": "in_total"
+        },
+        {
+          "name": "warning",
+          "target": 10,
+          "op": "above",
+          "matchType": "in_total"
+        }
+      ]
+    }
+  }
+}

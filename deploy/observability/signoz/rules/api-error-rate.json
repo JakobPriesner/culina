@@ -1,0 +1,82 @@
+{
+  "alert": "Culina: API error rate",
+  "alertType": "TRACES_BASED_ALERT",
+  "labels": {
+    "area": "availability",
+    "service": "${CULINA_API_SERVICE}"
+  },
+  "annotations": {
+    "summary": "{{$value}}% of API requests failed (threshold {{$threshold}}%)",
+    "description": "Server spans that ended in an error. Open the related traces link (or Jaeger, by TraceId) and look at the failing route's span status and the error log beside it (event 1800 for an unhandled exception). docs/operations.md, section Alerts."
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "10m",
+      "frequency": "1m"
+    }
+  },
+  "condition": {
+    "compositeQuery": {
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "signal": "traces",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "expression": "count()"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server' AND has_error = true"
+            }
+          }
+        },
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "B",
+            "signal": "traces",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "expression": "count()"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server'"
+            }
+          }
+        },
+        {
+          "type": "builder_formula",
+          "spec": {
+            "name": "F1",
+            "expression": "A / B * 100"
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "F1",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "critical",
+          "target": 10,
+          "op": "above",
+          "matchType": "on_average"
+        },
+        {
+          "name": "warning",
+          "target": 2,
+          "op": "above",
+          "matchType": "on_average"
+        }
+      ]
+    }
+  }
+}

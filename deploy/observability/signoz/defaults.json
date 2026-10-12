@@ -1,0 +1,31 @@
+{
+  "schemaVersion": "v2alpha1",
+  "version": "v5",
+  "ruleType": "threshold_rule",
+  "disabled": false,
+  "labels": {
+    "managed_by": "culina-repo"
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "5m",
+      "frequency": "1m"
+    }
+  },
+  "notificationSettings": {
+    "renotify": {
+      "enabled": true,
+      "interval": "4h",
+      "alertStates": ["firing", "nodata"]
+    },
+    "usePolicy": false
+  },
+  "condition": {
+    "compositeQuery": {
+      "queryType": "builder",
+      "panelType": "graph"
+    },
+    "selectedQueryName": "A"
+  }
+}

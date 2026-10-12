@@ -68,7 +68,9 @@ internal static partial class UserLogs
   evaluates even when the level is disabled.
 - Event ids are unique per domain, allocated in blocks (`1000-1099` users,
   `1100-1199` households, …) so an alert can key on an id that survives a
-  message rewording.
+  message rewording. Exported, it is the log attribute `logrecord.event.id`
+  (the SDK only sends it because Culina turns
+  `OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES` on by default).
 - Property names are PascalCase and stable; they are the field names an
   operator queries. Renaming one breaks dashboards, so treat it like renaming
   an API field.
@@ -237,3 +239,8 @@ last-4, or a boolean.
 - [ ] A new use case opens one `<Domain>.<Operation>` span and records its
       duration histogram with an `outcome` tag.
 - [ ] Anything an operator should alert on has a counter, not just a log line.
+- [ ] And a rule: a file in `deploy/observability/signoz/rules/`, with a
+      `critical` and/or `warning` threshold, checked by `make alerts-check`
+      (operations.md, Alerts), and a panel on the matching dashboard in
+      `deploy/observability/signoz/dashboards/`. Renaming a metric or an event
+      id breaks both.
