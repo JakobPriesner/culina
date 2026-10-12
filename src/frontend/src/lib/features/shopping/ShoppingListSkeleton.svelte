@@ -19,7 +19,7 @@
   ];
 </script>
 
-<div aria-busy="true" aria-label={m['shopping.loading']()}>
+<div role="status" aria-busy="true" aria-label={m['shopping.loading']()}>
   {#each sections as rows, section (section)}
     <section class="section">
       <div class="heading-row">
