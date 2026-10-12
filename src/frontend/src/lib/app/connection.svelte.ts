@@ -1,3 +1,5 @@
+import { forgetOfflineReads, native } from '$api';
+
 /** Whether there is a network, as far as the browser can tell; `navigator.onLine` is weak, so it only explains why a save failed and never decides whether to try. */
 class Connection {
   #online = $state(true);
@@ -32,6 +34,15 @@ export const connection = new Connection();
 
 /** Empties the cache of recipes this device has read, on sign-in and sign-out, so a shared tablet never answers one person from another's cache. */
 export function forgetCachedReads(): void {
+  // The app keeps its copies in the page, having no worker to ask; the kitchen goes with them, as the worker's `culina:forget` does.
+  if (native) {
+    void forgetOfflineReads();
+    void import('$features/cooking/timerState').then(({ forgetKitchen }) => forgetKitchen());
+    void import('./nativeImages').then(({ forgetNativeImages }) => forgetNativeImages());
+
+    return;
+  }
+
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
     return;
   }

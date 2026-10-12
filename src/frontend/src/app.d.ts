@@ -13,6 +13,13 @@ declare global {
    */
   const __CULINA_GALLERY__: boolean;
 
+  /**
+   * Whether this is the installed app's bundle (`CULINA_TARGET=native`), a
+   * literal for the same reason as `__CULINA_GALLERY__`: the website must ship
+   * none of the app's code. See src/lib/api/platform.ts.
+   */
+  const __CULINA_NATIVE__: boolean;
+
   namespace App {
     // interface Error {}
     // interface Locals {}

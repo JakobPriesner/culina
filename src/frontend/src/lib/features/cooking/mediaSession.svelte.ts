@@ -1,3 +1,4 @@
+import { native } from '$api';
 import silentAudio from './cooking-silence.wav?url';
 import { SvelteURL } from 'svelte/reactivity';
 import type { RecipeReading } from '$features/recipes/types';
@@ -62,9 +63,15 @@ export function createCookingMediaSession() {
     );
     const metadata = {
       ...text,
-      artwork: recipe.imageId
-        ? [{ src: new SvelteURL(imageUrl(recipe.id, 400, recipe.imageId), document.baseURI).href }]
-        : []
+      // The lock screen fetches artwork without the app's bearer token, so the app shows none.
+      artwork:
+        recipe.imageId && !native
+          ? [
+              {
+                src: new SvelteURL(imageUrl(recipe.id, 400, recipe.imageId), document.baseURI).href
+              }
+            ]
+          : []
     };
     const key = JSON.stringify(metadata);
     // Step, scaling, artwork and pause changes are immediate; countdowns at most every 10s.

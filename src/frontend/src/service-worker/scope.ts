@@ -6,7 +6,7 @@ export const worker = self as unknown as ServiceWorkerGlobalScope;
 export const cacheName = `culina-${version}`;
 
 /** Read recipes, deliberately unversioned so a deploy doesn't drop recipes people rely on offline. */
-export const privateCacheName = 'culina-private';
+export { privateCacheName } from '../lib/api/offlineReads';
 
 /** The shell document every route renders into: the root path, which is what navigations request, not `/index.html`. */
 export const shellDocument = `${base}/`;

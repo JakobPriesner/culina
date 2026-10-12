@@ -1845,5 +1845,19 @@
   "cookbooks.cover.label": "Cover",
   "cookbooks.cover.hint": "One photo for the whole cover, or the first photos on the shelf.",
   "cookbooks.cover.automatic": "First photos",
-  "problem.auth.invalid_client": "Culina does not know that kind of device."
+  "problem.auth.invalid_client": "Culina does not know that kind of device.",
+  "problem.auth.invalid_client": "Culina does not know that kind of device.",
+  "connect.eyebrow": "Culina app",
+  "connect.title": "Connect to your kitchen",
+  "connect.intro": "Culina runs on your own server. Enter the address you open it at in a browser.",
+  "connect.address": "Server address",
+  "connect.submit": "Connect",
+  "connect.failed.address": "That does not look like a server address. Try something like kitchen.example.com.",
+  "connect.failed.unreachable": "Nothing answered at that address. Check it, and that this phone can reach the server.",
+  "connect.failed.notCulina": "Something answered there, but it is not Culina.",
+  "connect.failed.notSetUp": "This Culina is not set up yet. Finish setting it up in a browser first.",
+  "connect.failed.serverTooOld": "This server runs an older Culina than this app understands. Ask whoever runs it to update it.",
+  "connect.failed.appTooOld": "This server runs a newer Culina than this app understands. Update the app.",
+  "me.server.switch": "Use a different server",
+  "me.server.switchBody": "Signs you out here and asks for another address."
 }

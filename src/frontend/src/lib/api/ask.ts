@@ -1,5 +1,6 @@
-import { csrfHeader, csrfToken } from './cookies';
+import { authorization, credentialsMode } from './credentials';
 import { drain, type Stream, type StreamHandlers } from './eventStream';
+import { apiUrl } from './instance';
 import { clientError, ErrorCodes, offline, toAppError, type AppError } from './problem';
 import { sessionExpired } from './session';
 
@@ -54,19 +55,18 @@ async function start(
   body: BodyInit | null,
   signal: AbortSignal
 ): Promise<{ body?: ReadableStream<Uint8Array>; error?: AppError }> {
-  const token = csrfToken();
   let response: Response;
 
   try {
-    response = await fetch(path, {
+    response = await fetch(apiUrl(path), {
       method: 'POST',
       // No deadline: model output is slow and the usual timeout would cut it off.
-      credentials: 'include',
+      credentials: credentialsMode,
       headers: {
         Accept: 'text/event-stream',
         // A string body is JSON (else fetch sends text/plain and the route 404s); FormData must keep the browser's multipart boundary.
         ...(typeof body === 'string' ? { 'Content-Type': 'application/json' } : {}),
-        ...(token ? { [csrfHeader]: token } : {})
+        ...authorization(true)
       },
       body,
       signal

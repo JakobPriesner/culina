@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { publicOrigin } from '$api';
   import { Button, Sheet, Skeleton } from '$ds';
 
   import { explain } from '$shell/explain';
@@ -29,7 +30,7 @@
   const token = $derived(sharing.tokenFor(recipeId));
 
   /** Built client-side: the browser knows which origin Culina is reached at (proxy, second hostname). */
-  const link = $derived(token ? `${location.origin}/shared/${token}` : null);
+  const link = $derived(token ? `${publicOrigin()}/shared/${token}` : null);
 
   async function share() {
     const failure = await sharing.share(recipeId);
