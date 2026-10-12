@@ -50,3 +50,16 @@ updates:
     ignore:
       - dependency-name: '*'
         update-types: ['version-update:semver-major']
+
+  # The Android project's Gradle wrapper and plugins (src/frontend/native/android). Not the androidx versions in
+  # variables.gradle, nor Capacitor's: those move with `@capacitor/android`, by hand, like npm. Not Swift either:
+  # CapApp-SPM/Package.swift is written by `cap sync` and must match `@capacitor/ios`.
+  - package-ecosystem: gradle
+    directory: /src/frontend/native/android
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    groups:
+      gradle:
+        patterns: ['*']
+

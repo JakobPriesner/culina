@@ -9,7 +9,12 @@ const config: CapacitorConfig = {
   appName: 'Culina',
   webDir: 'build-native',
   ios: { path: 'native/ios' },
-  android: { path: 'native/android' },
+  android: {
+    path: 'native/android',
+    // The app's own page is https; a Culina on the home network may be plain http, which the WebView would refuse as mixed
+    // content. The app itself allows http only for a private address (src/lib/api/connect.ts).
+    allowMixedContent: true
+  },
   server: {
     // The apps' origins, `capacitor://app.culina.localhost` and `https://app.culina.localhost`: the server's CORS
     // allow-list names exactly these (NativeAppCorsMiddleware). Not plain `localhost`, which any local dev server shares.
