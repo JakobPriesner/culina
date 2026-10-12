@@ -1,4 +1,5 @@
 using Application.Abstractions;
+using Domain.Ingredients;
 using Domain.Recipes;
 using Domain.Shared;
 using Npgsql;
@@ -10,11 +11,13 @@ namespace Infrastructure.Persistence.Recipes;
 /// <param name="tags">Resolves tag slugs to rows.</param>
 /// <param name="searcher">Runs the search projection.</param>
 /// <param name="documents">Keeps the search document in step with the recipe.</param>
+/// <param name="names">The household's ingredient merges, applied to every write.</param>
 internal sealed class RecipeRepository(
     DbExecutor executor,
     TagWriter tags,
     RecipeSearcher searcher,
-    SearchDocumentWriter documents)
+    SearchDocumentWriter documents,
+    IIngredientNameRepository names)
     : IRecipeRepository
 {
     public Task<RecipePage> SearchAsync(RecipeSearch search, CancellationToken cancellationToken) =>
@@ -411,6 +414,11 @@ internal sealed class RecipeRepository(
 
     private async Task WriteContentsAsync(Recipe recipe, CancellationToken cancellationToken)
     {
+        // Every create, edit, import, copy and restore reaches here, so a merged name cannot come back
+        // by any of them; the caller's recipe carries the kept names, so what it answers is what is stored.
+        var merges = await names.MergesAsync(recipe.HouseholdId, cancellationToken).ConfigureAwait(false);
+        recipe.UseKeptNames(new IngredientMerges(merges));
+
         // Cascades clear ingredients and the reference index with the groups.
         await executor.ExecuteAsync(
             """

@@ -1,3 +1,4 @@
+using Domain.Ingredients;
 using Domain.Shared;
 
 namespace Domain.Recipes;
@@ -230,6 +231,23 @@ public sealed class Recipe
         UpdatedAt = now;
 
         return Result.Success();
+    }
+
+    /// <summary>Writes every line under the name its household keeps for it.</summary>
+    /// <remarks>
+    /// Not an edit: it is applied on the way to storage, so neither the version nor the time moves,
+    /// and steps are untouched because they refer to lines by id.
+    /// </remarks>
+    public void UseKeptNames(IngredientMerges merges)
+    {
+        ArgumentNullException.ThrowIfNull(merges);
+
+        if (merges.IsEmpty)
+        {
+            return;
+        }
+
+        Groups = [.. Groups.Select(group => group.Renamed(merges.Resolve))];
     }
 
     /// <summary>The same recipe in another household, with ids of its own.</summary>

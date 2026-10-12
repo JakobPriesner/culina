@@ -26,6 +26,7 @@ test.describe('responsive production layouts @offline', () => {
           '/me',
           '/me/appearance',
           '/me/household',
+          '/me/ingredients',
           '/recipes/new',
           `/recipes/${recipeId}`,
           `/recipes/${recipeId}/edit`,

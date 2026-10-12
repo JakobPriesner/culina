@@ -65,6 +65,8 @@
 </script>
 
 <script lang="ts">
+  import { Button } from '$ds';
+
   import ComboField from './ComboField.svelte';
   import type { Suggestion } from './SuggestionList.svelte';
   import { m } from '$shell/i18n';
@@ -135,6 +137,9 @@
       }))
   );
 
+  /** What this field last asked suggestions for; the store is shared, so its answer may be another field's. */
+  let asked = $state('');
+
   // Asked for on a pause, not per keystroke (answers come back out of order), and only while this
   // field has the cursor since the store is shared.
   $effect(() => {
@@ -150,10 +155,24 @@
       return;
     }
 
-    const timer = setTimeout(() => void known.suggest(householdId, wanted, language), 180);
+    const timer = setTimeout(() => {
+      asked = wanted;
+      void known.suggest(householdId, wanted, language);
+    }, 180);
 
     return () => clearTimeout(timer);
   });
+
+  /**
+   * The household's own name for what was typed, when it is spelt otherwise ("Hähnchenbrust" for
+   * "Hühnchenbrustfilet"): offered so a near-duplicate is not saved. It stays after the field loses
+   * the cursor, until the name changes.
+   */
+  const existing = $derived(
+    asked && asked === value.name.trim() && known.answered === asked
+      ? (known.items.find((one) => one.equivalent && one.name !== asked)?.name ?? null)
+      : null
+  );
 </script>
 
 <div class="field-container">
@@ -222,6 +241,20 @@
       </label>
     {/if}
   </div>
+
+  {#if existing}
+    <p class="existing" role="status">
+      <span>{m['editor.ingredientExisting']({ name: existing })}</span>
+      <Button
+        size="sm"
+        variant="ghost"
+        label={m['editor.ingredientUseExistingLabel']({ name: existing })}
+        onclick={() => onchange({ ...value, name: existing })}
+      >
+        {m['editor.ingredientUseExisting']()}
+      </Button>
+    </p>
+  {/if}
 </div>
 
 <style>
@@ -247,6 +280,16 @@
     flex-direction: column;
     gap: var(--space-1);
     min-width: 0;
+  }
+
+  .existing {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
+    margin-top: var(--space-2);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
 
   .label {

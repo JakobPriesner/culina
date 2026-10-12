@@ -22,6 +22,7 @@ using Application.Households.Rename;
 using Application.Households.Restore;
 using Application.Households.RevokeInvitation;
 using Application.Households.SetInheritance;
+using Application.Ingredients;
 using Application.LogRecords.Create;
 using Application.Nutrition;
 using Application.PasswordResets.Create;
@@ -357,7 +358,19 @@ public static class DependencyInjection
                 CreateSavedSearchCommandHandler>()
             .AddScoped<ICommandHandler<UpdateSavedSearchCommand, Contracts.Searches.SavedSearchDetail>,
                 UpdateSavedSearchCommandHandler>()
-            .AddScoped<ICommandHandler<DeleteSavedSearchCommand>, DeleteSavedSearchCommandHandler>();
+            .AddScoped<ICommandHandler<DeleteSavedSearchCommand>, DeleteSavedSearchCommandHandler>()
+
+            // Ingredient names
+            .AddScoped<IQueryHandler<GetIngredientNamesQuery, Contracts.Ingredients.IngredientNamesResponse>,
+                GetIngredientNamesQueryHandler>()
+            .AddScoped<IQueryHandler<GetIngredientMergesQuery, Contracts.Ingredients.IngredientMergesResponse>,
+                GetIngredientMergesQueryHandler>()
+            .AddScoped<ICommandHandler<CreateIngredientMergeCommand, Contracts.Ingredients.CreatedIngredientMerge>,
+                CreateIngredientMergeCommandHandler>()
+            .AddScoped<ICommandHandler<DeleteIngredientMergeCommand>, DeleteIngredientMergeCommandHandler>()
+            .AddScoped<IQueryHandler<GetMergeSuggestionsQuery, Contracts.Ingredients.MergeSuggestionsResponse>,
+                GetMergeSuggestionsQueryHandler>()
+            .AddScoped<ICommandHandler<DeleteMergeSuggestionCommand>, DeleteMergeSuggestionCommandHandler>();
     }
 
     /// <summary>

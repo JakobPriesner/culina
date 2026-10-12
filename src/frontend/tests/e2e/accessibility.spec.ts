@@ -154,7 +154,7 @@ test.describe('what a machine can check, signed in', () => {
     expect(await violations(page)).toEqual([]);
   });
 
-  for (const path of ['/me', '/me/appearance', '/me/household']) {
+  for (const path of ['/me', '/me/appearance', '/me/household', '/me/ingredients']) {
     test(`settings at ${path} has no violations`, async () => {
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

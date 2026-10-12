@@ -12,6 +12,7 @@ using Infrastructure.Persistence.Cookbooks;
 using Infrastructure.Persistence.Cooking;
 using Infrastructure.Persistence.Households;
 using Infrastructure.Persistence.Import;
+using Infrastructure.Persistence.Ingredients;
 using Infrastructure.Persistence.Migrations;
 using Infrastructure.Persistence.Nutrition;
 using Infrastructure.Persistence.Planning;
@@ -158,6 +159,7 @@ public static class DependencyInjection
             .AddScoped<IShoppingListRepository, ShoppingListRepository>()
             .AddScoped<IRecipeCalories, RecipeCalories>()
             .AddScoped<INutritionCorrectionRepository, NutritionCorrectionRepository>()
+            .AddScoped<IIngredientNameRepository, IngredientNameRepository>()
             .AddScoped<INutritionWeightRepository, NutritionWeightRepository>()
             .AddScoped<IRecipeSourceRepository, RecipeSourceRepository>()
             .AddScoped<IRecipeOriginRepository, RecipeOriginRepository>()

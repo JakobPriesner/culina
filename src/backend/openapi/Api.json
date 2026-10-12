@@ -6117,6 +6117,364 @@
         }
       }
     },
+    "/api/v1/households/{householdId}/ingredient-names": {
+      "get": {
+        "tags": [
+          "Ingredients"
+        ],
+        "summary": "List a household's ingredient names",
+        "description": "Every distinct ingredient name in this household's own recipes, exactly as written, with how many recipes use it; most used first. Recipes it inherits are left out: a merge only rewrites the household's own.",
+        "operationId": "getIngredientNamesV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientsIngredientNamesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/ingredient-merges": {
+      "get": {
+        "tags": [
+          "Ingredients"
+        ],
+        "summary": "List a household's ingredient merges",
+        "description": "The names this household has merged into another. Each one is applied whenever one of its recipes is written, so an edit or an import cannot bring the old name back.",
+        "operationId": "getIngredientMergesV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientsIngredientMergesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Ingredients"
+        ],
+        "summary": "Merge an ingredient name into another",
+        "description": "Rewrites every line of this household's own recipes named `from` (spelled any way that folds the same: \"Olivenoel\", \"olivenöl\") to `to`, and keeps doing so for every later save, import, copy or restore. `to` need not be in use yet, so this is also how an ingredient is renamed. Merging into a name that was itself merged follows that merge; merges that kept `from` now keep `to`. A nutrition or shopping choice made for `from` moves to `to` unless `to` has its own. Each rewritten recipe gets a new version. Merging again from the same name replaces the merge. Any member may merge.",
+        "operationId": "createIngredientMergeV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngredientsCreateIngredientMergeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientsCreatedIngredientMerge"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/ingredient-merges/{from}": {
+      "delete": {
+        "tags": [
+          "Ingredients"
+        ],
+        "summary": "Forget an ingredient merge",
+        "description": "Stops writing `{from}` as the name it was merged into. Recipes already rewritten keep the kept name; nothing is renamed back. `{from}` is the merged name, percent-encoded. Idempotent; 204.",
+        "operationId": "deleteIngredientMergeV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "from",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/ingredient-merge-suggestions": {
+      "get": {
+        "tags": [
+          "Ingredients"
+        ],
+        "summary": "Suggest ingredient merges",
+        "description": "Names in this household's own recipes that are probably one ingredient: spelt the same once folded (`spelling`), naming the same food (`same_food`, e.g. \"Hühnchenbrustfilet\" and \"Hähnchenbrust\") or a letter or two apart (`typo`). Each is proposed to go into the most used of its lookalikes. Names the household kept apart are never proposed. Accepting is `POST ingredient-merges`.",
+        "operationId": "getIngredientMergeSuggestionsV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientsMergeSuggestionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/ingredient-merge-suggestions/{name}": {
+      "delete": {
+        "tags": [
+          "Ingredients"
+        ],
+        "summary": "Dismiss an ingredient merge suggestion",
+        "description": "Keeps `{name}` apart: it is never proposed for merging again, whatever it would be merged into. `{name}` is the suggestion's `from`, percent-encoded. Idempotent; 204.",
+        "operationId": "deleteIngredientMergeSuggestionV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/households/{householdId}/meal-plan": {
       "get": {
         "tags": [
@@ -9844,6 +10202,154 @@
           "$ref": "#/components/schemas/IFormFile"
         }
       },
+      "IngredientsCreateIngredientMergeRequest": {
+        "required": [
+          "from",
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "The name that goes away; every spelling that folds the same goes with it."
+          },
+          "to": {
+            "type": "string",
+            "description": "The name to keep. It need not be in use yet, which makes a merge a rename."
+          }
+        },
+        "description": "Merges one ingredient name into another."
+      },
+      "IngredientsCreatedIngredientMerge": {
+        "required": [
+          "from",
+          "to",
+          "recipeCount"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "The name that went away."
+          },
+          "to": {
+            "type": "string",
+            "description": "The name kept: the one asked for, or the one it was itself merged into."
+          },
+          "recipeCount": {
+            "type": "integer",
+            "description": "How many of the household's recipes were rewritten.",
+            "format": "int32"
+          }
+        },
+        "description": "A merge that was made, and what it changed."
+      },
+      "IngredientsIngredientMergeDetail": {
+        "required": [
+          "from",
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "The name that goes away, as it was written when merged."
+          },
+          "to": {
+            "type": "string",
+            "description": "The name that is kept."
+          }
+        },
+        "description": "One merge: lines written `from` are stored as `to`."
+      },
+      "IngredientsIngredientMergesResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IngredientsIngredientMergeDetail"
+            },
+            "description": "The merges, by the name that goes away."
+          }
+        },
+        "description": "The merges a household has made."
+      },
+      "IngredientsIngredientNameUse": {
+        "required": [
+          "name",
+          "recipeCount"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name, as written."
+          },
+          "recipeCount": {
+            "type": "integer",
+            "description": "How many of the household's recipes use it.",
+            "format": "int32"
+          }
+        },
+        "description": "One name as the household writes it."
+      },
+      "IngredientsIngredientNamesResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IngredientsIngredientNameUse"
+            },
+            "description": "The names, most used first."
+          }
+        },
+        "description": "The ingredient names a household's own recipes use."
+      },
+      "IngredientsMergeSuggestionDetail": {
+        "required": [
+          "from",
+          "to",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "$ref": "#/components/schemas/IngredientsIngredientNameUse"
+          },
+          "to": {
+            "$ref": "#/components/schemas/IngredientsIngredientNameUse"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why: `spelling` (they fold to one name), `same_food` (they name one food) or\n`typo` (a letter or two apart)."
+          }
+        },
+        "description": "A proposal to merge one name into another."
+      },
+      "IngredientsMergeSuggestionsResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IngredientsMergeSuggestionDetail"
+            },
+            "description": "The proposals, the most used name first."
+          }
+        },
+        "description": "Names in a household's recipes that are probably one ingredient."
+      },
       "LogRecordsCreateClient": {
         "type": "object",
         "properties": {
@@ -11325,7 +11831,8 @@
         "required": [
           "name",
           "section",
-          "own"
+          "own",
+          "equivalent"
         ],
         "type": "object",
         "properties": {
@@ -11340,6 +11847,10 @@
           "own": {
             "type": "boolean",
             "description": "Whether this household has written it before."
+          },
+          "equivalent": {
+            "type": "boolean",
+            "description": "Whether this is the household's own name for what was typed, though spelt otherwise: a name it\nmerged the typed one into, or one that looks like it (\"Hähnchenbrust\" for \"Hühnchenbrustfilet\").\nAt most one suggestion is, and it comes first."
           }
         },
         "description": "An ingredient a recipe could call for."
@@ -15553,6 +16064,9 @@
     },
     {
       "name": "Nutrition"
+    },
+    {
+      "name": "Ingredients"
     },
     {
       "name": "Planning"

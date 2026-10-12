@@ -4,7 +4,12 @@ namespace Contracts.Recipes.GetIngredients;
 /// <param name="Name">What to write, in the language that was asked for.</param>
 /// <param name="Section">Where in a shop it is found.</param>
 /// <param name="Own">Whether this household has written it before.</param>
-public sealed record IngredientSuggestion(string Name, string Section, bool Own);
+/// <param name="Equivalent">
+/// Whether this is the household's own name for what was typed, though spelt otherwise: a name it
+/// merged the typed one into, or one that looks like it ("Hähnchenbrust" for "Hühnchenbrustfilet").
+/// At most one suggestion is, and it comes first.
+/// </param>
+public sealed record IngredientSuggestion(string Name, string Section, bool Own, bool Equivalent);
 
 /// <summary>What a kitchen could be cooking with.</summary>
 /// <remarks>

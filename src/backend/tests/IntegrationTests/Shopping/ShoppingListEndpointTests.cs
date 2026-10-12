@@ -260,6 +260,28 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task AddItem_ShouldSumWithTheSameThingAlreadyOnTheList()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+
+        await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/items",
+            new { name = "Tomatenmark", quantity = 1m, unit = "EL" },
+            Token);
+
+        var response = await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/items",
+            new { name = "Tomatenmark", quantity = 4m, unit = "EL" },
+            Token);
+
+        var line = Assert.Single(response.Json!.Value.GetProperty("items").EnumerateArray());
+
+        Assert.Equal(5m, line.GetProperty("quantity").GetDecimal());
+        Assert.Equal("tbsp", line.GetProperty("unit").GetString());
+    }
+
+    [Fact]
     public async Task UpdateItem_ShouldRememberACorrectedSection()
     {
         using var client = await SignedInAsync();

@@ -613,6 +613,12 @@ export async function responsiveData(
     if (path.endsWith('/timers')) return reply({ items: [] });
     if (path.endsWith('/units')) return reply({ own: [] });
     if (path.endsWith('/ingredients')) return reply({ items: [] });
+    if (
+      path.endsWith('/ingredient-names') ||
+      path.endsWith('/ingredient-merges') ||
+      path.endsWith('/ingredient-merge-suggestions')
+    )
+      return reply({ items: [] });
     if (path === `/recipes/${recipeId}`) return reply(detail);
     if (path === `/recipes/${recipeId}/nutrition`)
       return reply(
