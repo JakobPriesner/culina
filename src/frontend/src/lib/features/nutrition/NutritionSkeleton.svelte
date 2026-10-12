@@ -5,7 +5,7 @@
   /** Matches the summary card's title and figure so loading has the same footprint. */
 </script>
 
-<div class="row" aria-busy="true" aria-label={m['nutrition.loading']()}>
+<div class="row" role="status" aria-busy="true" aria-label={m['nutrition.loading']()}>
   <Skeleton width="8rem" height="1.5rem" />
   <div class="overview">
     <div class="words">

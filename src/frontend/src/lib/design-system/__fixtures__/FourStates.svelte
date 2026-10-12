@@ -24,7 +24,7 @@
 </script>
 
 {#if state === 'loading'}
-  <div aria-busy="true" aria-label="Loading recipes">
+  <div role="status" aria-busy="true" aria-label="Loading recipes">
     {#each [0, 1, 2] as row (row)}
       <Skeleton width="12rem" />
     {/each}

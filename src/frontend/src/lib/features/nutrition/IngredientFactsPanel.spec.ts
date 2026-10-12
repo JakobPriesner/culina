@@ -104,6 +104,19 @@ describe('the household’s ingredients', () => {
     expect(toggle).toBeChecked();
   });
 
+  it('names its placeholders on a status while it waits, which a plain element may not carry', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>(() => {}))
+    );
+    show();
+
+    expect(screen.getByRole('status', { name: 'Loading ingredients' })).toHaveAttribute(
+      'aria-busy',
+      'true'
+    );
+  });
+
   it('lists each name with its food and its weights', async () => {
     serve([butter, garlic, salt]);
     show();

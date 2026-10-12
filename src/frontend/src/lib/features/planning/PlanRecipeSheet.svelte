@@ -114,7 +114,7 @@
   {#if upcoming.error && days.length === 0}
     <p class="failure">{explain(upcoming.error)}</p>
   {:else if days.length === 0}
-    <div class="loading" aria-label={m['plan.recipe.loading']()} aria-busy="true">
+    <div class="loading" role="status" aria-busy="true" aria-label={m['plan.recipe.loading']()}>
       <Skeleton width="100%" height="4.5rem" />
       <Skeleton width="60%" height="1.25rem" />
       <Skeleton width="80%" height="2.75rem" />

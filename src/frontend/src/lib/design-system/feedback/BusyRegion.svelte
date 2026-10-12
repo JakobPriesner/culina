@@ -12,7 +12,8 @@
   let { children, busy, label }: Props = $props();
 </script>
 
-<div class="region" aria-busy={busy} aria-label={busy ? label : undefined}>
+<!-- role=group: a plain div is generic and may not carry a name; status would announce every change to the content. -->
+<div class="region" role="group" aria-busy={busy} aria-label={busy ? label : undefined}>
   {#if busy}
     <span class="bar" aria-hidden="true"></span>
   {/if}
