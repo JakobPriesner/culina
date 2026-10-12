@@ -21,6 +21,7 @@ lock, media session as they work on the web).
 4. [Kitchen timers on the lock screen](#4-kitchen-timers-on-the-lock-screen) — `tj23.3`
 5. [Build pipeline: web and native from one tree](#5-build-pipeline-web-and-native-from-one-tree) — `tj23.4`
 6. [First steps](#6-first-steps)
+7. [Push relay](#7-push-relay) — `tj23.10`
 
 ---
 
@@ -984,3 +985,108 @@ each tracked as a bead under `culina-v2-tj23`:
    Live Activity.
 6. **Later.** Push relay (3.8, `tj23.10`), durable AI drafts (3.7, `tj23.11`),
    native CI lanes and Maestro smoke tests (5.4, `tj23.12`), share extension.
+
+---
+
+## 7. Push relay
+
+The website tells its owner "your recipe is ready" with Web Push. The server
+signs with its own VAPID key (`Infrastructure/Import/PushTransport.cs`) and
+delivers from a durable outbox (`recipe_intake_notifications`, claimed,
+retried for 12 attempts). An installed app cannot be reached that way:
+
+- APNs accepts only the key of the Apple developer account that publishes the
+  app.
+- FCM accepts only that app's Firebase project.
+
+A self-hosted server holds neither, and must not be given them. So the app's
+publisher runs a small relay that holds those keys and forwards (3.8). This part
+designs it so the relay learns as little as possible and each instance opts in.
+
+### 7.1 Shape: the relay knows devices, not servers
+
+```
+app ──(1) device token──▶ relay            relay ──▶ APNs / FCM ──▶ phone
+ │◀──(2) relay token─────┘                    ▲
+ └──(3) relay token──▶ instance ──(4) {relay token, text, path}──┘
+```
+
+1. The app gets its APNs or FCM device token. It sends the token to the relay:
+   `POST /v1/devices {platform, deviceToken}`.
+2. The relay answers with a **relay token**: 32 random bytes, which the relay
+   maps to that device. The relay is never told which server or person the
+   device belongs to.
+3. The app registers the relay token with its own server, beside the Web Push
+   subscriptions it already has: `PUT /api/v1/push/devices/{deviceId}`
+   `{relayToken, language}`, and `DELETE` on sign-out. Ten per person, the same
+   cap as `web_push_subscriptions`.
+4. The server's outbox delivers to devices as it does to subscriptions:
+   `POST {relay}/v1/notifications` `{relayToken, title, body, path, tag}`.
+
+Holding a relay token is the permission to push to that device. That is the
+Web Push model, where holding the endpoint URL is the permission. It is kept on
+the device and on the one server the person signed into. The relay limits each
+token (30 an hour) and each source address, so a leaked token can only annoy,
+not flood. The app revokes its token on sign-out (`DELETE /v1/devices/{relayToken}`)
+and gets a new one on the next sign-in.
+
+### 7.2 What crosses the relay
+
+- **Text.** The words the person sees ("Your recipe is ready" / "Dein Rezept
+  ist bereit"), in the language the device registered with. The server
+  composes them, as `IntakeNotifications.DeliverAsync` does today.
+- **A path** (`/recipes/imports/{jobId}`) for the tap to open, and a **tag** so
+  a repeat replaces rather than stacks.
+- **Never** a recipe title, an ingredient, a photo, a person's name or the
+  server's address.
+- The relay keeps counters (accepted, delivered, refused, rate-limited). It
+  keeps no payload log.
+
+### 7.3 On the server
+
+- **Opt-in, off by default.** An admin setting `Push:RelayUrl` (admin-editable,
+  `dotnet-configuration`) turns it on. The admin screen says that turning it on
+  sends notification text to a service outside this server, and names it.
+  Without it, the app gets no push, and the import screen still shows progress
+  while open (3.8).
+- **Same outbox.**
+  - A `native_push_devices` table (`device_id`, `user_id`, `relay_token`,
+    `language`, `created_at`); `recipe_intake_notifications` gains rows for
+    devices.
+  - The existing claim/retry/attempts loop delivers to both kinds through a
+    second transport beside `PushTransport`.
+  - It reuses that transport's public-address-only HTTP handler: the relay URL
+    is admin-supplied, but the same guard costs nothing.
+- **A relay answering 410** means the device revoked its token or the store
+  dropped it. The device row is deleted, as a 404/410 deletes a Web Push
+  subscription today.
+
+### 7.4 In the app
+
+- `@capacitor/push-notifications` supplies the token:
+  - iOS needs the `aps-environment` entitlement.
+  - Android needs the publisher's `google-services.json`, which is not
+    committed. CI writes it from a secret, as signing material.
+- The token is asked for only when the person turns on "Tell me when an import
+  is ready". This is the same moment the website asks for notification
+  permission (`features/import/push.svelte.ts`, which today reports
+  `supported: false` in the app).
+- Tapping a notification opens its path through the plugin's
+  `pushNotificationActionPerformed`.
+- It must coexist with the timers' notification delegate on iOS. Capacitor's
+  router keeps push and local notifications apart
+  (`pushNotificationHandler` / `localNotificationHandler`), and `CulinaTimers`
+  holds only the local slot.
+
+### 7.5 The relay itself
+
+A small stateless HTTP service: two endpoints, a key-value store (relay token
+→ platform and device token), and APNs (token-based `.p8` key) plus FCM HTTP v1
+clients. Its operation belongs to whoever publishes the app, not to Culina's
+server image. It is deployed and monitored separately, and the server treats
+it like any other optional outbound dependency: an outage only delays
+"import ready" notifications.
+
+Tracked: `culina-v2-tj23.14` (the relay), `culina-v2-tj23.15` (server devices
+and outbox), `culina-v2-tj23.16` (app registration).
+
