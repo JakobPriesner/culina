@@ -1,9 +1,12 @@
 using Api.Endpoints.Ingredients.CreateMerge.V1;
 using Api.Endpoints.Ingredients.DeleteMerge.V1;
 using Api.Endpoints.Ingredients.DeleteMergeSuggestion.V1;
+using Api.Endpoints.Ingredients.DeleteNoun.V1;
 using Api.Endpoints.Ingredients.GetMerges.V1;
 using Api.Endpoints.Ingredients.GetMergeSuggestions.V1;
 using Api.Endpoints.Ingredients.GetNames.V1;
+using Api.Endpoints.Ingredients.GetNouns.V1;
+using Api.Endpoints.Ingredients.SetNoun.V1;
 
 namespace Api.Endpoints.Ingredients;
 
@@ -17,5 +20,8 @@ internal static class IngredientsEndpoints
             .AddSingleton<IEndpoint, CreateIngredientMergeEndpoint>()
             .AddSingleton<IEndpoint, DeleteIngredientMergeEndpoint>()
             .AddSingleton<IEndpoint, GetMergeSuggestionsEndpoint>()
-            .AddSingleton<IEndpoint, DeleteMergeSuggestionEndpoint>();
+            .AddSingleton<IEndpoint, DeleteMergeSuggestionEndpoint>()
+            .AddSingleton<IEndpoint, GetIngredientNounsEndpoint>()
+            .AddSingleton<IEndpoint, SetIngredientNounEndpoint>()
+            .AddSingleton<IEndpoint, DeleteIngredientNounEndpoint>();
 }

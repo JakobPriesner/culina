@@ -133,4 +133,40 @@ public class IngredientNounsTests
         Assert.Equal(german.Count, german.Distinct(StringComparer.OrdinalIgnoreCase).Count());
         Assert.Equal(english.Count, english.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
+
+    [Fact]
+    public void ForAmount_ShouldUseTheHouseholdsOwnNouns()
+    {
+        // Arrange
+        var own = IngredientNouns.Own("Maultasche", "Maultaschen").Match(noun => noun, _ => null!);
+
+        // Act
+        var doubled = IngredientNouns.ForAmount("Maultasche", 2, hasUnit: false, Language.De, [own]);
+        var single = IngredientNouns.ForAmount("Spinatmaultaschen", 1, hasUnit: false, Language.De, [own]);
+        var without = IngredientNouns.ForAmount("Maultasche", 2, hasUnit: false, Language.De);
+
+        // Assert
+        Assert.Equal("Maultaschen", doubled);
+        Assert.Equal("Spinatmaultasche", single);
+        Assert.Equal("Maultasche", without);
+    }
+
+    [Theory]
+    [InlineData("Maultasche", "Maultasche")]
+    [InlineData("Maultasche", "maultasche")]
+    [InlineData("Maul tasche", "Maultaschen")]
+    [InlineData("", "Maultaschen")]
+    [InlineData("Maultasche", "2 Maultaschen")]
+    public void Own_ShouldRefuse_WhatIsNotTwoDifferentWords(string one, string many)
+    {
+        Assert.Equal(IngredientErrors.InvalidNoun.Code, IngredientNouns.Own(one, many).Match(_ => "valid", error => error.Code));
+    }
+
+    [Fact]
+    public void Own_ShouldTrimBothForms()
+    {
+        var noun = IngredientNouns.Own(" Schupfnudel ", "Schupfnudeln ").Match(noun => noun, _ => null!);
+
+        Assert.Equal(new IngredientNouns.Noun("Schupfnudel", "Schupfnudeln", null), noun);
+    }
 }

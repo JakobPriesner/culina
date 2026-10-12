@@ -183,6 +183,42 @@ internal sealed class IngredientNameRepository(DbExecutor executor, SearchDocume
         return recipeIds.Count;
     }
 
+    public async Task<IReadOnlyList<IngredientNouns.Noun>> NounsAsync(
+        Guid householdId,
+        CancellationToken cancellationToken)
+    {
+        var rows = await executor.QueryAsync<NounRow>(
+            """
+            select one, many from ingredient_nouns
+            where household_id = @householdId
+            order by one;
+            """,
+            new { householdId },
+            cancellationToken).ConfigureAwait(false);
+
+        return [.. rows.Select(row => new IngredientNouns.Noun(row.One, row.Many, null))];
+    }
+
+    public Task SetNounAsync(Guid householdId, IngredientNouns.Noun noun, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(noun);
+
+        return executor.ExecuteAsync(
+            """
+            insert into ingredient_nouns (household_id, one_key, one, many)
+            values (@householdId, @oneKey, @one, @many)
+            on conflict (household_id, one_key) do update set one = excluded.one, many = excluded.many;
+            """,
+            new { householdId, oneKey = ItemName.Fold(noun.One), one = noun.One, many = noun.Many },
+            cancellationToken);
+    }
+
+    public Task RemoveNounAsync(Guid householdId, string oneKey, CancellationToken cancellationToken) =>
+        executor.ExecuteAsync(
+            "delete from ingredient_nouns where household_id = @householdId and one_key = @oneKey;",
+            new { householdId, oneKey },
+            cancellationToken);
+
     // What the household already said about the kept name wins; otherwise the merged name's choice moves over.
     private async Task MoveChoicesAsync(Guid householdId, IngredientMerge merge, CancellationToken cancellationToken)
     {
@@ -210,6 +246,13 @@ internal sealed class IngredientNameRepository(DbExecutor executor, SearchDocume
         public string Name { get; init; } = string.Empty;
 
         public int RecipeCount { get; init; }
+    }
+
+    private sealed record NounRow
+    {
+        public string One { get; init; } = string.Empty;
+
+        public string Many { get; init; } = string.Empty;
     }
 
     private sealed record MergeRow

@@ -135,6 +135,28 @@ public sealed class ShoppingList
             },
             Result.Failure);
 
+    /// <summary>
+    /// Puts every name in the number its amount asks for, knowing the household's own nouns too: two
+    /// "Maultasche" lines are "2 Maultaschen" once the household has said so.
+    /// </summary>
+    /// <param name="own">The household's own nouns.</param>
+    public void FitNames(IReadOnlyList<IngredientNouns.Noun> own)
+    {
+        ArgumentNullException.ThrowIfNull(own);
+
+        var changed = false;
+
+        foreach (var item in items)
+        {
+            changed |= item.FitName(own);
+        }
+
+        if (changed)
+        {
+            Version += 1;
+        }
+    }
+
     /// <summary>Clears what has already been bought.</summary>
     public int ClearChecked()
     {

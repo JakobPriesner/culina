@@ -1,3 +1,4 @@
+using Domain.Ingredients;
 using Domain.Recipes;
 using Domain.Shopping;
 
@@ -106,6 +107,36 @@ public class ItemMergePolicyTests
 
         Assert.Equal(250m, item.Quantity.Amount);
         Assert.Equal(Unit.Gram, item.Quantity.Unit);
+    }
+
+    [Fact]
+    public void FitNames_ShouldWriteTheSumInTheHouseholdsOwnWords()
+    {
+        var list = ShoppingList.Create(Guid.CreateVersion7());
+        var maultasche = IngredientNouns.Own("Maultasche", "Maultaschen").Match(noun => noun, _ => null!);
+
+        list.Add(Name("Maultasche"), Asked(1, null), ShoppingSection.Other);
+        list.Add(Name("Maultasche"), Asked(2, null), ShoppingSection.Other);
+        var before = list.Version;
+
+        list.FitNames([maultasche]);
+
+        var item = Assert.Single(list.Items);
+        Assert.Equal("Maultaschen", item.Name.Value);
+        Assert.Equal(before + 1, list.Version);
+    }
+
+    [Fact]
+    public void FitNames_ShouldLeaveTheVersion_WhenNoNameChanges()
+    {
+        var list = ShoppingList.Create(Guid.CreateVersion7());
+
+        list.Add(Name("Tomaten"), Asked(3, null), ShoppingSection.Produce);
+        var before = list.Version;
+
+        list.FitNames([]);
+
+        Assert.Equal(before, list.Version);
     }
 
     [Fact]

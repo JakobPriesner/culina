@@ -16,6 +16,7 @@ public sealed record AddPlannedMealsToListCommand(Guid HouseholdId, Guid UserId,
 
 internal sealed class AddPlannedMealsToListCommandHandler(
     IShoppingListRepository lists,
+    IIngredientNameRepository names,
     IMealPlanRepository plans,
     IRecipeRepository recipes,
     IHouseholdRepository households,
@@ -53,6 +54,7 @@ internal sealed class AddPlannedMealsToListCommandHandler(
         var result = await ShoppingListWrites
             .ApplyAsync(
                 lists,
+                names,
                 unitOfWork,
                 command.HouseholdId,
                 (list, _) => Task.FromResult(Shop(list, week, cooked, overrides)),

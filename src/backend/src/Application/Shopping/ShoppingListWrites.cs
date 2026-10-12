@@ -24,6 +24,7 @@ internal static class ShoppingListWrites
 
     internal static async Task<Result<Response>> ApplyAsync(
         IShoppingListRepository lists,
+        IIngredientNameRepository names,
         IUnitOfWork unitOfWork,
         Guid householdId,
         Func<ShoppingList, CancellationToken, Task<Result>> change,
@@ -35,7 +36,7 @@ internal static class ShoppingListWrites
         {
             var outcome = await unitOfWork
                 .InTransactionAsync(
-                    token => OnceAsync(lists, householdId, change, token),
+                    token => OnceAsync(lists, names, householdId, change, token),
                     cancellationToken)
                 .ConfigureAwait(false);
 
@@ -52,6 +53,7 @@ internal static class ShoppingListWrites
 
     private static async Task<Result<Response>> OnceAsync(
         IShoppingListRepository lists,
+        IIngredientNameRepository names,
         Guid householdId,
         Func<ShoppingList, CancellationToken, Task<Result>> change,
         CancellationToken cancellationToken)
@@ -61,13 +63,14 @@ internal static class ShoppingListWrites
 
         return await found
             .Match(
-                list => SaveAsync(lists, list, change, cancellationToken),
+                list => SaveAsync(lists, names, list, change, cancellationToken),
                 error => Task.FromResult(Result<Response>.Failure(error)))
             .ConfigureAwait(false);
     }
 
     private static async Task<Result<Response>> SaveAsync(
         IShoppingListRepository lists,
+        IIngredientNameRepository names,
         ShoppingList list,
         Func<ShoppingList, CancellationToken, Task<Result>> change,
         CancellationToken cancellationToken)
@@ -78,7 +81,13 @@ internal static class ShoppingListWrites
 
         var saved = await changed
             .Match(
-                () => lists.SaveAsync(list, before, cancellationToken),
+                async () =>
+                {
+                    // Every amount is settled now, so names fit it in the household's own words too.
+                    list.FitNames(await names.NounsAsync(list.HouseholdId, cancellationToken).ConfigureAwait(false));
+
+                    return await lists.SaveAsync(list, before, cancellationToken).ConfigureAwait(false);
+                },
                 error => Task.FromResult(Result.Failure(error)))
             .ConfigureAwait(false);
 

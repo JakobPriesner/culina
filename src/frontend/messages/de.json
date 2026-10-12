@@ -1777,5 +1777,17 @@
   "editor.ingredientUnderstood": "Neu · gelesen als „{name}“",
   "editor.ingredientPreparation": "„{note}“ gehört in die Notiz.",
   "editor.ingredientMoveToNote": "Verschieben",
-  "editor.ingredientMoveToNoteLabel": "„{note}“ in die Notiz verschieben"
+  "editor.ingredientMoveToNoteLabel": "„{note}“ in die Notiz verschieben",
+  "ingredients.nouns.title": "Einzahl und Mehrzahl",
+  "ingredients.nouns.body": "Culina schreibt „2 Zwiebeln“, wenn aus „1 Zwiebel“ zwei werden. Für eigene Wörter, die Culina nicht kennt, trägst du hier beide Formen ein; hochgerechnete Rezepte und deine Einkaufsliste verwenden sie.",
+  "ingredients.nouns.empty": "Noch keine eigenen Wörter.",
+  "ingredients.nouns.one": "Einzahl",
+  "ingredients.nouns.many": "Mehrzahl",
+  "ingredients.nouns.save": "Speichern",
+  "ingredients.nouns.pair": "1 {one} · 2 {many}",
+  "ingredients.nouns.remove": "Entfernen",
+  "ingredients.nouns.removeLabel": "Mehrzahl von „{one}“ vergessen",
+  "ingredients.nouns.saved": "Zwei „{one}“ sind jetzt „{many}“.",
+  "ingredients.nouns.removed": "„{one}“ bleibt wieder, wie es geschrieben ist.",
+  "problem.ingredients.invalid_noun": "Einzahl und Mehrzahl müssen je ein Wort sein und sich unterscheiden."
 }
