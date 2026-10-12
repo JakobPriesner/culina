@@ -25,6 +25,14 @@ internal static class MiddlewareExtensions
         return app.UseMiddleware<SecurityHeadersMiddleware>();
     }
 
+    /// <summary>CORS for the installed apps' fixed origins, bearer-authenticated and never with credentials.</summary>
+    internal static IApplicationBuilder UseNativeAppCors(this IApplicationBuilder app)
+    {
+        ArgumentNullException.ThrowIfNull(app);
+
+        return app.UseMiddleware<NativeAppCorsMiddleware>();
+    }
+
     /// <summary>Rejects query parameters an endpoint does not declare.</summary>
     internal static IApplicationBuilder UseQueryParameterGuard(this IApplicationBuilder app)
     {

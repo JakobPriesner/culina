@@ -74,21 +74,22 @@ static WebApplication BuildCulina(WebApplicationBuilder builder)
     app.UseHttpLogging();             //  4. One combined line per request.
     app.UseExceptionHandler();        //  5. Outside everything below: any defect becomes a problem document.
     app.UseProblemStatusPages();      //  6. Framework-generated statuses get a problem body too.
-    app.UseSinglePageApp();           //  7. Static assets are cheap and never reach authentication.
+    app.UseNativeAppCors();           //  7. App preflights end here; app responses become readable cross-origin.
+    app.UseSinglePageApp();           //  8. Static assets are cheap and never reach authentication.
 
     // Explicit, so the checks below can read endpoint metadata.
     app.UseRouting();
 
-    app.UseQueryParameterGuard();     //  8. Reject unknown or repeated input before binding.
-    app.UseSameOriginGuard();         //  9. Unsafe cookie-authenticated requests must come from us.
-    app.UseRateLimiter();             // 10. Before authentication: brute force costs nothing to reject.
+    app.UseQueryParameterGuard();     //  9. Reject unknown or repeated input before binding.
+    app.UseSameOriginGuard();         // 10. Unsafe cookie-authenticated requests must come from us.
+    app.UseRateLimiter();             // 11. Before authentication: brute force costs nothing to reject.
 
-    app.UseAuthentication();          // 11. Cookie to principal.
+    app.UseAuthentication();          // 12. Session cookie, or an app's bearer token, to principal.
 
-    app.UseSessionContext();          // 12. User id on the logging scope and the span.
-    app.UseCsrfGuard();               // 13. Needs the session to compare the token against.
-    app.UseAuthorization();           // 14. Policies, after identity is established.
-    app.UsePersonalRateLimits();      // 15. Costly limits per person, now that it is known who asks.
+    app.UseSessionContext();          // 13. User id on the logging scope and the span.
+    app.UseCsrfGuard();               // 14. Needs the session to compare the token against; bearer requests are exempt.
+    app.UseAuthorization();           // 15. Policies, after identity is established.
+    app.UsePersonalRateLimits();      // 16. Costly limits per person, now that it is known who asks.
 
     app.MapHealthEndpoints();
     app.MapSecurityTxt();
@@ -143,6 +144,7 @@ static WebApplication BuildSetup(WebApplicationBuilder builder)
     app.UseHttpLogging();
     app.UseExceptionHandler();
     app.UseProblemStatusPages();
+    app.UseNativeAppCors();
     app.UseSinglePageApp();
     app.UseRouting();
     app.UseRateLimiter();

@@ -4,6 +4,7 @@ using Api.Infrastructure;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Settings;
 using Application.Sessions.SignIn;
+using Domain.Sessions;
 using Request = Contracts.Sessions.SignIn.Request;
 using Response = Contracts.Sessions.SignIn.Response;
 
@@ -31,8 +32,17 @@ internal sealed class SignInEndpoint : IEndpoint
                 return result.Match(
                     outcome =>
                     {
-                        // Only here are both halves visible: the session token becomes an HttpOnly
-                        // cookie, never in the body.
+                        // An app keeps its token in the Keychain or Keystore and sends it as a bearer
+                        // header; it has no cookie jar it could share with this origin.
+                        if (outcome.Client != SessionClient.Browser)
+                        {
+                            return Results.Created(
+                                $"{ApiPaths.V1}/sessions/current",
+                                outcome.Response with { SessionToken = outcome.SessionToken });
+                        }
+
+                        // Only here are both halves visible: a browser's session token becomes an
+                        // HttpOnly cookie, never in the body.
                         SessionCookies.Write(
                             context,
                             cookies,
@@ -48,9 +58,11 @@ internal sealed class SignInEndpoint : IEndpoint
             .WithTags(Tags.Sessions)
             .WithSummary("Sign in")
             .WithDescription(
-                "Starts a session. Sets the session cookie and returns the CSRF token to echo in "
-                + "X-Culina-CSRF on every unsafe request. Failure is always auth.invalid_credentials, "
-                + "whether or not the address is registered.")
+                "Starts a session. For a browser, sets the session cookie and returns the CSRF token to "
+                + "echo in X-Culina-CSRF on every unsafe request. For an app (client ios or android), "
+                + "returns the session token instead, to send as Authorization: Bearer with no CSRF "
+                + "token. Failure is always auth.invalid_credentials, whether or not the address is "
+                + "registered.")
             .Produces<Response>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status429TooManyRequests)

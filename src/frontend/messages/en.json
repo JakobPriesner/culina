@@ -1844,5 +1844,6 @@
   "problem.cookbooks.invalid_cover": "The cover has to be a recipe on this cookbook that has a photo.",
   "cookbooks.cover.label": "Cover",
   "cookbooks.cover.hint": "One photo for the whole cover, or the first photos on the shelf.",
-  "cookbooks.cover.automatic": "First photos"
+  "cookbooks.cover.automatic": "First photos",
+  "problem.auth.invalid_client": "Culina does not know that kind of device."
 }

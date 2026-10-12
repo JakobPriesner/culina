@@ -19,4 +19,11 @@ public sealed record Response
     /// The CSRF token to send in <c>X-Culina-CSRF</c> on every unsafe request.
     /// </summary>
     public required string CsrfToken { get; init; }
+
+    /// <summary>
+    /// The session token, for an app only (<c>client</c> <c>ios</c> or <c>android</c>); null for a
+    /// browser, whose token is the HttpOnly cookie and never readable by script. Sent as
+    /// <c>Authorization: Bearer</c>, it needs no CSRF token.
+    /// </summary>
+    public string? SessionToken { get; init; }
 }

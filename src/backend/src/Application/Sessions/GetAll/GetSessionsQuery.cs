@@ -54,6 +54,12 @@ internal static class SessionListMappings
             LastSeenAt = session.LastSeenAt,
             IpAddress = session.IpAddress,
             UserAgent = session.UserAgent,
+            Client = session.Client switch
+            {
+                SessionClient.Ios => "ios",
+                SessionClient.Android => "android",
+                _ => "browser"
+            },
             IsCurrent = session.Id == currentSessionId
         };
 }

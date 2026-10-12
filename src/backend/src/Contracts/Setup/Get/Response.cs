@@ -14,4 +14,10 @@ public sealed record Response
     /// client can tell the restart is over.
     /// </summary>
     public required DateTimeOffset StartedAt { get; init; }
+
+    /// <summary>
+    /// The generation of the API contract this server speaks (<see cref="ApiContract.Version"/>), so
+    /// an installed app can tell whether it understands this server before signing in.
+    /// </summary>
+    public required int ApiVersion { get; init; }
 }

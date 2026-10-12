@@ -2,7 +2,7 @@ using Domain.Shared;
 
 namespace Domain.Sessions;
 
-/// <summary>One signed-in browser.</summary>
+/// <summary>One signed-in browser or app.</summary>
 /// <remarks>
 /// The row is the truth, not the cookie: the cookie is an opaque reference, so sign-out, revocation
 /// and privilege changes take effect immediately.
@@ -19,7 +19,8 @@ public sealed class Session
         DateTimeOffset expiresAt,
         string? ipAddress,
         string? userAgent,
-        DateTimeOffset? revokedAt)
+        DateTimeOffset? revokedAt,
+        SessionClient client)
     {
         Id = id;
         UserId = userId;
@@ -31,6 +32,7 @@ public sealed class Session
         IpAddress = ipAddress;
         UserAgent = userAgent;
         RevokedAt = revokedAt;
+        Client = client;
     }
 
     /// <summary>The session's identifier, used in URLs and never as a credential.</summary>
@@ -65,6 +67,9 @@ public sealed class Session
     /// <summary>When it was revoked, if it was.</summary>
     public DateTimeOffset? RevokedAt { get; private set; }
 
+    /// <summary>What the session was started from, which also says how its token travels.</summary>
+    public SessionClient Client { get; }
+
     /// <summary>Starts a new session.</summary>
     public static Session Start(
         Guid userId,
@@ -73,7 +78,8 @@ public sealed class Session
         DateTimeOffset now,
         TimeSpan lifetime,
         string? ipAddress,
-        string? userAgent) =>
+        string? userAgent,
+        SessionClient client = SessionClient.Browser) =>
         new(
             CulinaId.New(),
             userId,
@@ -84,7 +90,8 @@ public sealed class Session
             now.Add(lifetime),
             ipAddress,
             Truncate(userAgent),
-            revokedAt: null);
+            revokedAt: null,
+            client);
 
     /// <summary>Rebuilds a session from storage.</summary>
     public static Session Restore(
@@ -97,8 +104,9 @@ public sealed class Session
         DateTimeOffset expiresAt,
         string? ipAddress,
         string? userAgent,
-        DateTimeOffset? revokedAt) =>
-        new(id, userId, tokenHash, csrfTokenHash, createdAt, lastSeenAt, expiresAt, ipAddress, userAgent, revokedAt);
+        DateTimeOffset? revokedAt,
+        SessionClient client) =>
+        new(id, userId, tokenHash, csrfTokenHash, createdAt, lastSeenAt, expiresAt, ipAddress, userAgent, revokedAt, client);
 
     /// <summary>Whether this session may still authenticate a request.</summary>
     public bool IsActive(DateTimeOffset now) => RevokedAt is null && ExpiresAt > now;

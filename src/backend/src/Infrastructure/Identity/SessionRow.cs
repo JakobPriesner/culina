@@ -24,6 +24,8 @@ internal sealed record SessionRow
     public string? UserAgent { get; init; }
 
     public DateTimeOffset? RevokedAt { get; init; }
+
+    public string Client { get; init; } = "browser";
 }
 
 /// <summary>Turns a stored row back into a domain session.</summary>
@@ -43,6 +45,22 @@ internal static class SessionRowMappings
             row.ExpiresAt,
             row.IpAddress,
             row.UserAgent,
-            row.RevokedAt);
+            row.RevokedAt,
+            ToClient(row.Client));
     }
+
+    /// <summary>The <c>client</c> column's spelling.</summary>
+    internal static string Of(SessionClient client) => client switch
+    {
+        SessionClient.Ios => "ios",
+        SessionClient.Android => "android",
+        _ => "browser"
+    };
+
+    private static SessionClient ToClient(string client) => client switch
+    {
+        "ios" => SessionClient.Ios,
+        "android" => SessionClient.Android,
+        _ => SessionClient.Browser
+    };
 }

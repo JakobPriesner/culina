@@ -43,4 +43,10 @@ public static class SessionErrors
         "auth.invalid_recovery_code",
         "That email address and recovery code do not match.",
         ErrorType.Validation);
+
+    /// <summary>The sign-in named a client Culina does not have.</summary>
+    public static readonly Error InvalidClient = new(
+        "auth.invalid_client",
+        "A session is started from 'browser', 'ios' or 'android'.",
+        ErrorType.Validation);
 }
