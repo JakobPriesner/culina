@@ -186,7 +186,7 @@ internal sealed class RestoreArchiveCommandHandler(
         foreach (var (step, at) in (entry.Steps ?? []).Select((one, index) => (one, index)))
         {
             var segments = (step.Segments ?? [])
-                .Select(segment => segment.Ingredient is { } position && position < order.Count
+                .Select(segment => segment.Ingredient is { } position && position >= 0 && position < order.Count
                     ? new IngredientSegment(order[position].Id)
                     : (StepSegment)new TextSegment(segment.Text ?? string.Empty))
                 .ToList();

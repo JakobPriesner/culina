@@ -99,6 +99,30 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Restore_ShouldKeepTheText_WhenAStepPointsAtANegativeIngredientPosition()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await FirstHouseholdIdAsync(client);
+
+        var response = await UploadAsync(
+            client,
+            householdId,
+            """{ "culina": 1, "exportedAt": "2026-09-13T10:00:00+00:00", "recipes": [{ "title": "Lemon orzo", "language": "en", "yieldAmount": 1, "yieldKind": "servings", "tags": [], "groups": [{ "name": null, "ingredients": [{ "quantity": 200, "unit": "g", "name": "orzo", "note": null }] }], "steps": [{ "segments": [{ "text": "Boil it", "ingredient": -1 }], "uses": [-1] }], "cooked": [] }] }""");
+
+        // Was order[-1]: a 500 halfway through, with the recipes before it already written.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(1, response.Json!.Value.GetProperty("restored").GetInt32());
+
+        var restored = await ReadTheRestoredOneAsync(client, householdId);
+        var step = Assert.Single(restored.GetProperty("steps").EnumerateArray());
+        var segment = Assert.Single(step.GetProperty("segments").EnumerateArray());
+
+        Assert.Equal("text", segment.GetProperty("type").GetString());
+        Assert.Equal("Boil it", segment.GetProperty("value").GetString());
+        Assert.Empty(step.GetProperty("uses").EnumerateArray());
+    }
+
+    [Fact]
     public async Task Restore_ShouldRefuse_AnArchiveFromAVersionItDoesNotKnow()
     {
         using var client = await SignedInAsync();
