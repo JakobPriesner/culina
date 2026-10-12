@@ -119,6 +119,16 @@ jobs:
       - run: pnpm verify:budget
         working-directory: src/frontend
 
+      # The installed app's bundle (docs/native-app-design.md, part 5): its own
+      # build into build-native/, so a break in the app's code fails the pull
+      # request that causes it, and the same release check with the app's rules
+      # (no service worker, no source maps).
+      - run: pnpm build:native
+        working-directory: src/frontend
+
+      - run: pnpm verify:release build-native
+        working-directory: src/frontend
+
   contract:
     name: Contract
     runs-on: ubuntu-latest

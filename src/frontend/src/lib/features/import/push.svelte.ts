@@ -1,4 +1,4 @@
-import { http, request } from '$api';
+import { http, native, request } from '$api';
 import { preferences } from '$shell/preferences.svelte';
 
 class ImportPush {
@@ -6,7 +6,9 @@ class ImportPush {
   busy = $state(false);
   failed = $state(false);
   get supported(): boolean {
+    // Web Push reaches browsers only; the app needs a push relay (docs/native-app-design.md, 3.8).
     return (
+      !native &&
       typeof window !== 'undefined' &&
       'Notification' in window &&
       'serviceWorker' in navigator &&

@@ -1,6 +1,6 @@
 import type { Middleware } from 'openapi-fetch';
 
-import { csrfHeader, csrfToken } from './cookies';
+import { authorization } from './credentials';
 import { cached, invalidate, remember, type CachedResponse } from './etagCache';
 import { ErrorCodes } from './problem';
 import { sessionExpired } from './session';
@@ -10,19 +10,19 @@ const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 const isUnsafe = (request: Request) => unsafeMethods.has(request.method);
 
 /**
- * Proves the request came from our own page; the cookie is read at send time so a sign-in in
- * another tab is picked up.
+ * Proves who sends the request: the CSRF token on the website's unsafe requests, the bearer token on every one of the
+ * app's. Read at send time, so a sign-in in another tab is picked up.
  */
 export const csrf: Middleware = {
   onRequest({ request }) {
-    if (!isUnsafe(request)) {
+    const headers = Object.entries(authorization(isUnsafe(request)));
+
+    if (headers.length === 0) {
       return undefined;
     }
 
-    const token = csrfToken();
-
-    if (token) {
-      request.headers.set(csrfHeader, token);
+    for (const [name, value] of headers) {
+      request.headers.set(name, value);
     }
 
     return request;

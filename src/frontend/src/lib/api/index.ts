@@ -5,3 +5,21 @@ export { clientError, ErrorCodes, type AppError, type FieldProblem } from './pro
 export { err, ok, type Err, type Ok, type Result } from './result';
 export { handleSessionExpiry } from './session';
 export { forgetEverything as forgetCachedResponses } from './etagCache';
+export { native, nativePlatform, type NativePlatform } from './platform';
+export {
+  apiUrl,
+  instanceOrigin,
+  loadInstance,
+  publicOrigin,
+  rememberSessionToken
+} from './instance';
+export {
+  connect,
+  disconnect,
+  normaliseAddress,
+  supportedApiVersions,
+  type ConnectFailure
+} from './connect';
+export { useSecretStore, type SecretStore } from './secrets';
+export { fetchFile } from './files';
+export { forgetOfflineReads } from './transport';

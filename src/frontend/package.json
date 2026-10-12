@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build && node --experimental-strip-types build-tools/addRoutePreloads.ts && node --experimental-strip-types build-tools/compressBuild.ts",
+    "build:native": "CULINA_TARGET=native vite build && node --experimental-strip-types build-tools/addRoutePreloads.ts build-native && node --experimental-strip-types build-tools/finishNativeShell.ts build-native",
     "preview": "vite preview",
     "prepare": "svelte-kit sync && pnpm messages || echo \"\"",
     "check": "pnpm messages && svelte-kit sync && svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.worker.json",

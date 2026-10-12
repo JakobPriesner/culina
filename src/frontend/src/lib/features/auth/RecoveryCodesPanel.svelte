@@ -2,7 +2,7 @@
   import { onDestroy } from 'svelte';
 
   import { Button } from '$ds';
-  import { ErrorCodes } from '$api';
+  import { ErrorCodes, publicOrigin } from '$api';
   import { formatDate, m } from '$shell/i18n';
   import { toaster } from '$shell/toaster.svelte';
 
@@ -68,7 +68,7 @@
 
   /** The codes as a plain text file, which is what survives a closed tab. */
   function download(codes: readonly string[]) {
-    const text = [m['me.recovery.fileHeading']({ origin: location.origin }), '', ...codes, ''].join(
+    const text = [m['me.recovery.fileHeading']({ origin: publicOrigin() }), '', ...codes, ''].join(
       '\n'
     );
     const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));

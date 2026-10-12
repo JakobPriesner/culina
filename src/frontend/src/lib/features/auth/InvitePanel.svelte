@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { publicOrigin } from '$api';
   import { Button, SectionLabel } from '$ds';
   import { invitations } from './invitations.svelte';
   import { explain } from '$shell/explain';
@@ -22,7 +23,7 @@
     void invitations.load(householdId);
   });
 
-  const linkFor = (code: string) => `${location.origin}/join/${code}`;
+  const linkFor = (code: string) => `${publicOrigin()}/join/${code}`;
 
   const when = (iso: string) =>
     new Intl.DateTimeFormat(preferences.locale, { dateStyle: 'long' }).format(new Date(iso));

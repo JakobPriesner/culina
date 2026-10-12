@@ -391,7 +391,11 @@ part 1. A build-time constant `__CULINA_NATIVE__` (folded like
    `no-referrer`).
 
 **Lean: 1 (fetch as blob)** for the first prototype. It touches no contract,
-and it gives the offline image cache the native app needs anyway. Revisit if
+and it gives the offline image cache the native app needs anyway. Built this
+way: the design system's `Image` asks a registered image source
+(`$ds/display/imageSources.ts`), which only the app registers
+(`lib/app/nativeImages.ts`). It picks the `srcset` width by hand and fetches
+through the same offline reads as every other request. Revisit if
 memory or scroll performance on long recipe grids suffers. The archive download
 (`<a download>`) becomes a fetch plus the native share/save sheet in either
 case.
@@ -750,22 +754,24 @@ today), and changes only these things:
 | --- | --- | --- |
 | `define` | `__CULINA_GALLERY__` | `+ __CULINA_NATIVE__: true` (false on web, so native code folds away) |
 | adapter `pages` / `assets` | `build` | `build-native` |
-| Service worker | Built, registered by the app | Not built (`kit.files.serviceWorker` pointed at a missing file) and never registered (2.2) |
+| Service worker | Built, registered by the app | Never registered (2.2); `finishNativeShell.ts` deletes the built file |
 | `siteFiles()` (robots, sitemap) | Yes | No |
 
 Post-build steps differ by target:
 
 | Step | `pnpm build` (web) | `pnpm build:native` |
 | --- | --- | --- |
-| `addRoutePreloads.ts` | Yes, nonce placeholder for `AppShell` | Yes; the preload table helps cold start equally |
+| `addRoutePreloads.ts` | Yes, nonce placeholder for `AppShell` | Code preloads only: the first API requests go to a server chosen at run time, which a preload link cannot name |
 | `compressBuild.ts` | Yes (`.br`/`.gz` for Kestrel) | **No**: assets are read from disk; compressed twins only add app size |
-| `finishNativeShell.ts` (new) | — | Removes `nonce="__CULINA_NONCE__"`, writes a `<meta>` CSP with sha256 hashes of the inline scripts, `connect-src`/`img-src 'self' https:` (3.5), keeps Trusted Types; drops `manifest.webmanifest`, `robots.txt`, `humans.txt`, `security.txt` |
+| `finishNativeShell.ts` (new) | — | Removes `nonce="__CULINA_NONCE__"`, writes a `<meta>` CSP with sha256 hashes of every inline script and style, `connect-src 'self' https: http:` and `img-src 'self' data: blob:` (photos arrive as object URLs), the same Trusted Types policies as the server's; marks `<html data-shell="culina-app">`; drops the manifest link, `service-worker.js`, `manifest.webmanifest`, `robots.txt`, `humans.txt` |
 | `verify:release` | `build` | `build-native` too, with two extra assertions: no `.map` file and no `sourceMappingURL` (CLAUDE.md, never ship source maps, which applies to app bundles too), and no service worker file |
 
 The web build gains one assertion in `verify:release`: no native-only code in
-`build/`, found by a string that exists only there (the "Your Culina address"
-connect copy, or `Capacitor`). It is the same technique as the gallery check
-(`assertNoGallery.ts`), for the same reason: a leak is invisible otherwise.
+`build/`, found by a string only the app's code holds (`build-tools/assertReleaseContents.ts`).
+Connect copy cannot serve, because Paraglide ships every message to both builds.
+It is the same technique as the gallery check (`assertNoGallery.ts`), for the
+same reason: a leak is invisible otherwise. Both builds are also checked for
+source maps.
 `verify:budget` keeps measuring `build/` only. If `@capacitor/*` imports are not
 behind `__CULINA_NATIVE__`, they would show up there as a budget regression
 first.
@@ -854,9 +860,10 @@ What must be true when the first native commit lands, and stay true:
     Gradle projects into the frontend stage. They would not ship, since only
     `build/` is copied onward. But they bloat the context and invalidate the
     layer cache on every native edit.
-- `pnpm build` output is byte-for-byte unchanged by the native work: same
-  `index.html`, same service worker, same `.br`/`.gz` set. Check it once by
-  diffing a build from before and after the first native commit.
+- `pnpm build` output carries no app code (`verify:release`), the same
+  service worker and the same `.br`/`.gz` set. The shared client modules did
+  change, so hashes differ; what must not differ is behaviour on the website,
+  which the unit and e2e suites hold.
 - `verify:release` (no gallery, no native code) and `verify:budget`
   (first-load 80 kB) pass on `build/`.
 - `__CULINA_NATIVE__` is a literal `false` in web builds, so every native

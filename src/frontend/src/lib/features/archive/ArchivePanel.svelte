@@ -2,7 +2,7 @@
   import { base } from '$app/paths';
   import { Button, FilePicker } from '$ds';
 
-  import type { AppError } from '$api';
+  import { fetchFile, native, type AppError } from '$api';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
   import { toaster } from '$shell/toaster.svelte';
@@ -20,10 +20,43 @@
   let { householdId }: Props = $props();
 
   let restoring = $state(false);
+  let exporting = $state(false);
   let picker = $state<ReturnType<typeof FilePicker>>();
 
   /** A plain link, not a fetch: the browser's download gives a name and progress, and archives with inline photos are the app's largest payload. */
   const href = $derived(`${base}/api/v1/households/${householdId}/archive`);
+
+  /**
+   * The app cannot follow that link: it signs in with a bearer token a link does not send, and a web view has no
+   * download manager. It reads the archive itself and hands it to the system share sheet, which can save it to Files.
+   */
+  async function exportFromApp() {
+    exporting = true;
+
+    const blob = await fetchFile(`/api/v1/households/${householdId}/archive`);
+
+    exporting = false;
+
+    if (!blob) {
+      toaster.show({ message: () => m['error.unexpected.title'](), tone: 'danger' });
+
+      return;
+    }
+
+    const file = new File([blob], 'culina.json', { type: 'application/json' });
+
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file] }).catch(() => {});
+
+      return;
+    }
+
+    const url = URL.createObjectURL(file);
+    const link = Object.assign(document.createElement('a'), { href: url, download: file.name });
+
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
 
   /** Why it failed, with the id support can look up; the id is absent when the request never reached the server. */
   function failureMessage(error: AppError) {
@@ -54,7 +87,13 @@
 
 <div class="archive">
   <div class="actions">
-    <Button {href} download="culina.json">{m['archive.export']()}</Button>
+    {#if native}
+      <Button loading={exporting} onclick={() => void exportFromApp()}
+        >{m['archive.export']()}</Button
+      >
+    {:else}
+      <Button {href} download="culina.json">{m['archive.export']()}</Button>
+    {/if}
 
     <Button loading={restoring} onclick={() => picker?.open()}>
       {m['archive.restore']()}

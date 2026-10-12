@@ -8,3 +8,13 @@ export async function signOut(): Promise<void> {
   await session.signOut();
   await goto(resolve('/(auth)/login'), { replaceState: true });
 }
+
+/** The app's "use a different server": signs out of this one, forgets it, and asks for another address. */
+export async function switchServer(): Promise<void> {
+  // Loaded here, not at the top: the website never switches servers and should not carry the code.
+  const { disconnect } = await import('$api/connect');
+
+  await session.signOut();
+  await disconnect();
+  await goto(resolve('/(auth)/connect'), { replaceState: true });
+}

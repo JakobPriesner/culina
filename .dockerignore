@@ -11,6 +11,9 @@
 **/obj
 **/.svelte-kit
 **/build
+**/build-native
+# The Xcode and Gradle projects: the image ships the website only.
+src/frontend/native
 **/TestResults
 **/playwright-report
 **/test-results

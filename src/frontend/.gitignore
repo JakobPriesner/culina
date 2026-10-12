@@ -30,3 +30,6 @@ vite.config.ts.timestamp-*
 
 # Paraglide's module cache; the compiled output carries its own .gitignore.
 project.inlang/cache
+
+# The app's bundle: copied into the native projects by `cap sync`, never tracked.
+/build-native
