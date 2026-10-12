@@ -15,7 +15,8 @@
 
   const choices: readonly LocaleChoice[] = ['system', ...locales];
 
-  const id = 'locale-picker';
+  // Per instance: the account menu carries one while settings shows its own.
+  const id = $props.id();
 
   const options = $derived(choices.map((choice) => ({ value: choice, label: names[choice]() })));
 </script>

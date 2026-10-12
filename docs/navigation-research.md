@@ -36,21 +36,28 @@ collection menu on every visit.
 | --- | --- | --- | --- |
 | Collection tab opens a sheet | Plenty of room for destinations | Repeated extra tap; parent tab behaves differently from peers | Remove |
 | Horizontally scrolling destination strip | Can contain many items | Later choices can be offscreen; finding them adds gestures | Reject |
-| Four core tabs, profile in the header | More space per core destination | Splits app navigation across locations; account is less apparent | Viable, but not selected for this request |
-| One five-destination navigation | Every current area is visible and one tap away | Five is already the intended upper limit; requires short labels on phones | Select |
+| Four core tabs, profile in the header | More space per core destination | Splits app navigation across locations; account is less apparent | Select (2026-10, replacing the five-tab layout) |
+| One five-destination navigation | Every current area is visible and one tap away | Five is already the intended upper limit; requires short labels on phones | Selected first; superseded |
 | Unified desktop sidebar and mobile tabs | Roomier desktop navigation | Changes placement between sizes and takes content width | Keep as a future option if primary areas genuinely grow |
 
 ## Selected structure
 
-**Recipes · Cookbooks · Week · Shopping · Settings**
+**Recipes · Cookbooks · Week · Shopping**
 
-German: **Rezepte · Kochbücher · Woche · Einkauf · Settings**.
+German: **Rezepte · Kochbücher · Woche · Einkauf**.
 
-All five are normal links. The same order appears in the desktop top navigation
+All four are normal links. The same order appears in the desktop top navigation
 and the compact bottom navigation. Each destination keeps its selected state on
 its child routes. There is no Recipe book parent tab, collection launcher,
 secondary sidebar, or collection-navigation dialog. Recipe creation stays in the
-header and does not consume a destination slot. Existing cookbook creation and
+header and does not consume a destination slot.
+
+Settings are not a cooking workflow, so they left the destinations for the
+account menu: the profile icon beside search in the header. It holds who is signed in,
+the household switch, theme and language (changed on the spot), the way to
+settings (also ⌘, / Ctrl-,) and sign out. The icon is lit while a settings page
+is on screen, since no destination is lit there, and a dot on it says an
+update is waiting. Search still finds Settings as a place. Existing cookbook creation and
 other contextual actions stay on their relevant pages.
 
 The shared toolbar, restrained colors, active selection shadow, and matching
@@ -67,9 +74,9 @@ of tabs. Examples of where future capabilities could belong:
 - collection organization and sharing: cookbooks;
 - schedules: week planning;
 - list management: shopping;
-- household, preferences, and account controls: Me.
+- household, preferences, and account controls: the account menu and settings.
 
-These are placement examples, not newly implemented features. A sixth genuinely
+These are placement examples, not newly implemented features. A fifth genuinely
 independent frequent workflow requires a new information-architecture decision
 based on observed use. Do not silently add a More tab or shrink every label. The
 cost of the selected design is a denser bottom bar; the benefit is direct access
@@ -77,7 +84,8 @@ and no changing navigation model between sections.
 
 ## Evaluation
 
-Automated verification covers direct navigation to all five destinations, route
+Automated verification covers direct navigation to all four destinations, the
+account menu, route
 selection including cookbook detail, browser Back, persistent search state,
 recipe creation, keyboard access, reflow, and accessibility. Desktop and compact
 layouts must expose only one navigation region. Visual checks include German

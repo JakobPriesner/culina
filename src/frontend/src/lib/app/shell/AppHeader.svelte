@@ -3,7 +3,6 @@
   import { page } from '$app/state';
   import { resolve } from '$app/paths';
 
-  import HouseholdSwitcher from '$features/auth/HouseholdSwitcher.svelte';
   import { session } from '$features/auth/session.svelte';
   import { libraryView } from '$features/recipes/stores/libraryView.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
@@ -13,6 +12,7 @@
   import { offersNewRecipe } from '../navigation';
   import Navigation from '../Navigation.svelte';
   import NewRecipeLink from '../NewRecipeLink.svelte';
+  import AccountMenu from './AccountMenu.svelte';
   import HeaderBrand from './HeaderBrand.svelte';
   import NavigationProgress from './NavigationProgress.svelte';
   import SearchButton from './SearchButton.svelte';
@@ -48,16 +48,17 @@
 
     <div class="wide-only"><Navigation placement="top" /></div>
 
-    <!-- Re-enables pointer events: the household menu opens inside and would inherit the header's "none". -->
+    <!-- Re-enables pointer events: the account menu opens inside and would inherit the header's "none". -->
     <div class="actions">
-      <!-- Creating comes first, so search and the household stay pinned to the edge whether or not a page offers it. -->
+      <!-- Creating comes first, so search and the account stay pinned to the edge whether or not a page offers it. -->
       {#if creating}
         <NewRecipeLink />
       {/if}
-      {#if session.activeHousehold}
+      <!-- Without a household too: the account menu is the one way to settings. -->
+      {#if session.user}
         <div class="tools">
           {#if searchable}<SearchButton />{/if}
-          <HouseholdSwitcher onswitch={switched} />
+          <AccountMenu onswitch={switched} />
         </div>
       {/if}
     </div>
@@ -111,7 +112,7 @@
     pointer-events: auto;
   }
 
-  /* One glass capsule grouping search and household, which relate to each other. */
+  /* One glass capsule grouping search and the account, the header's two tools. */
   .tools {
     display: flex;
     align-items: center;

@@ -68,6 +68,13 @@
       href: destination.href,
       keywords: placeWords[destination.icon]?.()
     })),
+    // Not a destination any more, but still a place a word leads to.
+    {
+      key: 'settings',
+      label: m['me.title'](),
+      href: resolve('/(app)/me'),
+      keywords: [m['search.place.settings']()]
+    },
     { key: 'new', label: m['editor.new'](), href: newRecipe },
     { key: 'paste', label: m['import.paste.title'](), href: `${newRecipe}?start=paste` },
     { key: 'import', label: m['import.source.title'](), href: resolve('/(app)/recipes/import') },
@@ -90,8 +97,7 @@
   /** Other words for a page, so "Liste" finds the shopping list and "Plan" the week. */
   const placeWords: Record<string, () => string[]> = {
     shopping: () => [m['search.place.list']()],
-    plan: () => [m['search.place.plan']()],
-    settings: () => [m['search.place.settings']()]
+    plan: () => [m['search.place.plan']()]
   };
   const shelving = createShelving(() => householdId);
 

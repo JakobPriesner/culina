@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { goto } from '$app/navigation';
-  import { resolve } from '$app/paths';
   import { Avatar, Badge, Button } from '$ds';
 
   import { session } from '$features/auth/session.svelte';
+  import { signOut } from '$features/auth/signOut';
   import { formatDate, m } from '$shell/i18n';
   import { update } from '$shell/updates.svelte';
 
@@ -12,11 +11,6 @@
 
   /** Who is signed in and the way out; deliberately the emptiest category. */
   const user = $derived(session.user);
-
-  async function signOut() {
-    await session.signOut();
-    await goto(resolve('/(auth)/login'), { replaceState: true });
-  }
 </script>
 
 <svelte:head><title>{m['me.account']()}</title></svelte:head>

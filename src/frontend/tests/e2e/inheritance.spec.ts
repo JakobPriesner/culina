@@ -34,7 +34,9 @@ test.describe('a household that inherits another', () => {
 
     try {
       await page.goto('/');
-      await page.getByRole('button', { name: /switch household|haushalt wechseln/i }).click();
+      await page
+        .getByRole('button', { name: /^(your account and settings|dein konto und einstellungen)/i })
+        .click();
       await page.getByRole('button', { name: /^(new household|neuer haushalt)$/i }).click();
 
       await page.getByRole('textbox', { name: /^name/i }).fill(flat);
@@ -47,11 +49,15 @@ test.describe('a household that inherits another', () => {
         .getByRole('button', { name: /^(create a household|haushalt erstellen)$/i })
         .click();
 
-      await expect(
-        page.getByRole('button', {
-          name: new RegExp(`^${flat}, (switch household|haushalt wechseln)`, 'i')
-        })
-      ).toBeVisible();
+      // The new household is the one on screen.
+      await page
+        .getByRole('button', { name: /^(your account and settings|dein konto und einstellungen)/i })
+        .click();
+      await expect(page.getByRole('button', { name: flat, exact: true })).toHaveAttribute(
+        'aria-current',
+        'true'
+      );
+      await page.keyboard.press('Escape');
 
       await page.getByRole('searchbox').first().fill(title);
       const card = page
@@ -78,7 +84,9 @@ test.describe('a household that inherits another', () => {
       await expect(page).toHaveURL(/\/recipes\/[^/]+\/edit$/);
       await expect(page.getByRole('textbox', { name: /^(title|titel)/i })).toHaveValue(title);
 
-      await page.getByRole('button', { name: /switch household|haushalt wechseln/i }).click();
+      await page
+        .getByRole('button', { name: /^(your account and settings|dein konto und einstellungen)/i })
+        .click();
       await page.getByRole('button', { name: kitchen, exact: true }).click();
       await page.goto('/me/household');
       await expect(page.getByRole('listitem').filter({ hasText: flat })).toBeVisible();

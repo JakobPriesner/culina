@@ -146,14 +146,4 @@
     font-size: var(--text-xs);
     font-weight: var(--weight-medium);
   }
-
-  /*
-   * Narrowest phones: German labels need about 325 of 320px ("Einstellungen" alone is 85px), and a wrapped label moves the bar and the page.
-   * The 4px per side is dropped; the icon pill gives the inset anyway.
-   */
-  @media (width < 24rem) {
-    .bottom .destination {
-      padding-inline: 0;
-    }
-  }
 </style>

@@ -106,8 +106,8 @@ test.describe('app flow polish @offline', () => {
       ? '[aria-current=page] .icon'
       : '[aria-current=page]';
     await expectIndicatorFits(visibleNav, target);
-    await page.getByRole('link', { name: 'Settings', exact: true }).click();
-    await expect(page).toHaveURL('/me');
+    await page.getByRole('link', { name: 'Cookbooks', exact: true }).click();
+    await expect(page).toHaveURL('/cookbooks');
     await expectIndicatorFits(visibleNav, target);
     await expect
       .poll(() =>
@@ -134,6 +134,28 @@ test.describe('app flow polish @offline', () => {
       testInfo.project.use.isMobile ? '[aria-current=page]' : '[aria-current=page] .icon'
     );
     await expectReflow(page);
+  });
+
+  test('the account menu changes the theme in place and leads to settings', async ({
+    page
+  }, testInfo) => {
+    await responsiveData(page, 'en', { activeCooking: false });
+    await page.goto('/');
+    const account = page.getByRole('button', { name: 'Your account and settings' });
+    await account.click();
+    await page.getByTitle('Dark', { exact: true }).click();
+    await expect(page.locator('html')).toHaveAttribute('data-mode', 'dark');
+    // The theme keeps the panel open, so the change is seen.
+    const settings = page.getByRole('link', { name: 'Settings', exact: true });
+    await expect(settings).toBeInViewport({ ratio: 1 });
+    await page.screenshot({ path: testInfo.outputPath('account-menu.png') });
+    await settings.click();
+    await expect(page).toHaveURL('/me');
+    await expect(settings).toBeHidden();
+    await page.goto('/');
+    await expect(account).toBeVisible();
+    await page.keyboard.press('ControlOrMeta+Comma');
+    await expect(page).toHaveURL('/me');
   });
 
   test('settings categories keep their rail steady and browser Back restores the page', async ({

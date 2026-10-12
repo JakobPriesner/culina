@@ -54,11 +54,12 @@ text arrows. The `@` glyph and keyboard hint appear only in a step's mention
 list, not in ordinary comboboxes.
 
 **Header.** The brand stays left and the navigation centred; on the right,
-search and the household switcher are pinned to the edge, and a page's own
+search and the account menu are pinned to the edge, and a page's own
 action (today only "new recipe" on the library) sits before them, so nothing
 moves when it comes and goes. The header is capped at `--layout-wide`, so its
 right column never grows: the create button is a plus (named by its label and
-tooltip) and the household switcher an icon. Cook mode hides the header at
+tooltip) and the account menu a profile icon (household, theme,
+language, settings and sign out are inside). Cook mode hides the header at
 every width.
 
 **Page templates.** A page picks one of three, through `Page`:
@@ -302,8 +303,8 @@ recipes/   RecipeCard  RecipeCardSkeleton  RecipeGrid  RecipeSurface
 cooking/   CookSurface  CookStep  CookIngredientStrip  CookProgress
            TimerChip  TimerTray  NowCookingBar  MadeItButton  PersonalNotePanel
 shopping/  ShoppingSection  ShoppingItemRow  AddFromRecipeSheet  SectionPicker
-household/ HouseholdSwitcher  MemberList  InvitationPanel
-app/       AppShell  NavRail  NavBar  ThemeToggle  LocalePicker  OfflineBadge
+household/ HouseholdChoices  MemberList  InvitationPanel
+app/       AppShell  NavRail  NavBar  AccountMenu  ThemeToggle  LocalePicker  OfflineBadge
 
 Sizing note: the space scale is sparse (1, 2, 3, 4, 6, 8, 12, 16, 24) and there
 are three control heights — `--control-sm` is 2.75rem, not because it looks
