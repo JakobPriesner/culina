@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
+  import { session } from '$features/auth/session.svelte';
+
   import { createIngredientPanel } from './ingredientPanel.svelte';
   import { createScaling } from './scaled.svelte';
   import CookingAction from './CookingAction.svelte';
@@ -11,6 +13,7 @@
   import SurfaceHero from './SurfaceHero.svelte';
   import SurfaceServings from './SurfaceServings.svelte';
   import type { NutritionLink } from './nutritionLink';
+  import { nouns } from '../stores/nouns.svelte';
   import type { RecipeReading } from '../types';
 
   /**
@@ -84,6 +87,15 @@
       }
     }
   };
+
+  // The reader's own words in both numbers, for the names `scaling` fits to the servings.
+  $effect(() => {
+    const household = session.activeHousehold;
+
+    if (household) {
+      void nouns.load(household.householdId);
+    }
+  });
 
   const scaling = createScaling(
     () => recipe,

@@ -26,6 +26,7 @@ public sealed record AddShoppingItemCommand(
 
 internal sealed class AddShoppingItemCommandHandler(
     IShoppingListRepository lists,
+    IIngredientNameRepository names,
     IHouseholdRepository households,
     IUnitOfWork unitOfWork)
     : ICommandHandler<AddShoppingItemCommand, Response>
@@ -60,6 +61,7 @@ internal sealed class AddShoppingItemCommandHandler(
             .Match(
                 pair => ShoppingListWrites.ApplyAsync(
                     lists,
+                    names,
                     unitOfWork,
                     command.HouseholdId,
                     (list, _) => Task.FromResult(

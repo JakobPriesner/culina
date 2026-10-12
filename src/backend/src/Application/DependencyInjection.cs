@@ -370,7 +370,11 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<DeleteIngredientMergeCommand>, DeleteIngredientMergeCommandHandler>()
             .AddScoped<IQueryHandler<GetMergeSuggestionsQuery, Contracts.Ingredients.MergeSuggestionsResponse>,
                 GetMergeSuggestionsQueryHandler>()
-            .AddScoped<ICommandHandler<DeleteMergeSuggestionCommand>, DeleteMergeSuggestionCommandHandler>();
+            .AddScoped<ICommandHandler<DeleteMergeSuggestionCommand>, DeleteMergeSuggestionCommandHandler>()
+            .AddScoped<IQueryHandler<GetIngredientNounsQuery, Contracts.Ingredients.IngredientNounsResponse>,
+                GetIngredientNounsQueryHandler>()
+            .AddScoped<ICommandHandler<SetIngredientNounCommand>, SetIngredientNounCommandHandler>()
+            .AddScoped<ICommandHandler<DeleteIngredientNounCommand>, DeleteIngredientNounCommandHandler>();
     }
 
     /// <summary>

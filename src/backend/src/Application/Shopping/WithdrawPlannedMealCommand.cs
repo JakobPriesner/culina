@@ -15,6 +15,7 @@ public sealed record WithdrawPlannedMealCommand(Guid HouseholdId, Guid UserId, G
 
 internal sealed class WithdrawPlannedMealCommandHandler(
     IShoppingListRepository lists,
+    IIngredientNameRepository names,
     IHouseholdRepository households,
     IUnitOfWork unitOfWork)
     : ICommandHandler<WithdrawPlannedMealCommand, Response>
@@ -40,6 +41,7 @@ internal sealed class WithdrawPlannedMealCommandHandler(
         var result = await ShoppingListWrites
             .ApplyAsync(
                 lists,
+                names,
                 unitOfWork,
                 command.HouseholdId,
                 (list, _) =>

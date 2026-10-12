@@ -31,4 +31,13 @@ public interface IIngredientNameRepository
 
     /// <summary>Stops suggesting a name for merging.</summary>
     Task KeepApartAsync(Guid householdId, string nameKey, DateTimeOffset now, CancellationToken cancellationToken);
+
+    /// <summary>The words the household writes in both numbers, beyond the built-in table, by singular.</summary>
+    Task<IReadOnlyList<IngredientNouns.Noun>> NounsAsync(Guid householdId, CancellationToken cancellationToken);
+
+    /// <summary>Lists a word in both numbers, or changes the plural of one listed by the same singular.</summary>
+    Task SetNounAsync(Guid householdId, IngredientNouns.Noun noun, CancellationToken cancellationToken);
+
+    /// <summary>Forgets a word by its folded singular.</summary>
+    Task RemoveNounAsync(Guid householdId, string oneKey, CancellationToken cancellationToken);
 }

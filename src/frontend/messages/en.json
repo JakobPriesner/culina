@@ -1777,5 +1777,17 @@
   "editor.ingredientUnderstood": "New · read as “{name}”",
   "editor.ingredientPreparation": "“{note}” goes in the note.",
   "editor.ingredientMoveToNote": "Move it",
-  "editor.ingredientMoveToNoteLabel": "Move “{note}” to the note"
+  "editor.ingredientMoveToNoteLabel": "Move “{note}” to the note",
+  "ingredients.nouns.title": "Singular and plural",
+  "ingredients.nouns.body": "Culina writes “2 Zwiebeln” when a recipe’s “1 Zwiebel” is doubled. For a word of your own it does not know, give both forms here; scaled recipes and your shopping list use them.",
+  "ingredients.nouns.empty": "No words of your own yet.",
+  "ingredients.nouns.one": "Singular",
+  "ingredients.nouns.many": "Plural",
+  "ingredients.nouns.save": "Save",
+  "ingredients.nouns.pair": "1 {one} · 2 {many}",
+  "ingredients.nouns.remove": "Remove",
+  "ingredients.nouns.removeLabel": "Forget the plural of “{one}”",
+  "ingredients.nouns.saved": "Two “{one}” are now “{many}”.",
+  "ingredients.nouns.removed": "“{one}” is written as it stands again.",
+  "problem.ingredients.invalid_noun": "Singular and plural need to be one word each, and differ."
 }

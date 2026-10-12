@@ -223,9 +223,19 @@ public sealed class ShoppingListItem
     }
 
     // "1 Tomate" and "3 Tomaten" are four Tomaten; a name the table does not list stays as written.
-    private void FitName() =>
-        Name = ItemName.Create(IngredientNouns.ForAmount(Name.Value, Quantity.Amount, Quantity.Unit is not null, language: null))
+    private void FitName() => FitName([]);
+
+    /// <summary>Puts the name in the number its amount asks for, with the household's own nouns as well.</summary>
+    /// <returns>Whether the name changed.</returns>
+    internal bool FitName(IReadOnlyList<IngredientNouns.Noun> own)
+    {
+        var before = Name;
+
+        Name = ItemName.Create(IngredientNouns.ForAmount(Name.Value, Quantity.Amount, Quantity.Unit is not null, language: null, own))
             .Match(fitted => fitted, _ => Name);
+
+        return Name != before;
+    }
 
     // An unmeasured amount ("salt") adds nothing, but still merges.
     private Result AddAmount(Quantity quantity)

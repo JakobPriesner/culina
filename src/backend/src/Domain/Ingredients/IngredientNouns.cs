@@ -1,5 +1,6 @@
 using Domain.Search;
 using Domain.Shared;
+using Domain.Shopping;
 
 namespace Domain.Ingredients;
 
@@ -38,6 +39,9 @@ public static class IngredientNouns
     /// <param name="Many">The plural: "Zwiebeln".</param>
     /// <param name="Of">For German, the gender; null for English, whose adjectives do not change.</param>
     public sealed record Noun(string One, string Many, Gender? Of);
+
+    /// <summary>The longest word a household may list.</summary>
+    private const int LongestOwnForm = 60;
 
     /// <summary>The shortest a listed form may be and still end a compound: "Zehe" ends Knoblauchzehe, "Ei" ends nothing.</summary>
     private const int ShortestCompoundForm = 4;
@@ -157,6 +161,25 @@ public static class IngredientNouns
         new("tortilla", "tortillas", null)
     ];
 
+    /// <summary>
+    /// A household's own food in both numbers, for a word the tables do not list: "Maultasche", "Maultaschen".
+    /// Without a gender, so the adjective before it is left as written.
+    /// </summary>
+    /// <param name="one">The singular.</param>
+    /// <param name="many">The plural.</param>
+    public static Result<Noun> Own(string? one, string? many)
+    {
+        var singular = one?.Trim() ?? string.Empty;
+        var plural = many?.Trim() ?? string.Empty;
+
+        return IsWord(singular) && IsWord(plural) && ItemName.Fold(singular) != ItemName.Fold(plural)
+            ? new Noun(singular, plural, null)
+            : IngredientErrors.InvalidNoun;
+    }
+
+    private static bool IsWord(string form) =>
+        form.Length is > 0 and <= LongestOwnForm && form.All(character => char.IsLetter(character) || character == '-');
+
     private static readonly (string One, string Many)[] Folded =
         [.. German.Concat(English).Select(noun => (SearchText.FoldAe(noun.One), SearchText.FoldAe(noun.Many)))];
 
@@ -172,7 +195,13 @@ public static class IngredientNouns
     /// <param name="amount">How many, or null.</param>
     /// <param name="hasUnit">Whether the amount is in a unit rather than a count.</param>
     /// <param name="language">The recipe's language, or null to try German first, then English.</param>
-    public static string ForAmount(string name, decimal? amount, bool hasUnit, Language? language)
+    /// <param name="own">The household's own nouns (<see cref="Own"/>), looked at with the table.</param>
+    public static string ForAmount(
+        string name,
+        decimal? amount,
+        bool hasUnit,
+        Language? language,
+        IReadOnlyList<Noun>? own = null)
     {
         ArgumentNullException.ThrowIfNull(name);
 
@@ -189,7 +218,7 @@ public static class IngredientNouns
         {
             var (word, trailing) = Trim(words[at]);
 
-            if (Find(word, language) is not { } found)
+            if (Find(word, language, own ?? []) is not { } found)
             {
                 continue;
             }
@@ -233,14 +262,14 @@ public static class IngredientNouns
         word == form || (form.Length >= ShortestCompoundForm && word.Length - form.Length >= ShortestCompoundFront &&
                          word.EndsWith(form, StringComparison.Ordinal));
 
-    private static (Noun Noun, string Front, bool IsMany)? Find(string word, Language? language)
+    private static (Noun Noun, string Front, bool IsMany)? Find(string word, Language? language, IReadOnlyList<Noun> own)
     {
-        IEnumerable<Noun> table = language switch
+        var table = own.Concat(language switch
         {
             Language.De => German,
             Language.En => English,
             _ => German.Concat(English)
-        };
+        });
 
         // Longest form first, so "Knoblauchzehen" is read as Zehen, not as a compound of something shorter.
         return table

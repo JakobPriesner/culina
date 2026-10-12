@@ -20,6 +20,7 @@ public sealed record AddRecipeToListCommand(
 
 internal sealed class AddRecipeToListCommandHandler(
     IShoppingListRepository lists,
+    IIngredientNameRepository names,
     IRecipeRepository recipes,
     IHouseholdRepository households,
     IUnitOfWork unitOfWork)
@@ -47,6 +48,7 @@ internal sealed class AddRecipeToListCommandHandler(
             .Match(
                 found => ShoppingListWrites.ApplyAsync(
                     lists,
+                    names,
                     unitOfWork,
                     command.HouseholdId,
                     (list, _) => Task.FromResult(
