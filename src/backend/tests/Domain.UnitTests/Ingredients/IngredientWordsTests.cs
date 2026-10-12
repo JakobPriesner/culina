@@ -45,6 +45,7 @@ public class IngredientWordsTests
     [InlineData("weiche Butter", "butter")]
     [InlineData("Butter für die Form", "butter")]
     [InlineData("Petersilie zum Bestreuen", "petersilie")]
+    [InlineData("Zucker nach Belieben", "zucker")]
     public void Read_ShouldFindThePreparationThatBelongsInTheNote(string name, string head)
     {
         // Act
@@ -128,5 +129,58 @@ public class IngredientWordsTests
     public void AreAllQualifiers_ShouldTellAVariantFromAPreparation(string tail, bool expected)
     {
         Assert.Equal(expected, IngredientWords.AreAllQualifiers(tail));
+    }
+
+    [Theory]
+    [InlineData("Kokosmilch light", "Kokosmilch, light")]
+    [InlineData("Kokosmilch (light)", "Kokosmilch, light")]
+    [InlineData("grüner Spargel", "Spargel, grün")]
+    [InlineData("Rote Zwiebeln", "Zwiebeln, rot")]
+    [InlineData("große Zwiebeln", "Zwiebeln")]
+    [InlineData("Kichererbsen aus der Dose", "Kichererbsen, aus der Dose")]
+    [InlineData("TK-Erbsen", "Erbsen, TK")]
+    [InlineData("Grünspargel", "Grünspargel")]
+    [InlineData("Thai-Basilikum", "Thai-Basilikum")]
+    [InlineData("gehackte Tomaten", "gehackte Tomaten")]
+    public void Wording_ShouldSayWhatWasUnderstood_InTheWordsTyped(string name, string understood)
+    {
+        // Act
+        var wording = IngredientWords.Wording(name);
+
+        // Assert
+        Assert.Equal(understood, wording.Understood);
+    }
+
+    [Theory]
+    [InlineData("gehackte Zwiebeln", "Zwiebeln", "gehackt")]
+    [InlineData("fein gehackte rote Zwiebeln", "rote Zwiebeln", "fein gehackt")]
+    [InlineData("Zimmerwarme Butter", "Butter", "zimmerwarm")]
+    [InlineData("geschälte Kartoffeln, gewürfelt", "Kartoffeln", "geschält, gewürfelt")]
+    [InlineData("Butter für die Form", "Butter", "für die Form")]
+    [InlineData("Zucker nach Belieben", "Zucker", "nach Belieben")]
+    [InlineData("chopped onions", "onions", "chopped")]
+    public void Wording_ShouldOfferThePreparationForTheNote(string name, string without, string note)
+    {
+        // Act
+        var wording = IngredientWords.Wording(name);
+
+        // Assert
+        Assert.Equal(without, wording.Name);
+        Assert.Equal(note, wording.Note);
+    }
+
+    [Theory]
+    [InlineData("Zwiebeln")]
+    [InlineData("gehackte Tomaten")]
+    [InlineData("gemischtes Gehacktes")]
+    [InlineData("große Zwiebeln")]
+    public void Wording_ShouldOfferNothingForTheNote_WhenNothingIsDoneToIt(string name)
+    {
+        // Act
+        var wording = IngredientWords.Wording(name);
+
+        // Assert
+        Assert.Null(wording.Name);
+        Assert.Null(wording.Note);
     }
 }

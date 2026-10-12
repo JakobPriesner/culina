@@ -3696,6 +3696,19 @@ export interface components {
         RecipesGetIngredientsResponse: {
             /** @description The suggestions, best first. */
             items: components["schemas"]["RecipesGetIngredientsIngredientSuggestion"][];
+            typed?: (null) | components["schemas"]["RecipesGetIngredientsTypedName"];
+        };
+        /** @description How a typed name reads, in the words it was typed in. */
+        RecipesGetIngredientsTypedName: {
+            /**
+             * @description The thing and its kinds, which is what lines of it are merged and looked up as: "Kokosmilch, light" for
+             *     "Kokosmilch light", "Zwiebeln" for "große Zwiebeln".
+             */
+            understood: string;
+            /** @description The name without what is done to it in the kitchen: "Zwiebeln" for "gehackte Zwiebeln". Null when nothing is. */
+            name: string | null;
+            /** @description What is done to it, which belongs in the note: "gehackt". Null when nothing is. */
+            note: string | null;
         };
         /** @description Your notes on one recipe. */
         RecipesGetNotesResponse: {

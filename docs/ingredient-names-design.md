@@ -338,7 +338,7 @@ The §E questions were settled with the defaults this document proposed (bead `c
 | Step | Where |
 | --- | --- |
 | 1. Stop the damage | `IngredientLookalikes` refuses variants and singular/plural pairs; `parseIngredientLine` keeps commas inside parentheses; Kokosmilch is under Konserven |
-| 2. Find what is typed | `OwnIngredientNamesAsync` and `CommonIngredients.Matching` match every folded word, in any order |
+| 2. Find what is typed | `OwnIngredientNamesAsync` and `CommonIngredients.Matching` match every folded word, in any order. The ingredient field says what a new name was understood as ("Neu · gelesen als „Kokosmilch, light“") and offers preparation in the name for the note in one tap: `IngredientWords.Wording`, served as `typed` on `GET /households/{id}/ingredients` |
 | 3. The name reading | `Domain/Ingredients/IngredientWords` + `IngredientReading`. Used by lookalikes, the lexicon (no *Character* concept from an ingredient, `Version` 5), the ingredient filters (migration 0038, `IngredientSql`), and the line parser (`qualifierWords.ts`) |
 | 4. Shopping by identity | `ItemMergePolicy.NamesMatch` reads names. A new kind is placed under the first one (`ShoppingList.PlaceFor`). A remembered section is found for the same ingredient written otherwise |
 | 5. Singular and plural | `Domain/Ingredients/IngredientNouns` and its frontend copy `nounForms.ts`, held together by a test. Recipe lines are scaled through `Scaling.nameFor`, and a shopping line's name follows its amount |

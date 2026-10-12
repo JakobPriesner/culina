@@ -96,7 +96,8 @@ internal sealed class GetIngredientsQueryHandler(
                         ShoppingWords.Of(entry.Section),
                         Own: false,
                         Equivalent: false))
-            ]
+            ],
+            Typed = Typed(query.Query)
         };
     }
 
@@ -125,6 +126,20 @@ internal sealed class GetIngredientsQueryHandler(
         var uses = await names.UsesAsync(query.HouseholdId, cancellationToken).ConfigureAwait(false);
 
         return IngredientLookalikes.Existing(typed, uses)?.Name;
+    }
+
+    private static TypedName? Typed(string? query)
+    {
+        var typed = query?.Trim() ?? string.Empty;
+
+        if (typed.Length == 0)
+        {
+            return null;
+        }
+
+        var wording = IngredientWords.Wording(typed);
+
+        return new TypedName(wording.Understood, wording.Name, wording.Note);
     }
 
     private static ShoppingSection SectionFor(string name) =>

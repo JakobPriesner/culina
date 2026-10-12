@@ -1773,5 +1773,9 @@
   "problem.ingredients.same_name": "So heißt sie schon.",
   "editor.ingredientExisting": "Du verwendest schon „{name}“.",
   "editor.ingredientUseExisting": "Übernehmen",
-  "editor.ingredientUseExistingLabel": "Stattdessen „{name}“ verwenden"
+  "editor.ingredientUseExistingLabel": "Stattdessen „{name}“ verwenden",
+  "editor.ingredientUnderstood": "Neu · gelesen als „{name}“",
+  "editor.ingredientPreparation": "„{note}“ gehört in die Notiz.",
+  "editor.ingredientMoveToNote": "Verschieben",
+  "editor.ingredientMoveToNoteLabel": "„{note}“ in die Notiz verschieben"
 }
