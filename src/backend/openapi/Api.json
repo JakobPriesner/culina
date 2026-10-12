@@ -6475,6 +6475,195 @@
         }
       }
     },
+    "/api/v1/households/{householdId}/ingredient-nouns": {
+      "get": {
+        "tags": [
+          "Ingredients"
+        ],
+        "summary": "List a household's own singular and plural words",
+        "description": "The ingredient words this household writes in both numbers, beyond the counted foods Culina knows. A scaled recipe and a summed shopping line use them to say \"2 Maultaschen\" rather than \"2 Maultasche\".",
+        "operationId": "getIngredientNounsV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientsIngredientNounsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/ingredient-nouns/{one}": {
+      "put": {
+        "tags": [
+          "Ingredients"
+        ],
+        "summary": "Say an ingredient word's plural",
+        "description": "Lists `{one}`, a singular, with its plural, for this household only. Both are one word each and differ. A word ending in it takes its forms too, as \"Zehe\" covers \"Knoblauchzehe\". Setting it again changes the plural. `{one}` is percent-encoded. Any member may set it. Idempotent; 204.",
+        "operationId": "setIngredientNounV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "one",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngredientsSetIngredientNounRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Ingredients"
+        ],
+        "summary": "Forget an ingredient word's plural",
+        "description": "Stops changing `{one}`, a singular, by the amount. Names already on the shopping list keep their words. `{one}` is percent-encoded. Idempotent; 204.",
+        "operationId": "deleteIngredientNounV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "one",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/households/{householdId}/meal-plan": {
       "get": {
         "tags": [
@@ -10313,6 +10502,40 @@
         },
         "description": "The ingredient names a household's own recipes use."
       },
+      "IngredientsIngredientNounDetail": {
+        "required": [
+          "one",
+          "many"
+        ],
+        "type": "object",
+        "properties": {
+          "one": {
+            "type": "string",
+            "description": "The singular."
+          },
+          "many": {
+            "type": "string",
+            "description": "The plural."
+          }
+        },
+        "description": "A word in both numbers: \"1 Maultasche\", \"2 Maultaschen\"."
+      },
+      "IngredientsIngredientNounsResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IngredientsIngredientNounDetail"
+            },
+            "description": "The words, by singular."
+          }
+        },
+        "description": "The words a household writes in both numbers, beyond the ones Culina knows."
+      },
       "IngredientsMergeSuggestionDetail": {
         "required": [
           "from",
@@ -10349,6 +10572,19 @@
           }
         },
         "description": "Names in a household's recipes that are probably one ingredient."
+      },
+      "IngredientsSetIngredientNounRequest": {
+        "required": [
+          "many"
+        ],
+        "type": "object",
+        "properties": {
+          "many": {
+            "type": "string",
+            "description": "The plural: one word, not the singular."
+          }
+        },
+        "description": "The plural of a word whose singular is in the path."
       },
       "LogRecordsCreateClient": {
         "type": "object",

@@ -1603,6 +1603,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/households/{householdId}/ingredient-nouns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a household's own singular and plural words
+         * @description The ingredient words this household writes in both numbers, beyond the counted foods Culina knows. A scaled recipe and a summed shopping line use them to say "2 Maultaschen" rather than "2 Maultasche".
+         */
+        get: operations["getIngredientNounsV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/ingredient-nouns/{one}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Say an ingredient word's plural
+         * @description Lists `{one}`, a singular, with its plural, for this household only. Both are one word each and differ. A word ending in it takes its forms too, as "Zehe" covers "Knoblauchzehe". Setting it again changes the plural. `{one}` is percent-encoded. Any member may set it. Idempotent; 204.
+         */
+        put: operations["setIngredientNounV1"];
+        post?: never;
+        /**
+         * Forget an ingredient word's plural
+         * @description Stops changing `{one}`, a singular, by the amount. Names already on the shopping list keep their words. `{one}` is percent-encoded. Idempotent; 204.
+         */
+        delete: operations["deleteIngredientNounV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/households/{householdId}/meal-plan": {
         parameters: {
             query?: never;
@@ -2919,6 +2963,18 @@ export interface components {
             /** @description The names, most used first. */
             items: components["schemas"]["IngredientsIngredientNameUse"][];
         };
+        /** @description A word in both numbers: "1 Maultasche", "2 Maultaschen". */
+        IngredientsIngredientNounDetail: {
+            /** @description The singular. */
+            one: string;
+            /** @description The plural. */
+            many: string;
+        };
+        /** @description The words a household writes in both numbers, beyond the ones Culina knows. */
+        IngredientsIngredientNounsResponse: {
+            /** @description The words, by singular. */
+            items: components["schemas"]["IngredientsIngredientNounDetail"][];
+        };
         /** @description A proposal to merge one name into another. */
         IngredientsMergeSuggestionDetail: {
             from: components["schemas"]["IngredientsIngredientNameUse"];
@@ -2933,6 +2989,11 @@ export interface components {
         IngredientsMergeSuggestionsResponse: {
             /** @description The proposals, the most used name first. */
             items: components["schemas"]["IngredientsMergeSuggestionDetail"][];
+        };
+        /** @description The plural of a word whose singular is in the path. */
+        IngredientsSetIngredientNounRequest: {
+            /** @description The plural: one word, not the singular. */
+            many: string;
         };
         /** @description The browser and device the records came from, as far as the page can tell. */
         LogRecordsCreateClient: {
@@ -10823,6 +10884,146 @@ export interface operations {
             path: {
                 householdId: string;
                 name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getIngredientNounsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngredientsIngredientNounsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    setIngredientNounV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                one: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IngredientsSetIngredientNounRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    deleteIngredientNounV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                one: string;
             };
             cookie?: never;
         };

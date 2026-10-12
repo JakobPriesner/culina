@@ -1,5 +1,6 @@
 import { formatQuantity, type QuantityText } from '../formatQuantity';
 import { forAmount } from '../nounForms';
+import { nouns } from '../stores/nouns.svelte';
 import { quantityLabels as labels } from '../quantityLabels';
 import { factorFor, scaleQuantity, trustedFactorRange } from '../scaling';
 import type { Quantity, RecipeReading } from '../types';
@@ -66,7 +67,13 @@ export function createScaling(recipe: () => RecipeReading | null, target: () => 
     nameFor: (of: { readonly name: string; readonly quantity: Quantity }): string => {
       const value = of.quantity.value === null ? null : of.quantity.value * factor;
 
-      return forAmount(of.name, value, of.quantity.unit !== null, recipe()?.language ?? null);
+      return forAmount(
+        of.name,
+        value,
+        of.quantity.unit !== null,
+        recipe()?.language ?? null,
+        nouns.own
+      );
     }
   };
 }

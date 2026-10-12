@@ -16,4 +16,10 @@ public static class IngredientErrors
         "ingredients.same_name",
         "An ingredient cannot be merged into itself.",
         ErrorType.Validation);
+
+    /// <summary>A noun in both numbers is two different words, each one word.</summary>
+    public static readonly Error InvalidNoun = new(
+        "ingredients.invalid_noun",
+        "Singular and plural need to be one word each, and differ.",
+        ErrorType.Validation);
 }

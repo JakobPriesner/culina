@@ -37,3 +37,16 @@ describe('a name left as written', () => {
     expect(forAmount('Zwiebel', null, false, 'de')).toBe('Zwiebel');
   });
 });
+
+describe('a household’s own words', () => {
+  const own = [{ one: 'Maultasche', many: 'Maultaschen' }];
+
+  it('change number like the listed ones, and end a compound', () => {
+    expect(forAmount('Maultasche', 2, false, 'de', own)).toBe('Maultaschen');
+    expect(forAmount('Spinatmaultaschen', 1, false, 'de', own)).toBe('Spinatmaultasche');
+  });
+
+  it('are left alone without them', () => {
+    expect(forAmount('Maultasche', 2, false, 'de')).toBe('Maultasche');
+  });
+});

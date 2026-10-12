@@ -13,6 +13,7 @@ public sealed record RemoveShoppingItemsCommand(Guid HouseholdId, Guid UserId, G
 
 internal sealed class RemoveShoppingItemsCommandHandler(
     IShoppingListRepository lists,
+    IIngredientNameRepository names,
     IHouseholdRepository households,
     IUnitOfWork unitOfWork)
     : ICommandHandler<RemoveShoppingItemsCommand, Response>
@@ -38,6 +39,7 @@ internal sealed class RemoveShoppingItemsCommandHandler(
         var result = await ShoppingListWrites
             .ApplyAsync(
                 lists,
+                names,
                 unitOfWork,
                 command.HouseholdId,
                 // Clearing what is bought is the one bulk action worth having.

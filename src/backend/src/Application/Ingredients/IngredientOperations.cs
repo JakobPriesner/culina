@@ -27,6 +27,15 @@ public sealed record GetMergeSuggestionsQuery(Guid HouseholdId, Guid UserId);
 /// <summary>Stops suggesting a name for merging: it is its own ingredient.</summary>
 public sealed record DeleteMergeSuggestionCommand(Guid HouseholdId, Guid UserId, string Name);
 
+/// <summary>The words a household writes in both numbers, beyond the built-in table.</summary>
+public sealed record GetIngredientNounsQuery(Guid HouseholdId, Guid UserId);
+
+/// <summary>Lists a word in both numbers, so a doubled "Maultasche" reads "2 Maultaschen".</summary>
+public sealed record SetIngredientNounCommand(Guid HouseholdId, Guid UserId, string One, string Many);
+
+/// <summary>Forgets a word's plural; <c>One</c> is its singular, spelled any way that folds the same.</summary>
+public sealed record DeleteIngredientNounCommand(Guid HouseholdId, Guid UserId, string One);
+
 internal sealed class GetIngredientNamesQueryHandler(
     IIngredientNameRepository names,
     IHouseholdRepository households)
@@ -217,6 +226,86 @@ internal sealed class DeleteMergeSuggestionCommandHandler(
     }
 }
 
+internal sealed class GetIngredientNounsQueryHandler(
+    IIngredientNameRepository names,
+    IHouseholdRepository households)
+    : IQueryHandler<GetIngredientNounsQuery, IngredientNounsResponse>
+{
+    public async Task<Result<IngredientNounsResponse>> Handle(
+        GetIngredientNounsQuery query,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+
+        using var tracked = UseCaseActivity.Start("Ingredients.GetNouns");
+
+        var result = await IngredientAccess.ReadAsync(
+            households,
+            query.HouseholdId,
+            query.UserId,
+            async token =>
+            {
+                var nouns = await names.NounsAsync(query.HouseholdId, token).ConfigureAwait(false);
+
+                return new IngredientNounsResponse { Items = [.. nouns.Select(IngredientMappings.ToContract)] };
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        return tracked.Record(result);
+    }
+}
+
+internal sealed class SetIngredientNounCommandHandler(
+    IIngredientNameRepository names,
+    IHouseholdRepository households)
+    : ICommandHandler<SetIngredientNounCommand>
+{
+    public async Task<Result> Handle(SetIngredientNounCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        using var tracked = UseCaseActivity.Start("Ingredients.SetNoun");
+
+        var allowed = await HouseholdAccess
+            .MemberOfAsync(households, command.HouseholdId, command.UserId, cancellationToken)
+            .ConfigureAwait(false);
+
+        var result = await allowed.Bind(() => IngredientNouns.Own(command.One, command.Many)).Match(
+            async noun =>
+            {
+                await names.SetNounAsync(command.HouseholdId, noun, cancellationToken).ConfigureAwait(false);
+
+                return Result.Success();
+            },
+            error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
+
+        return tracked.Record(result);
+    }
+}
+
+internal sealed class DeleteIngredientNounCommandHandler(
+    IIngredientNameRepository names,
+    IHouseholdRepository households)
+    : ICommandHandler<DeleteIngredientNounCommand>
+{
+    public async Task<Result> Handle(DeleteIngredientNounCommand command, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        using var tracked = UseCaseActivity.Start("Ingredients.DeleteNoun");
+
+        var result = await IngredientAccess.ChangeAsync(
+            households,
+            command.HouseholdId,
+            command.UserId,
+            command.One,
+            (key, token) => names.RemoveNounAsync(command.HouseholdId, key, token),
+            cancellationToken).ConfigureAwait(false);
+
+        return tracked.Record(result);
+    }
+}
+
 /// <summary>Membership first, then the work: every ingredient operation is open to any member.</summary>
 internal static class IngredientAccess
 {
@@ -270,6 +359,9 @@ internal static class IngredientMappings
 {
     internal static IngredientNameUse ToContract(IngredientUse use) =>
         new() { Name = use.Name, RecipeCount = use.RecipeCount };
+
+    internal static IngredientNounDetail ToContract(IngredientNouns.Noun noun) =>
+        new() { One = noun.One, Many = noun.Many };
 
     internal static IngredientMergeDetail ToContract(IngredientMerge merge) =>
         new() { From = merge.From.Value, To = merge.To.Value };

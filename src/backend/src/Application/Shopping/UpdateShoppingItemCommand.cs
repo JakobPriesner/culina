@@ -23,6 +23,7 @@ public sealed record UpdateShoppingItemCommand(
 
 internal sealed class UpdateShoppingItemCommandHandler(
     IShoppingListRepository lists,
+    IIngredientNameRepository names,
     IHouseholdRepository households,
     IUnitOfWork unitOfWork,
     TimeProvider time)
@@ -49,6 +50,7 @@ internal sealed class UpdateShoppingItemCommandHandler(
         var result = await ShoppingListWrites
             .ApplyAsync(
                 lists,
+                names,
                 unitOfWork,
                 command.HouseholdId,
                 (list, token) => ChangeAsync(list, command, token),

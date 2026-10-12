@@ -58,6 +58,30 @@ public sealed record CreatedIngredientMerge
     public required int RecipeCount { get; init; }
 }
 
+/// <summary>The words a household writes in both numbers, beyond the ones Culina knows.</summary>
+public sealed record IngredientNounsResponse
+{
+    /// <summary>The words, by singular.</summary>
+    public required IReadOnlyList<IngredientNounDetail> Items { get; init; }
+}
+
+/// <summary>A word in both numbers: "1 Maultasche", "2 Maultaschen".</summary>
+public sealed record IngredientNounDetail
+{
+    /// <summary>The singular.</summary>
+    public required string One { get; init; }
+
+    /// <summary>The plural.</summary>
+    public required string Many { get; init; }
+}
+
+/// <summary>The plural of a word whose singular is in the path.</summary>
+public sealed record SetIngredientNounRequest
+{
+    /// <summary>The plural: one word, not the singular.</summary>
+    public required string Many { get; init; }
+}
+
 /// <summary>Names in a household's recipes that are probably one ingredient.</summary>
 public sealed record MergeSuggestionsResponse
 {

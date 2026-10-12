@@ -132,12 +132,14 @@ const articles = new Set(['die', 'der', 'das', 'des', 'eine', 'einer', 'eines', 
 /**
  * The name with its food in the number a bare count asks for: "Zwiebel" for 2 is "Zwiebeln", "große Äpfel" for 1
  * is "großer Apfel". After a unit ("500 g Tomaten", "2 Scheiben Brot") or without an amount, the name as written.
+ * `own` are the household's words in both numbers, looked at with the table; their adjectives are left as written.
  */
 export function forAmount(
   name: string,
   amount: number | null,
   hasUnit: boolean,
-  language: 'de' | 'en' | null
+  language: 'de' | 'en' | null,
+  own: readonly { readonly one: string; readonly many: string }[] = []
 ): string {
   if (amount === null || hasUnit) {
     return name;
@@ -149,7 +151,7 @@ export function forAmount(
   // The food is the last listed word: "Zwiebel, rot" and "rote Zwiebel" alike.
   for (let at = words.length - 1; at >= 0; at--) {
     const [, word = '', trailing = ''] = /^(.*?)([^\p{L}]*)$/u.exec(words[at]!) ?? [];
-    const found = find(word, language);
+    const found = find(word, language, own);
 
     if (!found) {
       continue;
@@ -171,8 +173,15 @@ export function forAmount(
   return name;
 }
 
-function find(word: string, language: 'de' | 'en' | null) {
-  const table = language === 'de' ? german : language === 'en' ? english : [...german, ...english];
+function find(
+  word: string,
+  language: 'de' | 'en' | null,
+  own: readonly { readonly one: string; readonly many: string }[]
+) {
+  const table = [
+    ...own.map(({ one, many }) => ({ one, many, gender: null })),
+    ...(language === 'de' ? german : language === 'en' ? english : [...german, ...english])
+  ];
   const lower = word.toLowerCase();
 
   // Longest form first, so "Knoblauchzehen" reads as Zehen.

@@ -2,9 +2,11 @@
   import { session } from '$features/auth/session.svelte';
   import IngredientMergesPanel from '$features/ingredients/IngredientMergesPanel.svelte';
   import IngredientNamesPanel from '$features/ingredients/IngredientNamesPanel.svelte';
+  import IngredientNounsPanel from '$features/ingredients/IngredientNounsPanel.svelte';
   import MergeSuggestionsPanel from '$features/ingredients/MergeSuggestionsPanel.svelte';
   import { ingredientNames } from '$features/ingredients/stores/ingredientNames.svelte';
   import IngredientFactsPanel from '$features/nutrition/IngredientFactsPanel.svelte';
+  import { nouns } from '$features/recipes/stores/nouns.svelte';
   import { ingredientFacts } from '$features/nutrition/stores/ingredientFacts.svelte';
   import { m } from '$shell/i18n';
 
@@ -16,6 +18,7 @@
   $effect(() => {
     if (household) {
       void ingredientNames.load(household.householdId);
+      void nouns.load(household.householdId);
     }
   });
 
@@ -48,6 +51,14 @@
     bare
   >
     <IngredientMergesPanel householdId={household.householdId} />
+  </SettingsSection>
+
+  <SettingsSection
+    title={m['ingredients.nouns.title']()}
+    description={m['ingredients.nouns.body']()}
+    bare
+  >
+    <IngredientNounsPanel householdId={household.householdId} />
   </SettingsSection>
 
   <SettingsSection
