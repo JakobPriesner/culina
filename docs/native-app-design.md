@@ -708,10 +708,59 @@ Build in this order. Each step is useful on its own.
   five seconds, on screen.
 - Sign-out cancels every alarm (`forgetNativeTimers`).
 
-Still open for steps 2–3, beyond the checklist below:
-- The plugin declares `SCHEDULE_EXACT_ALARM` but does not ask for it.
-- Its Android manifest has no `BOOT_COMPLETED` receiver.
-- Alarms obey the silent switch on iOS.
+Steps 2 and 3 replaced it (`tj23.9`); the paragraph above describes the bridge,
+which stayed the same.
+
+**Status (13 October 2026, `tj23.9`): steps 2–3 are built.** The app-local
+`CulinaTimers` plugin replaced `@capacitor/local-notifications` on both
+platforms. One component owns all timer notifications, which matters on iOS,
+where only one object can be the notification delegate.
+- **The contract** is 4.2's, extended:
+  - `sync` also carries the words the system shows, in the app's language.
+  - Each journal entry carries `at`, when it was pressed.
+    `applyTimerAction(notice, action, at)` uses that, so "+1 min" lands on the
+    same deadline on the page as on the lock screen.
+  - `open` records a tap; the page drains on start, on `resume` and on the
+    plugin's `action` event.
+- **iOS** (`native/ios/App/App/CulinaTimers`, `Shared/`, the
+  `CulinaTimerWidget` extension):
+  - On iOS 26+ with permission, AlarmKit timers with a +1 min secondary button
+    and AlarmKit's countdown activity.
+  - Otherwise a time-sensitive notification per timer, plus one Live Activity
+    per session. Countdowns use `Text(timerInterval:)`, the Lock Screen shows
+    up to three timers, and buttons are `LiveActivityIntent`s that run in the
+    app's process.
+  - Background notification actions (+1/+2 min, Dismiss) are applied without
+    opening the app; "Next step" opens it.
+  - The AppDelegate claims the notification delegate for background launches.
+    Capacitor's router hands it to the plugin once the bridge loads.
+  - The app keeps iOS 15 as its minimum and weak-links ActivityKit,
+    AppIntents and AlarmKit.
+- **Android** (`native/android/.../timers`, Java, since the template has no
+  Kotlin):
+  - One ongoing notification with the system's countdown chronometer for the
+    soonest timer, with "+N more", +1 min, Dismiss and Next step. On Android 16
+    it is promoted to a Live Update: API 36 asks for that through the
+    `android.requestPromotedOngoing` extra, as AndroidX does.
+  - Exact alarms per timer ring on a high-importance alarm channel. The
+    exact-alarm settings page is opened once, at the first timer start.
+  - Buttons go to a receiver that applies them without the app; "Next step"
+    and a tap open the activity.
+  - `TimerBootReceiver` rebuilds the alarms after a reboot or update.
+
+Verified on this Mac:
+- The Swift typechecks (`swiftc -typecheck`, Swift 5 and 6 modes) against the
+  iOS 27 SDK and Capacitor 8.5's frameworks: app at iOS 15, widget at 16.2,
+  AlarmKit included.
+- The Java compiles with `-Xlint:all` against Android 36's `android.jar` and
+  stubs of the Capacitor classes it uses. That compile caught the missing
+  `setRequestPromotedOngoing` above.
+
+Not verified, for want of Xcode's simulator plug-in and an Android SDK:
+- Linking, resources, the widget target's build, and anything at run time.
+  The device checklist below is in `culina-v2-tj23.13`.
+- A widget extension also needs its App ID in the developer account, and the
+  time-sensitive entitlement needs that capability.
 
 Device checks, iPhone and Android:
 - Lock the phone with three timers running, and wait past each deadline. Each

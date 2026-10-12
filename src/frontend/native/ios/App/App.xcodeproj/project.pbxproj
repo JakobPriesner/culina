@@ -7,19 +7,57 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		23B0EB2F6B7B124CCC9169F3 /* CulinaTimerShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5076140EA3F2F2B2B1FE798 /* CulinaTimerShared.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
+		4FEF46875AEF1ED6B42430D8 /* MainViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E518673745312AE5BF57961 /* MainViewController.swift */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
+		6873254D1DA4EE428942EF38 /* CulinaAlarmLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29E75B8BDDC7B76F177777EA /* CulinaAlarmLiveActivity.swift */; };
+		7AD47735903B025B9117AFBC /* CulinaTimerShared.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5076140EA3F2F2B2B1FE798 /* CulinaTimerShared.swift */; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
+		CE6F252F31D89A145EDDF76C /* CulinaTimerWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0ABE20353CFC5E6F5FB15111 /* CulinaTimerWidget.appex */; settings = {ATTRIBUTES = (RemoveHeaderMapsOnCopy, ); }; };
+		D2B71CF66A5BC30E56C5962D /* CulinaTimerWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = B333F1F5C3E4CD64E863A1EE /* CulinaTimerWidgetBundle.swift */; };
+		DB6CD1A4C7E5E747E386277E /* CulinaTimersPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99E3482BD0F1AACA01AD1314 /* CulinaTimersPlugin.swift */; };
+		F00B9FFE002731A3DF2B9268 /* CulinaTimerEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D16C2E8204A31180F78EB2B5 /* CulinaTimerEngine.swift */; };
+		F23E0B930C24AA1DB90C8272 /* CulinaTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72B878E47077A80C581C5B07 /* CulinaTimerLiveActivity.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		E44A7797619E87D509900467 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 17143E97A94717F87C71E64C;
+			remoteInfo = CulinaTimerWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		21AFFF69299C82FA8A0D21B3 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				CE6F252F31D89A145EDDF76C /* CulinaTimerWidget.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		0ABE20353CFC5E6F5FB15111 /* CulinaTimerWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CulinaTimerWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		0CC3601F9BBCF5105449508C /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		29E75B8BDDC7B76F177777EA /* CulinaAlarmLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CulinaAlarmLiveActivity.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
+		390C8973D1D470FAD2C6964C /* App.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
+		4E518673745312AE5BF57961 /* MainViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MainViewController.swift; sourceTree = "<group>"; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -28,11 +66,23 @@
 		504EC3111FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
+		72B878E47077A80C581C5B07 /* CulinaTimerLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CulinaTimerLiveActivity.swift; sourceTree = "<group>"; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		99E3482BD0F1AACA01AD1314 /* CulinaTimersPlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CulinaTimersPlugin.swift; sourceTree = "<group>"; };
+		B333F1F5C3E4CD64E863A1EE /* CulinaTimerWidgetBundle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CulinaTimerWidgetBundle.swift; sourceTree = "<group>"; };
+		B5076140EA3F2F2B2B1FE798 /* CulinaTimerShared.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CulinaTimerShared.swift; sourceTree = "<group>"; };
+		D16C2E8204A31180F78EB2B5 /* CulinaTimerEngine.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CulinaTimerEngine.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		323919A51D3DF02B79BE7DE3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3011FED79650016851F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -44,12 +94,36 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		05F33E5BD3A27E062CD60CFD /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				B5076140EA3F2F2B2B1FE798 /* CulinaTimerShared.swift */,
+			);
+			name = Shared;
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		45FF10BC06ABC100A1CE1314 /* CulinaTimerWidget */ = {
+			isa = PBXGroup;
+			children = (
+				B333F1F5C3E4CD64E863A1EE /* CulinaTimerWidgetBundle.swift */,
+				72B878E47077A80C581C5B07 /* CulinaTimerLiveActivity.swift */,
+				29E75B8BDDC7B76F177777EA /* CulinaAlarmLiveActivity.swift */,
+				0CC3601F9BBCF5105449508C /* Info.plist */,
+			);
+			name = CulinaTimerWidget;
+			path = CulinaTimerWidget;
+			sourceTree = "<group>";
+		};
 		504EC2FB1FED79650016851F = {
 			isa = PBXGroup;
 			children = (
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
 				504EC3051FED79650016851F /* Products */,
+				05F33E5BD3A27E062CD60CFD /* Shared */,
+				AA4768D4F156739B785B6023 /* Frameworks */,
+				45FF10BC06ABC100A1CE1314 /* CulinaTimerWidget */,
 			);
 			sourceTree = "<group>";
 		};
@@ -57,6 +131,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				0ABE20353CFC5E6F5FB15111 /* CulinaTimerWidget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -73,13 +148,58 @@
 				504EC3131FED79650016851F /* Info.plist */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
+				BAA0403F12858A4F2AADBB69 /* CulinaTimers */,
+				4E518673745312AE5BF57961 /* MainViewController.swift */,
+				390C8973D1D470FAD2C6964C /* App.entitlements */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		AA4768D4F156739B785B6023 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D17983F3B4506C6FE7EF6300 /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		BAA0403F12858A4F2AADBB69 /* CulinaTimers */ = {
+			isa = PBXGroup;
+			children = (
+				D16C2E8204A31180F78EB2B5 /* CulinaTimerEngine.swift */,
+				99E3482BD0F1AACA01AD1314 /* CulinaTimersPlugin.swift */,
+			);
+			name = CulinaTimers;
+			path = CulinaTimers;
+			sourceTree = "<group>";
+		};
+		D17983F3B4506C6FE7EF6300 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = iOS;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		17143E97A94717F87C71E64C /* CulinaTimerWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7675566C52A7AE8961EECE33 /* Build configuration list for PBXNativeTarget "CulinaTimerWidget" */;
+			buildPhases = (
+				3826C11E84AA6D1D7D0BD753 /* Sources */,
+				323919A51D3DF02B79BE7DE3 /* Frameworks */,
+				C4DC60F495558B9B9FFFF440 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CulinaTimerWidget;
+			productName = CulinaTimerWidget;
+			productReference = 0ABE20353CFC5E6F5FB15111 /* CulinaTimerWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		504EC3031FED79650016851F /* App */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "App" */;
@@ -87,10 +207,12 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
+				21AFFF69299C82FA8A0D21B3 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				BEA42E89D3FDD566882E5A89 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -133,6 +255,7 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				17143E97A94717F87C71E64C /* CulinaTimerWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -151,19 +274,50 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C4DC60F495558B9B9FFFF440 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		3826C11E84AA6D1D7D0BD753 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D2B71CF66A5BC30E56C5962D /* CulinaTimerWidgetBundle.swift in Sources */,
+				F23E0B930C24AA1DB90C8272 /* CulinaTimerLiveActivity.swift in Sources */,
+				6873254D1DA4EE428942EF38 /* CulinaAlarmLiveActivity.swift in Sources */,
+				7AD47735903B025B9117AFBC /* CulinaTimerShared.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3001FED79650016851F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
+				F00B9FFE002731A3DF2B9268 /* CulinaTimerEngine.swift in Sources */,
+				DB6CD1A4C7E5E747E386277E /* CulinaTimersPlugin.swift in Sources */,
+				4FEF46875AEF1ED6B42430D8 /* MainViewController.swift in Sources */,
+				23B0EB2F6B7B124CCC9169F3 /* CulinaTimerShared.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		BEA42E89D3FDD566882E5A89 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = CulinaTimerWidget;
+			target = 17143E97A94717F87C71E64C /* CulinaTimerWidget */;
+			targetProxy = E44A7797619E87D509900467 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		504EC30B1FED79650016851F /* Main.storyboard */ = {
@@ -185,6 +339,37 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		2601E1131644DAD07B6A69DC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CulinaTimerWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					AlarmKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.culina.CulinaTimerWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		504EC3141FED79650016851F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
@@ -299,6 +484,7 @@
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
@@ -308,6 +494,15 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+					"-weak_framework",
+					AppIntents,
+					"-weak_framework",
+					AlarmKit,
+				);
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = app.culina;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -321,6 +516,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
@@ -330,6 +526,15 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					ActivityKit,
+					"-weak_framework",
+					AppIntents,
+					"-weak_framework",
+					AlarmKit,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = app.culina;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
@@ -337,6 +542,36 @@
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
+		};
+		BCA8D1D7090C47DE70B9A574 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CulinaTimerWidget/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-weak_framework",
+					AlarmKit,
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = app.culina.CulinaTimerWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
 		};
 /* End XCBuildConfiguration section */
 
@@ -355,6 +590,15 @@
 			buildConfigurations = (
 				504EC3171FED79650016851F /* Debug */,
 				504EC3181FED79650016851F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7675566C52A7AE8961EECE33 /* Build configuration list for PBXNativeTarget "CulinaTimerWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				2601E1131644DAD07B6A69DC /* Release */,
+				BCA8D1D7090C47DE70B9A574 /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

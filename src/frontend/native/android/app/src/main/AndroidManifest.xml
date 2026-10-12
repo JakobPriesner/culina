@@ -25,6 +25,21 @@
 
         </activity>
 
+        <!-- Kitchen timers (docs/native-app-design.md, 4.4): alarms and notification buttons, app running or not. -->
+        <receiver
+            android:name=".timers.TimerReceiver"
+            android:exported="false" />
+
+        <!-- Alarms do not survive a reboot or an update; rebuilt from the kept timers. -->
+        <receiver
+            android:name=".timers.TimerBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -39,4 +54,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Kitchen timers: the alarm, the notification, a reboot, the status-bar chip (Android 16). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
 </manifest>
