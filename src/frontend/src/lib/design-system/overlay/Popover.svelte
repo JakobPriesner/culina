@@ -103,7 +103,7 @@
       open = event.newState === 'open';
     }}
   >
-    {@render children()}
+    <div class="scroller">{@render children()}</div>
   </div>
 </div>
 
@@ -117,7 +117,6 @@
     position: fixed;
     inset: auto;
     margin: 0;
-    padding: var(--space-2);
     border: 1px solid var(--border);
     /* Concentric with its rows: lg minus this padding is the rows' md. */
     border-radius: var(--radius-lg);
@@ -126,6 +125,22 @@
     box-shadow: var(--shadow-overlay);
     /* Against the screen, so moving the panel never changes its size. */
     max-width: calc(100dvw - 2 * var(--space-4));
+    /*
+     * The panel draws the rounded edge and clips to it; the scroller inside scrolls. Scrolling the panel itself let a
+     * browser with classic scrollbars paint the reserved gutter as a square strip over the right-hand corners and border.
+     */
+    overflow: clip;
+  }
+
+  /* Set only while open: an author `display` would beat the browser's `display: none` for a closed popover. */
+  .panel:popover-open {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .scroller {
+    min-height: 0;
+    padding: var(--space-2);
     /* Only the axis `place()` manages; `overflow: auto` on both made over-wide content grow a horizontal bar instead of wrapping. */
     overflow-x: clip;
     overflow-y: auto;

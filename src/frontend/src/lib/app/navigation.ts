@@ -2,8 +2,8 @@ import { resolve } from '$app/paths';
 
 import { m } from './i18n';
 
-/** The five stable workflows, in the same order on desktop and mobile. */
-export type DestinationIcon = 'recipes' | 'cookbooks' | 'plan' | 'shopping' | 'settings';
+/** The four stable workflows, in the same order on desktop and mobile. */
+export type DestinationIcon = 'recipes' | 'cookbooks' | 'plan' | 'shopping';
 
 export interface Destination {
   readonly href: string;
@@ -21,6 +21,9 @@ const library = resolve('/(app)');
 
 /** Where the shell offers a new recipe: only where what it makes belongs to what is on screen, i.e. the library. Not on cookbooks (own add-to-shelf control), the week, shopping or one recipe, nor in the editor, importer or cook screen, where it would leave unsaved work. */
 export const offersNewRecipe = (pathname: string): boolean => pathname === library;
+
+/** Settings are not a workflow: the account menu leads there, and lights up while they are on screen. */
+export const inSettings = startsWith('/me');
 
 /** Whether search is offered: everywhere but the cook screen, where a search box invites losing the place. */
 export const offersSearch = (pathname: string): boolean => !pathname.endsWith('/cook');
@@ -50,11 +53,5 @@ export const destinations: readonly Destination[] = [
     icon: 'shopping',
     label: m['nav.shopping'],
     match: startsWith('/shopping')
-  },
-  {
-    href: resolve('/(app)/me'),
-    icon: 'settings',
-    label: m['nav.me'],
-    match: startsWith('/me')
   }
 ];

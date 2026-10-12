@@ -156,10 +156,9 @@ test.describe('library refinement @offline', () => {
       ['Recipes', '/'],
       ['Cookbooks', '/cookbooks'],
       ['Week', '/plan'],
-      ['Shopping', '/shopping'],
-      ['Settings', '/me']
+      ['Shopping', '/shopping']
     ] as const;
-    await expect(navigation.getByRole('link')).toHaveCount(5);
+    await expect(navigation.getByRole('link')).toHaveCount(4);
     await expect(navigation.getByRole('button')).toHaveCount(0);
     for (const [label, path] of expected) {
       const link = navigation.getByRole('link', { name: label, exact: true });
@@ -206,7 +205,7 @@ test.describe('library refinement @offline', () => {
           const navigation = page.getByRole('navigation', {
             name: locale === 'en' ? 'Sections' : 'Bereiche'
           });
-          await expect(navigation.getByRole('link')).toHaveCount(5);
+          await expect(navigation.getByRole('link')).toHaveCount(4);
           for (const link of await navigation.getByRole('link').all()) {
             await expect(link).toBeInViewport({ ratio: 1 });
             const label = link.locator('.label');
