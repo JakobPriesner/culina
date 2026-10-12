@@ -24,6 +24,8 @@ public class SmartCookbookTests(PostgresFixture postgres)
 
     private static readonly string[] Tofu = ["Tofu"];
 
+    private static readonly string[] Wildcard = ["%"];
+
     private static readonly string[] MainCourse = ["hauptspeise"];
 
     private static readonly string[] Main = ["Hauptspeise"];
@@ -216,6 +218,25 @@ public class SmartCookbookTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal(
             "cookbooks.rules_required",
+            response.Json!.Value.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task ItShouldRefuseAnIngredientRuleThatIsOnlyAWildcard()
+    {
+        // Built into a LIKE pattern unescaped, "%" was a shelf of the whole library.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        await RecipeAsync(client, householdId, "Irgendwas", "Butter", Untagged);
+
+        var response = await client.PostAsync(
+            "/api/v1/cookbooks",
+            new { householdId, name = "Alles", rules = new { ingredients = Wildcard } },
+            Token);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(
+            "cookbooks.invalid_rule",
             response.Json!.Value.GetProperty("code").GetString());
     }
 

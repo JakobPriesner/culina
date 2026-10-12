@@ -1,3 +1,4 @@
+using Domain.Search;
 using Domain.Shared;
 
 namespace Domain.Cookbooks;
@@ -60,6 +61,12 @@ public sealed record CookbookRules
         }
 
         if (cleanedTags.Concat(cleanedIngredients).Any(term => term.Length > MaxTermLength))
+        {
+            return CookbookErrors.InvalidRule;
+        }
+
+        // Matched word by word on the fold, so "%" or "!!!" names no word, and a rule of no words would hold every recipe.
+        if (cleanedIngredients.Any(term => SearchText.FoldAe(term).Length == 0))
         {
             return CookbookErrors.InvalidRule;
         }
