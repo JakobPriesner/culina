@@ -113,7 +113,10 @@
     margin-bottom: var(--space-8);
   }
 
+  /* Positioned so the track contains absolute descendants (a screen-reader-only label): otherwise they escape its
+     clipping, and the off-screen panels' ones widen the page. */
   .track {
+    position: relative;
     display: grid;
     grid-auto-flow: column;
     grid-auto-columns: 100%;
