@@ -118,6 +118,36 @@ public class RecipeSearchTests(PostgresFixture postgres)
         Assert.Equal(1, match.GetProperty("missing").GetInt32());
     }
 
+    [Theory]
+    [InlineData("grüner Spargel", new[] { "Grüne Pasta" })]
+    [InlineData("Spargel grün", new[] { "Grüne Pasta" })]
+    [InlineData("weißer Spargel", new[] { "Weißer Spargel mit Butter" })]
+    [InlineData("Spargel", new[] { "Grüne Pasta", "Weißer Spargel mit Butter" })]
+    // The seed's Bolognese has "tomatoes": the ending comes off in English too.
+    [InlineData("Tomaten", new[] { "Bolognese", "Tomatensalat" })]
+    [InlineData("Kokosmilch", new[] { "Curry" })]
+    public async Task Search_ShouldMatchAnIngredientWordByWord_ButNotAnotherKindOfIt(string wanted, string[] expected)
+    {
+        // Arrange
+        var world = await SeedAsync();
+        await SaveAsync(world.Client, world.HouseholdId, "Grüne Pasta", null, null, [("Spargel, grün", null)], []);
+        await SaveAsync(world.Client, world.HouseholdId, "Weißer Spargel mit Butter", null, null, [("weißen Spargel", null)], []);
+        await SaveAsync(world.Client, world.HouseholdId, "Tomatensalat", null, null, [("Tomate", null)], []);
+        await SaveAsync(world.Client, world.HouseholdId, "Curry", null, null, [("Kokosmilch light", null)], []);
+
+        // Act
+        var response = await world.Client.GetAsync(
+            $"/api/v1/recipes?householdId={world.HouseholdId}&ingredient={Uri.EscapeDataString(wanted)}&sort=relevance",
+            Token);
+
+        // Assert
+        var holding = response.Json!.Value.GetProperty("items").EnumerateArray()
+            .Where(item => item.GetProperty("ingredientMatch").GetProperty("matched").GetInt32() > 0)
+            .Select(item => item.GetProperty("title").GetString())
+            .Order(StringComparer.Ordinal);
+        Assert.Equal(expected, holding);
+    }
+
     [Fact]
     public async Task Search_ShouldOmitTheMatch_WhenNoIngredientsWereNamed()
     {

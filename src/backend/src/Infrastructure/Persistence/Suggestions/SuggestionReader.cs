@@ -85,7 +85,7 @@ internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weigh
                  where exists (
                      select 1 from recipe_ingredients ri
                      join ingredient_groups g on g.id = ri.group_id
-                     where g.recipe_id = r.id and ri.name ilike '%' || wanted || '%'))
+                     where g.recipe_id = r.id and {{IngredientSql.Holds("ri", "wanted")}}))
                     as matched_ingredients,
                 -- Bounded: sixty ingredients should not cost sixty string comparisons per candidate
                 -- pair.
@@ -127,7 +127,7 @@ internal sealed class SuggestionReader(DbExecutor executor, RankingWeights weigh
                     select 1 from unnest(@ingredients::text[]) as wanted
                     join ingredient_groups g on g.recipe_id = r.id
                     join recipe_ingredients ri on ri.group_id = g.id
-                    where ri.name ilike '%' || wanted || '%'))
+                    where {{IngredientSql.Holds("ri", "wanted")}}))
             order by s.score desc, r.id desc
             limit @pool::int;
             """;

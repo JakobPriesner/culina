@@ -52,7 +52,7 @@ export function createCookingMediaSession() {
     if (!valid() || !active || !recipe || !supported()) return;
     const index = Math.max(0, Math.min(cooking.session!.currentStepIndex, recipe.steps.length - 1));
     const step = recipe.steps[index];
-    const excerpt = stepExcerpt(step, scaling.amountFor);
+    const excerpt = stepExcerpt(step, scaling.amountFor, scaling.nameFor);
     const timer = selectedTimer();
     const { progress, ...text } = describeStep(
       recipe,

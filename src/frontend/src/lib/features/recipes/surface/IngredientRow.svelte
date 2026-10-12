@@ -28,7 +28,7 @@
   <span class="amount">{amount.text}</span>
 
   <span class="name">
-    {line.name}{#if line.note}<span class="note">, {line.note}</span>{/if}
+    {scaling.nameFor(line)}{#if line.note}<span class="note">, {line.note}</span>{/if}
   </span>
 </li>
 

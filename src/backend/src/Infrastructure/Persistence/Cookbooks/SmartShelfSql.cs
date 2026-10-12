@@ -36,6 +36,6 @@ internal static class SmartShelfSql
          where exists (
              select 1 from recipe_ingredients ri
              join ingredient_groups g on g.id = ri.group_id
-             where g.recipe_id = r.id and ri.name ilike '%' || required || '%'))
+             where g.recipe_id = r.id and {IngredientSql.Holds("ri", "required")}))
         """;
 }

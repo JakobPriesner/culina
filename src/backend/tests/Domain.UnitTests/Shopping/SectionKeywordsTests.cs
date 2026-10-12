@@ -26,16 +26,19 @@ public class SectionKeywordsTests
         Assert.Equal(expected, section);
     }
 
-    [Fact]
-    public void SectionFor_ShouldPreferTheMoreSpecificKeyword()
+    [Theory]
+    [InlineData("Kokosmilch")]
+    [InlineData("Kokosmilch light")]
+    [InlineData("coconut milk")]
+    public void SectionFor_ShouldPreferTheMoreSpecificKeyword(string name)
     {
-        var coconut = ItemName.Create("Kokosmilch")
+        var coconut = ItemName.Create(name)
             .Match(value => value, error => throw new InvalidOperationException(error.Code));
 
         var section = SectionKeywords.SectionFor(coconut);
 
-        // Otherwise coconut milk ends up in the dairy aisle.
-        Assert.Equal(ShoppingSection.DairyEggs, section);
+        // Otherwise canned coconut milk ends up in the dairy aisle.
+        Assert.Equal(ShoppingSection.CannedJars, section);
     }
 
     [Fact]

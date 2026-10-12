@@ -1,3 +1,4 @@
+using Domain.Ingredients;
 using Domain.Planning;
 using Domain.Recipes;
 using Domain.Shared;
@@ -34,8 +35,8 @@ public sealed class ShoppingListItem
     /// <summary>The item's id.</summary>
     public Guid Id { get; }
 
-    /// <summary>What to buy.</summary>
-    public ItemName Name { get; }
+    /// <summary>What to buy, in the number its amount asks for: "1 Zwiebel", "3 Zwiebeln".</summary>
+    public ItemName Name { get; private set; }
 
     /// <summary>
     /// How much, stored unrounded: rounding first and summing second compounds error, and rounding
@@ -53,7 +54,7 @@ public sealed class ShoppingListItem
     public DateTimeOffset? CheckedAt { get; private set; }
 
     /// <summary>Its place in its section.</summary>
-    public int SortOrder { get; private set; }
+    public int SortOrder { get; internal set; }
 
     /// <summary>Whether a person typed it, or typed some of it, rather than only recipes contributing it.</summary>
     public bool IsManual { get; private set; }
@@ -67,7 +68,8 @@ public sealed class ShoppingListItem
         Quantity quantity,
         ShoppingSection section,
         int sortOrder) =>
-        new(CulinaId.New(), name, quantity, section, false, null, sortOrder, isManual: true, []);
+        new ShoppingListItem(CulinaId.New(), name, quantity, section, false, null, sortOrder, isManual: true, [])
+            .WithFittingName();
 
     /// <summary>Adds a line a recipe asked for.</summary>
     public static ShoppingListItem Asked(
@@ -78,7 +80,8 @@ public sealed class ShoppingListItem
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        return new(CulinaId.New(), name, source.Quantity, section, false, null, sortOrder, isManual: false, [source]);
+        return new ShoppingListItem(CulinaId.New(), name, source.Quantity, section, false, null, sortOrder, isManual: false, [source])
+            .WithFittingName();
     }
 
     /// <summary>Rebuilds one that was stored.</summary>
@@ -116,6 +119,7 @@ public sealed class ShoppingListItem
         return AddAmount(source.Quantity).Bind(() =>
         {
             sources.Add(source);
+            FitName();
 
             return Result.Success();
         });
@@ -133,6 +137,7 @@ public sealed class ShoppingListItem
         return AddAmount(quantity).Bind(() =>
         {
             IsManual = true;
+            FitName();
 
             return Result.Success();
         });
@@ -196,6 +201,7 @@ public sealed class ShoppingListItem
             else
             {
                 Quantity = left;
+                FitName();
             }
         }
 
@@ -203,7 +209,23 @@ public sealed class ShoppingListItem
     }
 
     /// <summary>Changes the amount outright, when a person edits the line.</summary>
-    public void SetQuantity(Quantity quantity) => Quantity = quantity;
+    public void SetQuantity(Quantity quantity)
+    {
+        Quantity = quantity;
+        FitName();
+    }
+
+    private ShoppingListItem WithFittingName()
+    {
+        FitName();
+
+        return this;
+    }
+
+    // "1 Tomate" and "3 Tomaten" are four Tomaten; a name the table does not list stays as written.
+    private void FitName() =>
+        Name = ItemName.Create(IngredientNouns.ForAmount(Name.Value, Quantity.Amount, Quantity.Unit is not null, language: null))
+            .Match(fitted => fitted, _ => Name);
 
     // An unmeasured amount ("salt") adds nothing, but still merges.
     private Result AddAmount(Quantity quantity)

@@ -22,7 +22,7 @@
     {@const amount = scaling.amountFor(ingredient).text}
 
     <span class="one">
-      {#if amount}<span class="amount">{amount}</span>{/if}{ingredient.name}
+      {#if amount}<span class="amount">{amount}</span>{/if}{scaling.nameFor(ingredient)}
     </span>
   {/each}
 </p>

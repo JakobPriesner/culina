@@ -78,7 +78,7 @@ public sealed record NutritionIngredient
     /// <summary>The recipe's ingredient line.</summary>
     public required Guid IngredientId { get; init; }
 
-    /// <summary><c>counted</c>, <c>amountNotInGrams</c>, <c>noAmount</c>, <c>unknownFood</c>, <c>excluded</c> or <c>implausible</c>.</summary>
+    /// <summary><c>counted</c>, <c>amountNotInGrams</c>, <c>noAmount</c>, <c>unknownFood</c>, <c>unknownKind</c>, <c>excluded</c> or <c>implausible</c>.</summary>
     public required string Status { get; init; }
 
     /// <summary>
