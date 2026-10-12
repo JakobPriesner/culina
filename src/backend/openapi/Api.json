@@ -11867,9 +11867,47 @@
               "$ref": "#/components/schemas/RecipesGetIngredientsIngredientSuggestion"
             },
             "description": "The suggestions, best first."
+          },
+          "typed": {
+            "oneOf": [
+              {
+                "enum": [
+                  null
+                ],
+                "nullable": true
+              },
+              {
+                "$ref": "#/components/schemas/RecipesGetIngredientsTypedName"
+              }
+            ]
           }
         },
         "description": "What a kitchen could be cooking with."
+      },
+      "RecipesGetIngredientsTypedName": {
+        "required": [
+          "understood",
+          "name",
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "understood": {
+            "type": "string",
+            "description": "The thing and its kinds, which is what lines of it are merged and looked up as: \"Kokosmilch, light\" for\n\"Kokosmilch light\", \"Zwiebeln\" for \"große Zwiebeln\"."
+          },
+          "name": {
+            "type": "string",
+            "description": "The name without what is done to it in the kitchen: \"Zwiebeln\" for \"gehackte Zwiebeln\". Null when nothing is.",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "description": "What is done to it, which belongs in the note: \"gehackt\". Null when nothing is.",
+            "nullable": true
+          }
+        },
+        "description": "How a typed name reads, in the words it was typed in."
       },
       "RecipesGetNotesResponse": {
         "required": [

@@ -235,6 +235,22 @@ public class IngredientMergeEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task GetIngredients_ShouldSayHowTheTypedNameReads()
+    {
+        // Arrange
+        var kitchen = await Kitchen.OpenAsync(postgres);
+
+        // Act
+        var suggested = await kitchen.Client.GetAsync(IngredientsPath(kitchen, "fein gehackte rote Zwiebeln"), Token);
+
+        // Assert
+        var typed = suggested.Json!.Value.GetProperty("typed");
+        Assert.Equal("Zwiebeln, rot", typed.GetProperty("understood").GetString());
+        Assert.Equal("rote Zwiebeln", typed.GetProperty("name").GetString());
+        Assert.Equal("fein gehackt", typed.GetProperty("note").GetString());
+    }
+
+    [Fact]
     public async Task Everything_ShouldAnswerNotFound_ForAnotherHousehold()
     {
         // Arrange

@@ -163,14 +163,32 @@
     return () => clearTimeout(timer);
   });
 
+  /** Whether the store's answer is to the name in the field; it stays after the field loses the cursor. */
+  const answered = $derived(asked && asked === value.name.trim() && known.answered === asked);
+
   /**
    * The household's own name for what was typed, when it is spelt otherwise ("Hähnchenbrust" for
-   * "Hühnchenbrustfilet"): offered so a near-duplicate is not saved. It stays after the field loses
-   * the cursor, until the name changes.
+   * "Hühnchenbrustfilet"): offered so a near-duplicate is not saved.
    */
   const existing = $derived(
-    asked && asked === value.name.trim() && known.answered === asked
+    answered
       ? (known.items.find((one) => one.equivalent && one.name !== asked)?.name ?? null)
+      : null
+  );
+
+  const typed = $derived(answered ? known.typed : null);
+
+  /** Preparation written into the name ("gehackte Zwiebeln"): offered for the note, never moved unasked. */
+  const preparation = $derived(
+    note && typed?.name && typed.note ? { name: typed.name, note: typed.note } : null
+  );
+
+  /** What a new name was understood as, when that is more than the name typed: "Kokosmilch, light". */
+  const understood = $derived(
+    typed &&
+      typed.understood !== asked &&
+      !known.items.some((one) => one.name.toLowerCase() === asked.toLowerCase())
+      ? typed.understood
       : null
   );
 </script>
@@ -242,8 +260,25 @@
     {/if}
   </div>
 
-  {#if existing}
-    <p class="existing" role="status">
+  {#if preparation}
+    <p class="hint" role="status">
+      <span>{m['editor.ingredientPreparation']({ note: preparation.note })}</span>
+      <Button
+        size="sm"
+        variant="ghost"
+        label={m['editor.ingredientMoveToNoteLabel']({ note: preparation.note })}
+        onclick={() =>
+          onchange({
+            ...value,
+            name: preparation.name,
+            note: [value.note.trim(), preparation.note].filter(Boolean).join(', ')
+          })}
+      >
+        {m['editor.ingredientMoveToNote']()}
+      </Button>
+    </p>
+  {:else if existing}
+    <p class="hint" role="status">
       <span>{m['editor.ingredientExisting']({ name: existing })}</span>
       <Button
         size="sm"
@@ -254,6 +289,8 @@
         {m['editor.ingredientUseExisting']()}
       </Button>
     </p>
+  {:else if understood}
+    <p class="hint" role="status">{m['editor.ingredientUnderstood']({ name: understood })}</p>
   {/if}
 </div>
 
@@ -282,7 +319,7 @@
     min-width: 0;
   }
 
-  .existing {
+  .hint {
     display: flex;
     flex-wrap: wrap;
     align-items: center;

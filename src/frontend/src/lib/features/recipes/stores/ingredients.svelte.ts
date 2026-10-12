@@ -9,12 +9,23 @@ export interface IngredientSuggestion {
   readonly equivalent: boolean;
 }
 
+/** How a typed name reads, in the words it was typed in. */
+export interface TypedName {
+  /** The thing and its kinds, what lines of it are merged and looked up as: "Kokosmilch, light". */
+  readonly understood: string;
+  /** The name without what is done to it in the kitchen: "Zwiebeln" for "gehackte Zwiebeln". */
+  readonly name: string | null;
+  /** What is done to it, which belongs in the note: "gehackt". */
+  readonly note: string | null;
+}
+
 /**
  * What an ingredient line could be about: the household's own words first, then a seeded list;
  * suggestions only, never required.
  */
 class IngredientStore {
   #items = $state<IngredientSuggestion[]>([]);
+  #typed = $state<TypedName | null>(null);
   /** The query `items` answer, so a field can tell its own answer from another field's or an older one. */
   #answered = $state('');
   /** The query the current items answer, so a stale reply can't overwrite. */
@@ -22,6 +33,11 @@ class IngredientStore {
 
   get items(): readonly IngredientSuggestion[] {
     return this.#items;
+  }
+
+  /** How the answered query reads. */
+  get typed(): TypedName | null {
+    return this.#typed;
   }
 
   get answered(): string {
@@ -51,6 +67,7 @@ class IngredientStore {
 
     // Suggestions are a convenience; a message about having none would be worse.
     this.#items = result.ok ? [...result.value.items] : [];
+    this.#typed = result.ok ? (result.value.typed ?? null) : null;
     this.#answered = query;
   }
 
@@ -58,6 +75,7 @@ class IngredientStore {
     this.#asked = '';
     this.#answered = '';
     this.#items = [];
+    this.#typed = null;
   }
 
   reset(): void {
