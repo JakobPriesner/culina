@@ -1,3 +1,4 @@
+using Domain.Ingredients;
 using Domain.Planning;
 using Domain.Recipes;
 using Domain.Shared;
@@ -62,7 +63,7 @@ public sealed class ShoppingList
             return existing.Receive(source).Map(() => existing);
         }
 
-        var added = ShoppingListItem.Asked(name, source, section, NextSortOrder(section));
+        var added = ShoppingListItem.Asked(name, source, section, PlaceFor(name, section));
 
         items.Add(added);
 
@@ -90,7 +91,7 @@ public sealed class ShoppingList
             return existing.ReceiveTyped(quantity).Map(() => existing);
         }
 
-        var added = ShoppingListItem.Typed(name, quantity, section, NextSortOrder(section));
+        var added = ShoppingListItem.Typed(name, quantity, section, PlaceFor(name, section));
 
         items.Add(added);
         Version += 1;
@@ -202,6 +203,33 @@ public sealed class ShoppingList
         var item = items.FirstOrDefault(candidate => candidate.Id == itemId);
 
         return item is null ? ShoppingErrors.ItemNotFound : item;
+    }
+
+    /// <summary>
+    /// Where a new line goes: after the other kinds of the same thing still to buy, so "weißer Spargel" sits under
+    /// "grüner Spargel" rather than wherever it arrived; otherwise last in its section.
+    /// </summary>
+    private int PlaceFor(ItemName name, ShoppingSection section)
+    {
+        var reading = IngredientWords.Read(name.Value);
+        var kinds = items
+            .Where(item => item.Section == section && !item.IsChecked &&
+                           IngredientWords.Read(item.Name.Value).HasSameHead(reading))
+            .ToList();
+
+        if (kinds.Count == 0)
+        {
+            return NextSortOrder(section);
+        }
+
+        var place = kinds.Max(item => item.SortOrder) + 1;
+
+        foreach (var later in items.Where(item => item.Section == section && item.SortOrder >= place))
+        {
+            later.SortOrder += 1;
+        }
+
+        return place;
     }
 
     private int NextSortOrder(ShoppingSection section) =>

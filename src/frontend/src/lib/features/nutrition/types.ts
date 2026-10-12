@@ -1,6 +1,12 @@
 /** What the nutrition endpoint says, in the app's own words; the wire shape stops at the mapper. */
 export type NutritionStatus =
-  'counted' | 'amountNotInGrams' | 'noAmount' | 'unknownFood' | 'excluded' | 'implausible';
+  | 'counted'
+  | 'amountNotInGrams'
+  | 'noAmount'
+  | 'unknownFood'
+  | 'unknownKind'
+  | 'excluded'
+  | 'implausible';
 
 /** Why a unit is not counted as grams; only on a line whose status is `amountNotInGrams`. */
 export type NutritionReason = 'spoonOfSolid' | 'volumeOfSolid' | 'count' | 'householdUnit';

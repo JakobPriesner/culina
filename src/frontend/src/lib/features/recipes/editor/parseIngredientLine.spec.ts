@@ -39,6 +39,35 @@ describe('the preparation', () => {
     });
   });
 
+  it.each([
+    ['500 g Spargel, grün', 'Spargel, grün'],
+    ['400 ml Kokosmilch, light', 'Kokosmilch, light'],
+    ['1 Dose Kichererbsen, aus der Dose', 'Kichererbsen, aus der Dose']
+  ])('leaves a kind after the comma to the name in %s', (line, name) => {
+    expect(parse(line)).toMatchObject({ name, note: null });
+  });
+
+  it('starts after the kind', () => {
+    expect(parse('500 g Spargel, weiß, geschält')).toMatchObject({
+      name: 'Spargel, weiß',
+      note: 'geschält'
+    });
+  });
+
+  it('leaves a comma inside parentheses to the name', () => {
+    expect(parse('400 g Tomaten (gehackt, aus der Dose)')).toMatchObject({
+      name: 'Tomaten (gehackt, aus der Dose)',
+      note: null
+    });
+  });
+
+  it('starts after the parentheses', () => {
+    expect(parse('1 Dose Tomaten (stückig), abgetropft')).toMatchObject({
+      name: 'Tomaten (stückig)',
+      note: 'abgetropft'
+    });
+  });
+
   it('is absent when there is no comma', () => {
     expect(parse('2 Zwiebeln').note).toBeNull();
   });

@@ -10,7 +10,8 @@ import type { Step } from '../types';
 const scaling = {
   show: (quantity: { value: number | null; unit: string | null }) => ({
     text: `${quantity.value ?? ''} ${quantity.unit ?? ''}`.trim()
-  })
+  }),
+  nameFor: (of: { name: string }) => of.name
 } as unknown as Scaling;
 
 const butter = {

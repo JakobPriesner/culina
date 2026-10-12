@@ -52,6 +52,7 @@ internal static class NutritionMappings
                 LineStatus.AmountNotInGrams => "amountNotInGrams",
                 LineStatus.NoAmount => "noAmount",
                 LineStatus.UnknownFood => "unknownFood",
+                LineStatus.UnknownKind => "unknownKind",
                 LineStatus.Implausible => "implausible",
                 _ => "excluded"
             },

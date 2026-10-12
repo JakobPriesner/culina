@@ -14,7 +14,7 @@ public class NutritionCalculatorTests
     };
 
     private static readonly Dictionary<string, Food> Table =
-        new[] { Flour, Oil, Butter, Whole("Z999999", kcal: 100m), Whole("G480100", kcal: 28m), Whole("G490100", kcal: 140m), Whole("G561100", kcal: 22m), Whole("G568900", kcal: 20m), Whole("M111200", kcal: 47m), Whole("R111000", kcal: 0m), Whole("N110000", kcal: 0m), Whole("M111300", kcal: 64m), Whole("R821000", kcal: 195m), Whole("X416243", kcal: 4m) }.ToDictionary(food => food.Code);
+        new[] { Flour, Oil, Butter, Whole("Z999999", kcal: 100m), Whole("G480100", kcal: 28m), Whole("G490100", kcal: 140m), Whole("G561100", kcal: 22m), Whole("G568900", kcal: 20m), Whole("M111200", kcal: 47m), Whole("R111000", kcal: 0m), Whole("N110000", kcal: 0m), Whole("M111300", kcal: 64m), Whole("R821000", kcal: 195m), Whole("X416243", kcal: 4m), Whole("G450100", kcal: 18m), Whole("H154000", kcal: 227m) }.ToDictionary(food => food.Code);
 
     private static readonly IReadOnlyDictionary<string, string?> NoCorrections = new Dictionary<string, string?>();
 
@@ -226,6 +226,46 @@ public class NutritionCalculatorTests
 
         // Assert
         Assert.Equal(LineStatus.UnknownFood, result.Ingredients[0].Status);
+    }
+
+    [Theory]
+    [InlineData("Spargel, grün", "G450100")]
+    [InlineData("grünen Spargel", "G450100")]
+    [InlineData("große Tomaten", "G561100")]
+    [InlineData("Bio-Tomaten", "G561100")]
+    public void Calculate_ShouldFindAFood_WrittenAnotherWayThanTheTableWritesIt(string name, string code)
+    {
+        // Act
+        var result = Calculate(Servings(1m), NoCorrections, Line(200m, "g", name));
+
+        // Assert
+        Assert.Equal(LineStatus.Counted, result.Ingredients[0].Status);
+        Assert.Equal(code, result.Ingredients[0].Food?.Code);
+    }
+
+    [Fact]
+    public void Calculate_ShouldNotCountAnotherKindAsItsFood_ButSaySo()
+    {
+        // Act: light coconut milk has about half the energy of the canned food the table has.
+        var result = Calculate(Servings(1m), NoCorrections, Line(400m, "ml", "Kokosmilch light"));
+
+        // Assert
+        Assert.Equal(LineStatus.UnknownKind, result.Ingredients[0].Status);
+        Assert.True(result.Ingredients[0].CanRaiseEnergy);
+    }
+
+    [Fact]
+    public void Calculate_ShouldTakeTheHouseholdsChoice_ForTheSameIngredientWrittenOtherwise()
+    {
+        // Arrange: the household corrected "Tomaten"; this recipe writes "Tomate".
+        var corrections = new Dictionary<string, string?> { [ItemName.Fold("Tomaten")] = Flour.Code };
+
+        // Act
+        var result = Calculate(Servings(1m), corrections, Line(200m, "g", "Tomate"));
+
+        // Assert
+        Assert.True(result.Ingredients[0].Corrected);
+        Assert.Equal(Flour.Code, result.Ingredients[0].Food?.Code);
     }
 
     [Fact]

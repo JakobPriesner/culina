@@ -1,3 +1,4 @@
+using Domain.Search;
 using Domain.Shared;
 using Domain.Shopping;
 
@@ -20,24 +21,29 @@ public static class CommonIngredients
         public string In(Language language) => language == Language.De ? De : En;
     }
 
-    /// <summary>The entries whose name contains the query, best first (names that start with it before those that merely contain it).</summary>
+    /// <summary>
+    /// The entries whose name contains every word of the query, best first (names that start with it before those
+    /// that merely contain it).
+    /// </summary>
     /// <param name="query">What has been typed, which may be empty.</param>
     /// <param name="language">Which language to name them in.</param>
     /// <param name="limit">At most this many.</param>
     public static IReadOnlyList<Entry> Matching(string? query, Language language, int limit)
     {
-        var wanted = ItemName.Fold(query ?? string.Empty);
+        var wanted = SearchText.FoldAe(query ?? string.Empty);
 
         if (wanted.Length == 0)
         {
             return [.. All.Take(limit)];
         }
 
+        var words = wanted.Split(' ');
+
         return
         [
             .. All
-                .Select(entry => (entry, key: ItemName.Fold(entry.In(language))))
-                .Where(found => found.key.Contains(wanted, StringComparison.Ordinal))
+                .Select(entry => (entry, key: SearchText.FoldAe(entry.In(language))))
+                .Where(found => words.All(word => found.key.Contains(word, StringComparison.Ordinal)))
                 .OrderByDescending(found => found.key.StartsWith(wanted, StringComparison.Ordinal))
                 .ThenBy(found => found.key.Length)
                 .Take(limit)

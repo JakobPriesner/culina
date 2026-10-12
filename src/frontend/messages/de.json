@@ -1564,6 +1564,7 @@
   "nutrition.reason.amountNotInGrams": "Menge nicht in Gramm",
   "nutrition.reason.noAmount": "keine Menge",
   "nutrition.reason.unknownFood": "nicht in der Tabelle",
+  "nutrition.reason.unknownKind": "diese Sorte nicht in der Tabelle",
   "nutrition.reason.excluded": "von euch ausgenommen",
   "nutrition.reason.implausible": "Menge sieht falsch aus, nicht gezählt",
   "nutrition.source": "Nährwerte:",

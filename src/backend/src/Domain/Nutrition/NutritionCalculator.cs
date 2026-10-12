@@ -1,3 +1,4 @@
+using Domain.Ingredients;
 using Domain.Recipes;
 using Domain.Shopping;
 
@@ -22,7 +23,13 @@ public enum LineStatus
     Excluded = 4,
 
     /// <summary>The grams would be more than one portion plausibly holds, so it looks like a typo or a unit slip.</summary>
-    Implausible = 5
+    Implausible = 5,
+
+    /// <summary>
+    /// The food is ours but not this kind of it: "Kokosmilch light" is not counted as Kokosmilch, since the light
+    /// one has about half the energy.
+    /// </summary>
+    UnknownKind = 6
 }
 
 /// <summary>One ingredient line's part in a nutrition figure.</summary>
@@ -183,6 +190,45 @@ public static class NutritionCalculator
     /// </summary>
     internal const decimal MaxGramsPerLine = 10_000m;
 
+    // "Tomate" takes the food the household chose for "Tomaten": one ingredient, written otherwise.
+    private static bool TryCorrection(
+        string name,
+        string nameKey,
+        IReadOnlyDictionary<string, string?> corrections,
+        out string? code)
+    {
+        if (corrections.TryGetValue(nameKey, out code))
+        {
+            return true;
+        }
+
+        var reading = IngredientWords.Read(name);
+
+        foreach (var (key, chosen) in corrections)
+        {
+            if (IngredientWords.Read(key).IsSameIngredient(reading))
+            {
+                code = chosen;
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // The table lists one way of writing a food: "große Zwiebeln" is Zwiebeln, "Spargel, grün" is grüner Spargel.
+    private static FoodName? MatchWrittenOtherwise(string name) =>
+        IngredientWords.Spellings(name).Select(FoodNames.Match).FirstOrDefault(entry => entry is not null);
+
+    // Its thing is a food, only not this kind: counting the light can as the full one would double its energy.
+    private static bool IsUnknownKind(string name)
+    {
+        var reading = IngredientWords.Read(name);
+
+        return reading.Qualifiers.Count > 0 && FoodNames.Match(string.Join(' ', reading.Head)) is not null;
+    }
+
     private static NutritionLine Read(
         RecipeIngredient ingredient,
         Func<string, Food?> findFood,
@@ -195,7 +241,7 @@ public static class NutritionCalculator
             new NutritionLine(ingredient.Id, status, null, null, GramsBasis.None, corrected, null);
 
         var nameKey = ItemName.Fold(ingredient.Name);
-        var corrected = corrections.TryGetValue(nameKey, out var code);
+        var corrected = TryCorrection(ingredient.Name, nameKey, corrections, out var code);
 
         if (corrected && code is null)
         {
@@ -206,13 +252,13 @@ public static class NutritionCalculator
         // by unit; a name the table matched is, since broth is a powder or a liquid by its unit.
         var entry = corrected
             ? FoodNames.All.FirstOrDefault(one => one.Code == code)
-            : FoodNames.Match(ingredient.Name);
+            : FoodNames.Match(ingredient.Name) ?? MatchWrittenOtherwise(ingredient.Name);
         var name = entry is null || corrected ? entry : NutritionGrams.Resolve(ingredient.Quantity, entry);
         var food = corrected ? findFood(code!) : name is null ? null : findFood(name.Code);
 
         if (food is null)
         {
-            return uncounted(LineStatus.UnknownFood, corrected);
+            return uncounted(!corrected && IsUnknownKind(ingredient.Name) ? LineStatus.UnknownKind : LineStatus.UnknownFood, corrected);
         }
 
         // A food nobody wrote density, egg words or a label for counts by mass only and is named by BLS.

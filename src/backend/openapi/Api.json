@@ -11964,11 +11964,12 @@
               "amountNotInGrams",
               "noAmount",
               "unknownFood",
+              "unknownKind",
               "excluded",
               "implausible"
             ],
             "type": "string",
-            "description": "`counted`, `amountNotInGrams`, `noAmount`, `unknownFood`, `excluded` or `implausible`."
+            "description": "`counted`, `amountNotInGrams`, `noAmount`, `unknownFood`, `unknownKind`, `excluded` or `implausible`."
           },
           "reason": {
             "enum": [
