@@ -359,10 +359,12 @@ create table nutrition_food_overrides (
 - `name_key` is `ItemName.Fold`, the same key the section override uses.
 - `food_code` null means "this is not something to count", for the line no BLS
   food fits. Removing the row returns the line to the table's default.
-- **The household it is read in**, not the one the recipe belongs to. A
-  correction is something a household *did*, and `domain-model.md` keeps
-  everything a household did with the household it happened in. An inherited
-  recipe therefore reads with the heir's corrections.
+- **The household it is read in**, not the one the recipe belongs to, and
+  then the households it inherits from, nearest first. A correction is
+  something a household *did* and is stored with it, but an heir counts with
+  what its parent said unless it said otherwise itself: otherwise one recipe
+  shows two figures in two kitchens that share it (amended 2026-10-12,
+  culina-v2-knv7; it used to be the heir's corrections only).
 - Any member may correct, as with sections.
 - No version column: it is a fact at a known address, written idempotently,
   like `cookbook_recipes` and `suggestion_dismissals`.

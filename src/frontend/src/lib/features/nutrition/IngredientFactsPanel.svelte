@@ -204,6 +204,7 @@
 
 <NutritionCorrectionSheet
   name={chosen?.name ?? null}
+  {householdId}
   line={chosen ? lineOf(chosen) : null}
   onchoose={(hit) => chosen && void chooseFood(chosen.name, hit)}
   onexclude={() => chosen && void chooseFood(chosen.name, null)}

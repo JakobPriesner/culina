@@ -6,7 +6,8 @@ namespace Application.Recipes.GetNutrition;
 
 internal static class NutritionMappings
 {
-    internal static Response ToResponse(this NutritionResult figure) =>
+    /// <summary>The answer; <paramref name="whose"/> names the household behind a line's choice and weight, when the reader has one.</summary>
+    internal static Response ToResponse(this NutritionResult figure, Func<NutritionLine, Whose>? whose = null) =>
         new()
         {
             Per = figure.Per == YieldKind.Pieces ? "piece" : "serving",
@@ -15,7 +16,7 @@ internal static class NutritionMappings
             Counted = figure.Counted,
             Lines = figure.Lines,
             Values = figure.Values.ToContract(),
-            Ingredients = [.. figure.Ingredients.Select(ToContract)],
+            Ingredients = [.. figure.Ingredients.Select(line => line.ToContract(whose?.Invoke(line)))],
             Source = new NutritionSource
             {
                 Name = NutritionData.Source,
@@ -41,7 +42,7 @@ internal static class NutritionMappings
     private static Contracts.Recipes.GetNutrition.NutritionValue ToContract(this LabelValue value) =>
         new() { Value = value.Value, AtLeast = value.AtLeast, Estimated = value.Estimated };
 
-    private static NutritionIngredient ToContract(NutritionLine line) =>
+    private static NutritionIngredient ToContract(this NutritionLine line, Whose? whose) =>
         new()
         {
             IngredientId = line.IngredientId,
@@ -74,6 +75,8 @@ internal static class NutritionMappings
                 _ => null
             },
             Corrected = line.Corrected,
+            ChosenBy = line.Corrected ? whose?.ChosenBy : null,
+            WeighedBy = line.Via == GramsBasis.HouseholdWeight ? whose?.WeighedBy : null,
             CanRaiseEnergy = line.CanRaiseEnergy,
             EnergyKcal = line.EnergyKcal,
             UnitKey = line.UnitKey,
@@ -100,3 +103,8 @@ internal static class NutritionMappings
             LabelEn = labelEn ?? food.NameEn
         };
 }
+
+/// <summary>Which household chose a line's food, and which set the weight it was counted with.</summary>
+/// <param name="ChosenBy">The household whose food choice applies, if any.</param>
+/// <param name="WeighedBy">The household whose unit weight applies, if any.</param>
+internal sealed record Whose(Guid? ChosenBy, Guid? WeighedBy);

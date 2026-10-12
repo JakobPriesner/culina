@@ -9,7 +9,7 @@ using Domain.Shopping;
 namespace Application.Nutrition;
 
 /// <summary>Says what one unit of an ingredient weighs in a household: "bei uns wiegt 1 Zwiebel 150 g".</summary>
-/// <param name="HouseholdId">Whose weight; never the household it inherits from.</param>
+/// <param name="HouseholdId">Whose weight; never the household it inherits from. Its heirs count with it too.</param>
 /// <param name="UserId">Who is saying it.</param>
 /// <param name="Name">The ingredient name as written; folded here.</param>
 /// <param name="Unit">The unit as written; a spelling of a known unit is that unit, and anything else is the household's own word.</param>

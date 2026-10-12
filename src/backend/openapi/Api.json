@@ -11503,7 +11503,19 @@
           },
           "corrected": {
             "type": "boolean",
-            "description": "Whether the household chose the food (or to leave it out) instead of the default."
+            "description": "Whether a household chose the food (or to leave it out) instead of the default: the reader's own, or one it inherits from."
+          },
+          "chosenBy": {
+            "type": "string",
+            "description": "The household whose choice `corrected` means: the reader's own, or the nearest one it inherits from that\nchose. Only when corrected.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "weighedBy": {
+            "type": "string",
+            "description": "The household whose weight counted the line: the reader's own, or the nearest one it inherits from that set one.\nOnly when `via` is `householdWeight`.",
+            "format": "uuid",
+            "nullable": true
           },
           "canRaiseEnergy": {
             "type": "boolean",

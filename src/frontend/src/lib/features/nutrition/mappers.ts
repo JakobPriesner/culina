@@ -14,6 +14,8 @@ const toLine = (wire: WireLine): NutritionLine => ({
   // The document's enum still lacks the two newest ways; the server sends them.
   via: (wire.via as NutritionVia | null | undefined) ?? null,
   corrected: wire.corrected,
+  chosenBy: wire.chosenBy ?? null,
+  weighedBy: wire.weighedBy ?? null,
   canRaiseEnergy: wire.canRaiseEnergy,
   energyKcal: wire.energyKcal ?? null,
   unitKey: wire.unitKey ?? null,

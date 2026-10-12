@@ -3586,7 +3586,7 @@ export interface components {
              * @enum {string|null}
              */
             via?: "mass" | "density" | "eggSize" | "householdWeight" | "typicalWeight" | null;
-            /** @description Whether the household chose the food (or to leave it out) instead of the default. */
+            /** @description Whether a household chose the food (or to leave it out) instead of the default: the reader's own, or one it inherits from. */
             corrected: boolean;
             /**
              * @description Whether this line, left out of the figure, could still add energy to it: it is not counted, was not excluded
@@ -3759,6 +3759,18 @@ export interface components {
             nextCursor?: string | null;
         };
         /** @description A recipe as whoever follows the link sees it. */
+            /**
+             * Format: uuid
+             * @description The household whose choice `corrected` means: the reader's own, or the nearest one it inherits from that
+             *     chose. Only when corrected.
+             */
+            chosenBy?: string | null;
+            /**
+             * Format: uuid
+             * @description The household whose weight counted the line: the reader's own, or the nearest one it inherits from that set one.
+             *     Only when `via` is `householdWeight`.
+             */
+            weighedBy?: string | null;
         RecipesGetSharedResponse: {
             /** @description What it is called. */
             title: string;
