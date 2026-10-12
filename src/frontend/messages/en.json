@@ -1861,5 +1861,6 @@
   "me.server.switch": "Use a different server",
   "me.server.switchBody": "Signs you out here and asks for another address.",
   "kitchen.native.paused": "Paused",
-  "kitchen.native.more": "+{count} more"
+  "kitchen.native.more": "+{count} more",
+  "error.backgrounded": "This stopped while Culina was in the background. What arrived is kept; try again to finish it."
 }

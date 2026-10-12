@@ -17,6 +17,7 @@ const catalogue = m as unknown as Record<string, Message>;
  */
 const clientSaid: Record<string, Message> = {
   [ErrorCodes.offline]: m['error.offline'],
+  [ErrorCodes.backgrounded]: m['error.backgrounded'],
   [ErrorCodes.timeout]: m['error.timeout'],
   [ErrorCodes.unexpected]: m['error.unexpected.body']
 };
