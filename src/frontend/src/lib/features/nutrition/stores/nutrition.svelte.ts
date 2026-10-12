@@ -100,7 +100,7 @@ class NutritionStore {
       recipeId,
       householdId,
       ingredientIds,
-      (line) => corrected(line, correction),
+      (line) => corrected(line, correction, householdId),
       () =>
         correction.kind === 'default'
           ? http.DELETE('/api/v1/households/{householdId}/ingredients/{name}', { params: { path } })
@@ -130,7 +130,10 @@ class NutritionStore {
       recipeId,
       householdId,
       ingredientIds,
-      (line) => (grams === null ? line : { ...line, via: 'householdWeight', source: null }),
+      (line) =>
+        grams === null
+          ? line
+          : { ...line, via: 'householdWeight', weighedBy: householdId, source: null },
       () =>
         grams === null
           ? http.DELETE('/api/v1/households/{householdId}/ingredients/{name}/units/{unit}', {
@@ -189,14 +192,19 @@ class NutritionStore {
 type Ask = Parameters<typeof request<Parameters<typeof readNutrition>[0]>>[0];
 
 /** The line as the correction will make it; the server's reading replaces this a moment later. */
-const corrected = (line: NutritionLine, correction: Correction): NutritionLine => {
+const corrected = (
+  line: NutritionLine,
+  correction: Correction,
+  householdId: string
+): NutritionLine => {
   switch (correction.kind) {
     case 'food':
       return {
         ...line,
         status: line.status === 'excluded' ? 'counted' : line.status,
         food: correction.food,
-        corrected: true
+        corrected: true,
+        chosenBy: householdId
       };
     case 'exclude':
       return {
@@ -206,10 +214,12 @@ const corrected = (line: NutritionLine, correction: Correction): NutritionLine =
         grams: null,
         via: null,
         energyKcal: null,
-        corrected: true
+        corrected: true,
+        chosenBy: householdId
       };
     case 'default':
-      return { ...line, corrected: false };
+      // What a household it inherits from chose, if anything, comes with the server's reading.
+      return { ...line, corrected: false, chosenBy: null };
   }
 };
 

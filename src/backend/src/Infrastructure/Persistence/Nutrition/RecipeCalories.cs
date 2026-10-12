@@ -49,8 +49,14 @@ internal sealed class RecipeCalories(
                 Ingredients: (await reader.ReadAsync<IngredientRow>().ConfigureAwait(false)).ToList()),
             cancellationToken).ConfigureAwait(false);
 
-        var choices = await corrections.AllAsync(householdId, cancellationToken).ConfigureAwait(false);
-        var weighed = await weights.AllAsync(householdId, cancellationToken).ConfigureAwait(false);
+        // What the household said, else what the households it inherits from said, as on the recipe page.
+        var choices = (await corrections.ForNamesAsync(library, null, cancellationToken).ConfigureAwait(false))
+            .ToDictionary(pair => pair.Key, pair => pair.Value.FoodCode, StringComparer.Ordinal);
+        var weighed = (await weights.ForNamesAsync(library, null, cancellationToken).ConfigureAwait(false))
+            .ToDictionary(
+                pair => pair.Key,
+                pair => (IReadOnlyDictionary<string, decimal>)pair.Value.ToDictionary(unit => unit.Key, unit => unit.Value.Grams),
+                StringComparer.Ordinal);
         var typical = await weights.UsesTypicalWeightsAsync(householdId, cancellationToken).ConfigureAwait(false);
         var lines = inputs.Ingredients.ToLookup(line => line.RecipeId);
         var figures = new Dictionary<Guid, LabelValue>();

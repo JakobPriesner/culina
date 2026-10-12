@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
 
   import { Button, SearchField, Sheet, Skeleton } from '$ds';
+  import { session } from '$features/auth/session.svelte';
   import { formatNumber, m } from '$shell/i18n';
   import { createLoadingState } from '$shell/loadingState.svelte';
   import { preferences } from '$shell/preferences.svelte';
@@ -14,13 +15,16 @@
 
   /**
    * What an ingredient name really is, answered in one tap, like the shopping list's "move to section":
-   * the food's usual kinds first (the current one ticked), what one unit of it weighs when the recipe counts
-   * in units, then a search of the table. It says plainly that the answer holds for every recipe of the
-   * household, and nothing in it blocks the page: a search that fails only says so.
+   * what it counts as now and whose choice that is (the table's, the household's, or one it inherits from),
+   * then similar foods, what one unit weighs when the recipe counts in units, and a search of the table.
+   * The search opens on the name only when there are no similar foods to offer, so a long tail of soups
+   * never pushes them away. Nothing in it blocks the page: a search that fails only says so.
    */
   interface Props {
     /** The ingredient as written; null while the sheet is shut. */
     name: string | null;
+    /** The household the answer is given for; a choice another household made is named as theirs. */
+    householdId?: string | null;
     /** What the line is now: its food, and whether the household chose it. */
     line: NutritionLine | null;
     /** The recipe's own word for the unit of the line ("clove", "tbsp"); null when it has none to weigh. */
@@ -37,6 +41,7 @@
 
   let {
     name,
+    householdId = null,
     line,
     unit = null,
     perUnit = null,
@@ -66,6 +71,15 @@
   async function search(query: string) {
     const mine = ++latest;
 
+    if (query.trim() === '') {
+      loading.stop();
+      foods = [];
+      searched = null;
+      failed = false;
+
+      return;
+    }
+
     loading.start();
 
     const result = await searchFoods(query.trim());
@@ -80,22 +94,18 @@
     searched = query.trim();
   }
 
-  // Opens on the name itself: the likeliest answer is a better-named food for exactly what was written.
+  // Without similar foods, the likeliest answer is a better-named food for exactly what was written, so
+  // the search opens on the name; with them, it waits for the person to type. Only a new name re-runs it.
   $effect(() => {
     clearTimeout(timer);
 
-    if (name === null) {
-      latest++;
-      loading.stop();
-      foods = [];
-      searched = null;
-      failed = false;
+    const opening = name;
+    const offered = untrack(() => (line?.variants ?? []).length > 0);
 
-      return;
-    }
+    const query = opening === null || offered ? '' : opening;
 
-    typed = name;
-    void search(name);
+    typed = query;
+    void search(query);
   });
 
   function typing(value: string) {
@@ -113,11 +123,58 @@
   const bls = (food: NutritionFood) =>
     foodName(food) === foodLabel(food) ? null : m['nutrition.bls']({ name: foodName(food) });
 
+  const per100 = (kcal: number) =>
+    m['nutrition.correct.per100']({
+      kcal: formatNumber(roundForLabel('energy', kcal, false).value)
+    });
+
   const excluded = $derived(line?.status === 'excluded');
   const current = $derived(line?.food ?? null);
   const corrected = $derived(line?.corrected ?? false);
   const variants = $derived(line?.variants ?? []);
-  const variantIsCurrent = $derived(variants.some((one) => one.code === current?.code));
+  const currentVariant = $derived(variants.find((one) => one.code === current?.code));
+  /** The similar foods other than the one on show above. */
+  const alternatives = $derived(variants.filter((one) => one.code !== current?.code));
+
+  /** Whether a household chose for itself; a line from before the server named who counts as its own. */
+  const ownChoice = (by: string | null | undefined) => !by || by === householdId;
+
+  /** Another household chose, so taking back is not this household's to do. */
+  const inheritedChoice = $derived(corrected && !ownChoice(line?.chosenBy));
+
+  /** Who said so: the table, this household, or a household it inherits from (by name when the session knows it). */
+  const whoseWords = (by: string | null | undefined) => {
+    if (ownChoice(by)) {
+      return m['nutrition.correct.yours']();
+    }
+
+    const household = session.householdName(by!);
+
+    return household
+      ? m['nutrition.correct.chosenIn']({ household })
+      : m['nutrition.correct.chosenAbove']();
+  };
+
+  const whose = $derived(corrected ? whoseWords(line?.chosenBy) : m['nutrition.correct.default']());
+
+  /** Its energy, when the similar foods know it, and whose choice it is. */
+  const currentDetail = $derived(
+    [
+      currentVariant && currentVariant.energyKcal !== null
+        ? per100(currentVariant.energyKcal)
+        : null,
+      whose
+    ]
+      .filter(Boolean)
+      .join(' · ')
+  );
+
+  /** Taking back an heir's own choice leads to what it inherits, which need not be the default. */
+  const inherits = $derived(
+    householdId !== null &&
+      (session.households.find((one) => one.householdId === householdId)?.inheritsFrom ?? [])
+        .length > 0
+  );
 
   const variantLabel = (variant: { labelDe: string; labelEn: string }) =>
     preferences.locale === 'de' ? variant.labelDe : variant.labelEn;
@@ -133,22 +190,20 @@
   /** The weight section: only for a line counted in units, with a way to say it. */
   const weighing = $derived(Boolean(onweigh && unit && line?.unitKey));
   const householdWeight = $derived(line?.via === 'householdWeight');
+  const ownWeight = $derived(householdWeight && ownChoice(line?.weighedBy));
   const typicalWeight = $derived(line?.via === 'typicalWeight');
-  const typicalHint = $derived(
+  const weightHint = $derived(
     typicalWeight && perUnit !== null
       ? [m['nutrition.weight.typical']({ grams: gramsWords(perUnit) }), line?.source]
           .filter(Boolean)
           .join(' · ')
-      : undefined
+      : householdWeight && !ownWeight
+        ? whoseWords(line?.weighedBy)
+        : undefined
   );
 
   /** The food on show above is not offered a second time. */
   const others = $derived(foods.filter((food) => food.code !== current?.code));
-
-  const per100 = (kcal: number) =>
-    m['nutrition.correct.per100']({
-      kcal: formatNumber(roundForLabel('energy', kcal, false).value)
-    });
 </script>
 
 {#snippet mark(here: boolean)}
@@ -177,32 +232,7 @@
   <div class="body">
     <p class="reach">{m['nutrition.correct.reach']({ name: name ?? '' })}</p>
 
-    {#if variants.length > 0}
-      <h3 class="sectionTitle">{m['nutrition.variants.title']()}</h3>
-      <ul class="foods variantsList" aria-label={m['nutrition.variants.title']()}>
-        {#each variants as variant (variant.code)}
-          {@const here = variant.code === current?.code}
-          <li>
-            <button
-              type="button"
-              class="food"
-              aria-current={here ? 'true' : undefined}
-              onclick={() => (here ? onclose() : chooseVariant(variant))}
-            >
-              {@render mark(here)}
-              <span class="words">
-                <span class="name">{variantLabel(variant)}</span>
-                {#if variant.energyKcal !== null}
-                  <span class="quiet">{per100(variant.energyKcal)}</span>
-                {/if}
-              </span>
-            </button>
-          </li>
-        {/each}
-      </ul>
-    {/if}
-
-    {#if (current || excluded) && !variantIsCurrent}
+    {#if current || excluded}
       <h3 class="sectionTitle">{m['nutrition.correct.now']()}</h3>
       <ul class="foods" aria-label={m['nutrition.correct.now']()}>
         <li>
@@ -212,16 +242,35 @@
               {#if current}
                 <span class="name">{foodLabel(current)}</span>
                 {#if bls(current)}<span class="quiet">{bls(current)}</span>{/if}
-                <span class="quiet">
-                  {corrected ? m['nutrition.correct.yours']() : m['nutrition.correct.default']()}
-                </span>
+                <span class="quiet">{currentDetail}</span>
               {:else}
                 <span class="name">{m['nutrition.correct.exclude']()}</span>
-                <span class="quiet">{m['nutrition.reason.excluded']()}</span>
+                <span class="quiet">
+                  {inheritedChoice ? whose : m['nutrition.reason.excluded']()}
+                </span>
               {/if}
             </span>
           </button>
         </li>
+      </ul>
+    {/if}
+
+    {#if alternatives.length > 0}
+      <h3 class="sectionTitle">{m['nutrition.variants.title']()}</h3>
+      <ul class="foods variantsList" aria-label={m['nutrition.variants.title']()}>
+        {#each alternatives as variant (variant.code)}
+          <li>
+            <button type="button" class="food" onclick={() => chooseVariant(variant)}>
+              {@render mark(false)}
+              <span class="words">
+                <span class="name">{variantLabel(variant)}</span>
+                {#if variant.energyKcal !== null}
+                  <span class="quiet">{per100(variant.energyKcal)}</span>
+                {/if}
+              </span>
+            </button>
+          </li>
+        {/each}
       </ul>
     {/if}
 
@@ -236,9 +285,9 @@
           <UnitWeightForm
             label={m['nutrition.weight.field']()}
             initial={householdWeight || typicalWeight ? perUnit : null}
-            hint={typicalHint}
+            hint={weightHint}
             saveLabel={m['nutrition.weight.save']()}
-            removeLabel={householdWeight ? m['nutrition.weight.remove']() : undefined}
+            removeLabel={ownWeight ? m['nutrition.weight.remove']() : undefined}
             onsave={(grams) => onweigh?.(grams)}
             onremove={() => onweigh?.(null)}
           />
@@ -259,7 +308,12 @@
       oninput={typing}
     />
 
-    <div class="results" aria-live="polite" aria-busy={loading.showing}>
+    <div
+      class="results"
+      class:open={searched !== null || loading.showing}
+      aria-live="polite"
+      aria-busy={loading.showing}
+    >
       {#if loading.showing}
         <div class="skeletons" aria-label={m['nutrition.correct.loading']()}>
           {#each [0, 1, 2, 3] as row (row)}
@@ -268,7 +322,9 @@
         </div>
       {:else if failed}
         <p class="quiet">{m['nutrition.correct.failed']()}</p>
-      {:else if searched !== null && others.length === 0}
+      {:else if searched === null}
+        <!-- Nothing asked yet: the similar foods above are the offer. -->
+      {:else if others.length === 0}
         <p class="quiet">{m['nutrition.correct.none']({ query: searched })}</p>
       {:else}
         <ul class="foods">
@@ -291,8 +347,10 @@
   </div>
 
   {#snippet footer()}
-    {#if corrected}
-      <Button onclick={onreset}>{m['nutrition.correct.reset']()}</Button>
+    {#if corrected && !inheritedChoice}
+      <Button onclick={onreset}>
+        {inherits ? m['nutrition.correct.undo']() : m['nutrition.correct.reset']()}
+      </Button>
     {/if}
     {#if !excluded}
       <Button onclick={onexclude}>{m['nutrition.correct.exclude']()}</Button>
@@ -405,7 +463,8 @@
     padding: var(--space-2) var(--space-3);
   }
 
-  .results {
+  /* Room for the answer once a search runs, so the sheet does not jump as results arrive. */
+  .results.open {
     min-height: 12rem;
   }
 </style>

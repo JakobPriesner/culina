@@ -105,6 +105,40 @@ public class FoodCorrectionTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Put_ShouldReachEveryHeir_UntilTheHeirChoosesForItself()
+    {
+        // Arrange
+        var kitchen = await Kitchen.OpenAsync(postgres);
+        var recipe = await RecipeAsync(kitchen, "Brot", [("Butter", 100m)]);
+        var flat = await HeirAsync(kitchen);
+        var heirPath = $"{NutritionPath(recipe)}?householdId={flat}";
+        var heirBefore = await kitchen.Client.GetAsync(heirPath, Token);
+
+        // Act: the kitchen chooses, then the heir chooses for itself, then takes its choice back.
+        await PutAsync(kitchen.Client, kitchen.HouseholdId, "Butter", Buttermilk);
+        var inherited = await kitchen.Client.GetAsync(heirPath, Token);
+        await PutAsync(kitchen.Client, flat, "Butter", Oats);
+        var own = await kitchen.Client.GetAsync(heirPath, Token);
+        var owner = await kitchen.Client.GetAsync(NutritionPath(recipe), Token);
+        await kitchen.Client.DeleteAsync(IngredientPath(flat, "Butter"), Token);
+        var again = await kitchen.Client.GetAsync(heirPath, Token);
+
+        // Assert: the heir counts what its parent chose, says whose choice it is, and its own choice wins.
+        Assert.NotEqual(heirBefore.ETag, inherited.ETag);
+        Assert.Equal(Buttermilk, Lines(inherited)[0].GetProperty("food").GetProperty("code").GetString());
+        Assert.True(Lines(inherited)[0].GetProperty("corrected").GetBoolean());
+        Assert.Equal(kitchen.HouseholdId, Lines(inherited)[0].GetProperty("chosenBy").GetGuid());
+
+        Assert.Equal(Oats, Lines(own)[0].GetProperty("food").GetProperty("code").GetString());
+        Assert.Equal(flat, Lines(own)[0].GetProperty("chosenBy").GetGuid());
+        Assert.Equal(Buttermilk, Lines(owner)[0].GetProperty("food").GetProperty("code").GetString());
+        Assert.Equal(kitchen.HouseholdId, Lines(owner)[0].GetProperty("chosenBy").GetGuid());
+
+        Assert.Equal(inherited.ETag, again.ETag);
+        Assert.Equal(Buttermilk, Lines(again)[0].GetProperty("food").GetProperty("code").GetString());
+    }
+
+    [Fact]
     public async Task Put_ShouldExcludeTheLine_WhenTheFoodIsNull()
     {
         // Arrange

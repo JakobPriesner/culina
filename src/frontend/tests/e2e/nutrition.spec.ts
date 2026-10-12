@@ -327,7 +327,9 @@ test.describe('nutrition on a recipe @offline', () => {
 
       await expect(sheet).toBeVisible();
       await expect(
-        sheet.getByText('Applies to every recipe of yours that uses “Olivenöl”.')
+        sheet.getByText(
+          'Applies to every recipe of yours that uses “Olivenöl”, and to households that inherit from you.'
+        )
       ).toBeVisible();
       await expect(sheet.getByRole('button', { name: /Olive oil\s*Default/ })).toHaveAttribute(
         'aria-current',

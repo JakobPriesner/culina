@@ -985,6 +985,29 @@ describe('estimates are said where they are shown', () => {
     expect(rowOf('egg')).not.toHaveTextContent('Source');
   });
 
+  it("says a weight is inherited, not the household's own", async () => {
+    serverAnswers(withLine(estimated(), egg, { weighedBy: 'parent' }));
+    show();
+    await toggle();
+
+    const rows = screen.getAllByRole('listitem');
+
+    expect(rows.find((row) => row.textContent?.includes('egg'))).toHaveTextContent(
+      '60 g · inherited value'
+    );
+  });
+
+  it("says an exclusion is inherited, not the household's own", async () => {
+    serverAnswers(
+      withLine(partial(), salt, { status: 'excluded', corrected: true, chosenBy: 'parent' })
+    );
+    show();
+    await toggle();
+
+    expect(screen.getByText('chosen in a household you inherit from')).toBeInTheDocument();
+    expect(screen.queryByText('excluded by your household')).not.toBeInTheDocument();
+  });
+
   it('follows the servings on the page for the weight of a row', async () => {
     serverAnswers(estimated());
     show(4);

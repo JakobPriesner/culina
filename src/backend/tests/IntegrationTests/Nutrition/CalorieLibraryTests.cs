@@ -86,6 +86,25 @@ public class CalorieLibraryTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Filter_ShouldFollowTheCorrectionsOfTheHouseholdAnHeirInheritsFrom()
+    {
+        var kitchen = await Kitchen.OpenAsync(postgres);
+        var id = await RecipeAsync(kitchen, "Flour", 100m);
+        var inherited = (await kitchen.Client.PostAsync("/api/v1/households",
+            new { name = "Other kitchen", inheritsFrom = kitchen.HouseholdId }, Token))
+            .Json!.Value.GetProperty("householdId").GetGuid();
+        var before = await kitchen.Client.GetAsync($"/api/v1/recipes?householdId={inherited}&maxKcal=100", Token);
+
+        var correction = await kitchen.Client.PutAsync($"/api/v1/households/{kitchen.HouseholdId}/ingredients/Mehl",
+            new { food = "Q120000" }, Token);
+        Assert.Equal(HttpStatusCode.NoContent, correction.StatusCode);
+
+        var heir = await kitchen.Client.GetAsync($"/api/v1/recipes?householdId={inherited}&maxKcal=100", Token);
+        Assert.Equal(id, Assert.Single(Items(before)).GetProperty("recipeId").GetGuid());
+        Assert.Empty(Items(heir));
+    }
+
+    [Fact]
     public async Task SavedSearch_ShouldRoundTripACalorieOnlyFilter_AndRejectInvalidLimits()
     {
         var kitchen = await Kitchen.OpenAsync(postgres);

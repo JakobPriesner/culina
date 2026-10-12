@@ -99,8 +99,20 @@ public sealed record NutritionIngredient
     /// </summary>
     public string? Via { get; init; }
 
-    /// <summary>Whether the household chose the food (or to leave it out) instead of the default.</summary>
+    /// <summary>Whether a household chose the food (or to leave it out) instead of the default: the reader's own, or one it inherits from.</summary>
     public required bool Corrected { get; init; }
+
+    /// <summary>
+    /// The household whose choice <c>corrected</c> means: the reader's own, or the nearest one it inherits from that
+    /// chose. Only when corrected.
+    /// </summary>
+    public Guid? ChosenBy { get; init; }
+
+    /// <summary>
+    /// The household whose weight counted the line: the reader's own, or the nearest one it inherits from that set one.
+    /// Only when <c>via</c> is <c>householdWeight</c>.
+    /// </summary>
+    public Guid? WeighedBy { get; init; }
 
     /// <summary>
     /// Whether this line, left out of the figure, could still add energy to it: it is not counted, was not excluded

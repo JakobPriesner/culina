@@ -55,8 +55,12 @@ export interface NutritionLine {
   /** Grams counted, at the recipe's own yield. */
   readonly grams: number | null;
   readonly via: NutritionVia | null;
-  /** The household chose this food (or to leave the line out) instead of the table's default. */
+  /** A household chose this food (or to leave the line out) instead of the table's default: the reader's own, or one it inherits from. */
   readonly corrected: boolean;
+  /** Which household made that choice; absent when not corrected or not known. */
+  readonly chosenBy?: string | null;
+  /** Which household's weight counted the line; only when `via` is `householdWeight`. */
+  readonly weighedBy?: string | null;
   /** Whether leaving this line out of the figure could still make the energy higher than shown. */
   readonly canRaiseEnergy: boolean;
   /** Kilocalories per portion; the lines add up to the headline. */

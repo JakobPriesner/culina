@@ -3,6 +3,7 @@
 
   import type { AppError } from '$api';
   import { IconButton, VisuallyHidden } from '$ds';
+  import { session } from '$features/auth/session.svelte';
   import { explain } from '$shell/explain';
   import { formatNumber, m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
@@ -143,7 +144,10 @@
       case 'exclude':
         return m['nutrition.correct.doneExcluded']({ name });
       case 'default':
-        return m['nutrition.correct.doneDefault']({ name });
+        // Read after the new answer: an heir that takes its choice back counts what it inherits, if anything.
+        return rows.some((row) => row.ingredient.name === name && row.line.corrected)
+          ? m['nutrition.correct.doneUndone']({ name })
+          : m['nutrition.correct.doneDefault']({ name });
     }
   };
 
@@ -189,8 +193,17 @@
         return m['nutrition.grams.eggSize']({ grams });
       case 'typicalWeight':
         return m['nutrition.grams.typical']({ grams });
-      case 'householdWeight':
-        return m['nutrition.grams.household']({ grams });
+      case 'householdWeight': {
+        const from = inheritedName(line.weighedBy);
+
+        if (from === null) {
+          return m['nutrition.grams.household']({ grams });
+        }
+
+        return from
+          ? m['nutrition.grams.inherited']({ grams, household: from })
+          : m['nutrition.grams.inheritedSomewhere']({ grams });
+      }
       default:
         return null;
     }
@@ -215,9 +228,21 @@
     householdUnit: m['nutrition.reason.householdUnit']
   };
 
+  /** Whose weight or choice: null for the household's own, else the household it inherits it from ('' when the session does not know its name). */
+  const inheritedName = (by: string | null | undefined) =>
+    !by || by === householdId ? null : (session.householdName(by) ?? '');
+
   const reason = (line: NutritionLine) => {
     if (line.status === 'counted') {
       return '';
+    }
+
+    const excludedBy = line.status === 'excluded' ? inheritedName(line.chosenBy) : null;
+
+    if (excludedBy !== null) {
+      return excludedBy
+        ? m['nutrition.correct.chosenIn']({ household: excludedBy })
+        : m['nutrition.correct.chosenAbove']();
     }
 
     // A unit with no reason given is an older answer: the general words still say it.
@@ -328,6 +353,7 @@
 
 <NutritionCorrectionSheet
   name={editedRow?.ingredient.name ?? null}
+  {householdId}
   line={editedRow?.line ?? null}
   unit={editedRow ? unitWordOf(editedRow) : null}
   perUnit={editedRow ? perUnitOf(editedRow) : null}

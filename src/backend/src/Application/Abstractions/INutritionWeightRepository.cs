@@ -4,15 +4,19 @@ namespace Application.Abstractions;
 public interface INutritionWeightRepository
 {
     /// <summary>
-    /// The household's weights for these folded names, as grams by unit key (see <c>UnitKeys</c>), keyed by
-    /// name. Names without a weight are absent.
+    /// The weights that apply in a library for these folded names, or for every name when null, by unit key
+    /// (see <c>UnitKeys</c>): a household's own weight, else the nearest one it inherits. Names without a
+    /// weight are absent.
     /// </summary>
-    Task<IReadOnlyDictionary<string, IReadOnlyDictionary<string, decimal>>> ForNamesAsync(
-        Guid householdId,
-        IReadOnlyCollection<string> nameKeys,
+    /// <param name="library">The household first, then what it inherits, nearest first.</param>
+    /// <param name="nameKeys">The folded names; null for all of them.</param>
+    /// <param name="cancellationToken">Cancels the read.</param>
+    Task<IReadOnlyDictionary<string, IReadOnlyDictionary<string, WeightChoice>>> ForNamesAsync(
+        IReadOnlyList<Guid> library,
+        IReadOnlyCollection<string>? nameKeys,
         CancellationToken cancellationToken);
 
-    /// <summary>Every weight the household has set, by folded name, then unit key.</summary>
+    /// <summary>Every weight the household itself has set, by folded name, then unit key.</summary>
     Task<IReadOnlyDictionary<string, IReadOnlyDictionary<string, decimal>>> AllAsync(
         Guid householdId,
         CancellationToken cancellationToken);
@@ -29,3 +33,8 @@ public interface INutritionWeightRepository
     /// <summary>Remembers whether typical weights may count lines for this household.</summary>
     Task SetUsesTypicalWeightsAsync(Guid householdId, bool use, CancellationToken cancellationToken);
 }
+
+/// <summary>What one unit of an ingredient weighs in a library, and which household said so.</summary>
+/// <param name="Grams">Grams of one unit.</param>
+/// <param name="HouseholdId">The household whose weight it is: the reader's own, or one it inherits from.</param>
+public sealed record WeightChoice(decimal Grams, Guid HouseholdId);

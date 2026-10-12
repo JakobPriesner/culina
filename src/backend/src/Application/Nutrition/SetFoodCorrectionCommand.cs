@@ -9,7 +9,7 @@ using Domain.Shopping;
 namespace Application.Nutrition;
 
 /// <summary>Says what a household means by an ingredient name, or that it should not be counted.</summary>
-/// <param name="HouseholdId">Whose choice; never the household it inherits from.</param>
+/// <param name="HouseholdId">Whose choice; never the household it inherits from. Its heirs count with it too.</param>
 /// <param name="UserId">Who is choosing.</param>
 /// <param name="Name">The ingredient name as written; folded here.</param>
 /// <param name="Food">A BLS code, or null for "do not count".</param>
