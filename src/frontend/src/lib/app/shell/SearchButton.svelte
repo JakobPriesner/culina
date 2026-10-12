@@ -18,7 +18,7 @@
 </button>
 
 <style>
-  /* The household's button beside it is drawn the same way, in its own file. */
+  /* The account menu's button beside it is drawn the same way, in its own file. */
   .search {
     display: inline-flex;
     align-items: center;

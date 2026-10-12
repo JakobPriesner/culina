@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { resetAllStores } from '$shell/stores';
 import { renderWithProviders } from '$lib/test/render';
 
-import HouseholdSwitcher from './HouseholdSwitcher.svelte';
+import HouseholdChoices from './HouseholdChoices.svelte';
 import { session } from './session.svelte';
 
 const me = {
@@ -31,11 +31,6 @@ const settings = { locale: 'en', theme: 'warm-paper', mode: 'light', measurement
 const json = (body: unknown) =>
   new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } });
 
-// jsdom implements neither `showPopover` nor the declarative invocation, so
-// the panel stays hidden here; its contents are still there to be pressed. The
-// end-to-end suite is where a real browser opens it.
-const hidden = { hidden: true } as const;
-
 beforeEach(async () => {
   localStorage.clear();
   resetAllStores();
@@ -49,18 +44,14 @@ beforeEach(async () => {
   session.selectHousehold('h1');
 });
 
-describe('the household switcher', () => {
-  it('names the household on screen', () => {
-    renderWithProviders(HouseholdSwitcher, { props: { onswitch: vi.fn() } });
+const props = () => ({ onswitch: vi.fn(), oncreate: vi.fn() });
 
-    expect(screen.getByRole('button', { name: 'Home, switch household' })).toBeInTheDocument();
-  });
-
+describe('the household choices', () => {
   it('switches to another household, and says so', async () => {
     const onswitch = vi.fn();
-    renderWithProviders(HouseholdSwitcher, { props: { onswitch } });
+    renderWithProviders(HouseholdChoices, { props: { ...props(), onswitch } });
 
-    await fireEvent.click(screen.getByRole('button', { name: /Flat/, ...hidden }));
+    await fireEvent.click(screen.getByRole('button', { name: /Flat/ }));
 
     expect(session.activeHouseholdId).toBe('h2');
     expect(onswitch).toHaveBeenCalledOnce();
@@ -68,22 +59,25 @@ describe('the household switcher', () => {
 
   it('does not count choosing the household already on screen as a switch', async () => {
     const onswitch = vi.fn();
-    renderWithProviders(HouseholdSwitcher, { props: { onswitch } });
+    renderWithProviders(HouseholdChoices, { props: { ...props(), onswitch } });
 
-    await fireEvent.click(screen.getByRole('button', { name: 'Home', ...hidden }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Home' }));
 
     expect(onswitch).not.toHaveBeenCalled();
   });
 
   it('says whose recipes a household inherits', () => {
-    renderWithProviders(HouseholdSwitcher, { props: { onswitch: vi.fn() } });
+    renderWithProviders(HouseholdChoices, { props: props() });
 
     expect(screen.getByText('Sees the recipes of Home.')).toBeInTheDocument();
   });
 
-  it('offers a new household', () => {
-    renderWithProviders(HouseholdSwitcher, { props: { onswitch: vi.fn() } });
+  it('asks for a new household', async () => {
+    const oncreate = vi.fn();
+    renderWithProviders(HouseholdChoices, { props: { ...props(), oncreate } });
 
-    expect(screen.getByRole('button', { name: 'New household', ...hidden })).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole('button', { name: 'New household' }));
+
+    expect(oncreate).toHaveBeenCalledOnce();
   });
 });
