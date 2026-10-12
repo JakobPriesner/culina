@@ -5,7 +5,7 @@
   import CookingControlsBar from './CookingControlsBar.svelte';
 </script>
 
-<div class="cook-skeleton" aria-busy="true" aria-label={m['recipes.list.loading']()}>
+<div class="cook-skeleton" role="status" aria-busy="true" aria-label={m['recipes.list.loading']()}>
   <div class="back">
     <Skeleton width="6rem" height="1.5rem" />
   </div>

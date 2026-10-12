@@ -315,7 +315,7 @@
       aria-busy={loading.showing}
     >
       {#if loading.showing}
-        <div class="skeletons" aria-label={m['nutrition.correct.loading']()}>
+        <div class="skeletons" role="status" aria-label={m['nutrition.correct.loading']()}>
           {#each [0, 1, 2, 3] as row (row)}
             <Skeleton width={row % 2 ? '70%' : '85%'} height="1.25rem" />
           {/each}
