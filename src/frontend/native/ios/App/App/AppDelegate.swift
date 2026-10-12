@@ -1,5 +1,6 @@
-import UIKit
 import Capacitor
+import UIKit
+import UserNotifications
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -7,7 +8,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // A timer button pressed with the app closed wakes it with no web view: these handle it until the bridge loads
+        // (docs/native-app-design.md, 4.3). Capacitor's notification router then takes over and routes to CulinaTimers.
+        UNUserNotificationCenter.current().delegate = CulinaTimerNotifications.shared
+        CulinaTimerSink.handler = { press in
+            await CulinaTimerEngine.shared.handle(press)
+        }
+
         return true
     }
 

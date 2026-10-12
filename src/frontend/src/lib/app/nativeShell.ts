@@ -4,7 +4,7 @@ import { App } from '@capacitor/app';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 
 import { useSecretStore } from '$api';
-import { startNativeTimers } from '$features/cooking/nativeTimers';
+import { drainNativeTimers, startNativeTimers } from '$features/cooking/nativeTimers';
 import { useNativeWakeLock } from '$features/cooking/wakeLock.svelte';
 
 import { useNativeHaptics, type HapticMoment } from './haptics';
@@ -41,8 +41,9 @@ export async function startNativeShell(): Promise<void> {
 
   useNativeHaptics(feel);
 
-  // Before the first route: a notification button that opened the app is delivered as soon as there is a listener.
+  // Before the first route: presses on the lock screen while the app was closed are applied first.
   await startNativeTimers();
+  await App.addListener('resume', () => void drainNativeTimers());
 
   // Android's Back closes what is open on top before it leaves the page, and leaves the app from its first page.
   await App.addListener('backButton', ({ canGoBack }) => {

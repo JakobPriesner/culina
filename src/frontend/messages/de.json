@@ -1859,5 +1859,7 @@
   "connect.failed.serverTooOld": "Auf diesem Server läuft ein älteres Culina, als diese App versteht. Bitte die Person, die ihn betreibt, um ein Update.",
   "connect.failed.appTooOld": "Auf diesem Server läuft ein neueres Culina, als diese App versteht. Aktualisiere die App.",
   "me.server.switch": "Anderen Server verwenden",
-  "me.server.switchBody": "Meldet dich hier ab und fragt nach einer anderen Adresse."
+  "me.server.switchBody": "Meldet dich hier ab und fragt nach einer anderen Adresse.",
+  "kitchen.native.paused": "Pausiert",
+  "kitchen.native.more": "+{count} weitere"
 }
