@@ -102,4 +102,11 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
+
+  /* Wider pages fit more cards, not bigger ones. */
+  @media (min-width: 100rem) {
+    .grid {
+      grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+    }
+  }
 </style>
