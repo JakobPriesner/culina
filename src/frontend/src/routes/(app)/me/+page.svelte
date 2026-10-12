@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { instanceOrigin, native } from '$api';
   import { Avatar, Badge, Button } from '$ds';
 
   import { session } from '$features/auth/session.svelte';
-  import { signOut } from '$features/auth/signOut';
+  import { signOut, switchServer } from '$features/auth/signOut';
   import { formatDate, m } from '$shell/i18n';
   import { update } from '$shell/updates.svelte';
 
@@ -42,6 +43,16 @@
     <SettingsRow label={m['me.memberSince']()}>
       <span class="value">{formatDate(new Date(user.createdAt), { dateStyle: 'long' })}</span>
     </SettingsRow>
+  </SettingsSection>
+{/if}
+
+<!-- The app talks to one self-hosted server; the website is that server. -->
+{#if native}
+  <SettingsSection description={m['me.server.switchBody']()}>
+    <SettingsRow label={m['me.server']()}>
+      <span class="value">{instanceOrigin()}</span>
+    </SettingsRow>
+    <Button onclick={switchServer}>{m['me.server.switch']()}</Button>
   </SettingsSection>
 {/if}
 

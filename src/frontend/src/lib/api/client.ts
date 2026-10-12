@@ -2,9 +2,13 @@ import createClient from 'openapi-fetch';
 
 import type { paths } from './generated/schema';
 import { csrfToken } from './cookies';
+import { credentialsMode } from './credentials';
+import { apiUrl, instanceOrigin, loadInstance } from './instance';
 import { conditionalRequests, csrf, expiredSessions } from './middleware';
 import { ErrorCodes, offline, timedOut, toAppError } from './problem';
+import { native } from './platform';
 import { err, ok, type Result } from './result';
+import { send } from './transport';
 
 /** The one place that talks to the backend; nothing else in the app calls `fetch`. */
 
@@ -36,8 +40,9 @@ const restoreTimeoutMs = 600_000;
 const restorePath = /^\/api\/v1\/households\/[^/]+\/archive$/;
 
 const http = createClient<paths>({
-  // No base URL: paths carry /api/v1 and the API is same-origin (hence no CORS, no Authorization header).
-  credentials: 'include',
+  // No base URL: paths carry /api/v1. The website's API is same-origin; the app's server is chosen at run time,
+  // so its requests are moved there as they are sent (`toInstance`).
+  credentials: credentialsMode,
   fetch: withTimeout
 });
 
@@ -92,11 +97,34 @@ function describe(thrown: unknown) {
 }
 
 /** Gives every request a deadline, combined with the caller's signal so unmounting still cancels. */
-function withTimeout(input: Request): Promise<Response> {
+async function withTimeout(input: Request): Promise<Response> {
   const deadline = AbortSignal.timeout(deadlineFor(input.url));
+  const signal = input.signal ? AbortSignal.any([input.signal, deadline]) : deadline;
 
-  return fetch(input, {
-    signal: input.signal ? AbortSignal.any([input.signal, deadline]) : deadline
+  return native ? send(await toInstance(input, signal)) : fetch(input, { signal });
+}
+
+/**
+ * The same request, addressed to the connected server instead of the app's own origin. The body is read whole: WebKit
+ * cannot send a streamed request body, and these are JSON or a form of photos.
+ */
+async function toInstance(request: Request, signal: AbortSignal): Promise<Request> {
+  await loadInstance();
+
+  // Not connected yet: nothing to ask, and the app's own origin would answer every path with the shell. Reads as offline.
+  if (!instanceOrigin()) {
+    throw new TypeError('No server is connected.');
+  }
+
+  const { pathname, search } = new URL(request.url);
+  const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
+
+  return new Request(apiUrl(`${pathname}${search}`), {
+    method: request.method,
+    headers: request.headers,
+    body: hasBody ? await request.blob() : null,
+    credentials: request.credentials,
+    signal
   });
 }
 

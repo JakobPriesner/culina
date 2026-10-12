@@ -1,4 +1,6 @@
+import { authorization, credentialsMode } from './credentials';
 import { drain, type Stream, type StreamHandlers } from './eventStream';
+import { apiUrl } from './instance';
 import { clientError, ErrorCodes, offline, toAppError, type AppError } from './problem';
 import { sessionExpired } from './session';
 
@@ -82,10 +84,11 @@ async function open(
   let response: Response;
 
   try {
-    response = await fetch(path, {
+    response = await fetch(apiUrl(path), {
       // No deadline: a stream stays open; the usual timeout would cut it every 15s.
-      credentials: 'include',
+      credentials: credentialsMode,
       headers: {
+        ...authorization(false),
         Accept: 'text/event-stream',
         ...(from ? { 'Last-Event-ID': from } : {})
       },

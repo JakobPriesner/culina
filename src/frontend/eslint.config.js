@@ -99,6 +99,9 @@ export default ts.config(
     ignores: [
       '.svelte-kit/',
       'build/',
+      // The app's bundle, and the Xcode and Gradle projects that ship it (docs/native-app-design.md, 5.1).
+      'build-native/',
+      'native/',
       'node_modules/',
       // Generated from the OpenAPI document and messages/*.json; never hand-edited.
       'src/lib/api/generated/',

@@ -1,4 +1,5 @@
 import { forgetEverything } from './etagCache';
+import { rememberSessionToken } from './instance';
 
 /**
  * The seam between the API layer and the app: the shell registers what happens on a 401, the client
@@ -14,5 +15,7 @@ export function handleSessionExpiry(handler: ExpiryHandler): void {
 
 export function sessionExpired(): void {
   forgetEverything();
+  // The app's token is dead too; on the website this forgets nothing.
+  void rememberSessionToken(null);
   onExpired();
 }

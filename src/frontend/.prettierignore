@@ -1,5 +1,7 @@
 .svelte-kit
 build
+build-native
+native
 node_modules
 pnpm-lock.yaml
 # Generated from the backend's OpenAPI document; never hand-edited, so never

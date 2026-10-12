@@ -12,6 +12,9 @@ const underTest = Boolean(process.env['VITEST']);
 
 const galleryWanted = process.env['VITE_GALLERY'] === '1';
 
+// The installed app's bundle (docs/native-app-design.md, part 5): its own output directory, so `build/` stays exactly the website.
+const nativeTarget = process.env['CULINA_TARGET'] === 'native';
+
 const apiProxy = {
   '/api': {
     target: process.env['CULINA_API'] ?? 'http://localhost:5000',
@@ -29,7 +32,8 @@ function messages(outputStructure: 'message-modules' | 'locale-modules') {
 export default defineConfig({
   // A literal so the bundler can fold it: the gallery must vanish from release builds (see src/lib/app/gallery.ts).
   define: {
-    __CULINA_GALLERY__: JSON.stringify(galleryWanted)
+    __CULINA_GALLERY__: JSON.stringify(galleryWanted),
+    __CULINA_NATIVE__: JSON.stringify(nativeTarget)
   },
 
   plugins: [
@@ -49,7 +53,12 @@ export default defineConfig({
       },
 
       // A static SPA served by the .NET host from the API's origin; `fallback` serves index.html for client routes.
-      adapter: adapter({ fallback: 'index.html', strict: false }),
+      adapter: adapter({
+        pages: nativeTarget ? 'build-native' : 'build',
+        assets: nativeTarget ? 'build-native' : 'build',
+        fallback: 'index.html',
+        strict: false
+      }),
 
       // Absolute asset URLs: a document built for `/` but served for `/recipes/<id>` (service worker shell, host deep links)
       // would resolve `./_app/…` against `/recipes/` and boot blank.
@@ -67,7 +76,8 @@ export default defineConfig({
     }),
 
     // robots.txt and sitemap.xml from the one public-route list; last, so it writes into the finished adapter output.
-    siteFiles()
+    // The app has no crawlers.
+    ...(nativeTarget ? [] : [siteFiles()])
   ],
 
   resolve: underTest ? { conditions: ['browser'] } : {},

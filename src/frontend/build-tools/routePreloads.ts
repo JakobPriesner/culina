@@ -196,15 +196,23 @@ export async function readKit(
   };
 }
 
-/** Adds the script to the finished shell, in place; the placeholder nonce is the one the host swaps per response. */
+/**
+ * Adds the script to the finished shell, in place; the placeholder nonce is the one the host swaps per response.
+ * `data: false` for the app's shell: its first requests go to a server chosen at run time, which a preload link cannot name.
+ */
 export async function addPreloads(
   buildDir: string,
-  kitDir = '.svelte-kit'
+  kitDir = '.svelte-kit',
+  { data = true }: { data?: boolean } = {}
 ): Promise<{ added: number }> {
   const shell = `${buildDir}/index.html`;
   const html = await readFile(shell, 'utf8');
   const { manifest, dictionary } = await readKit(kitDir);
-  const tag = `<script nonce="__CULINA_NONCE__">${script(plan(manifest, dictionary, preloadedBy(html)))}</script>`;
+  const routes = plan(manifest, dictionary, preloadedBy(html));
+  const table = data
+    ? routes
+    : { ...routes, routes: routes.routes.map((route) => ({ ...route, early: null })) };
+  const tag = `<script nonce="__CULINA_NONCE__">${script(table)}</script>`;
 
   await writeFile(
     shell,

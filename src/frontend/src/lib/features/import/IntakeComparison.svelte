@@ -1,5 +1,6 @@
 <script lang="ts">
   import DraftWriting from '$features/assistance/DraftWriting.svelte';
+  import { sourced } from '$ds/display/imageSources';
   import { sourceLink } from '$features/recipes/sourceLink';
   import { m } from '$shell/i18n';
   import { running, type IntakeJob } from './intakes.svelte';
@@ -26,7 +27,7 @@
       <pre>{job.transcript}</pre>{/if}
     {#if job.photoCount}<div class="photos">
         {#each Array(job.photoCount) as _, index (index)}<img
-            src="/api/v1/recipe-intakes/{job.id}/photos/{index}"
+            {@attach sourced(`/api/v1/recipe-intakes/${job.id}/photos/${index}`)}
             alt={m['import.review.photo']()}
             loading="lazy"
             decoding="async"

@@ -6,7 +6,7 @@
   import { dev } from '$app/environment';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
-  import { handleSessionExpiry } from '$api';
+  import { handleSessionExpiry, native } from '$api';
   import ErrorState from '$ds/feedback/ErrorState.svelte';
   import { loginUrlFor } from '$features/auth/redirectTarget';
   import { session } from '$features/auth/session.svelte';
@@ -29,8 +29,8 @@
 
     const stopFollowingTheDevice = preferences.start();
     appIcon.start();
-    // Not under the dev server, where every rebuild would prompt a reload.
-    const stopWatchingForUpdates = dev ? () => {} : watchForUpdates();
+    // Not under the dev server, where every rebuild would prompt a reload, nor in the app, whose code changes only with an app update.
+    const stopWatchingForUpdates = dev || native ? () => {} : watchForUpdates();
     const stopFollowingTheNetwork = connection.start();
 
     // Ask for persistent storage so the browser does not evict cached recipes and offline shopping data.

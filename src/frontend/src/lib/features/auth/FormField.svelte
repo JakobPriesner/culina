@@ -10,9 +10,9 @@
     label: string;
     value: string;
     submission: Submission;
-    type?: 'text' | 'email' | 'password';
+    type?: 'text' | 'email' | 'password' | 'url';
     autocomplete?: HTMLInputElement['autocomplete'];
-    inputmode?: 'text' | 'email';
+    inputmode?: 'text' | 'email' | 'url';
     hint?: string;
     required?: boolean;
     autofocus?: boolean;

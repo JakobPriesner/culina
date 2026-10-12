@@ -181,7 +181,9 @@ LANES="$LANES $!"
     step "pnpm test:unit" "$FRONTEND" pnpm test:unit &&
     step "pnpm build" "$FRONTEND" pnpm build &&
     step "pnpm verify:release" "$FRONTEND" pnpm verify:release &&
-    step "pnpm verify:budget" "$FRONTEND" pnpm verify:budget
+    step "pnpm verify:budget" "$FRONTEND" pnpm verify:budget &&
+    step "pnpm build:native" "$FRONTEND" pnpm build:native &&
+    step "pnpm verify:release build-native" "$FRONTEND" pnpm verify:release build-native
 } &
 LANES="$LANES $!"
 

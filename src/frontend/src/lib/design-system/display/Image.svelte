@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { imageSource, pickCandidate } from './imageSources';
+
   /**
    * A photo that does not move the page: the box is reserved from the aspect ratio, on a warm tint (grey reads as a broken image mid-fade).
    * A missing photo draws the same box with a mark, so grids keep their shape.
@@ -34,9 +36,59 @@
 
   let loadedSource = $state<string>();
   let failedSource = $state<string>();
+
+  /** Set only where photos must be fetched before they can be shown (the app); otherwise the browser loads `src` itself. */
+  const resolve = imageSource();
+  let width = $state(0);
+  let resolved = $state<{ for: string; url: string }>();
+
+  // Measured first, so the fetched candidate fits the box as `srcset` would have chosen; asked again only when the photo changes.
+  const wanted = $derived(resolve && src && width > 0 ? pickCandidate(src, srcset, width) : null);
+
+  $effect(() => {
+    const url = wanted;
+    const owner = src;
+
+    if (!resolve || !url || !owner || resolved?.for === owner) {
+      return;
+    }
+
+    let current = true;
+
+    void resolve(url).then((answer) => {
+      if (!current) {
+        return;
+      }
+
+      if (answer) {
+        resolved = { for: owner, url: answer };
+      } else {
+        failedSource = owner;
+      }
+    });
+
+    return () => {
+      current = false;
+    };
+  });
+
+  /** Read once: the box is reserved from its ratio, so its width is known before any photo arrives. The website never measures. */
+  function measure(frame: HTMLDivElement) {
+    width = frame.clientWidth || 400;
+  }
+
+  const shown = $derived(
+    resolve ? (resolved && resolved.for === src ? resolved.url : undefined) : src
+  );
 </script>
 
-<div class="frame" class:rounded class:fill style:aspect-ratio={fill ? undefined : ratio}>
+<div
+  class="frame"
+  class:rounded
+  class:fill
+  style:aspect-ratio={fill ? undefined : ratio}
+  {@attach resolve && measure}
+>
   {#if !src || failedSource === src}
     <div
       class="fallback"
@@ -56,15 +108,15 @@
         /></svg
       >
     </div>
-  {:else}
+  {:else if shown}
     {#key src}<img
         class="image"
         class:loaded={loadedSource === src}
-        {src}
+        src={shown}
         {alt}
         {loading}
         {fetchpriority}
-        {srcset}
+        srcset={resolve ? undefined : srcset}
         {sizes}
         decoding="async"
         onload={() => (loadedSource = src)}

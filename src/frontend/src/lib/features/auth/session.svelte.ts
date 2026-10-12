@@ -1,4 +1,12 @@
-import { forgetCachedResponses, http, request, type AppError } from '$api';
+import {
+  forgetCachedResponses,
+  http,
+  native,
+  nativePlatform,
+  rememberSessionToken,
+  request,
+  type AppError
+} from '$api';
 import { forgetEveryDraft } from '$features/recipes/editor/journal';
 import { forgetEveryLastDraft } from '$features/recipes/editor/lastDraft';
 import { forgetEveryRecentSearch } from '$features/recipes/search/recentSearches';
@@ -101,12 +109,19 @@ class SessionStore {
   }
 
   async signIn(email: string, password: string): Promise<AppError | null> {
+    // The app says which it is, and gets its session as a token to keep in the Keychain or Keystore instead of a cookie.
     const result = await request(() =>
-      http.POST('/api/v1/sessions', { body: { email, password } })
+      http.POST('/api/v1/sessions', {
+        body: native ? { email, password, client: nativePlatform() } : { email, password }
+      })
     );
 
     if (!result.ok) {
       return result.error;
+    }
+
+    if (native) {
+      await rememberSessionToken(result.value.sessionToken ?? null);
     }
 
     // Drop the previous person's reads on the way in too: a closed browser never signed out.
@@ -129,6 +144,7 @@ class SessionStore {
     await request(() => http.DELETE('/api/v1/sessions/current'));
 
     // Cleared even if the request failed, so the previous person's data never stays on screen.
+    await rememberSessionToken(null);
     this.end();
     // Account-scoped keys hide drafts; only this deletes them.
     forgetAccounts();
