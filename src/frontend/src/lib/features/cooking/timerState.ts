@@ -90,7 +90,16 @@ export async function editTimerState(
   }
 }
 
-export async function applyTimerAction(notice: TimerNotice, action: string): Promise<boolean> {
+/**
+ * Applies a notification button to the stored timers, only if the timer still has the deadline the button was shown for.
+ * `at` is when the button was pressed: the app's buttons are applied by the operating system first and reach the page
+ * later, and +1 min must mean a minute from the press, exactly as the system already counted it.
+ */
+export async function applyTimerAction(
+  notice: TimerNotice,
+  action: string,
+  at: number = Date.now()
+): Promise<boolean> {
   if (!['minute-1', 'minute-2', 'dismiss', 'next'].includes(action)) return false;
   let changed = false;
   const saved = await editTimerState(notice.sessionId, (state) => {
@@ -104,7 +113,7 @@ export async function applyTimerAction(notice: TimerNotice, action: string): Pro
       state.timers.push({
         stepIndex: timer.stepIndex,
         label: timer.label,
-        endsAt: Date.now() + (action === 'minute-1' ? 60_000 : 120_000)
+        endsAt: at + (action === 'minute-1' ? 60_000 : 120_000)
       });
     } else if (action === 'next') {
       state.nextStep = timer.stepIndex + 1;

@@ -24,6 +24,10 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSAlarmKitUsageDescription</key>
+	<string>Culina rings your kitchen timers, even with your phone on silent.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<!-- A Culina on the home network (http://192.168.x.y, *.local) is allowed; anything else must be https (src/lib/api/connect.ts). -->

@@ -1,4 +1,4 @@
-import { LocalNotifications, type ActionPerformed } from '@capacitor/local-notifications';
+import { registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 
 import { goto } from '$app/navigation';
 import { m } from '$shell/i18n';
@@ -6,225 +6,169 @@ import { m } from '$shell/i18n';
 import { applyTimerAction, type KitchenTimer, type TimerNotice } from './timerState';
 
 /**
- * The installed app's kitchen timers, rung by the operating system (docs/native-app-design.md, 4.2): the page publishes
- * the whole set of timers whenever it changes and this schedules exactly that, so an alarm rings with the app asleep or
- * closed. Buttons on a notification go through the same `applyTimerAction` as the website's worker, so a stale button
- * (an `endsAt` that no longer matches) changes nothing. Loaded only by the app's bundle (build-tools/nativeOnly.ts).
+ * The installed app's kitchen timers, kept by the operating system (docs/native-app-design.md, 4.2). Declarative down:
+ * the page hands over the whole set of timers whenever it changes, and the app's own `CulinaTimers` plugin
+ * (native/ios/App/App/CulinaTimers, native/android/.../timers) rings and shows exactly that: AlarmKit or notifications
+ * and a Live Activity on iOS, alarms and an ongoing countdown on Android. Journal up: a button pressed on the lock
+ * screen is applied there at once and recorded; the page drains the record and applies each through the website's
+ * `applyTimerAction`, at the moment it was pressed, so both sides land on the same deadline and a stale button
+ * changes nothing. Loaded only by the app's bundle (build-tools/nativeOnly.ts).
  */
 
 export interface NativeTimerSnapshot {
   readonly sessionId: string;
-  /** The cooking route, opened by tapping a notification. */
+  /** The cooking route, opened by tapping a notification or the Live Activity. */
   readonly url: string;
   readonly timers: readonly KitchenTimer[];
 }
 
-/** Sent to the page after a notification button changed the stored timers, as the worker's `culina:timers-changed`. */
+/** What the system shows, in the app's language: the native side has no message catalogue of its own. */
+interface TimerText {
+  readonly timer: string;
+  readonly finished: string;
+  readonly minute1: string;
+  readonly minute2: string;
+  readonly dismiss: string;
+  readonly next: string;
+  readonly paused: string;
+  /** With `{count}` for the number of further timers. */
+  readonly more: string;
+}
+
+/** One button press, as the native side recorded it. */
+export interface NativeTimerAction {
+  readonly sessionId: string;
+  readonly stepIndex: number;
+  /** The deadline the button was shown for. */
+  readonly endsAt: number;
+  readonly url: string;
+  readonly action: 'minute-1' | 'minute-2' | 'dismiss' | 'next' | 'open';
+  /** When it was pressed, epoch ms. */
+  readonly at: number;
+}
+
+export interface CulinaTimersPlugin {
+  /** Makes what the system rings and shows exactly these timers; a null session ends everything. */
+  sync(options: {
+    sessionId: string | null;
+    url: string;
+    timers: readonly KitchenTimer[];
+    text: TimerText;
+  }): Promise<void>;
+  /** Hands over and forgets every recorded button press. */
+  drain(): Promise<{ actions: NativeTimerAction[] }>;
+  /** Takes finished timers' notifications off the screen: one step's, or the whole session's. */
+  close(options: { sessionId: string; stepIndex?: number }): Promise<void>;
+  requestPermissions(): Promise<{ display: string }>;
+  /** Fired when a press was recorded while the page is alive. */
+  addListener(event: 'action', listener: () => void): Promise<PluginListenerHandle>;
+}
+
+const CulinaTimers = registerPlugin<CulinaTimersPlugin>('CulinaTimers');
+
+/** Sent to the page after recorded presses changed the stored timers, as the worker's `culina:timers-changed`. */
 export const timersChangedEvent = 'culina:timers-changed';
 
-const actionType = 'culina-timer';
-const channel = 'kitchen-alarms';
 const timerActions = ['minute-1', 'minute-2', 'dismiss', 'next'] as const;
 
-let ready: Promise<void> | null = null;
+let started: Promise<void> | null = null;
 let syncing: Promise<void> = Promise.resolve();
+let draining: Promise<void> = Promise.resolve();
 
-/** Registers the buttons, the Android channel and the listener; once, from the native shell. */
+/** Listens for presses; once, from the native shell, which also drains on every return to the app. */
 export function startNativeTimers(): Promise<void> {
-  ready ??= (async () => {
-    await LocalNotifications.registerActionTypes({
-      types: [
-        {
-          id: actionType,
-          // Foreground: the change is applied by the page, which iOS does not wake for a background action.
-          actions: [
-            { id: 'minute-1', title: m['kitchen.minute1'](), foreground: true },
-            { id: 'minute-2', title: m['kitchen.minute2'](), foreground: true },
-            { id: 'dismiss', title: m['app.dismiss'](), foreground: true },
-            { id: 'next', title: m['cooking.next'](), foreground: true }
-          ]
-        }
-      ]
-    });
-
-    await LocalNotifications.createChannel({
-      id: channel,
-      name: m['kitchen.timer'](),
-      description: m['kitchen.timerFinished'](),
-      // High: a kitchen alarm makes a sound and shows over what is on screen.
-      importance: 5,
-      visibility: 1,
-      vibration: true
-    }).catch(() => {
-      // iOS has no channels.
-    });
-
-    await LocalNotifications.addListener('localNotificationActionPerformed', (event) => {
-      void act(event);
-    });
+  started ??= (async () => {
+    await CulinaTimers.addListener('action', () => void drainNativeTimers());
+    await drainNativeTimers();
   })().catch(() => {});
 
-  return ready;
+  return started;
+}
+
+/** Applies every press made while the page was asleep or closed; serialised, so none is applied twice. */
+export function drainNativeTimers(): Promise<void> {
+  draining = draining.then(drain).catch(() => {});
+
+  return draining;
 }
 
 /** Asked the moment the first timer starts, as the website asks for notification permission. */
 export async function requestNativeTimerPermission(): Promise<void> {
-  try {
-    const { display } = await LocalNotifications.checkPermissions();
-
-    if (display === 'prompt' || display === 'prompt-with-rationale') {
-      await LocalNotifications.requestPermissions();
-    }
-  } catch {
-    // Timers still run in the app; only the alarm with the app asleep is lost.
-  }
+  await CulinaTimers.requestPermissions().catch(() => {});
 }
 
-/**
- * Makes the scheduled alarms exactly the running timers of `snapshot` (none for null): unchanged ones are left, moved or
- * new ones scheduled, paused, dismissed and finished ones cancelled. Serialised, so a burst of changes settles in order.
- */
+/** Hands the system the session's timers (none for null). Serialised, so a burst of changes settles in order. */
 export function syncNativeTimers(snapshot: NativeTimerSnapshot | null): Promise<void> {
-  syncing = syncing.then(() => reconcile(snapshot)).catch(() => {});
+  syncing = syncing
+    .then(() =>
+      CulinaTimers.sync({
+        sessionId: snapshot?.sessionId ?? null,
+        url: snapshot?.url ?? '/',
+        timers: snapshot?.timers ?? [],
+        text: text()
+      })
+    )
+    .catch(() => {});
 
   return syncing;
 }
 
-/** Takes finished timers' notifications off the screen: one step's, or the whole session's. */
 export async function closeNativeTimer(sessionId: string, stepIndex?: number): Promise<void> {
-  try {
-    const { notifications } = await LocalNotifications.getDeliveredNotifications();
-    const ids = notifications
-      .filter((delivered) => {
-        const notice = noticeIn(delivered.extra);
-
-        return (
-          notice?.sessionId === sessionId &&
-          (stepIndex === undefined || notice.stepIndex === stepIndex)
-        );
-      })
-      .map((delivered) => delivered.id);
-
-    if (ids.length > 0) {
-      await LocalNotifications.removeDeliveredNotificationsById({ ids });
-    }
-  } catch {
-    // Optional, as on the website.
-  }
+  await CulinaTimers.close(
+    stepIndex === undefined ? { sessionId } : { sessionId, stepIndex }
+  ).catch(() => {});
 }
 
-/** On sign-out: no alarm of the previous person's may ring for the next. */
+/** On sign-out: no alarm of the previous person's may ring for the next, and their presses are not applied. */
 export async function forgetNativeTimers(): Promise<void> {
   await syncNativeTimers(null);
-
-  try {
-    const { notifications } = await LocalNotifications.getDeliveredNotifications();
-    const ids = notifications
-      .filter((delivered) => noticeIn(delivered.extra))
-      .map((delivered) => delivered.id);
-
-    if (ids.length > 0) {
-      await LocalNotifications.removeDeliveredNotificationsById({ ids });
-    }
-  } catch {
-    // Nothing delivered, nothing to take away.
-  }
+  await CulinaTimers.drain().catch(() => {});
 }
 
-async function reconcile(snapshot: NativeTimerSnapshot | null): Promise<void> {
-  await startNativeTimers();
+async function drain(): Promise<void> {
+  const { actions } = await CulinaTimers.drain();
+  const changed = new Set<string>();
+  let open: string | null = null;
 
-  const now = Date.now();
-  const wanted = (snapshot?.timers ?? [])
-    .filter((timer) => timer.pausedRemaining === undefined && timer.endsAt > now)
-    .map((timer): TimerNotice => ({
+  for (const press of actions) {
+    const notice: TimerNotice = {
       type: 'culina:timer',
-      sessionId: snapshot!.sessionId,
-      stepIndex: timer.stepIndex,
-      endsAt: timer.endsAt,
-      url: snapshot!.url
-    }));
-  const labels = new Map(snapshot?.timers.map((timer) => [timer.stepIndex, timer.label]) ?? []);
+      sessionId: press.sessionId,
+      stepIndex: press.stepIndex,
+      endsAt: press.endsAt,
+      url: press.url
+    };
+    const action = timerActions.find((known) => known === press.action);
 
-  const { notifications } = await LocalNotifications.getPending();
-  const scheduled = notifications.flatMap((pending) => {
-    const notice = noticeIn(pending.extra);
+    if (action && (await applyTimerAction(notice, action, press.at))) {
+      changed.add(press.sessionId);
+    }
 
-    return notice ? [{ id: pending.id, notice }] : [];
-  });
-
-  const stale = scheduled.filter(({ notice }) => !wanted.some((want) => same(want, notice)));
-  const missing = wanted.filter((want) => !scheduled.some(({ notice }) => same(want, notice)));
-
-  if (stale.length > 0) {
-    await LocalNotifications.cancel({ notifications: stale.map(({ id }) => ({ id })) });
+    // The notification or activity itself, or "Next step": back to the recipe being cooked.
+    if (press.action === 'open' || press.action === 'next') {
+      open = press.url;
+    }
   }
 
-  if (missing.length > 0) {
-    await LocalNotifications.schedule({
-      notifications: missing.map((notice) => ({
-        id: notificationId(notice),
-        title: labels.get(notice.stepIndex) || m['kitchen.timer'](),
-        body: m['kitchen.timerFinished'](),
-        schedule: { at: new Date(notice.endsAt), allowWhileIdle: true },
-        actionTypeId: actionType,
-        channelId: channel,
-        interruptionLevel: 'timeSensitive',
-        extra: notice
-      }))
-    });
-  }
-}
-
-async function act({ actionId, notification }: ActionPerformed): Promise<void> {
-  const notice = noticeIn(notification.extra);
-
-  if (!notice) {
-    return;
+  for (const sessionId of changed) {
+    window.dispatchEvent(new CustomEvent(timersChangedEvent, { detail: { sessionId } }));
   }
 
-  const action = timerActions.find((known) => known === actionId);
-
-  if (action && (await applyTimerAction(notice, action))) {
-    window.dispatchEvent(
-      new CustomEvent(timersChangedEvent, { detail: { sessionId: notice.sessionId } })
-    );
-  }
-
-  // The notification itself, or "Next step": back to the recipe being cooked.
-  if (actionId === 'tap' || action === 'next') {
+  if (open) {
     // eslint-disable-next-line svelte/no-navigation-without-resolve -- a path this app built (`kitchenTimers`' url).
-    await goto(notice.url);
+    await goto(open);
   }
 }
 
-/** One notification per timer: the same step of the same session always replaces its own. */
-function notificationId({ sessionId, stepIndex }: TimerNotice): number {
-  let hash = 0;
-
-  for (const character of `${sessionId}:${stepIndex}`) {
-    hash = (Math.imul(hash, 31) + character.charCodeAt(0)) | 0;
-  }
-
-  // Positive and within Java's int, which Android's notification ids are.
-  return hash & 0x7fffffff;
-}
-
-const same = (a: TimerNotice, b: TimerNotice) =>
-  a.sessionId === b.sessionId && a.stepIndex === b.stepIndex && a.endsAt === b.endsAt;
-
-function noticeIn(extra: unknown): TimerNotice | null {
-  if (typeof extra !== 'object' || extra === null) {
-    return null;
-  }
-
-  const notice = extra as Partial<TimerNotice>;
-
-  return notice.type === 'culina:timer' &&
-    typeof notice.sessionId === 'string' &&
-    typeof notice.stepIndex === 'number' &&
-    typeof notice.endsAt === 'number' &&
-    typeof notice.url === 'string'
-    ? (notice as TimerNotice)
-    : null;
+function text(): TimerText {
+  return {
+    timer: m['kitchen.timer'](),
+    finished: m['kitchen.timerFinished'](),
+    minute1: m['kitchen.minute1'](),
+    minute2: m['kitchen.minute2'](),
+    dismiss: m['app.dismiss'](),
+    next: m['cooking.next'](),
+    paused: m['kitchen.native.paused'](),
+    more: m['kitchen.native.more']({ count: '{count}' })
+  };
 }

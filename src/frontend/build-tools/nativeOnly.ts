@@ -12,6 +12,7 @@ const stubs: Record<string, string> = {
   'src/lib/features/cooking/nativeTimers.ts': [
     "export const timersChangedEvent = 'culina:timers-changed';",
     'export async function startNativeTimers() {}',
+    'export async function drainNativeTimers() {}',
     'export async function requestNativeTimerPermission() {}',
     'export async function syncNativeTimers() {}',
     'export async function closeNativeTimer() {}',
