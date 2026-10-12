@@ -1,4 +1,4 @@
-import { ask as askServer, clientError, type AppError, type Stream } from '$api';
+import { ask as askServer, clientError, ErrorCodes, type AppError, type Stream } from '$api';
 import { registerStore } from '$shell/stores';
 
 import type { Draft } from '../draftToRecipe';
@@ -119,6 +119,15 @@ class DraftStore {
     return new Promise((resolve) => {
       // A stream ends once; a finished event and a dead connection can both arrive.
       let settled = false;
+      // A phone suspends a page in the background, which cuts the stream; "offline" would be the wrong thing to say.
+      let leftTheApp = false;
+      const noticeLeaving = () => {
+        if (document.visibilityState === 'hidden') {
+          leftTheApp = true;
+        }
+      };
+
+      document.addEventListener('visibilitychange', noticeLeaving);
 
       const settle = (error: AppError | null) => {
         if (settled) {
@@ -126,9 +135,13 @@ class DraftStore {
         }
 
         settled = true;
+        document.removeEventListener('visibilitychange', noticeLeaving);
         this.#stop();
-        this.#error = error;
-        resolve(error);
+        this.#error =
+          error?.code === ErrorCodes.offline && leftTheApp
+            ? clientError(ErrorCodes.backgrounded, error.detail)
+            : error;
+        resolve(this.#error);
       };
 
       this.#stream = askServer<DraftEventWire>(path, body, {

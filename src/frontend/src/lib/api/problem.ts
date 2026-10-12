@@ -30,6 +30,7 @@ export const ErrorCodes = {
   csrfInvalid: 'auth.csrf_invalid',
   versionMismatch: 'request.version_mismatch',
   offline: 'client.offline',
+  backgrounded: 'client.backgrounded',
   timeout: 'client.timeout',
   unexpected: 'client.unexpected'
 } as const;
