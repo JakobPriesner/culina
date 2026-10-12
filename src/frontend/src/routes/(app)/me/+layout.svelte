@@ -293,18 +293,26 @@
       gap: var(--space-1);
     }
 
-    /* Stretched so the pill marks a list row rather than floating at label width. */
+    /*
+     * Stretched so the pill marks a list row rather than floating at label width. List-row size and full text colour,
+     * so a destination never reads like the small, faint caption above it.
+     */
     .category {
       justify-content: flex-start;
       padding-inline: var(--space-4);
+      color: var(--text);
+      font-size: var(--text-base);
+      font-weight: var(--weight-regular);
     }
 
-    /* The rail captions the administrator's group the way it captions the whole column. */
+    /* The rail captions the administrator's group the way it captions the whole column, below a hairline. */
     .administration {
       display: flex;
       flex-direction: column;
       gap: var(--space-1);
-      margin-top: var(--space-6);
+      margin-top: var(--space-4);
+      padding-top: var(--space-4);
+      border-top: 1px solid var(--border);
     }
 
     .administration::before {
