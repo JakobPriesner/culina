@@ -102,15 +102,4 @@
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
-
-  /* Past the page's width there is room for more cards, not longer lines: the grid leaves the page
-     container (headings and toolbar keep their width) and adds columns instead of stretching them. */
-  @media (min-width: 100rem) {
-    .grid {
-      --grid-width: min(100vw - var(--layout-gutter) * 2, var(--layout-grid));
-      grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
-      width: var(--grid-width);
-      margin-inline: calc(50% - var(--grid-width) / 2);
-    }
-  }
 </style>
