@@ -5,26 +5,33 @@ namespace Infrastructure.Persistence.Nutrition;
 internal sealed class NutritionCorrectionRepository(DbExecutor executor, TimeProvider time)
     : INutritionCorrectionRepository
 {
-    public async Task<IReadOnlyDictionary<string, string?>> ForNamesAsync(
-        Guid householdId,
-        IReadOnlyCollection<string> nameKeys,
+    public async Task<IReadOnlyDictionary<string, FoodChoice>> ForNamesAsync(
+        IReadOnlyList<Guid> library,
+        IReadOnlyCollection<string>? nameKeys,
         CancellationToken cancellationToken)
     {
-        if (nameKeys.Count == 0)
+        ArgumentNullException.ThrowIfNull(library);
+        if (nameKeys is { Count: 0 })
         {
-            return new Dictionary<string, string?>();
+            return new Dictionary<string, FoodChoice>();
         }
 
-        var rows = await executor.QueryAsync<CorrectionRow>(
+        // The nearest household that said anything about a name decides it: an heir's own choice, else
+        // the one it inherits.
+        var rows = await executor.QueryAsync<LibraryCorrectionRow>(
             """
-            select name_key, food_code
+            select distinct on (name_key) name_key, food_code, household_id
             from nutrition_food_overrides
-            where household_id = @householdId and name_key = any(@nameKeys);
+            where household_id = any(@library) and (@all or name_key = any(@nameKeys))
+            order by name_key, array_position(@library, household_id);
             """,
-            new { householdId, nameKeys = nameKeys.ToArray() },
+            new { library = library.ToArray(), all = nameKeys is null, nameKeys = nameKeys?.ToArray() ?? [] },
             cancellationToken).ConfigureAwait(false);
 
-        return rows.ToDictionary(row => row.NameKey, row => row.FoodCode, StringComparer.Ordinal);
+        return rows.ToDictionary(
+            row => row.NameKey,
+            row => new FoodChoice(row.FoodCode, row.HouseholdId),
+            StringComparer.Ordinal);
     }
 
     public async Task<IReadOnlyDictionary<string, string?>> AllAsync(
@@ -59,6 +66,15 @@ internal sealed class NutritionCorrectionRepository(DbExecutor executor, TimePro
             "delete from nutrition_food_overrides where household_id = @householdId and name_key = @nameKey;",
             new { householdId, nameKey },
             cancellationToken).ConfigureAwait(false);
+
+    private sealed record LibraryCorrectionRow
+    {
+        public string NameKey { get; init; } = string.Empty;
+
+        public string? FoodCode { get; init; }
+
+        public Guid HouseholdId { get; init; }
+    }
 
     private sealed record CorrectionRow
     {

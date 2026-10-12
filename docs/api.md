@@ -193,8 +193,11 @@ each ingredient line up in the Bundeslebensmittelschlüssel and sums it.
   ETag is the recipe's version alone. This one is the recipe's version, the
   asking household, the version of the nutrition data and a fingerprint of the
   corrections that apply, so a data update or a correction is never answered
-  with a `304`. The corrections, the household's weights for the recipe's
-  names and the typical-weights switch are all in the fingerprint.
+  with a `304`. The corrections and weights for the recipe's names (the
+  household's own, else the nearest it inherits, each with the household it came
+  from) and the typical-weights switch are all in the fingerprint, so a parent's
+  correction changes its heirs' tags too. Each line names that household as
+  `chosenBy` (with `corrected`) and `weighedBy` (with `via: householdWeight`).
 
 ### `GET /shared-recipes/{token}/nutrition`
 

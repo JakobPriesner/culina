@@ -46,12 +46,13 @@ test.describe('typical weights, household weights and kinds of a food @offline',
 
     await page.getByRole('button', { name: 'Was ist „Milch“? Ändern' }).click();
 
-    const kinds = page.getByRole('list', { name: 'Sorte' });
+    const kinds = page.getByRole('list', { name: 'Ähnliche Lebensmittel' });
 
-    await expect(kinds.getByRole('button', { name: /Vollmilch 3,5 %/ })).toHaveAttribute(
-      'aria-current',
-      'true'
-    );
+    await expect(
+      page
+        .getByRole('list', { name: 'Zählt jetzt als' })
+        .getByRole('button', { name: /Vollmilch 3,5 %/ })
+    ).toHaveAttribute('aria-current', 'true');
     await expect(
       kinds.getByRole('button', { name: /fettarme Milch 1,5 %\s*47 kcal/ })
     ).toBeVisible();
@@ -133,7 +134,7 @@ test.describe('typical weights, household weights and kinds of a food @offline',
     await open(page);
     await expectReflow(page);
     await page.getByRole('button', { name: 'Was ist „Milch“? Ändern' }).click();
-    await expect(page.getByRole('list', { name: 'Sorte' })).toBeVisible();
+    await expect(page.getByRole('list', { name: 'Ähnliche Lebensmittel' })).toBeVisible();
     await expectReflow(page);
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Was ist „Zwiebel“? Ändern' }).click();

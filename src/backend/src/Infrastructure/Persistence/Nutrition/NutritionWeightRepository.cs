@@ -4,26 +4,34 @@ namespace Infrastructure.Persistence.Nutrition;
 
 internal sealed class NutritionWeightRepository(DbExecutor executor, TimeProvider time) : INutritionWeightRepository
 {
-    public async Task<IReadOnlyDictionary<string, IReadOnlyDictionary<string, decimal>>> ForNamesAsync(
-        Guid householdId,
-        IReadOnlyCollection<string> nameKeys,
+    public async Task<IReadOnlyDictionary<string, IReadOnlyDictionary<string, WeightChoice>>> ForNamesAsync(
+        IReadOnlyList<Guid> library,
+        IReadOnlyCollection<string>? nameKeys,
         CancellationToken cancellationToken)
     {
-        if (nameKeys.Count == 0)
+        ArgumentNullException.ThrowIfNull(library);
+        if (nameKeys is { Count: 0 })
         {
-            return new Dictionary<string, IReadOnlyDictionary<string, decimal>>();
+            return new Dictionary<string, IReadOnlyDictionary<string, WeightChoice>>();
         }
 
-        var rows = await executor.QueryAsync<WeightRow>(
+        // Per name and unit, the nearest household that set a weight decides it.
+        var rows = await executor.QueryAsync<LibraryWeightRow>(
             """
-            select name_key, unit_key, grams
+            select distinct on (name_key, unit_key) name_key, unit_key, grams, household_id
             from nutrition_unit_weights
-            where household_id = @householdId and name_key = any(@nameKeys);
+            where household_id = any(@library) and (@all or name_key = any(@nameKeys))
+            order by name_key, unit_key, array_position(@library, household_id);
             """,
-            new { householdId, nameKeys = nameKeys.ToArray() },
+            new { library = library.ToArray(), all = nameKeys is null, nameKeys = nameKeys?.ToArray() ?? [] },
             cancellationToken).ConfigureAwait(false);
 
-        return Grouped(rows);
+        return rows.GroupBy(row => row.NameKey).ToDictionary(
+            group => group.Key,
+            group => (IReadOnlyDictionary<string, WeightChoice>)group.ToDictionary(
+                row => row.UnitKey,
+                row => new WeightChoice(row.Grams, row.HouseholdId)),
+            StringComparer.Ordinal);
     }
 
     public async Task<IReadOnlyDictionary<string, IReadOnlyDictionary<string, decimal>>> AllAsync(
@@ -85,6 +93,17 @@ internal sealed class NutritionWeightRepository(DbExecutor executor, TimeProvide
             group => group.Key,
             group => (IReadOnlyDictionary<string, decimal>)group.ToDictionary(row => row.UnitKey, row => row.Grams),
             StringComparer.Ordinal);
+
+    private sealed record LibraryWeightRow
+    {
+        public string NameKey { get; init; } = string.Empty;
+
+        public string UnitKey { get; init; } = string.Empty;
+
+        public decimal Grams { get; init; }
+
+        public Guid HouseholdId { get; init; }
+    }
 
     private sealed record WeightRow
     {

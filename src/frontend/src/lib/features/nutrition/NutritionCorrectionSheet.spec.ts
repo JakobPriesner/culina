@@ -4,8 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import NutritionCorrectionSheet from './NutritionCorrectionSheet.svelte';
 import type { NutritionLine } from './types';
+import { session } from '$features/auth/session.svelte';
 import { renderWithProviders } from '$lib/test/render';
 import { preferences } from '$shell/preferences.svelte';
+import { resetAllStores } from '$shell/stores';
 
 const butters = [
   { code: 'M111111', nameDe: 'Süßrahmbutter', nameEn: 'Sweet cream butter', energyKcal: 741 },
@@ -81,7 +83,9 @@ describe('the correction sheet', () => {
 
     expect(await screen.findByRole('dialog', { name: 'What is “Butter”?' })).toBeInTheDocument();
     expect(
-      screen.getByText('Applies to every recipe of yours that uses “Butter”.')
+      screen.getByText(
+        'Applies to every recipe of yours that uses “Butter”, and to households that inherit from you.'
+      )
     ).toBeInTheDocument();
   });
 
@@ -219,21 +223,44 @@ const milk: NutritionLine = {
   ]
 };
 
-describe('the kinds of a food', () => {
-  it('lists them in one tap with the current one ticked and the energy as quiet text', async () => {
+describe('similar foods', () => {
+  it('shows the current one ticked above them, with its energy and whose choice it is', async () => {
     respond();
     show(milk);
 
-    const list = await screen.findByRole('list', { name: 'Kind' });
-    const current = within(list).getByRole('button', { name: /whole milk 3\.5 %/ });
+    const now = await screen.findByRole('list', { name: 'Counts as' });
 
-    expect(current).toHaveAttribute('aria-current', 'true');
+    expect(
+      within(now).getByRole('button', { name: /whole milk 3\.5 %.*65 kcal per 100 g · Default/ })
+    ).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('lists the others in one tap, the energy as quiet text, without the current one', async () => {
+    respond();
+    show(milk);
+
+    const list = await screen.findByRole('list', { name: 'Similar foods' });
+
     expect(
       within(list).getByRole('button', { name: /low-fat milk 1\.5 %\s*47 kcal per 100 g/ })
     ).not.toHaveAttribute('aria-current');
     expect(within(list).getByRole('button', { name: 'milk without number' })).toBeInTheDocument();
-    // The food on show is not also a second "counts as" entry.
-    expect(screen.queryByRole('list', { name: 'Counts as' })).not.toBeInTheDocument();
+    expect(within(list).queryByRole('button', { name: /whole milk/ })).not.toBeInTheDocument();
+  });
+
+  it('does not search until asked, so the similar foods are the offer', async () => {
+    respond();
+    show(milk);
+
+    await screen.findByRole('list', { name: 'Similar foods' });
+
+    expect(screen.getByRole('searchbox', { name: 'Search other foods' })).toHaveValue('');
+    expect(asked).not.toHaveBeenCalled();
+
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search other foods' }), 'Hafer');
+
+    expect(await screen.findByRole('button', { name: /Sweet cream butter/ })).toBeInTheDocument();
+    expect(asked.mock.calls.at(-1)?.[0].url).toContain('q=Hafer');
   });
 
   it('chooses one by its code, and the search below is for everything else', async () => {
@@ -252,7 +279,7 @@ describe('the kinds of a food', () => {
     respond();
     show(milk);
 
-    const list = await screen.findByRole('list', { name: 'Sorte' });
+    const list = await screen.findByRole('list', { name: 'Ähnliche Lebensmittel' });
 
     expect(within(list).getByRole('button', { name: /fettarme Milch 1,5 %/ })).toBeInTheDocument();
   });
@@ -262,8 +289,86 @@ describe('the kinds of a food', () => {
     show();
 
     await screen.findByRole('button', { name: /Butter\s*Default/ });
-    expect(screen.queryByRole('list', { name: 'Kind' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Similar foods' })).not.toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Search foods' })).toBeInTheDocument();
+  });
+});
+
+describe('a choice made up the inheritance chain', () => {
+  const me = {
+    userId: 'u1',
+    email: 'jakob@example.com',
+    displayName: 'Jakob',
+    isAdmin: false,
+    createdAt: '2026-01-01T00:00:00Z',
+    version: 1,
+    assistance: { improve: false, draft: false, read: false, draw: false },
+    households: [
+      { householdId: 'home', name: 'Home', role: 'owner', inheritsFrom: [] },
+      {
+        householdId: 'flat',
+        name: 'Flat',
+        role: 'owner',
+        inheritsFrom: [{ householdId: 'home', name: 'Home' }]
+      }
+    ]
+  };
+
+  const settings = {
+    locale: 'en',
+    theme: 'warm-paper',
+    mode: 'light',
+    measurementSystem: 'metric'
+  };
+
+  beforeEach(async () => {
+    localStorage.clear();
+    resetAllStores();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) =>
+        Promise.resolve(
+          new Response(JSON.stringify(input.url.endsWith('/settings') ? settings : me), {
+            headers: { 'Content-Type': 'application/json' }
+          })
+        )
+      )
+    );
+    await session.refresh();
+    respond();
+  });
+
+  it('names the household that chose, and leaves taking it back to them', async () => {
+    show({ ...counted, corrected: true, chosenBy: 'home' }, { householdId: 'flat' });
+
+    expect(
+      await screen.findByRole('button', { name: /Butter\s*chosen in “Home”/ })
+    ).toHaveAttribute('aria-current', 'true');
+    expect(screen.queryByRole('button', { name: 'Back to the default' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Take back your choice' })).not.toBeInTheDocument();
+  });
+
+  it('lets an heir take back its own choice, which leads to what it inherits', async () => {
+    const { onreset } = show(
+      { ...counted, corrected: true, chosenBy: 'flat' },
+      { householdId: 'flat' }
+    );
+
+    await screen.findByRole('button', { name: /Butter\s*your choice/ });
+    await userEvent.click(screen.getByRole('button', { name: 'Take back your choice' }));
+
+    expect(onreset).toHaveBeenCalled();
+  });
+
+  it('starts from an inherited weight, says whose it is, and offers no removal', async () => {
+    show(
+      { ...counted, unitKey: 'piece', via: 'householdWeight', weighedBy: 'home', grams: 150 },
+      { householdId: 'flat', unit: 'piece', perUnit: 150 }
+    );
+
+    expect(await screen.findByRole('textbox', { name: 'Weight in grams' })).toHaveValue('150');
+    expect(screen.getAllByText('chosen in “Home”').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: 'Remove weight' })).not.toBeInTheDocument();
   });
 });
 

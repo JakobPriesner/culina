@@ -72,7 +72,7 @@ public class NutritionWeightTests(PostgresFixture postgres)
     }
 
     [Fact]
-    public async Task Put_ShouldLeaveAnotherHouseholdAndTheOneItInheritsFromAlone()
+    public async Task Put_ShouldLeaveTheHouseholdItInheritsFromAlone()
     {
         // Arrange
         var kitchen = await Kitchen.OpenAsync(postgres);
@@ -91,6 +91,29 @@ public class NutritionWeightTests(PostgresFixture postgres)
         Assert.Equal(300m, Lines(heir)[0].GetProperty("grams").GetDecimal());
         Assert.Equal(ownerBefore.ETag, owner.ETag);
         Assert.Equal("typicalWeight", Lines(owner)[0].GetProperty("via").GetString());
+    }
+
+    [Fact]
+    public async Task Put_ShouldReachEveryHeir_UntilTheHeirWeighsForItself()
+    {
+        // Arrange
+        var kitchen = await Kitchen.OpenAsync(postgres);
+        var recipe = await RecipeAsync(kitchen, "Suppe", ("Zwiebel", 2m, "Stück"));
+        var flat = await HeirAsync(kitchen);
+        var heirPath = $"{NutritionPath(recipe)}?householdId={flat}";
+
+        // Act
+        await PutWeightAsync(kitchen.Client, kitchen.HouseholdId, "Zwiebel", "piece", 150m);
+        var inherited = await kitchen.Client.GetAsync(heirPath, Token);
+        await PutWeightAsync(kitchen.Client, flat, "Zwiebel", "piece", 100m);
+        var own = await kitchen.Client.GetAsync(heirPath, Token);
+
+        // Assert
+        Assert.Equal("householdWeight", Lines(inherited)[0].GetProperty("via").GetString());
+        Assert.Equal(300m, Lines(inherited)[0].GetProperty("grams").GetDecimal());
+        Assert.Equal(kitchen.HouseholdId, Lines(inherited)[0].GetProperty("weighedBy").GetGuid());
+        Assert.Equal(200m, Lines(own)[0].GetProperty("grams").GetDecimal());
+        Assert.Equal(flat, Lines(own)[0].GetProperty("weighedBy").GetGuid());
     }
 
     [Fact]
