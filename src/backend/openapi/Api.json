@@ -421,7 +421,7 @@
           "Sessions"
         ],
         "summary": "Sign in",
-        "description": "Starts a session. Sets the session cookie and returns the CSRF token to echo in X-Culina-CSRF on every unsafe request. Failure is always auth.invalid_credentials, whether or not the address is registered.",
+        "description": "Starts a session. For a browser, sets the session cookie and returns the CSRF token to echo in X-Culina-CSRF on every unsafe request. For an app (client ios or android), returns the session token instead, to send as Authorization: Bearer with no CSRF token. Failure is always auth.invalid_credentials, whether or not the address is registered.",
         "operationId": "signInV1",
         "requestBody": {
           "content": {
@@ -14709,6 +14709,7 @@
           "sessionId",
           "createdAt",
           "lastSeenAt",
+          "client",
           "isCurrent"
         ],
         "type": "object",
@@ -14738,6 +14739,10 @@
             "description": "What browser started it.",
             "nullable": true
           },
+          "client": {
+            "type": "string",
+            "description": "What it was started from: `browser`, `ios` or `android`."
+          },
           "isCurrent": {
             "type": "boolean",
             "description": "Whether this is the session making the request."
@@ -14759,6 +14764,11 @@
           "password": {
             "type": "string",
             "description": "The account's password."
+          },
+          "client": {
+            "type": "string",
+            "description": "`browser` (the default) for the session cookie; `ios` or `android` for an app,\n        which receives the session token in the response and sends it as\n        `Authorization: Bearer`.",
+            "nullable": true
           }
         },
         "description": "Credentials."
@@ -14793,6 +14803,11 @@
           "csrfToken": {
             "type": "string",
             "description": "The CSRF token to send in `X-Culina-CSRF` on every unsafe request."
+          },
+          "sessionToken": {
+            "type": "string",
+            "description": "The session token, for an app only (`client``ios` or `android`); null for a\nbrowser, whose token is the HttpOnly cookie and never readable by script. Sent as\n`Authorization: Bearer`, it needs no CSRF token.",
+            "nullable": true
           }
         },
         "description": "Who signed in, and the token their requests must echo."
@@ -16085,7 +16100,8 @@
       "SetupGetResponse": {
         "required": [
           "stage",
-          "startedAt"
+          "startedAt",
+          "apiVersion"
         ],
         "type": "object",
         "properties": {
@@ -16097,6 +16113,11 @@
             "type": "string",
             "description": "When the running host started; it changes when the server restarts to apply a setting, so a\nclient can tell the restart is over.",
             "format": "date-time"
+          },
+          "apiVersion": {
+            "type": "integer",
+            "description": "The generation of the API contract this server speaks (int ApiContract.Version), so\nan installed app can tell whether it understands this server before signing in.",
+            "format": "int32"
           }
         },
         "description": "How far this instance has got in being set up."

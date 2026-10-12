@@ -26,7 +26,8 @@ internal sealed class GetSetupQueryHandler(ISetupProgress progress, IHostRestart
                 SetupStage.Account => "account",
                 _ => "complete"
             },
-            StartedAt = host.StartedAt
+            StartedAt = host.StartedAt,
+            ApiVersion = Contracts.ApiContract.Version
         }));
     }
 }

@@ -8,6 +8,7 @@ internal static class RequestContext
     private const string ErrorCodeKey = "culina.error_code";
     private const string CsrfTokenHashKey = "culina.csrf_token_hash";
     private const string HashedAssetKey = "culina.hashed_asset";
+    private const string BearerKey = "culina.bearer";
 
     internal static void SetRequestId(HttpContext context, string requestId) =>
         context.Items[RequestIdKey] = requestId;
@@ -44,4 +45,12 @@ internal static class RequestContext
     /// <summary>Whether the response is a hashed asset, which only ever loads as a subresource.</summary>
     internal static bool IsHashedAsset(HttpContext context) =>
         context.Items.ContainsKey(HashedAssetKey);
+
+    /// <summary>Records that the session came from <c>Authorization: Bearer</c>, not the cookie.</summary>
+    internal static void MarkBearer(HttpContext context) =>
+        context.Items[BearerKey] = true;
+
+    /// <summary>Whether the request authenticated with an app's bearer token, which a browser never attaches by itself.</summary>
+    internal static bool IsBearer(HttpContext context) =>
+        context.Items.ContainsKey(BearerKey);
 }

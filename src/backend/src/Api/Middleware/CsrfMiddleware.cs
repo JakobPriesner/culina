@@ -10,6 +10,7 @@ namespace Api.Middleware;
 /// <remarks>
 /// A synchronizer token, not double-submit: only the server knows the digest, which comes from the same read that authenticated the session.
 /// Safe methods are exempt because no <c>GET</c> changes state, which an architecture test asserts.
+/// Bearer-authenticated requests (the apps) are exempt because forgery needs a credential the browser attaches by itself, and it never attaches that header.
 /// </remarks>
 /// <param name="next">The rest of the pipeline.</param>
 internal sealed class CsrfMiddleware(RequestDelegate next)
@@ -25,6 +26,7 @@ internal sealed class CsrfMiddleware(RequestDelegate next)
 
         if (SafeMethods.Includes(context.Request.Method)
             || context.User.FindFirst(CulinaClaims.SessionId) is null
+            || RequestContext.IsBearer(context)
             || context.GetEndpoint()?.Metadata.GetMetadata<CsrfExempt>() is not null
             || IsValid(context, tokens))
         {

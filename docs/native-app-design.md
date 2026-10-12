@@ -278,9 +278,9 @@ First launch, before any other route renders:
 2. **Verify.** `GET {origin}/api/v1/setup` (already anonymous) proves that a
    Culina instance answers, and its `stage` says whether it can be signed into.
    `account` and `database` show "finish setting up this server in a browser
-   first"; the native app does not run setup. Two fields would be added to its
-   response, for the compatibility check in 3.6: `apiVersion` (the contract
-   generation) and `name` (the instance's display name, if the admin set one).
+   first"; the native app does not run setup. Its response carries
+   `apiVersion` (the contract generation, `Contracts.ApiContract.Version`) for
+   the compatibility check in 3.6.
 3. **Sign in.** The existing sign-in form with native session delivery (3.4).
    Registration and invitations (`/join/{code}`) reuse their pages. An invite
    link opened on the phone carries its instance origin, so it can pre-fill
@@ -331,10 +331,11 @@ Keep one session model; give it a second carrier.
   `token_hash = sha256(token)` and the token travels in `__Host-culina.session`.
   A native session is the same row. Only the delivery differs: the token is
   returned in the sign-in response body instead of a `Set-Cookie`.
-- **Asking for it.** The sign-in request gets an optional field, e.g.
-  `"delivery": "token"`. The `SignIn` response gains a nullable `sessionToken`,
-  set only then. Sign-in stays one resource (`POST /api/v1/sessions`), per
-  `rest-api-design`. Recovery-code and invitation sign-ins get the same field.
+- **Asking for it.** The sign-in request has an optional `client`: `browser`
+  (the default), `ios` or `android`. An app client gets `sessionToken` in the
+  response and no cookie. The same field labels the session on the devices
+  screen. Sign-in stays one resource (`POST /api/v1/sessions`), per
+  `rest-api-design`; it is the only way a session starts.
 - **Reading it.** `SessionAuthenticationHandler` accepts
   `Authorization: Bearer <token>` when no session cookie is present. If both
   are present, the cookie wins and the bearer header is ignored, so a browser
@@ -345,9 +346,9 @@ Keep one session model; give it a second carrier.
   never attached that way. The client middleware sends `X-Culina-CSRF` only
   when it authenticates by cookie. `SameOriginMiddleware` already applies only
   to requests that carry the session cookie, so it needs no change.
-- **Sessions list.** `GET /api/v1/sessions` shows the app as a device. A
-  `client` column (`browser` / `ios` / `android`) gives a better label than the
-  webview user agent.
+- **Sessions list.** `GET /api/v1/sessions` shows the app as a device. The
+  `client` column (`browser` / `ios` / `android`, migration 0041) gives a
+  better label than the webview user agent.
 - **Expiry and 401.** Unchanged: a 401 still calls `sessionExpired()`. The
   native store deletes the Keychain entry and returns to sign-in, not to
   Connect.
@@ -463,7 +464,7 @@ Local timer notifications need no push at all (part 4).
 2. CSRF skip for bearer-authenticated requests.
 3. CORS for a configured allow-list of native shell origins, with the expose
    list (3.5).
-4. `apiVersion` (and `name`) on `GET /api/v1/setup`.
+4. `apiVersion` on `GET /api/v1/setup`.
 5. Session `client` label.
 6. Later, optional: push relay sender beside `PushTransport`.
 
@@ -872,7 +873,7 @@ each tracked as a bead under `culina-v2-tj23`:
 
 1. **Backend: native session carrier** (`tj23.5`). Bearer delivery and acceptance of the
    session token, CSRF skip for bearer, CORS allow-list with exposed headers,
-   `apiVersion`/`name` on `GET /setup`, and the session `client` label (3.9).
+   `apiVersion` on `GET /setup`, and the session `client` label (3.9).
    Testable entirely with integration tests, with no native project needed.
 2. **Frontend: instance-aware API client** (`tj23.6`). `apiOrigin()`, `baseUrl`, bearer
    middleware, image fetch, share-link origin and the connect/verify flow
