@@ -1861,5 +1861,6 @@
   "me.server.switch": "Anderen Server verwenden",
   "me.server.switchBody": "Meldet dich hier ab und fragt nach einer anderen Adresse.",
   "kitchen.native.paused": "Pausiert",
-  "kitchen.native.more": "+{count} weitere"
+  "kitchen.native.more": "+{count} weitere",
+  "error.backgrounded": "Das ist abgebrochen, während Culina im Hintergrund war. Was schon da ist, bleibt; versuch es noch einmal, um es fertigzustellen."
 }

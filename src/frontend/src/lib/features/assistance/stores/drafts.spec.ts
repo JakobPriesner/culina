@@ -174,6 +174,28 @@ describe('the draft store', () => {
     expect(drafts.asking).toBe(false);
   });
 
+  it('says the draft stopped in the background, not that the phone is offline, when the page was put away', async () => {
+    assistant();
+
+    const drafts = createDraftStore();
+    const finished = drafts.ask(anIdea);
+
+    await opened();
+
+    FakeStream.last!.send({ draft: { title: 'Auberginen' } });
+    // Switching apps: the phone hides the page, then suspends it, which cuts the stream.
+    const visibility = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
+    document.dispatchEvent(new Event('visibilitychange'));
+    FakeStream.last!.cut();
+
+    const failure = await finished;
+    visibility.mockRestore();
+
+    expect(failure?.code).toBe('client.backgrounded');
+    expect(drafts.error?.code).toBe('client.backgrounded');
+    expect(drafts.draft?.title).toBe('Auberginen');
+  });
+
   it('keeps a refusal to start as an ordinary failure', async () => {
     assistant(() => problem('assistance.budget_exhausted', 429));
 

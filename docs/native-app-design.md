@@ -22,6 +22,7 @@ lock, media session as they work on the web).
 5. [Build pipeline: web and native from one tree](#5-build-pipeline-web-and-native-from-one-tree) — `tj23.4`
 6. [First steps](#6-first-steps)
 7. [Push relay](#7-push-relay) — `tj23.10`
+8. [AI drafts when the app is put away](#8-ai-drafts-when-the-app-is-put-away) — `tj23.11`
 
 ---
 
@@ -1089,4 +1090,52 @@ it like any other optional outbound dependency: an outage only delays
 
 Tracked: `culina-v2-tj23.14` (the relay), `culina-v2-tj23.15` (server devices
 and outbox), `culina-v2-tj23.16` (app registration).
+
+---
+
+## 8. AI drafts when the app is put away
+
+3.7 left this open. A draft streams from `POST /recipe-drafts*` through
+`ask.ts`, which never resumes. Switching apps suspends the page, the stream
+breaks, and the draft stops where it was.
+
+### 8.1 What could be measured
+
+Nothing that settles it. `assistance_usage` records tokens and cost per call,
+not time, and the local development database holds no completed draft.
+Durations do exist where they belong: every handler reports
+`culina.usecase.duration` (`Recipes.ComposeDraft` and the photograph and media
+reads) to the instance's metrics backend. Its p50 and p90 are the number to read
+before building anything (`culina-v2-tj23.17`). Output tokens give a rough bound. At the
+50–100 tokens a second providers stream, a full recipe (around 1,000–2,000
+tokens of JSON) takes 10–40 s, and a photograph read with a reasoning model
+takes longer.
+
+### 8.2 Decision
+
+**No background-time request.** `beginBackgroundTask` keeps the app's process
+alive for about 30 s:
+- WKWebView's networking and script run in WebKit's own processes, which
+  WebKit suspends on its own terms, so keeping the app alive does not keep the
+  stream alive.
+- Android's freezer stops cached apps within seconds too.
+- At best it would cover the short drafts, which are the ones that rarely
+  break.
+
+**Durable drafts instead** (`culina-v2-tj23.17`). The photo intake already is what a draft
+needs to become:
+- a server job that runs regardless of the client;
+- a watch stream (`events.ts`) that resumes with `Last-Event-ID`;
+- a notification when it is ready.
+
+Routing the composer's drafts through it keeps generation going while the phone
+is in a pocket. The page re-attaches on `resume`, and "ready" can arrive through
+Web Push or the relay (part 7).
+
+**Now:** a draft cut while the page was hidden no longer says "you appear to be
+offline", which was wrong. It says it stopped while Culina was in the
+background, and keeps what had arrived (it was paid for), with Try again as
+before (`client.backgrounded`,
+`features/assistance/stores/drafts.svelte.ts`). This helps phone browsers
+equally.
 
