@@ -1,10 +1,13 @@
+using Domain.Ingredients;
 using Domain.Recipes;
 
 namespace Domain.Shopping;
 
 /// <summary>Whether two lines are the same thing to buy.</summary>
 /// <remarks>
-/// Lines merge when the folded names match (Müsli meets Muesli) and the units can be added. Spoons
+/// Lines merge when they are one thing to buy and the units can be added: the folded names match (Müsli meets
+/// Muesli), or the names read as one ingredient ("Tomate" and "Tomaten", "Spargel, grün" and "grüner Spargel",
+/// "große Zwiebel" and "Zwiebel"), but never two kinds of one ("grüner Spargel" and "weißer Spargel"). Spoons
 /// never convert to millilitres (tablespoons differ by country), so "2 tbsp oil" and "30 ml oil"
 /// stay two lines rather than invent precision.
 /// </remarks>
@@ -37,6 +40,7 @@ public static class ItemMergePolicy
         ArgumentNullException.ThrowIfNull(left);
         ArgumentNullException.ThrowIfNull(right);
 
-        return string.Equals(left.ComparisonKey, right.ComparisonKey, StringComparison.Ordinal);
+        return string.Equals(left.ComparisonKey, right.ComparisonKey, StringComparison.Ordinal) ||
+               IngredientWords.Read(left.Value).IsSameIngredient(IngredientWords.Read(right.Value));
     }
 }

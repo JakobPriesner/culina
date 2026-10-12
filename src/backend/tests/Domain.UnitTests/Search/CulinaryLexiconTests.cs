@@ -213,6 +213,18 @@ public class CulinaryLexiconTests
     }
 
     [Theory]
+    [InlineData("Kokosmilch light", "light")]
+    [InlineData("kalte Butter", "cold")]
+    [InlineData("warmes Wasser", "warm")]
+    [InlineData("süße Sahne", "sweet")]
+    public void Describe_ShouldTakeTheDishsCharacter_NeverFromAnIngredient(string ingredient, string character)
+    {
+        var concepts = CulinaryLexicon.Describe("Gericht", [], [ingredient]);
+
+        Assert.DoesNotContain(character, concepts);
+    }
+
+    [Theory]
     [InlineData("Hackfleisch")]
     [InlineData("Speck")]
     [InlineData("Lachs")]

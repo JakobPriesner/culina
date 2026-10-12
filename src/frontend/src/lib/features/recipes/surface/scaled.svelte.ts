@@ -1,4 +1,5 @@
 import { formatQuantity, type QuantityText } from '../formatQuantity';
+import { forAmount } from '../nounForms';
 import { quantityLabels as labels } from '../quantityLabels';
 import { factorFor, scaleQuantity, trustedFactorRange } from '../scaling';
 import type { Quantity, RecipeReading } from '../types';
@@ -59,7 +60,14 @@ export function createScaling(recipe: () => RecipeReading | null, target: () => 
 
     show,
 
-    amountFor: (of: { readonly quantity: Quantity }): QuantityText => show(of.quantity)
+    amountFor: (of: { readonly quantity: Quantity }): QuantityText => show(of.quantity),
+
+    /** The name in the number its scaled count asks for: one "Zwiebel", doubled "2 Zwiebeln". */
+    nameFor: (of: { readonly name: string; readonly quantity: Quantity }): string => {
+      const value = of.quantity.value === null ? null : of.quantity.value * factor;
+
+      return forAmount(of.name, value, of.quantity.unit !== null, recipe()?.language ?? null);
+    }
   };
 }
 

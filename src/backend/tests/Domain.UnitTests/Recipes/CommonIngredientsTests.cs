@@ -45,6 +45,14 @@ public class CommonIngredientsTests
     }
 
     [Fact]
+    public void Matching_ShouldFindEveryTypedWord_InAnyOrder()
+    {
+        var found = CommonIngredients.Matching("milch kokos", Language.De, 5);
+
+        Assert.Contains(found, entry => entry.De == "Kokosmilch");
+    }
+
+    [Fact]
     public void Matching_ShouldStopAtTheLimit()
     {
         var found = CommonIngredients.Matching(query: null, Language.En, 4);

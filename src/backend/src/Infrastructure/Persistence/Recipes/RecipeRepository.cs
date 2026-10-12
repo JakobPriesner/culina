@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Domain.Ingredients;
 using Domain.Recipes;
+using Domain.Search;
 using Domain.Shared;
 using Npgsql;
 
@@ -58,7 +59,11 @@ internal sealed class RecipeRepository(
     {
         ArgumentNullException.ThrowIfNull(library);
 
-        // Most-used spelling wins, so a stray "Olivenoel" does not displace "Olivenöl". The trigram index makes the LIKE cheap.
+        // Every typed word somewhere in the name, in either fold and any order: "kokos light" finds "Kokosmilch light",
+        // "olivenoel" finds "Olivenöl". Most-used spelling wins, so a stray "Olivenoel" does not displace "Olivenöl".
+        var ae = SearchText.FoldAe(query ?? string.Empty);
+        var a = SearchText.FoldA(query ?? string.Empty);
+
         var names = await executor.QueryAsync<string>(
             """
             select i.name
@@ -66,16 +71,20 @@ internal sealed class RecipeRepository(
             join ingredient_groups g on g.id = i.group_id
             join recipes r on r.id = g.recipe_id
             where r.household_id = any(@library)
-              and (@query = '' or i.name ilike '%' || @query || '%')
+              and (i.name_ae like all(@aeWords) or i.name_a like all(@aWords))
             group by i.name
-            order by (lower(i.name) like lower(@query) || '%') desc, count(*) desc, i.name
+            order by (min(i.name_ae) like @ae || '%' or min(i.name_a) like @a || '%') desc, count(*) desc, i.name
             limit @limit;
             """,
-            new { library = library.ToArray(), query = query?.Trim() ?? string.Empty, limit },
+            new { library = library.ToArray(), aeWords = Contains(ae), aWords = Contains(a), ae, a, limit },
             cancellationToken).ConfigureAwait(false);
 
         return [.. names];
     }
+
+    /// <summary>A LIKE pattern per folded word; a fold is letters, digits and single spaces, so none needs escaping.</summary>
+    private static string[] Contains(string folded) =>
+        [.. folded.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(word => $"%{word}%")];
 
     public async Task<Result<Guid>> HouseholdOfAsync(Guid recipeId, CancellationToken cancellationToken)
     {

@@ -126,6 +126,7 @@ const shortReasons: Record<Exclude<NutritionStatus, 'counted'>, () => string> = 
   amountNotInGrams: m['nutrition.reason.amountNotInGrams'],
   noAmount: m['nutrition.reason.noAmount'],
   unknownFood: m['nutrition.reason.unknownFood'],
+  unknownKind: m['nutrition.reason.unknownKind'],
   excluded: m['nutrition.reason.excluded'],
   implausible: m['nutrition.short.implausible']
 };

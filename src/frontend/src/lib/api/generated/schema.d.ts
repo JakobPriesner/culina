@@ -3735,10 +3735,10 @@ export interface components {
              */
             ingredientId: string;
             /**
-             * @description `counted`, `amountNotInGrams`, `noAmount`, `unknownFood`, `excluded` or `implausible`.
+             * @description `counted`, `amountNotInGrams`, `noAmount`, `unknownFood`, `unknownKind`, `excluded` or `implausible`.
              * @enum {string}
              */
-            status: "counted" | "amountNotInGrams" | "noAmount" | "unknownFood" | "excluded" | "implausible";
+            status: "counted" | "amountNotInGrams" | "noAmount" | "unknownFood" | "unknownKind" | "excluded" | "implausible";
             /**
              * @description Why the unit is not counted: `spoonOfSolid`, `volumeOfSolid`, `count` or `householdUnit`;
              *     only when the status is `amountNotInGrams`.

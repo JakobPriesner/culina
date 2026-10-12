@@ -4,6 +4,7 @@ using Application.Recipes;
 using Application.Telemetry;
 using Contracts.Shopping;
 using Domain.Households;
+using Domain.Ingredients;
 using Domain.Recipes;
 using Domain.Shared;
 using Domain.Shopping;
@@ -71,11 +72,27 @@ internal sealed class AddShoppingItemCommandHandler(
         return tracked.Record(result);
     }
 
-    // A household's own correction always wins over the keyword default.
+    // A household's own correction always wins over the keyword default, also for the same thing written otherwise:
+    // "Tomate" goes where the household put "Tomaten".
     internal static ShoppingSection SectionFor(
         ItemName name,
-        IReadOnlyDictionary<string, ShoppingSection> overrides) =>
-        overrides.TryGetValue(name.ComparisonKey, out var corrected)
-            ? corrected
-            : SectionKeywords.SectionFor(name);
+        IReadOnlyDictionary<string, ShoppingSection> overrides)
+    {
+        if (overrides.TryGetValue(name.ComparisonKey, out var corrected))
+        {
+            return corrected;
+        }
+
+        var reading = IngredientWords.Read(name.Value);
+
+        foreach (var (key, section) in overrides)
+        {
+            if (IngredientWords.Read(key).IsSameIngredient(reading))
+            {
+                return section;
+            }
+        }
+
+        return SectionKeywords.SectionFor(name);
+    }
 }

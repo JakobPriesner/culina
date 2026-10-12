@@ -62,18 +62,19 @@
         onblur={() => onhighlight?.(null)}
         onclick={() => (activeQuickLook = activeQuickLook === index ? null : index)}
         >{#if amount}<span class="amount">{amount}</span>
-          <span class="name">{node.name}</span>{:else}<span class="name">{node.name}</span
+          <span class="name">{scaling.nameFor(node)}</span>{:else}<span class="name"
+            >{node.name}</span
           >{/if}</button
       >{#if activeQuickLook === index && buttonRefs[index]}<IngredientQuickLook
           anchor={buttonRefs[index]}
-          name={node.name}
+          name={scaling.nameFor(node)}
           stepAmount={amount}
           totalAmount={totalFor(node.ingredientId)}
           note={noteFor(node.ingredientId)}
           onclose={() => (activeQuickLook = null)}
           onlocate={onlocate ? () => onlocate?.(node.ingredientId) : undefined}
         />{/if}{:else}<strong class="ingredient-plain"
-        >{#if amount}{amount} {node.name}{:else}{node.name}{/if}</strong
+        >{#if amount}{amount} {scaling.nameFor(node)}{:else}{node.name}{/if}</strong
       >{/if}{:else if node.kind === 'code'}<code>{node.text}</code
     >{:else if node.kind === 'link'}{#if interactive}<a
         href={node.href}

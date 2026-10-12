@@ -256,6 +256,38 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
         Assert.Equal(["butter", "peanut butter"], found);
     }
 
+    [Theory]
+    [InlineData("Kokosmilch light")]
+    [InlineData("kokos light")]
+    [InlineData("light kokos")]
+    [InlineData("kokosmilch lig")]
+    public async Task OwnIngredientNamesAsync_ShouldFindEveryTypedWord_InAnyOrder(string typed)
+    {
+        await using var scope = await NewScopeAsync();
+        var recipe = await scope.SeedRecipeAsync();
+        await WriteNamesAsync(scope, recipe, "Kokosmilch light", "Kokosmilch");
+
+        var found = await scope.Recipes.OwnIngredientNamesAsync([recipe.HouseholdId], typed, 10, Token);
+
+        // Typing on past "Kokosmilch" must not lose the light one the household already wrote.
+        Assert.Equal(["Kokosmilch light"], found);
+    }
+
+    [Theory]
+    [InlineData("olivenoel")]
+    [InlineData("Olivenöl")]
+    [InlineData("OLIVENÖL")]
+    public async Task OwnIngredientNamesAsync_ShouldIgnoreHowUmlautsAndCapitalsWereTyped(string typed)
+    {
+        await using var scope = await NewScopeAsync();
+        var recipe = await scope.SeedRecipeAsync();
+        await WriteNamesAsync(scope, recipe, "Olivenöl");
+
+        var found = await scope.Recipes.OwnIngredientNamesAsync([recipe.HouseholdId], typed, 10, Token);
+
+        Assert.Equal(["Olivenöl"], found);
+    }
+
     [Fact]
     public async Task OwnIngredientNamesAsync_ShouldNotReachIntoAnotherHouseholdsKitchen()
     {
@@ -268,6 +300,20 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
         Assert.Empty(found);
         Assert.NotEmpty(await scope.Recipes
             .OwnIngredientNamesAsync([recipe.HouseholdId], "butter", 10, Token));
+    }
+
+    private static async Task WriteNamesAsync(RecipeScope scope, Recipe recipe, params string[] names)
+    {
+        recipe.SetContents(
+            [
+                IngredientGroup.Create(null, null, 0,
+                    [.. names.Select((name, at) =>
+                        RecipeIngredient.Create(null, at, Quantity.Unmeasured, name, null).ShouldBeSuccess())])
+                    .ShouldBeSuccess()
+            ],
+            [],
+            Now).ShouldBeSuccess();
+        (await scope.Recipes.UpdateAsync(recipe, recipe.Version, Token)).ShouldBeSuccess();
     }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;

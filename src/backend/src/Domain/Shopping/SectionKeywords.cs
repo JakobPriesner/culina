@@ -23,7 +23,7 @@ public static class SectionKeywords
         return ShoppingSection.Other;
     }
 
-    // Longest keywords first: "kokosmilch" must match before "milch".
+    // Longest keywords first: "kokosmilch", a can for cooking, must match before "milch".
     private static readonly (string Keyword, ShoppingSection Section)[] Table = Build();
 
     private static (string, ShoppingSection)[] Build()
@@ -52,7 +52,7 @@ public static class SectionKeywords
             "traube", "grape", "mango", "kraut", "cabbage", "radieschen", "radish");
 
         Add(ShoppingSection.DairyEggs,
-            "kokosmilch", "coconut milk", "mandelmilch", "almond milk", "hafermilch",
+            "kokosdrink", "coconut drink", "mandelmilch", "almond milk", "hafermilch",
             "oat milk", "milch", "milk", "sahne", "cream", "butter", "kaese", "cheese",
             "parmesan", "mozzarella", "feta", "joghurt", "yoghurt", "yogurt", "quark",
             "schmand", "creme fraiche", "ei", "egg", "frischkaese", "ricotta",
@@ -77,7 +77,7 @@ public static class SectionKeywords
 
         Add(ShoppingSection.CannedJars,
             "dose", "tin", "konserve", "passierte tomaten", "passata", "tomatenmark",
-            "tomato paste", "kokosmilch dose", "oliven", "olive", "kapern", "caper",
+            "tomato paste", "kokosmilch", "coconut milk", "oliven", "olive", "kapern", "caper",
             "senf", "mustard", "ketchup", "mayonnaise", "honig", "honey", "marmelade",
             "jam", "erdnussbutter", "peanut butter", "bruehe", "broth", "stock");
 

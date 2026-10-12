@@ -24,8 +24,23 @@ public class ItemMergePolicyTests
     }
 
     [Theory]
+    [InlineData("Tomate", "Tomaten")]
+    [InlineData("Apfel", "Äpfel")]
+    [InlineData("Spargel, grün", "grüner Spargel")]
+    [InlineData("große Zwiebel", "Zwiebeln")]
+    [InlineData("gehackte Zwiebeln", "Zwiebel")]
+    public void NamesMatch_ShouldMergeOneThingWrittenOtherwise(string left, string right)
+    {
+        Assert.True(ItemMergePolicy.NamesMatch(Name(left), Name(right)));
+    }
+
+    [Theory]
     [InlineData("Butter", "Buttermilch")]
     [InlineData("Mehl", "Vollkornmehl")]
+    [InlineData("grüner Spargel", "weißer Spargel")]
+    [InlineData("grüner Spargel", "Spargel")]
+    [InlineData("Kokosmilch light", "Kokosmilch")]
+    [InlineData("gehackte Tomaten", "Tomaten")]
     public void NamesMatch_ShouldNotMergeDifferentThings(string left, string right)
     {
         var matched = ItemMergePolicy.NamesMatch(Name(left), Name(right));
@@ -91,6 +106,45 @@ public class ItemMergePolicyTests
 
         Assert.Equal(250m, item.Quantity.Amount);
         Assert.Equal(Unit.Gram, item.Quantity.Unit);
+    }
+
+    [Fact]
+    public void Add_ShouldWriteTheSumInItsNumber()
+    {
+        var list = ShoppingList.Create(Guid.CreateVersion7());
+
+        list.Add(Name("Tomate"), Asked(1, null), ShoppingSection.Produce);
+        list.Add(Name("Tomaten"), Asked(3, null), ShoppingSection.Produce);
+
+        var item = Assert.Single(list.Items);
+
+        Assert.Equal(4m, item.Quantity.Amount);
+        Assert.Equal("Tomaten", item.Name.Value);
+    }
+
+    [Fact]
+    public void Add_ShouldWriteADoubledRecipesCountInItsNumber()
+    {
+        var list = ShoppingList.Create(Guid.CreateVersion7());
+
+        list.Add(Name("Zwiebel"), Asked(2, null), ShoppingSection.Produce);
+
+        Assert.Equal("Zwiebeln", Assert.Single(list.Items).Name.Value);
+    }
+
+    [Fact]
+    public void Add_ShouldPutAnotherKindUnderTheFirst_NotWhereverItArrives()
+    {
+        var list = ShoppingList.Create(Guid.CreateVersion7());
+
+        list.Add(Name("grüner Spargel"), Asked(500, Unit.Gram), ShoppingSection.Produce);
+        list.Add(Name("Zwiebeln"), Asked(2, null), ShoppingSection.Produce);
+        list.Add(Name("weißer Spargel"), Asked(1, Unit.Kilogram), ShoppingSection.Produce);
+
+        // Two kinds of asparagus, side by side and not summed.
+        Assert.Equal(
+            ["grüner Spargel", "weißer Spargel", "Zwiebeln"],
+            list.Items.OrderBy(item => item.SortOrder).Select(item => item.Name.Value));
     }
 
     [Fact]

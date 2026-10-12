@@ -9,6 +9,11 @@ const excerptLength = 180;
 
 type AmountOf = (of: { readonly quantity: Quantity }) => { readonly text: string };
 
+/** The name at the current scale: "2 Zwiebeln" once one is doubled. */
+type NameOf = (of: { readonly name: string; readonly quantity: Quantity }) => string;
+
+const asWritten: NameOf = (of) => of.name;
+
 /**
  * The timer the remote should talk about: the one on the step being cooked,
  * then the one that was just paused from the remote, then the next to ring,
@@ -36,14 +41,14 @@ export function selectTimer(
   );
 }
 
-function inlineText(nodes: readonly Inline[], amountFor: AmountOf): string {
+function inlineText(nodes: readonly Inline[], amountFor: AmountOf, nameFor: NameOf): string {
   return nodes
     .map((node) => {
       if (node.kind === 'ingredient') {
-        return [amountFor(node).text, node.name].filter(Boolean).join(' ');
+        return [amountFor(node).text, nameFor(node)].filter(Boolean).join(' ');
       }
 
-      return 'children' in node ? inlineText(node.children, amountFor) : node.text;
+      return 'children' in node ? inlineText(node.children, amountFor, nameFor) : node.text;
     })
     .join('');
 }
@@ -51,7 +56,8 @@ function inlineText(nodes: readonly Inline[], amountFor: AmountOf): string {
 /** A step as one line of plain text, with ingredient amounts at the current scale. */
 export function stepExcerpt(
   step: RecipeReading['steps'][number] | undefined,
-  amountFor: AmountOf
+  amountFor: AmountOf,
+  nameFor: NameOf = asWritten
 ): string {
   if (!step) {
     return '';
@@ -60,8 +66,8 @@ export function stepExcerpt(
   return parseStep(step.segments)
     .map((block) =>
       block.kind === 'paragraph'
-        ? inlineText(block.children, amountFor)
-        : block.items.map((item) => inlineText(item, amountFor)).join(' ')
+        ? inlineText(block.children, amountFor, nameFor)
+        : block.items.map((item) => inlineText(item, amountFor, nameFor)).join(' ')
     )
     .join(' ')
     .replace(/\s+/g, ' ')

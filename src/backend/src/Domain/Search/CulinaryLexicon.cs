@@ -16,7 +16,7 @@ public static class CulinaryLexicon
     /// <summary>
     /// The table's version; raise it with any change to an entry or to how text is matched.
     /// </summary>
-    public const int Version = 4;
+    public const int Version = 5;
 
     private static readonly Compiled Index = new(Entries());
 
@@ -103,7 +103,10 @@ public static class CulinaryLexicon
 
         foreach (var ingredient in ingredients)
         {
-            named.UnionWith(Read(ingredient, whole: false).Where(key => Index.ByKey[key].Kind != ConceptKind.Diet));
+            // An ingredient says what is in the dish, not what the dish is like: "Kokosmilch light" is not light
+            // cooking, "kalte Butter" not a cold dish.
+            named.UnionWith(Read(ingredient, whole: false)
+                .Where(key => Index.ByKey[key].Kind is not (ConceptKind.Diet or ConceptKind.Character)));
         }
 
         return [.. named.SelectMany(Lineage).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];

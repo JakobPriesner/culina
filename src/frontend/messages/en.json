@@ -1564,6 +1564,7 @@
   "nutrition.reason.amountNotInGrams": "amount not in grams",
   "nutrition.reason.noAmount": "no amount",
   "nutrition.reason.unknownFood": "not in the food table",
+  "nutrition.reason.unknownKind": "this kind isn't in the food table",
   "nutrition.reason.excluded": "excluded by your household",
   "nutrition.reason.implausible": "amount looks wrong, not counted",
   "nutrition.source": "Nutrition values:",

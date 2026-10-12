@@ -1,4 +1,5 @@
 using Domain.Nutrition;
+using Domain.Search;
 using Domain.Shopping;
 
 namespace Domain.Ingredients;
@@ -15,7 +16,7 @@ public enum LookalikeReason
     /// <summary>They name the same food: "Hühnchenbrustfilet" and "Hähnchenbrust".</summary>
     SameFood,
 
-    /// <summary>One letter or two apart: "Tomate" and "Tomaten", "Oregano" and "Origano".</summary>
+    /// <summary>One letter or two apart: "Oregano" and "Origano".</summary>
     Typo
 }
 
@@ -35,6 +36,9 @@ public static class IngredientLookalikes
 
     /// <summary>From this length, two slips are still a typo.</summary>
     private const int LongTypo = 9;
+
+    /// <summary>What a word grows by in the plural or when declined: "Tomaten", "grüner", "onions".</summary>
+    private static readonly string[] Endings = ["e", "en", "er", "es", "n", "r", "s"];
 
     /// <summary>Proposes merges, most used names first.</summary>
     /// <param name="uses">Every distinct name the household's recipes use.</param>
@@ -125,14 +129,70 @@ public static class IngredientLookalikes
             return LookalikeReason.Spelling;
         }
 
+        // A kind is never a misspelling of its thing: "grüner Spargel" is not "Spargel", "Kokosmilch light" not "Kokosmilch".
+        if (!one.Reading.HasSameQualifiers(other.Reading))
+        {
+            return null;
+        }
+
+        // The same thing in another order or case ("Spargel, grün", "grüner Spargel", "Grünspargel"), unless a word
+        // about it differs: "große Zwiebel" and "gehackte Zwiebel" are written that way on purpose.
+        if (one.Reading.Head.SequenceEqual(other.Reading.Head))
+        {
+            return one.Reading.Descriptors.Order(StringComparer.Ordinal).SequenceEqual(other.Reading.Descriptors.Order(StringComparer.Ordinal)) &&
+                   one.Reading.Preparation.SequenceEqual(other.Reading.Preparation)
+                ? LookalikeReason.Spelling
+                : null;
+        }
+
+        if (InAnotherForm(one, other) || one.Reading.IsSameIngredient(other.Reading))
+        {
+            return null;
+        }
+
         if (one.Food is not null && other.Food is not null)
         {
-            // Two different foods are never a typo of each other, however close they are spelt.
-            return one.Food == other.Food ? LookalikeReason.SameFood : null;
+            // Two different foods are never a typo of each other, however close they are spelt. One food is not
+            // always one thing to buy either: nutrition counts green and white asparagus alike, a shop does not.
+            return one.Food == other.Food && !AreKinds(one, other) ? LookalikeReason.SameFood : null;
         }
 
         return IsTypo(one.Key, other.Key) ? LookalikeReason.Typo : null;
     }
+
+    /// <summary>
+    /// Whether the names are one word for word, a word only longer by an ending somewhere: one ingredient in
+    /// another number or case, which merging would leave as "1 Tomaten" or "4 Tomate" in a recipe.
+    /// </summary>
+    private static bool InAnotherForm(Name one, Name other) =>
+        one.Words.Length == other.Words.Length &&
+        !one.Words.SequenceEqual(other.Words) &&
+        one.Words.Zip(other.Words).All(pair => Alike(pair.First, pair.Second));
+
+    /// <summary>
+    /// Whether the names are two kinds of one thing rather than two ways of writing it: they share a word but not
+    /// all of them ("grüner Spargel" and "Spargel", "weißer Spargel" and "Spargel grün"), or one ends in the
+    /// other, as a German compound ends in the thing it is a kind of ("Vollmilch" and "Milch").
+    /// </summary>
+    private static bool AreKinds(Name one, Name other)
+    {
+        if (SameWords(one.Words, other.Words) && SameWords(other.Words, one.Words))
+        {
+            return false;
+        }
+
+        return one.Words.Any(word => other.Words.Any(otherWord => Alike(word, otherWord) ||
+            word.EndsWith(otherWord, StringComparison.Ordinal) || otherWord.EndsWith(word, StringComparison.Ordinal)));
+    }
+
+    private static bool SameWords(string[] words, string[] others) =>
+        words.All(word => others.Any(other => Alike(word, other)));
+
+    private static bool Alike(string one, string other) =>
+        one == other || EndsDifferently(one, other) || EndsDifferently(other, one);
+
+    private static bool EndsDifferently(string longer, string shorter) =>
+        longer.StartsWith(shorter, StringComparison.Ordinal) && Endings.Contains(longer[shorter.Length..]);
 
     private static bool IsTypo(string one, string other)
     {
@@ -194,5 +254,9 @@ public static class IngredientLookalikes
         public string Key { get; } = ItemName.Fold(use.Name);
 
         public string? Food { get; } = FoodNames.Match(use.Name)?.Code;
+
+        public string[] Words { get; } = SearchText.FoldAe(use.Name).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+        public IngredientReading Reading { get; } = IngredientWords.Read(use.Name);
     }
 }
