@@ -1,5 +1,6 @@
 import { SvelteSet } from 'svelte/reactivity';
 
+import { native } from '$api';
 import { haptics } from '$shell/haptics';
 import { playKitchenChime, unlockAudio } from './kitchenAudio';
 import {
@@ -7,10 +8,17 @@ import {
   notifyTimerDone,
   requestTimerNotificationPermission
 } from './timerNotification';
+import { timersChangedEvent } from './nativeTimers';
 import { editTimerState, validTimers, type KitchenTimer, type TimerState } from './timerState';
 export type { KitchenTimer } from './timerState';
 
 const storageKey = (id: string) => `culina.timers.${id}`;
+
+/**
+ * In the app the operating system has already rung a timer whose deadline passed while the page slept; ringing it again
+ * on return would sound every alarm twice. Only a deadline just passed, on screen, is the page's to ring.
+ */
+const freshAlarmMs = 5_000;
 
 export function createTimers(sessionId: () => string | null, url: () => string = () => '/') {
   let timers = $state<KitchenTimer[]>([]);
@@ -107,7 +115,10 @@ export function createTimers(sessionId: () => string | null, url: () => string =
           )
         )
           return;
-        if (!state || claimed) {
+        const stale =
+          native &&
+          (document.visibilityState !== 'visible' || Date.now() - timer.endsAt > freshAlarmMs);
+        if ((!state || claimed) && !stale) {
           playKitchenChime();
           // OS notification vibration handles hidden windows.
           if (document.visibilityState === 'visible') haptics.alarm();
@@ -256,12 +267,19 @@ export function createTimers(sessionId: () => string | null, url: () => string =
         if (event.data?.type === 'culina:timers-changed' && event.data.sessionId === loadedFor)
           void refresh().then(read);
       };
+      // The app's notification buttons change the stored timers from the page itself (nativeTimers.ts).
+      const onNativeChange = (event: Event) => {
+        if ((event as CustomEvent<{ sessionId?: string }>).detail?.sessionId === loadedFor)
+          void refresh().then(read);
+      };
       clock.document.addEventListener('visibilitychange', onVisible);
+      clock.addEventListener(timersChangedEvent, onNativeChange);
       navigator.serviceWorker?.addEventListener('message', onMessage);
       read();
       return () => {
         clock.clearInterval(ticking);
         clock.document.removeEventListener('visibilitychange', onVisible);
+        clock.removeEventListener(timersChangedEvent, onNativeChange);
         navigator.serviceWorker?.removeEventListener('message', onMessage);
       };
     },

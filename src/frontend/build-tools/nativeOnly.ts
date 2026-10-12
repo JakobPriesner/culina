@@ -9,6 +9,15 @@ const stubs: Record<string, string> = {
   'src/lib/app/nativeShell.ts': 'export async function startNativeShell() {}\n',
   'src/lib/app/nativeImages.ts':
     'export function startNativeImages() {}\nexport function forgetNativeImages() {}\n',
+  'src/lib/features/cooking/nativeTimers.ts': [
+    "export const timersChangedEvent = 'culina:timers-changed';",
+    'export async function startNativeTimers() {}',
+    'export async function requestNativeTimerPermission() {}',
+    'export async function syncNativeTimers() {}',
+    'export async function closeNativeTimer() {}',
+    'export async function forgetNativeTimers() {}',
+    ''
+  ].join('\n'),
   'src/lib/api/connect.ts': [
     'export const supportedApiVersions = { oldest: 0, newest: 0 };',
     "export async function connect() { return 'address'; }",

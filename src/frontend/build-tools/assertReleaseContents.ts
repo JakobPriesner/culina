@@ -10,7 +10,7 @@ import { join } from 'node:path';
  * Text only the app's code holds: `toInstance`'s error (lib/api/client.ts) means `__CULINA_NATIVE__` stopped folding;
  * the Capacitor plugin names mean build-tools/nativeOnly.ts stopped stubbing the native shell.
  */
-const nativeOnly = ['No server is connected.', 'SecureStorage', 'KeepAwake'];
+const nativeOnly = ['No server is connected.', 'SecureStorage', 'KeepAwake', 'LocalNotifications'];
 
 export async function findNativeText(buildDir: string): Promise<string[]> {
   const found: string[] = [];
