@@ -42,6 +42,9 @@ internal static class Tags
 
     internal const string Nutrition = "Nutrition";
 
+    /// <summary>A household's ingredient names and its merges of them.</summary>
+    internal const string Ingredients = "Ingredients";
+
     internal const string Cookbooks = "Cookbooks";
 
     internal const string RecipeSources = "RecipeSources";

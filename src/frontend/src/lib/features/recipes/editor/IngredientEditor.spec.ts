@@ -16,7 +16,9 @@ const note = () => screen.getByLabelText('Note (e.g. diced)');
 const unitList = () => screen.queryByRole('listbox', { name: 'Unit suggestions' });
 const nameList = () => screen.queryByRole('listbox', { name: 'Ingredient suggestions' });
 
-function serverSuggests(items: { name: string; section: string; own: boolean }[]) {
+function serverSuggests(
+  items: { name: string; section: string; own: boolean; equivalent?: boolean }[]
+) {
   vi.stubGlobal(
     'fetch',
     vi.fn(
@@ -244,6 +246,32 @@ describe('the ingredient list', () => {
     expect(onchange).toHaveBeenLastCalledWith([
       { id: '', quantity: { value: null, unit: null }, name: 'flo', note: null }
     ]);
+  });
+});
+
+describe('steering to a name already in use', () => {
+  it('offers the household’s own name for a lookalike, and writes it in on request', async () => {
+    serverSuggests([{ name: 'chicken breast', section: 'meat', own: true, equivalent: true }]);
+
+    renderWithProviders(IngredientHarness, {});
+
+    await userEvent.type(name(), 'chiken breast');
+    await screen.findByText('You already use “chicken breast”.');
+    await userEvent.click(screen.getByRole('button', { name: 'Use “chicken breast” instead' }));
+
+    expect(name()).toHaveValue('chicken breast');
+    expect(screen.queryByText('You already use “chicken breast”.')).not.toBeInTheDocument();
+  });
+
+  it('says nothing when the suggestions only start with what was typed', async () => {
+    serverSuggests([{ name: 'flour', section: 'baking', own: true, equivalent: false }]);
+
+    renderWithProviders(IngredientHarness, {});
+
+    await userEvent.type(name(), 'flo');
+    await vi.waitFor(() => expect(nameList()).toBeInTheDocument());
+
+    expect(screen.queryByText(/You already use/)).not.toBeInTheDocument();
   });
 });
 

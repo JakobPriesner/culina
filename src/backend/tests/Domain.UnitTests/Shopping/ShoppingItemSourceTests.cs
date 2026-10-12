@@ -137,6 +137,58 @@ public class ShoppingItemSourceTests
         Assert.Single(list.Items);
     }
 
+    [Fact]
+    public void AddManual_ShouldSumWithALineARecipeAskedFor()
+    {
+        // Arrange
+        var list = ShoppingList.Create(Guid.CreateVersion7());
+
+        list.Add(Name("Tomatenmark"), For(Waffles, Saturday, 1, Unit.Tablespoon), ShoppingSection.CannedJars);
+
+        // Act
+        list.AddManual(Name("tomatenmark"), Spoons(4), ShoppingSection.CannedJars);
+
+        // Assert
+        var line = Assert.Single(list.Items);
+
+        Assert.Equal(5m, line.Quantity.Amount);
+        Assert.True(line.IsManual);
+    }
+
+    [Fact]
+    public void AddManual_ShouldNotSumWithWhatIsAlreadyBought()
+    {
+        // Arrange
+        var list = ShoppingList.Create(Guid.CreateVersion7());
+
+        list.AddManual(Name("Tomatenmark"), Spoons(1), ShoppingSection.CannedJars);
+        list.Check(list.Items[0].Id, isChecked: true, DateTimeOffset.UnixEpoch);
+
+        // Act
+        list.AddManual(Name("Tomatenmark"), Spoons(4), ShoppingSection.CannedJars);
+
+        // Assert
+        Assert.Equal(2, list.Items.Count);
+    }
+
+    [Fact]
+    public void Withdraw_ShouldKeepWhatSomebodyTypedOntoAPlannedLine()
+    {
+        // Arrange
+        var list = ShoppingList.Create(Guid.CreateVersion7());
+
+        list.Add(Name("Tomatenmark"), For(Waffles, Saturday, 1, Unit.Tablespoon), ShoppingSection.CannedJars);
+        list.AddManual(Name("Tomatenmark"), Spoons(4), ShoppingSection.CannedJars);
+
+        // Act
+        list.Withdraw(Saturday);
+
+        // Assert
+        var line = Assert.Single(list.Items);
+
+        Assert.Equal(4m, line.Quantity.Amount);
+    }
+
     private static ItemName Name(string value) =>
         ItemName.Create(value).Match(name => name, error => throw new InvalidOperationException(error.Code));
 
@@ -149,4 +201,8 @@ public class ShoppingItemSourceTests
             planEntryId is null ? null : MealSlot.Dinner,
             Quantity.Create(amount, amount is null ? null : unit ?? Unit.Gram)
                 .Match(quantity => quantity, error => throw new InvalidOperationException(error.Code)));
+
+    private static Quantity Spoons(decimal amount) =>
+        Quantity.Create(amount, Unit.Tablespoon)
+            .Match(quantity => quantity, error => throw new InvalidOperationException(error.Code));
 }

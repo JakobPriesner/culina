@@ -1708,5 +1708,69 @@
   "ai.usage.pricedBy.culina": "Culina's list ({date})",
   "ai.usage.pricedBy.administrator": "Your price",
   "ai.usage.pricedBy.none": "No price",
-  "problem.assistance.invalid_price": "A price can't be less than nothing, and no model costs a thousand dollars or more."
+  "problem.assistance.invalid_price": "A price can't be less than nothing, and no model costs a thousand dollars or more.",
+  "me.ingredients": "Ingredients",
+  "me.ingredients.lead": "One name for each ingredient, so shopping lists, search and nutrition add up.",
+  "ingredients.recipes": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} recipe",
+        "countPlural=*": "{count} recipes"
+      }
+    }
+  ],
+  "ingredients.into": "into",
+  "ingredients.suggestions.title": "Suggested merges",
+  "ingredients.suggestions.body": "These look like one ingredient written in different ways. Merging renames it in your recipes, and recipes you add later follow.",
+  "ingredients.suggestions.empty": "Nothing to tidy up: every ingredient has one name.",
+  "ingredients.suggestions.loading": "Looking for lookalikes",
+  "ingredients.suggestions.merge": "Merge",
+  "ingredients.suggestions.mergeLabel": "Merge “{from}” into “{to}”",
+  "ingredients.suggestions.keepApart": "Keep apart",
+  "ingredients.suggestions.keepApartLabel": "Keep “{from}” apart from “{to}”",
+  "ingredients.suggestions.mergeAll": "Merge all",
+  "ingredients.reason.spelling": "Same word, spelt differently",
+  "ingredients.reason.sameFood": "Same food",
+  "ingredients.reason.typo": "Probably a typo",
+  "ingredients.names.title": "Your ingredients",
+  "ingredients.names.body": "Every name your recipes use. Rename one, or merge it into another: your recipes change with it.",
+  "ingredients.names.filter": "Filter ingredients",
+  "ingredients.names.clear": "Clear filter",
+  "ingredients.names.empty": "Your recipes have no ingredients yet.",
+  "ingredients.names.none": "No ingredient matches “{query}”.",
+  "ingredients.names.change": "Rename",
+  "ingredients.names.changeLabel": "Rename or merge “{name}”",
+  "ingredients.names.into": "New name for “{name}”",
+  "ingredients.names.intoHint": "A new name renames it. A name you already use merges the two.",
+  "ingredients.names.rename": "Rename",
+  "ingredients.names.mergeInto": "Merge into “{name}”",
+  "ingredients.names.cancel": "Cancel",
+  "ingredients.loading": "Loading ingredients",
+  "ingredients.failed": "Your ingredients could not be loaded.",
+  "ingredients.merges.title": "Merge rules",
+  "ingredients.merges.body": "Names that are always saved as another, in recipes you write, import or copy.",
+  "ingredients.merges.empty": "No merges yet. When you merge or rename an ingredient, it shows up here.",
+  "ingredients.merges.remove": "Remove",
+  "ingredients.merges.removeLabel": "Stop saving “{from}” as “{to}”",
+  "ingredients.merges.removed": "“{from}” is saved as written again.",
+  "ingredients.merged": "“{from}” is now “{to}” in your recipes.",
+  "ingredients.mergedAll": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Merged {count} name.",
+        "countPlural=*": "Merged {count} names."
+      }
+    }
+  ],
+  "ingredients.keptApart": "“{from}” won't be suggested again.",
+  "ingredients.nutrition.title": "Nutrition",
+  "problem.ingredients.invalid_name": "An ingredient needs a name of at most 120 characters.",
+  "problem.ingredients.same_name": "That is already its name.",
+  "editor.ingredientExisting": "You already use “{name}”.",
+  "editor.ingredientUseExisting": "Use it",
+  "editor.ingredientUseExistingLabel": "Use “{name}” instead"
 }

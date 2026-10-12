@@ -26,59 +26,62 @@
   let { id, label, items, highlighted, onchoose, query = '', mention = false }: Props = $props();
 </script>
 
-<ul {id} class="picker" role="listbox" aria-label={label}>
-  {#each items as item, index (item.value)}
-    {@const isAdd = item.value.startsWith('add:')}
-    <!-- Keyboard is handled on the field, so these ignores follow the pattern rather than a gap. -->
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <li
-      id="{id}-{index}"
-      role="option"
-      aria-label={item.label}
-      aria-selected={index === highlighted}
-      class:highlighted={index === highlighted}
-      class:is-add={isAdd}
-      onmousedown={(event) => event.preventDefault()}
-      onclick={() => onchoose(index)}
-    >
-      <span class="row-content">
-        {#if isAdd}
-          <span class="icon add-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-              <path d="M12 5v14M5 12h14" stroke-linecap="round" />
-            </svg>
-          </span>
-          <span class="label add-label">{item.label}</span>
-        {:else}
-          {#if mention}
-            <span class="icon glyph-icon" aria-hidden="true">@</span>
-          {/if}
-          <span class="label">
-            {#if query && item.label.toLowerCase().includes(query.toLowerCase())}
-              {@const q = query.toLowerCase()}
-              {@const matchIdx = item.label.toLowerCase().indexOf(q)}
-              {item.label.slice(0, matchIdx)}<mark class="match"
-                >{item.label.slice(matchIdx, matchIdx + q.length)}</mark
-              >{item.label.slice(matchIdx + q.length)}
-            {:else}
-              {item.label}
+<!-- The frame clips to its rounded corners, scrollbar included, so the list scrolls inside it rather than on the outer edge. -->
+<div class="picker">
+  <ul {id} class="options" role="listbox" aria-label={label}>
+    {#each items as item, index (item.value)}
+      {@const isAdd = item.value.startsWith('add:')}
+      <!-- Keyboard is handled on the field, so these ignores follow the pattern rather than a gap. -->
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <li
+        id="{id}-{index}"
+        role="option"
+        aria-label={item.label}
+        aria-selected={index === highlighted}
+        class:highlighted={index === highlighted}
+        class:is-add={isAdd}
+        onmousedown={(event) => event.preventDefault()}
+        onclick={() => onchoose(index)}
+      >
+        <span class="row-content">
+          {#if isAdd}
+            <span class="icon add-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M12 5v14M5 12h14" stroke-linecap="round" />
+              </svg>
+            </span>
+            <span class="label add-label">{item.label}</span>
+          {:else}
+            {#if mention}
+              <span class="icon glyph-icon" aria-hidden="true">@</span>
             {/if}
-          </span>
+            <span class="label">
+              {#if query && item.label.toLowerCase().includes(query.toLowerCase())}
+                {@const q = query.toLowerCase()}
+                {@const matchIdx = item.label.toLowerCase().indexOf(q)}
+                {item.label.slice(0, matchIdx)}<mark class="match"
+                  >{item.label.slice(matchIdx, matchIdx + q.length)}</mark
+                >{item.label.slice(matchIdx + q.length)}
+              {:else}
+                {item.label}
+              {/if}
+            </span>
+          {/if}
+        </span>
+
+        {#if item.detail}
+          <span class="detail">{item.detail}</span>
         {/if}
-      </span>
+      </li>
+    {/each}
 
-      {#if item.detail}
-        <span class="detail">{item.detail}</span>
-      {/if}
-    </li>
-  {/each}
-
-  {#if mention}
-    <li class="nav-hint" aria-hidden="true">
-      {m['editor.mentionNavHint']()}
-    </li>
-  {/if}
-</ul>
+    {#if mention}
+      <li class="nav-hint" aria-hidden="true">
+        {m['editor.mentionNavHint']()}
+      </li>
+    {/if}
+  </ul>
+</div>
 
 <style>
   .picker {
@@ -86,6 +89,15 @@
     z-index: var(--z-overlay, 100);
     inset-inline: 0;
     top: calc(100% + var(--space-1));
+    overflow: hidden;
+    background: var(--surface-overlay);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-overlay);
+    animation: paletteIn var(--duration-fast) var(--ease-out);
+  }
+
+  .options {
     max-height: 16rem;
     overflow-y: auto;
     scrollbar-gutter: stable;
@@ -93,13 +105,6 @@
     margin: 0;
     padding: var(--space-1);
     list-style: none;
-    background: var(--surface-overlay-glass);
-    backdrop-filter: blur(24px) saturate(180%);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-overlay);
-    animation: paletteIn var(--duration-fast) var(--ease-out);
   }
 
   @keyframes paletteIn {

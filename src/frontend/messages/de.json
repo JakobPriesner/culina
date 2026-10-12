@@ -1708,5 +1708,69 @@
   "ai.usage.pricedBy.culina": "Culinas Liste ({date})",
   "ai.usage.pricedBy.administrator": "Dein Preis",
   "ai.usage.pricedBy.none": "Kein Preis",
-  "problem.assistance.invalid_price": "Ein Preis kann nicht unter null liegen, und kein Modell kostet tausend Dollar oder mehr."
+  "problem.assistance.invalid_price": "Ein Preis kann nicht unter null liegen, und kein Modell kostet tausend Dollar oder mehr.",
+  "me.ingredients": "Zutaten",
+  "me.ingredients.lead": "Ein Name pro Zutat, damit Einkaufsliste, Suche und Nährwerte zusammenpassen.",
+  "ingredients.recipes": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Rezept",
+        "countPlural=*": "{count} Rezepte"
+      }
+    }
+  ],
+  "ingredients.into": "in",
+  "ingredients.suggestions.title": "Vorgeschlagene Zusammenführungen",
+  "ingredients.suggestions.body": "Diese Namen sehen nach derselben Zutat aus. Zusammenführen benennt sie in deinen Rezepten um, und neue Rezepte folgen.",
+  "ingredients.suggestions.empty": "Nichts aufzuräumen: Jede Zutat hat einen Namen.",
+  "ingredients.suggestions.loading": "Suche nach Doppelungen",
+  "ingredients.suggestions.merge": "Zusammenführen",
+  "ingredients.suggestions.mergeLabel": "„{from}“ in „{to}“ zusammenführen",
+  "ingredients.suggestions.keepApart": "Getrennt lassen",
+  "ingredients.suggestions.keepApartLabel": "„{from}“ getrennt von „{to}“ lassen",
+  "ingredients.suggestions.mergeAll": "Alle zusammenführen",
+  "ingredients.reason.spelling": "Gleiches Wort, anders geschrieben",
+  "ingredients.reason.sameFood": "Gleiches Lebensmittel",
+  "ingredients.reason.typo": "Wohl ein Tippfehler",
+  "ingredients.names.title": "Deine Zutaten",
+  "ingredients.names.body": "Alle Namen aus deinen Rezepten. Benenne einen um oder führe ihn mit einem anderen zusammen – deine Rezepte ändern sich mit.",
+  "ingredients.names.filter": "Zutaten filtern",
+  "ingredients.names.clear": "Filter löschen",
+  "ingredients.names.empty": "Deine Rezepte haben noch keine Zutaten.",
+  "ingredients.names.none": "Keine Zutat passt zu „{query}“.",
+  "ingredients.names.change": "Umbenennen",
+  "ingredients.names.changeLabel": "„{name}“ umbenennen oder zusammenführen",
+  "ingredients.names.into": "Neuer Name für „{name}“",
+  "ingredients.names.intoHint": "Ein neuer Name benennt sie um. Ein Name, den du schon verwendest, führt beide zusammen.",
+  "ingredients.names.rename": "Umbenennen",
+  "ingredients.names.mergeInto": "In „{name}“ zusammenführen",
+  "ingredients.names.cancel": "Abbrechen",
+  "ingredients.loading": "Zutaten werden geladen",
+  "ingredients.failed": "Deine Zutaten konnten nicht geladen werden.",
+  "ingredients.merges.title": "Zusammenführungsregeln",
+  "ingredients.merges.body": "Namen, die immer als ein anderer gespeichert werden – in Rezepten, die du schreibst, importierst oder kopierst.",
+  "ingredients.merges.empty": "Noch nichts zusammengeführt. Wenn du eine Zutat umbenennst oder zusammenführst, steht sie hier.",
+  "ingredients.merges.remove": "Entfernen",
+  "ingredients.merges.removeLabel": "„{from}“ nicht mehr als „{to}“ speichern",
+  "ingredients.merges.removed": "„{from}“ wird wieder so gespeichert, wie es geschrieben ist.",
+  "ingredients.merged": "„{from}“ heißt in deinen Rezepten jetzt „{to}“.",
+  "ingredients.mergedAll": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Name zusammengeführt.",
+        "countPlural=*": "{count} Namen zusammengeführt."
+      }
+    }
+  ],
+  "ingredients.keptApart": "„{from}“ wird nicht mehr vorgeschlagen.",
+  "ingredients.nutrition.title": "Nährwerte",
+  "problem.ingredients.invalid_name": "Eine Zutat braucht einen Namen mit höchstens 120 Zeichen.",
+  "problem.ingredients.same_name": "So heißt sie schon.",
+  "editor.ingredientExisting": "Du verwendest schon „{name}“.",
+  "editor.ingredientUseExisting": "Übernehmen",
+  "editor.ingredientUseExistingLabel": "Stattdessen „{name}“ verwenden"
 }

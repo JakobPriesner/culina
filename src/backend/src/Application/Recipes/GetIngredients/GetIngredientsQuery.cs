@@ -4,6 +4,7 @@ using Application.Households;
 using Application.Shopping;
 using Application.Telemetry;
 using Contracts.Recipes.GetIngredients;
+using Domain.Ingredients;
 using Domain.Recipes;
 using Domain.Shared;
 using Domain.Shopping;
@@ -21,7 +22,8 @@ public sealed record GetIngredientsQuery(
 
 internal sealed class GetIngredientsQueryHandler(
     IRecipeRepository recipes,
-    IHouseholdRepository households)
+    IHouseholdRepository households,
+    IIngredientNameRepository names)
     : IQueryHandler<GetIngredientsQuery, Response>
 {
     /// <summary>
@@ -62,9 +64,15 @@ internal sealed class GetIngredientsQueryHandler(
             .LibraryAsync(households, query.HouseholdId, cancellationToken)
             .ConfigureAwait(false);
 
-        var own = await recipes
+        var equivalent = await EquivalentAsync(query, cancellationToken).ConfigureAwait(false);
+
+        var written = await recipes
             .OwnIngredientNamesAsync(library, query.Query, Limit, cancellationToken)
             .ConfigureAwait(false);
+
+        IReadOnlyList<string> own = equivalent is null
+            ? written
+            : [equivalent, .. written.Where(name => name != equivalent).Take(Limit - 1)];
 
         var taken = own.Select(ItemName.Fold).ToHashSet(StringComparer.Ordinal);
 
@@ -79,15 +87,44 @@ internal sealed class GetIngredientsQueryHandler(
                 .. own.Select(name => new IngredientSuggestion(
                     name,
                     ShoppingWords.Of(SectionFor(name)),
-                    Own: true)),
+                    Own: true,
+                    Equivalent: name == equivalent)),
                 .. seeded
                     .Take(Limit - own.Count)
                     .Select(entry => new IngredientSuggestion(
                         entry.In(language),
                         ShoppingWords.Of(entry.Section),
-                        Own: false))
+                        Own: false,
+                        Equivalent: false))
             ]
         };
+    }
+
+    /// <summary>
+    /// The household's own name for what was typed, when it is spelt otherwise: the one the typed
+    /// name was merged into, else its most used lookalike. So the editor can say "you already have
+    /// this" before a near-duplicate is saved.
+    /// </summary>
+    private async Task<string?> EquivalentAsync(GetIngredientsQuery query, CancellationToken cancellationToken)
+    {
+        var typed = query.Query?.Trim() ?? string.Empty;
+
+        if (typed.Length == 0)
+        {
+            return null;
+        }
+
+        var merges = await names.MergesAsync(query.HouseholdId, cancellationToken).ConfigureAwait(false);
+        var kept = new IngredientMerges(merges).Resolve(typed);
+
+        if (kept != typed)
+        {
+            return kept;
+        }
+
+        var uses = await names.UsesAsync(query.HouseholdId, cancellationToken).ConfigureAwait(false);
+
+        return IngredientLookalikes.Existing(typed, uses)?.Name;
     }
 
     private static ShoppingSection SectionFor(string name) =>
