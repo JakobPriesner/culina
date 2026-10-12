@@ -11,6 +11,8 @@
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { kitchenMediaSession } from './mediaSession.svelte';
   import { preferences } from '$shell/preferences.svelte';
+  import { native } from '$api';
+  import { syncNativeTimers } from './nativeTimers';
 
   const sessionId = $derived(cooking.session?.sessionId ?? null);
 
@@ -48,6 +50,19 @@
     };
     for (const timer of kitchenTimers.timers) kitchenTimers.remaining(timer);
     untrack(() => kitchenMediaSession.sync(snapshot.detail));
+  });
+
+  // The app hands the operating system every running timer, so each rings with the app asleep or closed.
+  $effect(() => {
+    if (!native) return;
+    const id = sessionId;
+    const timers = $state.snapshot(kitchenTimers.timers);
+    const url = untrack(() =>
+      cooking.session
+        ? `/recipes/${encodeURIComponent(cooking.session.recipeId)}/cook?yield=${cooking.session.servings}`
+        : '/'
+    );
+    void syncNativeTimers(id ? { sessionId: id, url, timers } : null);
   });
 
   $effect(() => {

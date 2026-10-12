@@ -693,6 +693,26 @@ Build in this order. Each step is useful on its own.
 3. **iOS AlarmKit timers** (Swift plugin, 4.3), then the custom Live Activity
    if AlarmKit's presentation falls short.
 
+**Status (13 October 2026, `tj23.8`): step 1 is built.**
+- `cooking/nativeTimers.ts` implements `sync` over
+  `@capacitor/local-notifications`: one notification per (session, step), id
+  hashed from both, `extra` is the website's `TimerNotice`.
+- `KitchenRuntime.svelte` publishes `$state.snapshot` of the timers from one
+  `$effect`. Reconciling leaves unchanged alarms alone.
+- The buttons (+1 min, +2 min, Dismiss, Next step) are registered as
+  foreground actions and applied with `applyTimerAction`. Foreground, because
+  iOS does not wake the web view for a background action; the plugin keeps the
+  event until the page listens. That is why the native journal waits for step 3.
+- The page refreshes on `culina:timers-changed`. `notifyTimerDone` is a no-op
+  in the app, and the in-page chime only sounds for a deadline passed within
+  five seconds, on screen.
+- Sign-out cancels every alarm (`forgetNativeTimers`).
+
+Still open for steps 2–3, beyond the checklist below:
+- The plugin declares `SCHEDULE_EXACT_ALARM` but does not ask for it.
+- Its Android manifest has no `BOOT_COMPLETED` receiver.
+- Alarms obey the silent switch on iOS.
+
 Device checks, iPhone and Android:
 - Lock the phone with three timers running, and wait past each deadline. Each
   rings on time and the countdown is correct throughout.
