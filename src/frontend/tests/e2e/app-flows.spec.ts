@@ -92,7 +92,7 @@ test.describe('app flow polish @offline', () => {
     );
   });
 
-  test('peer navigation responds during transitions and aligns its marker at both layouts', async ({
+  test('peer navigation responds to quick clicks and aligns its marker at both layouts', async ({
     page
   }, testInfo) => {
     await responsiveData(page, 'en', { activeCooking: false });
@@ -109,21 +109,6 @@ test.describe('app flow polish @offline', () => {
     await page.getByRole('link', { name: 'Cookbooks', exact: true }).click();
     await expect(page).toHaveURL('/cookbooks');
     await expectIndicatorFits(visibleNav, target);
-    await expect
-      .poll(() =>
-        page.evaluate(
-          () =>
-            document
-              .getAnimations()
-              .filter(
-                (a) =>
-                  a.playState === 'running' &&
-                  'animationName' in a &&
-                  String(a.animationName).startsWith('vt-')
-              ).length
-        )
-      )
-      .toBe(0);
     await page.screenshot({ path: testInfo.outputPath('navigation-polish.png') });
     await page.setViewportSize({
       width: testInfo.project.use.isMobile ? 1280 : 390,
@@ -170,26 +155,8 @@ test.describe('app flow polish @offline', () => {
     const after = await rail.boundingBox();
     expect(after!.x).toBe(before!.x);
     expect(after!.width).toBe(before!.width);
-    expect(await rail.evaluate((node) => getComputedStyle(node).viewTransitionName)).toBe(
-      'settings-navigation'
-    );
     await page.goBack();
     await expect(page.getByRole('heading', { level: 1, name: 'Appearance' })).toBeVisible();
-    await expect
-      .poll(() =>
-        page.evaluate(
-          () =>
-            document
-              .getAnimations()
-              .filter(
-                (a) =>
-                  a.playState === 'running' &&
-                  'animationName' in a &&
-                  String(a.animationName).startsWith('vt-')
-              ).length
-        )
-      )
-      .toBe(0);
     await page.screenshot({ path: testInfo.outputPath('settings-polish.png') });
     await expectReflow(page);
   });

@@ -101,7 +101,6 @@
   .content {
     grid-area: content;
     min-width: 0;
-    view-transition-name: page-content;
     /* Skip-link target: focusable but no ring. */
     outline: none;
     scroll-margin-top: var(--space-24);

@@ -124,10 +124,6 @@
     align-items: start;
   }
 
-  .rail {
-    view-transition-name: settings-navigation;
-  }
-
   .legend {
     /* Only on the desktop rail, where it captions a column. */
     display: none;
@@ -181,7 +177,6 @@
 
   /* Capped: on a wide monitor a label-left, control-right row is a long eye trip. */
   .panel {
-    view-transition-name: settings-content;
     display: flex;
     flex-direction: column;
     gap: var(--layout-section-gap);

@@ -4,7 +4,7 @@
   import { onMount, type Snippet } from 'svelte';
 
   import { dev } from '$app/environment';
-  import { goto, onNavigate } from '$app/navigation';
+  import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { handleSessionExpiry } from '$api';
   import ErrorState from '$ds/feedback/ErrorState.svelte';
@@ -22,33 +22,6 @@
   }
 
   let { children }: Props = $props();
-  let activeTransition: ViewTransition | undefined;
-
-  onNavigate((navigation) => {
-    // Filters and serving counts update in place; only a different screen transitions, and a new navigation can interrupt the old one.
-    activeTransition?.skipTransition();
-    if (
-      typeof document === 'undefined' ||
-      !('startViewTransition' in document) ||
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
-      navigation.from?.url.pathname === navigation.to?.url.pathname
-    ) {
-      return;
-    }
-
-    return new Promise((resolve) => {
-      try {
-        activeTransition = document.startViewTransition(async () => {
-          resolve();
-          await navigation.complete;
-        });
-        // Interrupted snapshots are expected, and never block navigation.
-        void activeTransition.finished.catch(() => undefined);
-      } catch {
-        resolve();
-      }
-    });
-  });
 
   onMount(() => {
     // The static boot screen in app.html is done once there is something real to see.
