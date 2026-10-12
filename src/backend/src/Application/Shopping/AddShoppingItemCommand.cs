@@ -61,7 +61,6 @@ internal sealed class AddShoppingItemCommandHandler(
                     lists,
                     unitOfWork,
                     command.HouseholdId,
-                    // A hand-typed line is not merged, or the user would not see that they added anything.
                     (list, _) => Task.FromResult(
                         list.AddManual(pair.Name, pair.Quantity, SectionFor(pair.Name, overrides))
                             .Bind(_ => Result.Success())),

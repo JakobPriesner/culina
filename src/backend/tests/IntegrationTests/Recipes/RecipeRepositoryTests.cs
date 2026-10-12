@@ -7,6 +7,7 @@ using Domain.Users;
 using Infrastructure.Nutrition;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.Households;
+using Infrastructure.Persistence.Ingredients;
 using Infrastructure.Persistence.Nutrition;
 using Infrastructure.Persistence.Recipes;
 using Infrastructure.Persistence.Users;
@@ -287,7 +288,8 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
                 new TagWriter(executor),
                 new RecipeSearcher(executor, TimeProvider.System, RankingWeights.Default,
                     new RecipeCalories(executor, BlsFoodTable.Load(), new NutritionCorrectionRepository(executor, TimeProvider.System), new NutritionWeightRepository(executor, TimeProvider.System))),
-                new SearchDocumentWriter(executor)),
+                new SearchDocumentWriter(executor),
+                new IngredientNameRepository(executor, new SearchDocumentWriter(executor))),
             new UserRepository(executor),
             new HouseholdRepository(executor));
     }

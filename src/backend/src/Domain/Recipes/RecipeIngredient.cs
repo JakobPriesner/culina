@@ -71,4 +71,8 @@ public sealed class RecipeIngredient
             trimmedName,
             string.IsNullOrEmpty(trimmedNote) ? null : trimmedNote);
     }
+
+    /// <summary>The same line under another name.</summary>
+    internal RecipeIngredient Renamed(string name) =>
+        name == Name ? this : new RecipeIngredient(Id, SortOrder, Quantity, name, Note);
 }

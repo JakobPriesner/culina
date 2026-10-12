@@ -69,13 +69,26 @@ public sealed class ShoppingList
         return added;
     }
 
-    /// <summary>Puts something on the list that a person typed.</summary>
+    /// <summary>Puts something on the list that a person typed, merging into an existing line.</summary>
+    /// <returns>The line it went onto, whether new or existing.</returns>
+    /// <remarks>"4 EL Tomatenmark" typed next to "1 EL Tomatenmark" is one line of five.</remarks>
     public Result<ShoppingListItem> AddManual(
         ItemName name,
         Quantity quantity,
         ShoppingSection section)
     {
         ArgumentNullException.ThrowIfNull(name);
+        ArgumentNullException.ThrowIfNull(quantity);
+
+        var existing = items.FirstOrDefault(item =>
+            !item.IsChecked && ItemMergePolicy.CanMerge(item, name, quantity));
+
+        if (existing is not null)
+        {
+            Version += 1;
+
+            return existing.ReceiveTyped(quantity).Map(() => existing);
+        }
 
         var added = ShoppingListItem.Typed(name, quantity, section, NextSortOrder(section));
 

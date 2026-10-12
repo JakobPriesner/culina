@@ -89,9 +89,9 @@ test.describe('typical weights, household weights and kinds of a food @offline',
     await expect(row(page, 'Zwiebel')).toContainText('150 g · euer Wert');
     await expect(page.locator('#nutrition .summaryOverview')).not.toContainText('geschätzt');
 
-    await page.goto('/me/household');
+    await page.goto('/me/ingredients');
 
-    const facts = page.getByRole('list', { name: 'Zutaten' });
+    const facts = page.getByRole('list', { name: 'Zutaten', exact: true });
 
     await expect(facts).toContainText('1 Stück = 150 g');
 
@@ -107,7 +107,7 @@ test.describe('typical weights, household weights and kinds of a food @offline',
 
   test('turning typical weights off sends the onion back to not counted', async ({ page }) => {
     await responsiveData(page, 'de', { nutritionLines: true, estimates: true });
-    await page.goto('/me/household');
+    await page.goto('/me/ingredients');
 
     const toggle = page.getByRole('switch', { name: 'Typische Gewichte verwenden' });
 
@@ -141,7 +141,7 @@ test.describe('typical weights, household weights and kinds of a food @offline',
     await expect(page.getByRole('textbox', { name: 'Gewicht in Gramm' })).toBeVisible();
     await expectReflow(page);
     await page.keyboard.press('Escape');
-    await page.goto('/me/household');
+    await page.goto('/me/ingredients');
     await expect(page.getByRole('switch', { name: 'Typische Gewichte verwenden' })).toBeVisible();
     await expectReflow(page);
   });

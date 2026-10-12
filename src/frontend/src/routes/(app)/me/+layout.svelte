@@ -36,6 +36,11 @@
       href: resolve('/(app)/me/household'),
       label: m['me.household'],
       lead: m['me.household.lead']
+    },
+    {
+      href: resolve('/(app)/me/ingredients'),
+      label: m['me.ingredients'],
+      lead: m['me.ingredients.lead']
     }
   ];
 

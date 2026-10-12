@@ -55,6 +55,10 @@ public sealed class IngredientGroup
             ingredients);
     }
 
+    /// <summary>The same group with each line under the name <paramref name="kept"/> gives it.</summary>
+    internal IngredientGroup Renamed(Func<string, string> kept) =>
+        new(Id, Name, SortOrder, [.. Ingredients.Select(line => line.Renamed(kept(line.Name)))]);
+
     /// <summary>The empty group every new recipe starts with.</summary>
     public static IngredientGroup Implicit() =>
         new(CulinaId.New(), name: null, sortOrder: 0, ingredients: []);

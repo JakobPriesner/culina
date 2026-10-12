@@ -55,8 +55,8 @@ public sealed class ShoppingListItem
     /// <summary>Its place in its section.</summary>
     public int SortOrder { get; private set; }
 
-    /// <summary>Whether a person typed it rather than a recipe contributing it.</summary>
-    public bool IsManual { get; }
+    /// <summary>Whether a person typed it, or typed some of it, rather than only recipes contributing it.</summary>
+    public bool IsManual { get; private set; }
 
     /// <summary>Which recipes asked for it, and how much each.</summary>
     public IReadOnlyList<ShoppingItemSource> Sources => sources;
@@ -113,22 +113,29 @@ public sealed class ShoppingListItem
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        if (!source.Quantity.IsMeasured)
+        return AddAmount(source.Quantity).Bind(() =>
         {
             sources.Add(source);
 
             return Result.Success();
-        }
+        });
+    }
 
-        return Quantity.Add(source.Quantity).Match(
-            combined =>
-            {
-                Quantity = combined;
-                sources.Add(source);
+    /// <summary>Adds an amount a person typed of the same thing.</summary>
+    /// <remarks>
+    /// Only called after <see cref="ItemMergePolicy"/> says the two combine. The line counts as typed
+    /// from now on, so withdrawing a planned meal keeps what the person added.
+    /// </remarks>
+    public Result ReceiveTyped(Quantity quantity)
+    {
+        ArgumentNullException.ThrowIfNull(quantity);
 
-                return Result.Success();
-            },
-            Result.Failure);
+        return AddAmount(quantity).Bind(() =>
+        {
+            IsManual = true;
+
+            return Result.Success();
+        });
     }
 
     /// <summary>Whether this planned meal asked for any of it.</summary>
@@ -197,4 +204,20 @@ public sealed class ShoppingListItem
 
     /// <summary>Changes the amount outright, when a person edits the line.</summary>
     public void SetQuantity(Quantity quantity) => Quantity = quantity;
+
+    // An unmeasured amount ("salt") adds nothing, but still merges.
+    private Result AddAmount(Quantity quantity)
+    {
+        if (!quantity.IsMeasured)
+        {
+            return Result.Success();
+        }
+
+        return Quantity.Add(quantity).Bind(combined =>
+        {
+            Quantity = combined;
+
+            return Result.Success();
+        });
+    }
 }

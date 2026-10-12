@@ -1499,6 +1499,110 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/households/{householdId}/ingredient-names": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a household's ingredient names
+         * @description Every distinct ingredient name in this household's own recipes, exactly as written, with how many recipes use it; most used first. Recipes it inherits are left out: a merge only rewrites the household's own.
+         */
+        get: operations["getIngredientNamesV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/ingredient-merges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a household's ingredient merges
+         * @description The names this household has merged into another. Each one is applied whenever one of its recipes is written, so an edit or an import cannot bring the old name back.
+         */
+        get: operations["getIngredientMergesV1"];
+        put?: never;
+        /**
+         * Merge an ingredient name into another
+         * @description Rewrites every line of this household's own recipes named `from` (spelled any way that folds the same: "Olivenoel", "olivenöl") to `to`, and keeps doing so for every later save, import, copy or restore. `to` need not be in use yet, so this is also how an ingredient is renamed. Merging into a name that was itself merged follows that merge; merges that kept `from` now keep `to`. A nutrition or shopping choice made for `from` moves to `to` unless `to` has its own. Each rewritten recipe gets a new version. Merging again from the same name replaces the merge. Any member may merge.
+         */
+        post: operations["createIngredientMergeV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/ingredient-merges/{from}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Forget an ingredient merge
+         * @description Stops writing `{from}` as the name it was merged into. Recipes already rewritten keep the kept name; nothing is renamed back. `{from}` is the merged name, percent-encoded. Idempotent; 204.
+         */
+        delete: operations["deleteIngredientMergeV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/ingredient-merge-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suggest ingredient merges
+         * @description Names in this household's own recipes that are probably one ingredient: spelt the same once folded (`spelling`), naming the same food (`same_food`, e.g. "Hühnchenbrustfilet" and "Hähnchenbrust") or a letter or two apart (`typo`). Each is proposed to go into the most used of its lookalikes. Names the household kept apart are never proposed. Accepting is `POST ingredient-merges`.
+         */
+        get: operations["getIngredientMergeSuggestionsV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/ingredient-merge-suggestions/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Dismiss an ingredient merge suggestion
+         * @description Keeps `{name}` apart: it is never proposed for merging again, whatever it would be merged into. `{name}` is the suggestion's `from`, percent-encoded. Idempotent; 204.
+         */
+        delete: operations["deleteIngredientMergeSuggestionV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/households/{householdId}/meal-plan": {
         parameters: {
             query?: never;
@@ -2769,6 +2873,67 @@ export interface components {
         /** Format: binary */
         IFormFile: string;
         IFormFileCollection: components["schemas"]["IFormFile"][];
+        /** @description Merges one ingredient name into another. */
+        IngredientsCreateIngredientMergeRequest: {
+            /** @description The name that goes away; every spelling that folds the same goes with it. */
+            from: string;
+            /** @description The name to keep. It need not be in use yet, which makes a merge a rename. */
+            to: string;
+        };
+        /** @description A merge that was made, and what it changed. */
+        IngredientsCreatedIngredientMerge: {
+            /** @description The name that went away. */
+            from: string;
+            /** @description The name kept: the one asked for, or the one it was itself merged into. */
+            to: string;
+            /**
+             * Format: int32
+             * @description How many of the household's recipes were rewritten.
+             */
+            recipeCount: number;
+        };
+        /** @description One merge: lines written `from` are stored as `to`. */
+        IngredientsIngredientMergeDetail: {
+            /** @description The name that goes away, as it was written when merged. */
+            from: string;
+            /** @description The name that is kept. */
+            to: string;
+        };
+        /** @description The merges a household has made. */
+        IngredientsIngredientMergesResponse: {
+            /** @description The merges, by the name that goes away. */
+            items: components["schemas"]["IngredientsIngredientMergeDetail"][];
+        };
+        /** @description One name as the household writes it. */
+        IngredientsIngredientNameUse: {
+            /** @description The name, as written. */
+            name: string;
+            /**
+             * Format: int32
+             * @description How many of the household's recipes use it.
+             */
+            recipeCount: number;
+        };
+        /** @description The ingredient names a household's own recipes use. */
+        IngredientsIngredientNamesResponse: {
+            /** @description The names, most used first. */
+            items: components["schemas"]["IngredientsIngredientNameUse"][];
+        };
+        /** @description A proposal to merge one name into another. */
+        IngredientsMergeSuggestionDetail: {
+            from: components["schemas"]["IngredientsIngredientNameUse"];
+            to: components["schemas"]["IngredientsIngredientNameUse"];
+            /**
+             * @description Why: `spelling` (they fold to one name), `same_food` (they name one food) or
+             *     `typo` (a letter or two apart).
+             */
+            reason: string;
+        };
+        /** @description Names in a household's recipes that are probably one ingredient. */
+        IngredientsMergeSuggestionsResponse: {
+            /** @description The proposals, the most used name first. */
+            items: components["schemas"]["IngredientsMergeSuggestionDetail"][];
+        };
         /** @description The browser and device the records came from, as far as the page can tell. */
         LogRecordsCreateClient: {
             /** @description Random per page load, so records from one page can be told apart from another's. */
@@ -3520,6 +3685,12 @@ export interface components {
             section: string;
             /** @description Whether this household has written it before. */
             own: boolean;
+            /**
+             * @description Whether this is the household's own name for what was typed, though spelt otherwise: a name it
+             *     merged the typed one into, or one that looks like it ("Hähnchenbrust" for "Hühnchenbrustfilet").
+             *     At most one suggestion is, and it comes first.
+             */
+            equivalent: boolean;
         };
         /** @description What a kitchen could be cooking with. */
         RecipesGetIngredientsResponse: {
@@ -3588,6 +3759,18 @@ export interface components {
             via?: "mass" | "density" | "eggSize" | "householdWeight" | "typicalWeight" | null;
             /** @description Whether a household chose the food (or to leave it out) instead of the default: the reader's own, or one it inherits from. */
             corrected: boolean;
+            /**
+             * Format: uuid
+             * @description The household whose choice `corrected` means: the reader's own, or the nearest one it inherits from that
+             *     chose. Only when corrected.
+             */
+            chosenBy?: string | null;
+            /**
+             * Format: uuid
+             * @description The household whose weight counted the line: the reader's own, or the nearest one it inherits from that set one.
+             *     Only when `via` is `householdWeight`.
+             */
+            weighedBy?: string | null;
             /**
              * @description Whether this line, left out of the figure, could still add energy to it: it is not counted, was not excluded
              *     by the household, and its food is unknown or has energy (or no energy value). True for an implausible amount.
@@ -3759,18 +3942,6 @@ export interface components {
             nextCursor?: string | null;
         };
         /** @description A recipe as whoever follows the link sees it. */
-            /**
-             * Format: uuid
-             * @description The household whose choice `corrected` means: the reader's own, or the nearest one it inherits from that
-             *     chose. Only when corrected.
-             */
-            chosenBy?: string | null;
-            /**
-             * Format: uuid
-             * @description The household whose weight counted the line: the reader's own, or the nearest one it inherits from that set one.
-             *     Only when `via` is `householdWeight`.
-             */
-            weighedBy?: string | null;
         RecipesGetSharedResponse: {
             /** @description What it is called. */
             title: string;
@@ -10389,6 +10560,275 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NutritionIngredientFactsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getIngredientNamesV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngredientsIngredientNamesResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getIngredientMergesV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngredientsIngredientMergesResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createIngredientMergeV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IngredientsCreateIngredientMergeRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngredientsCreatedIngredientMerge"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    deleteIngredientMergeV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                from: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getIngredientMergeSuggestionsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngredientsMergeSuggestionsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    deleteIngredientMergeSuggestionV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
             /** @description Unauthorized */
