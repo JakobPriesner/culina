@@ -90,18 +90,29 @@ test.describe('polished motion @offline', () => {
     await expectWorkFits();
   });
 
-  test('consecutive page navigation keeps the content usable', async ({ page }) => {
+  test('consecutive page navigation swaps the content instantly', async ({ page }) => {
     await responsiveData(page, 'en', { activeCooking: false });
+    // Pages switch without a dissolve: a navigation never starts a view transition.
+    await page.addInitScript(() => {
+      const counted = window as unknown as { viewTransitions: number };
+      counted.viewTransitions = 0;
+      const start = document.startViewTransition?.bind(document);
+      if (start) {
+        document.startViewTransition = (...args: Parameters<typeof start>) => {
+          counted.viewTransitions++;
+          return start(...args);
+        };
+      }
+    });
     await page.goto('/recipes');
-    const content = page.locator('#content');
-    expect(await content.evaluate((node) => getComputedStyle(node).viewTransitionName)).toBe(
-      'page-content'
-    );
     await page.getByRole('link', { name: 'Cookbooks', exact: true }).click();
     await expect(page).toHaveURL('/cookbooks');
     await page.getByRole('link', { name: 'Shopping', exact: true }).click();
     await expect(page).toHaveURL('/shopping');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    expect(
+      await page.evaluate(() => (window as unknown as { viewTransitions: number }).viewTransitions)
+    ).toBe(0);
     await expectReflow(page);
   });
 });
