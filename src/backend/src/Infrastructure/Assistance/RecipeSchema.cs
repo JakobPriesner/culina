@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Application.Abstractions;
+using Domain.Recipes;
 
 namespace Infrastructure.Assistance;
 
@@ -25,6 +26,9 @@ internal static class RecipeSchema
     private static readonly Lazy<JsonElement> Serialised =
         new(() => JsonSerializer.SerializeToElement(Definition, AssistantHttp.Json));
 
+    /// <summary>The built-in units, the same list the instruction gives; above <see cref="Definition"/>, which reads it.</summary>
+    private static readonly string Units = string.Join(", ", Unit.BuiltIn.Select(unit => unit.Code));
+
     /// <summary>The schema, as every provider takes it.</summary>
     internal static IReadOnlyDictionary<string, object> Definition { get; } = Object(
         new Dictionary<string, object>
@@ -32,14 +36,13 @@ internal static class RecipeSchema
             ["title"] = Text("What the dish is called."),
             ["description"] = MaybeText(
                 "A sentence or two about it, or null where there is nothing to say."),
-            ["yieldAmount"] = MaybeNumber("How many it makes, or null if the recipe does not say."),
+            ["yieldAmount"] = MaybeNumber("How many it makes, or null where there is none to give."),
             ["yieldLabel"] = MaybeText(
-                "What it makes: servings, or a cake, or jars. Null if the recipe does not say."),
+                "What it makes: servings, or a cake, or jars. Null where there is none to give."),
             ["prepMinutes"] = MaybeInteger(
-                "Minutes of hands-on work, or null. Null rather than a guess: a number here is "
-                + "read as something the recipe stated."),
+                "Minutes of hands-on work, or null where there are none to give."),
             ["cookMinutes"] = MaybeInteger(
-                "Minutes of cooking or baking, or null. Null rather than a guess."),
+                "Minutes of cooking or baking, or null where there are none to give."),
             ["groups"] = Array(
                 "The ingredients, grouped. Use one unnamed group unless the recipe "
                 + "genuinely has parts, such as a filling and a topping.",
@@ -56,8 +59,8 @@ internal static class RecipeSchema
                                         "How much, as a number, or null for a line that gives "
                                         + "no amount."),
                                     ["unit"] = MaybeText(
-                                        "The unit, as an ordinary abbreviation: g, kg, ml, l, "
-                                        + "tsp, tbsp. Null for a bare count."),
+                                        $"One of {Units}, or another word where none fits. Null "
+                                        + "for a count with no measure, such as two onions."),
                                     ["name"] = Text("The shoppable noun alone: 'butter'."),
                                     ["note"] = MaybeText(
                                         "The preparation: 'finely chopped'. Null where there "
@@ -78,7 +81,9 @@ internal static class RecipeSchema
                             "How long this step waits, when it waits. Null otherwise.")
                     },
                     ["title", "text", "durationSeconds"])),
-            ["tags"] = Array("A few short labels. An empty list where none fit.", Text("One label."))
+            ["tags"] = Array(
+                "Two to six labels, each one or two lowercase words.",
+                Text("One label."))
         },
         [
             "title",

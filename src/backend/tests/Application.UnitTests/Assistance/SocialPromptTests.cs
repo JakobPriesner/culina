@@ -16,6 +16,16 @@ public class SocialPromptTests
         Assert.EndsWith("<untrusted_transcript>one cup</untrusted_transcript>", material, StringComparison.Ordinal);
     }
 
+    /// <summary>An entity such as <c>&amp;#246;</c> is what a model copies into an ingredient name.</summary>
+    [Fact]
+    public void Source_ShouldKeepItsOwnLettersAndSigns()
+    {
+        var material = AssistantPrompts.SocialMaterial("2 EL Olivenöl, ½ TL Salz, 180 °C, \"fein\" 🍝", "it's");
+
+        Assert.Contains("2 EL Olivenöl, ½ TL Salz, 180 °C, \"fein\" 🍝", material, StringComparison.Ordinal);
+        Assert.Contains("it's", material, StringComparison.Ordinal);
+    }
+
     [Fact]
     public void Social_ShouldKeepTheReadPromptsCachePrefix_AndPutLanguageLast()
     {
