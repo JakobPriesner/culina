@@ -134,6 +134,41 @@ public static class IngredientWords
     }
 
     /// <summary>
+    /// Reads a name back in the words it was written in, for the cook to check: "fein gehackte rote Zwiebeln" is
+    /// understood as "Zwiebeln, rot", and would be "rote Zwiebeln" with "fein gehackt" in the note.
+    /// </summary>
+    /// <param name="name">An ingredient name as written.</param>
+    public static IngredientWording Wording(string name)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+
+        var tokens = Tokens(name);
+        var owners = tokens.SelectMany((token, index) => Fold(token.Text).Select(_ => index)).ToArray();
+        var words = Words(name).ToLookup(word => owners[word.At]);
+
+        // A written word is the thing when any part of it is: "Grünspargel" is not only green.
+        IngredientWordKind? KindOf(int at) => words[at].Any(word => word.Kind is null) ? null : words[at].First().Kind;
+
+        int[] Where(Func<IngredientWordKind?, bool> kind) => [.. Enumerable.Range(0, tokens.Count).Where(at => kind(KindOf(at)))];
+
+        var kinds = Where(kind => kind == IngredientWordKind.Qualifier).Select(at => Plain(tokens, at, words[at])).ToList();
+        var understood = Joined(name, tokens, Where(kind => kind is null)) + (kinds.Count > 0 ? ", " + string.Join(' ', kinds) : string.Empty);
+        var preparation = Where(kind => kind == IngredientWordKind.Preparation);
+
+        if (preparation.Length == 0)
+        {
+            return new IngredientWording(understood, null, null);
+        }
+
+        // Words apart in the name are apart in the note: "gehackte Zwiebeln, geschält" is "gehackt, geschält".
+        var note = string.Concat(preparation.Select((at, index) =>
+            (index == 0 ? string.Empty : at == preparation[index - 1] + 1 ? name[tokens[at - 1].End..tokens[at].Start] : ", ")
+            + Plain(tokens, at, words[at])));
+
+        return new IngredientWording(understood, Joined(name, tokens, Where(kind => kind != IngredientWordKind.Preparation)), note);
+    }
+
+    /// <summary>
     /// The other ways a name is written, for a table that lists only one, folded: "große Zwiebeln" is also
     /// "zwiebeln", "Spargel, grün" also "gruener spargel" and "spargel gruen". The name as written is not among them.
     /// </summary>
@@ -169,11 +204,13 @@ public static class IngredientWords
 
     private static List<Word> Words(string name)
     {
-        var nouns = WrittenAsNouns(name);
-        var words = Classify(SearchText.FoldAe(name).Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        var tokens = Tokens(name);
+        var nouns = WrittenAsNouns(tokens);
+        var words = Classify([.. tokens.SelectMany(token => Fold(token.Text))]);
 
-        // German capitalises a noun: in "gemischtes Gehacktes" the participle is the thing, not its preparation.
-        words = [.. words.Select(word => IsAbout(word) && word.Key is not null && nouns.Contains(word.Text)
+        // German capitalises a noun: in "gemischtes Gehacktes" the participle is the thing, not its preparation. Not
+        // a noun inside a phrase: "nach Belieben" is still preparation.
+        words = [.. words.Select(word => IsAbout(word) && word.Key is not null && Phrases.ContainsKey(word.Text) && nouns.Contains(word.Text)
             ? word with { Kind = null, Key = null }
             : word)];
 
@@ -215,28 +252,78 @@ public static class IngredientWords
     {
         ArgumentNullException.ThrowIfNull(tail);
 
-        var words = Classify(SearchText.FoldAe(tail).Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        var words = Classify(Fold(tail));
 
         return words.Count > 0 && words.All(word => word.Kind == IngredientWordKind.Qualifier);
     }
 
     /// <summary>The words written with a capital after the first, folded: a capital opening a name says nothing.</summary>
-    private static HashSet<string> WrittenAsNouns(string name)
+    private static HashSet<string> WrittenAsNouns(List<Written> tokens) =>
+        [.. tokens.Skip(1).Where(token => char.IsUpper(token.Text[0])).SelectMany(token => Fold(token.Text))];
+
+    /// <summary>A word as written, and where: the letters and digits between anything else.</summary>
+    private sealed record Written(string Text, int Start)
     {
-        var nouns = new HashSet<string>(StringComparer.Ordinal);
-        var written = name.Split(
-            [.. name.Where(character => !char.IsLetterOrDigit(character)).Distinct()],
-            StringSplitOptions.RemoveEmptyEntries);
-
-        foreach (var word in written.Skip(1).Where(word => char.IsUpper(word[0])))
-        {
-            nouns.UnionWith(SearchText.FoldAe(word).Split(' ', StringSplitOptions.RemoveEmptyEntries));
-        }
-
-        return nouns;
+        public int End => Start + Text.Length;
     }
 
-    private sealed record Word(string Text, IngredientWordKind? Kind, string? Key, bool Continues = false);
+    private static List<Written> Tokens(string name)
+    {
+        var tokens = new List<Written>();
+
+        for (var at = 0; at < name.Length; at++)
+        {
+            var start = at;
+
+            while (at < name.Length && char.IsLetterOrDigit(name[at]))
+            {
+                at++;
+            }
+
+            if (at > start)
+            {
+                tokens.Add(new Written(name[start..at], start));
+            }
+        }
+
+        return tokens;
+    }
+
+    private static string[] Fold(string text) => SearchText.FoldAe(text).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+    /// <summary>The written words at <paramref name="indices"/>, with what was written before each but the first.</summary>
+    private static string Joined(string name, List<Written> tokens, int[] indices) =>
+        string.Concat(indices.Select((at, index) => (index == 0 ? string.Empty : name[tokens[at - 1].End..tokens[at].Start]) + tokens[at].Text));
+
+    /// <summary>
+    /// A written word in its plain form, the way it reads on its own: "gehackte" is "gehackt", "Rote" opening the
+    /// name is "rot". A word outside the vocabulary is left as written.
+    /// </summary>
+    private static string Plain(List<Written> tokens, int at, IEnumerable<Word> words)
+    {
+        var text = tokens[at].Text;
+
+        if (words.ToList() is not [{ Key: not null } word])
+        {
+            return text;
+        }
+
+        var ending = Declensions.FirstOrDefault(ending =>
+            ending.Length > 0 &&
+            word.Text.EndsWith(ending, StringComparison.Ordinal) &&
+            Phrases.TryGetValue(word.Text[..^ending.Length], out var stem) &&
+            stem == Phrases.GetValueOrDefault(word.Text)) ?? string.Empty;
+
+        text = text[..^ending.Length];
+
+        // Only the opening capital is the sentence's: "TK" stays, and so does "Dose" in "aus der Dose".
+        return at == 0 && text.Length > 1 && char.IsUpper(text[0]) && char.IsLower(text[1])
+            ? char.ToLowerInvariant(text[0]) + text[1..]
+            : text;
+    }
+
+    /// <summary>A folded word, what it does, and <see cref="At"/>: its place among the folded words of the name.</summary>
+    private sealed record Word(string Text, IngredientWordKind? Kind, string? Key, int At, bool Continues = false);
 
     private static List<Word> Classify(string[] folded)
     {
@@ -246,20 +333,20 @@ public static class IngredientWords
         {
             if (Purpose.Contains(folded[at]))
             {
-                words.AddRange(folded[at..].Select(word => new Word(word, IngredientWordKind.Preparation, null)));
+                words.AddRange(folded[at..].Select((word, index) => new Word(word, IngredientWordKind.Preparation, null, at + index)));
 
                 break;
             }
 
             if (PhraseAt(folded, at) is var (entry, length) && entry is not null)
             {
-                words.AddRange(folded[at..(at + length)].Select((word, index) => new Word(word, entry.Kind, entry.Key, index > 0)));
+                words.AddRange(folded[at..(at + length)].Select((word, index) => new Word(word, entry.Kind, entry.Key, at + index, index > 0)));
                 at += length - 1;
 
                 continue;
             }
 
-            words.AddRange(Compound(folded[at]));
+            words.AddRange(Compound(folded[at], at));
         }
 
         return words;
@@ -279,7 +366,7 @@ public static class IngredientWords
     }
 
     // Split only where the rest is a food on its own: "gruenspargel", not "rotisserie" or "schwarzwaelder".
-    private static IEnumerable<Word> Compound(string word)
+    private static IEnumerable<Word> Compound(string word, int at)
     {
         foreach (var (prefix, key) in CompoundPrefixes)
         {
@@ -287,11 +374,11 @@ public static class IngredientWords
 
             if (word.StartsWith(prefix, StringComparison.Ordinal) && rest.Length >= ShortestCompoundRest && FoodNames.Match(rest) is not null)
             {
-                return [new Word(prefix, IngredientWordKind.Qualifier, key), new Word(rest, null, null)];
+                return [new Word(prefix, IngredientWordKind.Qualifier, key, at), new Word(rest, null, null, at)];
             }
         }
 
-        return [new Word(word, null, null)];
+        return [new Word(word, null, null, at)];
     }
 
     private static bool IsAbout(Word word) => word.Kind is IngredientWordKind.Descriptor or IngredientWordKind.Preparation;

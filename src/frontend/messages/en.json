@@ -1773,5 +1773,9 @@
   "problem.ingredients.same_name": "That is already its name.",
   "editor.ingredientExisting": "You already use “{name}”.",
   "editor.ingredientUseExisting": "Use it",
-  "editor.ingredientUseExistingLabel": "Use “{name}” instead"
+  "editor.ingredientUseExistingLabel": "Use “{name}” instead",
+  "editor.ingredientUnderstood": "New · read as “{name}”",
+  "editor.ingredientPreparation": "“{note}” goes in the note.",
+  "editor.ingredientMoveToNote": "Move it",
+  "editor.ingredientMoveToNoteLabel": "Move “{note}” to the note"
 }

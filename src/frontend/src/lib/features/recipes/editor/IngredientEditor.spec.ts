@@ -17,13 +17,14 @@ const unitList = () => screen.queryByRole('listbox', { name: 'Unit suggestions' 
 const nameList = () => screen.queryByRole('listbox', { name: 'Ingredient suggestions' });
 
 function serverSuggests(
-  items: { name: string; section: string; own: boolean; equivalent?: boolean }[]
+  items: { name: string; section: string; own: boolean; equivalent?: boolean }[],
+  typed: { understood: string; name: string | null; note: string | null } | null = null
 ) {
   vi.stubGlobal(
     'fetch',
     vi.fn(
       () =>
-        new Response(JSON.stringify({ items }), {
+        new Response(JSON.stringify({ items, typed }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         })
@@ -272,6 +273,66 @@ describe('steering to a name already in use', () => {
     await vi.waitFor(() => expect(nameList()).toBeInTheDocument());
 
     expect(screen.queryByText(/You already use/)).not.toBeInTheDocument();
+  });
+});
+
+describe('saying how a name reads', () => {
+  it('says what a new name was understood as', async () => {
+    serverSuggests([], { understood: 'Kokosmilch, light', name: null, note: null });
+
+    renderWithProviders(IngredientHarness, {});
+
+    await userEvent.type(name(), 'Kokosmilch light');
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'New · read as “Kokosmilch, light”'
+    );
+  });
+
+  it('says nothing when the name reads as typed', async () => {
+    serverSuggests([{ name: 'Zwiebeln', section: 'produce', own: false }], {
+      understood: 'Zwiebel',
+      name: null,
+      note: null
+    });
+
+    renderWithProviders(IngredientHarness, {});
+
+    await userEvent.type(name(), 'Zwiebel');
+    await vi.waitFor(() => expect(nameList()).toBeInTheDocument());
+
+    expect(screen.queryByText(/read as/)).not.toBeInTheDocument();
+  });
+
+  it('says nothing about a name the household already uses', async () => {
+    serverSuggests(
+      [
+        { name: 'Kokosmilch light', section: 'canned', own: true },
+        { name: 'Kokosmilch', section: 'canned', own: false }
+      ],
+      { understood: 'Kokosmilch, light', name: null, note: null }
+    );
+
+    renderWithProviders(IngredientHarness, {});
+
+    await userEvent.type(name(), 'Kokosmilch light');
+    await vi.waitFor(() => expect(nameList()).toBeInTheDocument());
+
+    expect(screen.queryByText(/read as/)).not.toBeInTheDocument();
+  });
+
+  it('offers the preparation in the name for the note, and moves it on request', async () => {
+    serverSuggests([], { understood: 'Zwiebeln', name: 'Zwiebeln', note: 'gehackt' });
+
+    renderWithProviders(IngredientHarness, {});
+
+    await userEvent.type(note(), 'fein');
+    await userEvent.type(name(), 'gehackte Zwiebeln');
+    await screen.findByText('“gehackt” goes in the note.');
+    await userEvent.click(screen.getByRole('button', { name: 'Move “gehackt” to the note' }));
+
+    expect(name()).toHaveValue('Zwiebeln');
+    expect(note()).toHaveValue('fein, gehackt');
   });
 });
 
