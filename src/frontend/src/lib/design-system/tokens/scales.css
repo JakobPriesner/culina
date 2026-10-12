@@ -56,7 +56,8 @@
 
   /* Long-form measure; prose past about 70 characters is hard to track. */
   --measure: 68ch;
-  --layout-wide: 80rem;
+  /* Grows with large screens so the header and every page widen together, always leaving room at the sides. */
+  --layout-wide: clamp(80rem, 90vw, 120rem);
 
   /* Inline padding of every full-width band, so header brand and heading start on one line. */
   --layout-gutter: clamp(1rem, 4vw, 3rem);
