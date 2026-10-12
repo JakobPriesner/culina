@@ -1,4 +1,4 @@
-import { devices, expect, test, type Page } from '@playwright/test';
+import { devices, expect, test, type Locator, type Page } from '@playwright/test';
 
 import {
   accountFor,
@@ -71,10 +71,10 @@ test.describe('planning a week', () => {
     await sheet.getByRole('button', { name: title }).click();
 
     await expect(sheet).toBeHidden();
-    await expect(page.getByRole('link', { name: title })).toBeVisible();
+    await expect(cardOf(page, title)).toBeVisible();
 
     await page.getByRole('button', { name: weekToList }).click();
-    await expect(page.getByRole('link', { name: title })).toContainText(onTheList);
+    await expect(cardOf(page, title)).toContainText(onTheList);
     await expect(page.getByText(everythingOnTheList)).toBeVisible();
     await expect(page.getByRole('button', { name: weekToList })).toBeHidden();
 
@@ -108,7 +108,7 @@ test.describe('planning a week', () => {
     await expect(sheet).toBeHidden();
 
     await page.getByRole('button', { name: weekToList }).click();
-    await expect(page.getByRole('link', { name: waffles })).toContainText(onTheList);
+    await expect(cardOf(page, waffles)).toContainText(onTheList);
 
     // Doubling here used to be silent.
     await page.goto('/shopping');
@@ -142,15 +142,13 @@ test.describe('planning a week', () => {
 
     await page.goto('/plan');
 
-    await expect(page.getByRole('link', { name: new RegExp(plannedTitle) })).toContainText(
-      /5 servings|5 Portionen/i
-    );
+    await expect(cardOf(page, new RegExp(plannedTitle))).toContainText(/5 servings|5 Portionen/i);
   });
 
   test('moves a meal to another day by dragging it there', async () => {
-    await page.goto('/plan');
+    await openWeek(page);
 
-    await expect(page.getByRole('link', { name: title })).toBeVisible();
+    await expect(cardOf(page, title)).toBeVisible();
 
     const onto = await dayOtherThan(page, await dayHolding(page, title));
 
@@ -163,9 +161,9 @@ test.describe('planning a week', () => {
   });
 
   test('puts it back when the move is undone', async () => {
-    await page.goto('/plan');
+    await openWeek(page);
 
-    await expect(page.getByRole('link', { name: title })).toBeVisible();
+    await expect(cardOf(page, title)).toBeVisible();
 
     const from = await dayHolding(page, title);
     const onto = await dayOtherThan(page, from);
@@ -192,7 +190,7 @@ test.describe('planning a week', () => {
   test('moves a meal without a pointer, through the grip', async () => {
     await page.goto('/plan');
 
-    await expect(page.getByRole('link', { name: title })).toBeVisible();
+    await expect(cardOf(page, title)).toBeVisible();
 
     const onto = await dayOtherThan(page, await dayHolding(page, title));
     const which = await indexOfDay(page, onto);
@@ -220,8 +218,8 @@ test.describe('planning a week', () => {
 
     try {
       await signInWithHousehold(screen, who);
-      await screen.goto('/plan');
-      await expect(screen.getByRole('link', { name: title })).toBeVisible();
+      await openWeek(screen);
+      await expect(cardOf(screen, title)).toBeVisible();
 
       const from = await dayHolding(screen, title);
 
@@ -240,14 +238,14 @@ test.describe('planning a week', () => {
   test('takes a meal off the plan again', async () => {
     await page.goto('/plan');
 
-    await expect(page.getByRole('link', { name: title })).toBeVisible();
+    await expect(cardOf(page, title)).toBeVisible();
 
     // The card carries two controls that mention the title; the other one moves it.
     await page
       .getByRole('button', { name: new RegExp(`(take ${title} off|${title} vom plan)`, 'i') })
       .click();
 
-    await expect(page.getByRole('link', { name: title })).toBeHidden();
+    await expect(cardOf(page, title)).toBeHidden();
 
     await page.getByRole('button', { name: /^(remove them|entfernen)$/i }).click();
     await expect(
@@ -264,6 +262,21 @@ const weekToList =
 const onTheList = /on the shopping list|auf der einkaufsliste/i;
 const everythingOnTheList =
   /everything planned this week is on|alles, was diese woche geplant ist/i;
+
+/** A meal's card on the week; tonight's row above the days links the same title to cooking it. */
+function cardOf(page: Page, title: string | RegExp): Locator {
+  return page.locator('[data-plan-day]').getByRole('link', { name: title });
+}
+
+/**
+ * This week, once tonight's row is in: it loads after the days and pushes them down, so a card
+ * measured before it lands is dropped on the wrong day. Today has a meal by now, the scaled plan's
+ * (the sheet picks today first), so the row always comes.
+ */
+async function openWeek(page: Page): Promise<void> {
+  await page.goto('/plan');
+  await expect(page.getByRole('link', { name: /^(today|heute) · /i })).toBeVisible();
+}
 
 async function dayHolding(page: Page, title: string): Promise<string> {
   const days = page.locator('[data-plan-day]');
@@ -304,7 +317,7 @@ async function dayOtherThan(page: Page, date: string): Promise<string> {
  * into view first.
  */
 async function dragCardOnto(page: Page, title: string, date: string): Promise<void> {
-  const card = page.getByRole('link', { name: title });
+  const card = cardOf(page, title);
   const target = page.locator(`[data-plan-day="${date}"]`);
 
   await target.scrollIntoViewIfNeeded();
@@ -355,7 +368,7 @@ async function touchDragOnto(
   date: string,
   { holdMs }: { holdMs: number }
 ): Promise<void> {
-  const card = page.getByRole('link', { name: title });
+  const card = cardOf(page, title);
   const target = page.locator(`[data-plan-day="${date}"]`);
 
   await target.scrollIntoViewIfNeeded();
