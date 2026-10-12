@@ -1,0 +1,724 @@
+{
+  "schemaVersion": "v6",
+  "name": "culina-database",
+  "tags": [
+    {
+      "key": "app",
+      "value": "culina"
+    }
+  ],
+  "spec": {
+    "display": {
+      "name": "Culina · Database",
+      "description": "The Npgsql connection pool and the queries running through it."
+    },
+    "duration": "6h",
+    "refreshInterval": "0s",
+    "variables": [],
+    "panels": {
+      "pool-used-percent": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Pool in use %",
+            "description": "Connections in use against Database__MaxPoolSize. Alert: warning above 80 %, critical above 95 %."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "percent",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [
+                {
+                  "value": 80,
+                  "unit": "percent",
+                  "color": "#F5A524",
+                  "label": "warning"
+                },
+                {
+                  "value": 95,
+                  "unit": "percent",
+                  "color": "#E5484D",
+                  "label": "critical"
+                }
+              ],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "db.client.connection.count",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND db.client.connection.state = 'used'"
+                          },
+                          "disabled": true
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "db.client.connection.max",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}'"
+                          },
+                          "disabled": true
+                        }
+                      },
+                      {
+                        "type": "builder_formula",
+                        "spec": {
+                          "name": "F1",
+                          "expression": "A / B * 100",
+                          "legend": "in use %"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "pool-connections": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Connections by state",
+            "description": "Idle and used connections, and the pool's maximum."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "db.client.connection.count",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}'"
+                          },
+                          "groupBy": [
+                            {
+                              "name": "db.client.connection.state"
+                            }
+                          ],
+                          "legend": "{{db.client.connection.state}}"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "db.client.connection.max",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}'"
+                          },
+                          "legend": "max"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "pool-pending": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Requests waiting for a connection",
+            "description": "Empty until the pool first runs dry. Alert: warning above 0, critical above 5."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [
+                {
+                  "value": 5,
+                  "unit": "short",
+                  "color": "#E5484D",
+                  "label": "critical"
+                }
+              ],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "db.client.connection.npgsql.pending_requests",
+                        "temporality": "cumulative",
+                        "timeAggregation": "avg",
+                        "spaceAggregation": "max"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "pool-timeouts": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Connection timeouts",
+            "description": "Requests that gave up waiting for a connection. Empty until the first one. Alert: critical on any."
+          },
+          "plugin": {
+            "kind": "signoz/BarChartPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "db.client.connection.npgsql.timeouts",
+                        "temporality": "cumulative",
+                        "timeAggregation": "increase",
+                        "spaceAggregation": "sum"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "pool-events": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Slow waits and long holds",
+            "description": "Event 1970: waited over half a second for a connection. 1971: held one over five seconds. Each logged at most once a minute."
+          },
+          "plugin": {
+            "kind": "signoz/BarChartPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "logs",
+                    "aggregations": [
+                      {
+                        "expression": "count()"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}' AND attribute.logrecord.event.id IN (1970, 1971)"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "logrecord.event.id"
+                      }
+                    ],
+                    "legend": "event {{logrecord.event.id}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "db-operation-p95": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Query duration p95",
+            "description": "95th percentile of database operation duration."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "s",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "db.client.operation.duration.bucket",
+                        "temporality": "cumulative",
+                        "timeAggregation": "",
+                        "spaceAggregation": "p95"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    },
+                    "legend": "p95"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "db-operations": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Queries",
+            "description": "Database operations per interval."
+          },
+          "plugin": {
+            "kind": "signoz/BarChartPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "db.client.operation.duration.count",
+                        "temporality": "cumulative",
+                        "timeAggregation": "increase",
+                        "spaceAggregation": "sum"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    },
+                    "legend": "queries"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "db-executing": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Queries running",
+            "description": "Commands executing at the same time."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "db.client.operation.npgsql.executing",
+                        "temporality": "cumulative",
+                        "timeAggregation": "avg",
+                        "spaceAggregation": "max"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "db-bytes": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Bytes read and written",
+            "description": "Traffic between the API and PostgreSQL per interval."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "bytes",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "db.client.operation.npgsql.bytes_read",
+                              "temporality": "cumulative",
+                              "timeAggregation": "increase",
+                              "spaceAggregation": "sum"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}'"
+                          },
+                          "legend": "read"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "db.client.operation.npgsql.bytes_written",
+                              "temporality": "cumulative",
+                              "timeAggregation": "increase",
+                              "spaceAggregation": "sum"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}'"
+                          },
+                          "legend": "written"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "pool-holds-list": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Long holds",
+            "description": "The latest 1971 lines: which use case kept a connection, for how long."
+          },
+          "plugin": {
+            "kind": "signoz/ListPanel",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "raw",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "logs",
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}' AND attribute.logrecord.event.id IN (1970, 1971)"
+                    },
+                    "order": [
+                      {
+                        "key": {
+                          "name": "timestamp"
+                        },
+                        "direction": "desc"
+                      }
+                    ],
+                    "limit": 50
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Pool"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/pool-used-percent"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/pool-connections"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/pool-pending"
+              }
+            },
+            {
+              "x": 6,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/pool-timeouts"
+              }
+            },
+            {
+              "x": 0,
+              "y": 12,
+              "width": 12,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/pool-events"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Queries"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/db-operation-p95"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/db-operations"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/db-executing"
+              }
+            },
+            {
+              "x": 6,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/db-bytes"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Held too long"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/pool-holds-list"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

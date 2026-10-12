@@ -1,0 +1,59 @@
+{
+  "alert": "Culina: background job failed",
+  "alertType": "LOGS_BASED_ALERT",
+  "labels": {
+    "area": "jobs",
+    "service": "${CULINA_API_SERVICE}"
+  },
+  "annotations": {
+    "summary": "{{$value}} background job failures in an hour (threshold {{$threshold}})",
+    "description": "1211 import defect, 1212 a recipe that failed to import, 1921 session sweep failed, 1951/1952 trash purge failed. Each background run is a trace of its own: open it from the log line. docs/operations.md, section Alerts."
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "1h",
+      "frequency": "1m"
+    }
+  },
+  "condition": {
+    "compositeQuery": {
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "signal": "logs",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "expression": "count()"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}' AND attribute.logrecord.event.id IN (1211, 1212, 1921, 1951, 1952)"
+            }
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "A",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "critical",
+          "target": 4,
+          "op": "above",
+          "matchType": "in_total"
+        },
+        {
+          "name": "warning",
+          "target": 0,
+          "op": "above",
+          "matchType": "in_total"
+        }
+      ]
+    }
+  }
+}

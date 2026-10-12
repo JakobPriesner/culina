@@ -1,0 +1,53 @@
+{
+  "alert": "Culina: critical failure",
+  "alertType": "LOGS_BASED_ALERT",
+  "labels": {
+    "area": "errors",
+    "service": "${CULINA_API_SERVICE}"
+  },
+  "annotations": {
+    "summary": "The API logged a critical failure",
+    "description": "Critical lines stop the process, e.g. a failed or edited migration (events 1902, 1903). The instance serves no traffic until fixed. See docs/operations.md, Rolling back."
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "5m",
+      "frequency": "1m"
+    }
+  },
+  "condition": {
+    "compositeQuery": {
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "signal": "logs",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "expression": "count()"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}' AND severity_number >= 21"
+            }
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "A",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "critical",
+          "target": 0,
+          "op": "above",
+          "matchType": "in_total"
+        }
+      ]
+    }
+  }
+}

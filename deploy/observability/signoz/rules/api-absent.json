@@ -1,0 +1,58 @@
+{
+  "alert": "Culina: API sends no telemetry",
+  "alertType": "METRIC_BASED_ALERT",
+  "labels": {
+    "area": "availability",
+    "service": "${CULINA_API_SERVICE}"
+  },
+  "annotations": {
+    "summary": "No telemetry from ${CULINA_API_SERVICE} for 10 minutes",
+    "description": "The API reports its memory every export even when nobody uses it, so silence means the process is down, cannot reach the collector, or OTEL_EXPORTER_OTLP_ENDPOINT changed. Check /health/live and /health/ready, then the container's logs. docs/operations.md, section Alerts."
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "10m",
+      "frequency": "1m"
+    }
+  },
+  "condition": {
+    "compositeQuery": {
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "signal": "metrics",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "metricName": "system.memory.usage",
+                "temporality": "cumulative",
+                "timeAggregation": "avg",
+                "spaceAggregation": "max"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}'"
+            }
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "A",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "critical",
+          "target": 0,
+          "op": "below",
+          "matchType": "at_least_once"
+        }
+      ]
+    },
+    "alertOnAbsent": true,
+    "absentFor": 10
+  }
+}

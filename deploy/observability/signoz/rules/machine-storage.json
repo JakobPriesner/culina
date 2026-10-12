@@ -1,0 +1,98 @@
+{
+  "alert": "Culina: storage filling up",
+  "alertType": "METRIC_BASED_ALERT",
+  "labels": {
+    "area": "resources",
+    "service": "${CULINA_API_SERVICE}"
+  },
+  "annotations": {
+    "summary": "{{index $labels \"culina.storage.directory\"}} storage at {{$value}}% (threshold {{$threshold}}%)",
+    "description": "The volume behind this directory is filling up. Images grow with every recipe; empty the trash, prune old backups on the same disk, or grow the volume before uploads start failing. docs/operations.md, section Alerts."
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "15m",
+      "frequency": "1m"
+    }
+  },
+  "condition": {
+    "compositeQuery": {
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "signal": "metrics",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "metricName": "culina.storage.usage",
+                "temporality": "cumulative",
+                "timeAggregation": "avg",
+                "spaceAggregation": "max"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}' AND system.filesystem.state = 'used'"
+            },
+            "groupBy": [
+              {
+                "name": "culina.storage.directory"
+              }
+            ]
+          }
+        },
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "B",
+            "signal": "metrics",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "metricName": "culina.storage.limit",
+                "temporality": "cumulative",
+                "timeAggregation": "avg",
+                "spaceAggregation": "max"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}'"
+            },
+            "groupBy": [
+              {
+                "name": "culina.storage.directory"
+              }
+            ]
+          }
+        },
+        {
+          "type": "builder_formula",
+          "spec": {
+            "name": "F1",
+            "expression": "A / B * 100"
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "F1",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "critical",
+          "target": 90,
+          "op": "above",
+          "matchType": "last"
+        },
+        {
+          "name": "warning",
+          "target": 80,
+          "op": "above",
+          "matchType": "last"
+        }
+      ]
+    }
+  }
+}

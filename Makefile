@@ -36,7 +36,7 @@ endef
 .DEFAULT_GOAL := help
 .PHONY: help dev db-up db-down db-reset db-shell backend frontend \
         build test test-backend test-frontend test-e2e ci lint format api \
-        image image-run clean
+        alerts-check alerts-apply image image-run clean
 
 help: ## Show this help
 	@grep -hE '^[a-z0-9-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -133,6 +133,14 @@ api: openapi ## Export the OpenAPI document and regenerate the frontend client
 
 openapi: db-up ## Export the OpenAPI document to src/backend/openapi/Api.json
 	cd $(API) && dotnet run -- --export-openapi ../../openapi/Api.json
+
+# ── Alerts ───────────────────────────────────────────────────────────────────
+
+alerts-check: ## Validate the SigNoz alert rules, channels and dashboards, offline
+	scripts/signoz-alerts.sh check
+
+alerts-apply: ## Create or update them in SigNoz (needs SIGNOZ_URL, SIGNOZ_API_KEY; see operations.md)
+	scripts/signoz-alerts.sh apply
 
 # ── Container ────────────────────────────────────────────────────────────────
 

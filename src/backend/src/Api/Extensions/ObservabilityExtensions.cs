@@ -30,6 +30,12 @@ internal static class ObservabilityExtensions
     /// <summary>The web app's service name when <see cref="ServiceNameKey"/> is not set.</summary>
     internal const string WebAppService = "culina-web";
 
+    /// <summary>
+    /// Without it the OTLP exporter drops each line's event id, the key operations.md and the SigNoz
+    /// alert rules match on (exported as <c>logrecord.event.id</c>). Set by an operator, theirs wins.
+    /// </summary>
+    internal const string EventIdKey = "OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES";
+
     internal static string ApiServiceName(IConfiguration configuration) =>
         string.IsNullOrWhiteSpace(configuration[ServiceNameKey]) ? ApiService : configuration[ServiceNameKey]!.Trim();
 
@@ -47,6 +53,11 @@ internal static class ObservabilityExtensions
     internal static IHostApplicationBuilder AddObservability(this IHostApplicationBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
+
+        if (builder.Configuration[EventIdKey] is null)
+        {
+            builder.Configuration.AddInMemoryCollection([new(EventIdKey, "true")]);
+        }
 
         builder.ConfigureLogging();
 

@@ -1,0 +1,53 @@
+{
+  "alert": "Culina: server misconfigured",
+  "alertType": "LOGS_BASED_ALERT",
+  "labels": {
+    "area": "configuration",
+    "service": "${CULINA_API_SERVICE}"
+  },
+  "annotations": {
+    "summary": "The API started with a risky configuration",
+    "description": "1600: no database is configured, so Culina serves only its setup screen; finish setup or set Database__*. 1603: session cookies are sent without Secure. See docs/configuration.md."
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "1h",
+      "frequency": "1m"
+    }
+  },
+  "condition": {
+    "compositeQuery": {
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "signal": "logs",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "expression": "count()"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}' AND attribute.logrecord.event.id IN (1600, 1603)"
+            }
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "A",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "warning",
+          "target": 0,
+          "op": "above",
+          "matchType": "in_total"
+        }
+      ]
+    }
+  }
+}
