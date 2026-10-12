@@ -943,6 +943,37 @@ developer's LAN API (`make dev` already binds `LAN=1`).
 - **`scripts/ci-local.sh`** frontend lane adds `build:native` and its
   `verify:release`. Gradle and Xcode stay out of the local CI mirror.
 
+**Status (13 October 2026, `tj23.12`).** Built slightly differently from the
+table above:
+- **Its own workflow.** The native lanes are in `.github/workflows/native.yml`,
+  not `ci.yml`. Every `ci.yml` job gates the server image, and an Android lint
+  must not hold up self-hosters. Making `native.yml` required in branch
+  protection is the repository owner's call.
+- **iOS runs on every change.** The repository is public, so macOS minutes
+  cost nothing. `native.yml` runs Android (Gradle lint, unit tests, a debug
+  APK) and iOS (an unsigned simulator build of the app and its widget
+  extension, on `macos-26`) for every change under `src/frontend`.
+- **Android smoke, nightly or by hand.** It starts the real image with a real
+  database, as `ci.yml`'s end-to-end job does, boots an Android 16 emulator and
+  runs `src/frontend/native/maestro`. The flow connects to
+  `http://10.0.2.2:8080`, signs in, lands on the new-account screen, then
+  relaunches and is still signed in. Maestro is pinned by version and checksum.
+- **Releases.** `native-release.yml` follows a successful `Release` run, from
+  the same commit:
+  - a signed AAB to Google Play's internal track;
+  - an archive exported straight to TestFlight with an App Store Connect API
+    key and automatic signing.
+
+  All signing material lives in the reviewer-protected `app-stores`
+  environment, and `app/build.gradle` reads the upload key only from there.
+- **Dependabot** watches the Android project's Gradle wrapper and plugins.
+  `Package.swift` is written by `cap sync` and moves with `@capacitor/ios`.
+- **Fixes the smoke test needed:** a shared `App` scheme, and
+  `android.allowMixedContent`, without which the https app page could not
+  call a home-network http server at all.
+
+None of these workflows has run yet. They run on the first push of this branch.
+
 ### 5.5 Web parity checklist
 
 What must be true when the first native commit lands, and stay true:
