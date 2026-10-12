@@ -1,0 +1,62 @@
+{
+  "alert": "Culina: thread pool backlog",
+  "alertType": "METRIC_BASED_ALERT",
+  "labels": {
+    "area": "resources",
+    "service": "${CULINA_API_SERVICE}"
+  },
+  "annotations": {
+    "summary": "{{$value}} work items queued on the thread pool (threshold {{$threshold}})",
+    "description": "Work is queuing faster than threads finish it, usually blocking I/O or CPU starvation. Check process.cpu.time and the container's CPU limit, and traces with long gaps between spans. docs/operations.md, section Alerts."
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "5m",
+      "frequency": "1m"
+    }
+  },
+  "condition": {
+    "compositeQuery": {
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "signal": "metrics",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "metricName": "dotnet.thread_pool.queue.length",
+                "temporality": "cumulative",
+                "timeAggregation": "avg",
+                "spaceAggregation": "max"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}'"
+            }
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "A",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "critical",
+          "target": 100,
+          "op": "above",
+          "matchType": "all_the_times"
+        },
+        {
+          "name": "warning",
+          "target": 10,
+          "op": "above",
+          "matchType": "all_the_times"
+        }
+      ]
+    }
+  }
+}

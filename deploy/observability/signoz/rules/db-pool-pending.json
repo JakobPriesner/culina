@@ -1,0 +1,62 @@
+{
+  "alert": "Culina: requests waiting for a database connection",
+  "alertType": "METRIC_BASED_ALERT",
+  "labels": {
+    "area": "database",
+    "service": "${CULINA_API_SERVICE}"
+  },
+  "annotations": {
+    "summary": "{{$value}} requests waiting for a database connection (threshold {{$threshold}})",
+    "description": "The pool is exhausted and requests queue (event 1970 logs the slow waits). See the pool saturation alert and event 1971 for who holds connections. docs/operations.md, section Alerts."
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "5m",
+      "frequency": "1m"
+    }
+  },
+  "condition": {
+    "compositeQuery": {
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "signal": "metrics",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "metricName": "db.client.connection.npgsql.pending_requests",
+                "temporality": "cumulative",
+                "timeAggregation": "avg",
+                "spaceAggregation": "max"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}'"
+            }
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "A",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "critical",
+          "target": 5,
+          "op": "above",
+          "matchType": "all_the_times"
+        },
+        {
+          "name": "warning",
+          "target": 0,
+          "op": "above",
+          "matchType": "all_the_times"
+        }
+      ]
+    }
+  }
+}

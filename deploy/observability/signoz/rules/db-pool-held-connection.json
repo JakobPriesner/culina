@@ -1,0 +1,58 @@
+{
+  "alert": "Culina: database connection held too long",
+  "alertType": "LOGS_BASED_ALERT",
+  "labels": {
+    "area": "database",
+    "service": "${CULINA_API_SERVICE}"
+  },
+  "annotations": {
+    "summary": "A use case kept a database connection for more than five seconds",
+    "description": "Event 1971 names the use case (UseCase) and how long it held the connection, and counts the ones in between. A connection held across slow I/O starves the pool. docs/operations.md, section Alerts."
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "15m",
+      "frequency": "1m"
+    }
+  },
+  "condition": {
+    "compositeQuery": {
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "signal": "logs",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "expression": "count()"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}' AND attribute.logrecord.event.id = 1971"
+            },
+            "groupBy": [
+              {
+                "name": "UseCase"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "A",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "warning",
+          "target": 0,
+          "op": "above",
+          "matchType": "in_total"
+        }
+      ]
+    }
+  }
+}

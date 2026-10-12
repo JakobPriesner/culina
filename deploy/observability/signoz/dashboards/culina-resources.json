@@ -1,0 +1,1025 @@
+{
+  "schemaVersion": "v6",
+  "name": "culina-resources",
+  "tags": [
+    {
+      "key": "app",
+      "value": "culina"
+    }
+  ],
+  "spec": {
+    "display": {
+      "name": "Culina · Resources",
+      "description": "Memory, storage, CPU and the .NET runtime of the API container."
+    },
+    "duration": "6h",
+    "refreshInterval": "0s",
+    "variables": [],
+    "panels": {
+      "res-memory-percent-now": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Memory used",
+            "description": "Against the container's limit. Alert: warning above 80 %, critical above 92 %."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "formatting": {
+                "unit": "percent",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [
+                {
+                  "value": 80,
+                  "operator": "above",
+                  "unit": "percent",
+                  "color": "#F5A524",
+                  "format": "text"
+                },
+                {
+                  "value": 92,
+                  "operator": "above",
+                  "unit": "percent",
+                  "color": "#E5484D",
+                  "format": "text"
+                }
+              ]
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "system.memory.usage",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max",
+                              "reduceTo": "last"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND system.memory.state = 'used'"
+                          },
+                          "disabled": true
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "system.memory.limit",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max",
+                              "reduceTo": "last"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}'"
+                          },
+                          "disabled": true
+                        }
+                      },
+                      {
+                        "type": "builder_formula",
+                        "spec": {
+                          "name": "F1",
+                          "expression": "A / B * 100",
+                          "legend": "memory %"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "res-storage-max-now": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Fullest volume",
+            "description": "Highest share used of any storage directory. Alert: warning above 80 %, critical above 90 %."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "formatting": {
+                "unit": "percent",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [
+                {
+                  "value": 80,
+                  "operator": "above",
+                  "unit": "percent",
+                  "color": "#F5A524",
+                  "format": "text"
+                },
+                {
+                  "value": 90,
+                  "operator": "above",
+                  "unit": "percent",
+                  "color": "#E5484D",
+                  "format": "text"
+                }
+              ]
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "culina.storage.usage",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max",
+                              "reduceTo": "last"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND system.filesystem.state = 'used'"
+                          },
+                          "disabled": true
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "culina.storage.limit",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max",
+                              "reduceTo": "last"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}'"
+                          },
+                          "disabled": true
+                        }
+                      },
+                      {
+                        "type": "builder_formula",
+                        "spec": {
+                          "name": "F1",
+                          "expression": "A / B * 100",
+                          "legend": "storage %"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "res-uptime": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Uptime",
+            "description": "Since the process last started."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "formatting": {
+                "unit": "s",
+                "decimalPrecision": "2"
+              },
+              "thresholds": []
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "process.uptime",
+                        "temporality": "unspecified",
+                        "timeAggregation": "latest",
+                        "spaceAggregation": "max",
+                        "reduceTo": "last"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "res-exceptions": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Exceptions thrown",
+            "description": ".NET exceptions in the selected range, handled ones included."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": []
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "dotnet.exceptions",
+                        "temporality": "cumulative",
+                        "timeAggregation": "increase",
+                        "spaceAggregation": "sum",
+                        "reduceTo": "sum"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "res-memory": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Memory",
+            "description": "Used against the container's limit."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "bytes",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "system.memory.usage",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND system.memory.state = 'used'"
+                          },
+                          "legend": "used"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "system.memory.limit",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}'"
+                          },
+                          "legend": "limit"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "res-storage": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Storage used %",
+            "description": "Per directory: images, keys and config."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "percent",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [
+                {
+                  "value": 80,
+                  "unit": "percent",
+                  "color": "#F5A524",
+                  "label": "warning"
+                },
+                {
+                  "value": 90,
+                  "unit": "percent",
+                  "color": "#E5484D",
+                  "label": "critical"
+                }
+              ],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "culina.storage.usage",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND system.filesystem.state = 'used'"
+                          },
+                          "groupBy": [
+                            {
+                              "name": "culina.storage.directory"
+                            }
+                          ],
+                          "disabled": true
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "culina.storage.limit",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}'"
+                          },
+                          "groupBy": [
+                            {
+                              "name": "culina.storage.directory"
+                            }
+                          ],
+                          "disabled": true
+                        }
+                      },
+                      {
+                        "type": "builder_formula",
+                        "spec": {
+                          "name": "F1",
+                          "expression": "A / B * 100",
+                          "legend": "{{culina.storage.directory}}"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "res-heap": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": ".NET heap",
+            "description": "Heap size and committed memory after the last collection, beside the working set."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "bytes",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "dotnet.gc.last_collection.heap.size",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "sum"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}'"
+                          },
+                          "legend": "heap"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "dotnet.gc.last_collection.memory.committed_size",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}'"
+                          },
+                          "legend": "committed"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "C",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "dotnet.process.memory.working_set",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}'"
+                          },
+                          "legend": "working set"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "res-gc": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Garbage collections",
+            "description": "Collections per interval, by generation."
+          },
+          "plugin": {
+            "kind": "signoz/BarChartPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "dotnet.gc.collections",
+                        "temporality": "cumulative",
+                        "timeAggregation": "increase",
+                        "spaceAggregation": "sum"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "gc.heap.generation"
+                      }
+                    ],
+                    "legend": "{{gc.heap.generation}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "res-cpu": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "CPU",
+            "description": "CPU seconds per second: 1 is one core busy."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "process.cpu.time",
+                        "temporality": "cumulative",
+                        "timeAggregation": "rate",
+                        "spaceAggregation": "sum"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    },
+                    "legend": "cores"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "res-gc-pause": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "GC pause",
+            "description": "Time the runtime spent paused for garbage collection, per second."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "s",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "dotnet.gc.pause.time",
+                        "temporality": "cumulative",
+                        "timeAggregation": "rate",
+                        "spaceAggregation": "sum"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    },
+                    "legend": "paused"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "res-threadpool": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Thread pool",
+            "description": "Queued work items against threads. Alert on the queue: warning above 10, critical above 100."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [
+                {
+                  "value": 10,
+                  "unit": "short",
+                  "color": "#F5A524",
+                  "label": "warning"
+                },
+                {
+                  "value": 100,
+                  "unit": "short",
+                  "color": "#E5484D",
+                  "label": "critical"
+                }
+              ],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "dotnet.thread_pool.queue.length",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}'"
+                          },
+                          "legend": "queued"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "dotnet.thread_pool.thread.count",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}'"
+                          },
+                          "legend": "threads"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "res-connections": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Connections",
+            "description": "Open HTTP connections to Kestrel, and those waiting to be accepted."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "kestrel.active_connections",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}'"
+                          },
+                          "legend": "active"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "signal": "metrics",
+                          "aggregations": [
+                            {
+                              "metricName": "kestrel.queued_connections",
+                              "temporality": "cumulative",
+                              "timeAggregation": "avg",
+                              "spaceAggregation": "max"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}'"
+                          },
+                          "legend": "queued"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "At a glance"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 3,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/res-memory-percent-now"
+              }
+            },
+            {
+              "x": 3,
+              "y": 0,
+              "width": 3,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/res-storage-max-now"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 3,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/res-uptime"
+              }
+            },
+            {
+              "x": 9,
+              "y": 0,
+              "width": 3,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/res-exceptions"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Memory and storage"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/res-memory"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/res-storage"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/res-heap"
+              }
+            },
+            {
+              "x": 6,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/res-gc"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "CPU and threads"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/res-cpu"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/res-gc-pause"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/res-threadpool"
+              }
+            },
+            {
+              "x": 6,
+              "y": 6,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/res-connections"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

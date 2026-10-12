@@ -1,0 +1,9 @@
+{
+  "name": "culina-telegram",
+  "webhook_configs": [
+    {
+      "url": "${CULINA_ALERT_TELEGRAM_RELAY_URL}",
+      "send_resolved": true
+    }
+  ]
+}

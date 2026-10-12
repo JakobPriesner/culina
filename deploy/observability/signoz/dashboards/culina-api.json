@@ -1,0 +1,1075 @@
+{
+  "schemaVersion": "v6",
+  "name": "culina-api",
+  "tags": [
+    {
+      "key": "app",
+      "value": "culina"
+    }
+  ],
+  "spec": {
+    "display": {
+      "name": "Culina · API",
+      "description": "Traffic, failures and latency of the API, per route and per use case."
+    },
+    "duration": "6h",
+    "refreshInterval": "0s",
+    "variables": [],
+    "panels": {
+      "api-requests-total": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Requests",
+            "description": "Server requests in the selected range."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": []
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "traces",
+                    "aggregations": [
+                      {
+                        "expression": "count()"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server'"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "api-error-share": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Failed requests",
+            "description": "Share of server spans that ended in an error."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "formatting": {
+                "unit": "percent",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [
+                {
+                  "value": 2,
+                  "operator": "above",
+                  "unit": "percent",
+                  "color": "#F5A524",
+                  "format": "text"
+                },
+                {
+                  "value": 10,
+                  "operator": "above",
+                  "unit": "percent",
+                  "color": "#E5484D",
+                  "format": "text"
+                }
+              ]
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "signal": "traces",
+                          "aggregations": [
+                            {
+                              "expression": "count()"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server' AND has_error = true"
+                          },
+                          "disabled": true
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "signal": "traces",
+                          "aggregations": [
+                            {
+                              "expression": "count()"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server'"
+                          },
+                          "disabled": true
+                        }
+                      },
+                      {
+                        "type": "builder_formula",
+                        "spec": {
+                          "name": "F1",
+                          "expression": "A / B * 100",
+                          "legend": "failed %"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "api-p95-number": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "p95 latency",
+            "description": "95th percentile of server span duration."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "formatting": {
+                "unit": "ns",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [
+                {
+                  "value": 1000000000.0,
+                  "operator": "above",
+                  "unit": "ns",
+                  "color": "#F5A524",
+                  "format": "text"
+                },
+                {
+                  "value": 3000000000.0,
+                  "operator": "above",
+                  "unit": "ns",
+                  "color": "#E5484D",
+                  "format": "text"
+                }
+              ]
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "traces",
+                    "aggregations": [
+                      {
+                        "expression": "p95(duration_nano)"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server'"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "api-active": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Requests in flight",
+            "description": "Requests being served right now."
+          },
+          "plugin": {
+            "kind": "signoz/NumberPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": []
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "http.server.active_requests",
+                        "temporality": "cumulative",
+                        "timeAggregation": "latest",
+                        "spaceAggregation": "sum",
+                        "reduceTo": "last"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "api-requests-by-status": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Requests by status",
+            "description": "Requests per interval, by HTTP status code."
+          },
+          "plugin": {
+            "kind": "signoz/BarChartPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "http.server.request.duration.count",
+                        "temporality": "cumulative",
+                        "timeAggregation": "increase",
+                        "spaceAggregation": "sum"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "http.response.status_code"
+                      }
+                    ],
+                    "legend": "{{http.response.status_code}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "api-error-rate": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Failed requests %",
+            "description": "Share of server spans that ended in an error. Alert: warning above 2 %, critical above 10 %."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "percent",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [
+                {
+                  "value": 2,
+                  "unit": "percent",
+                  "color": "#F5A524",
+                  "label": "warning"
+                },
+                {
+                  "value": 10,
+                  "unit": "percent",
+                  "color": "#E5484D",
+                  "label": "critical"
+                }
+              ],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "signal": "traces",
+                          "aggregations": [
+                            {
+                              "expression": "count()"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server' AND has_error = true"
+                          },
+                          "disabled": true
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "signal": "traces",
+                          "aggregations": [
+                            {
+                              "expression": "count()"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server'"
+                          },
+                          "disabled": true
+                        }
+                      },
+                      {
+                        "type": "builder_formula",
+                        "spec": {
+                          "name": "F1",
+                          "expression": "A / B * 100",
+                          "legend": "failed %"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "api-latency-percentiles": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Request latency",
+            "description": "p50, p95 and p99 of server span duration. Alert on p95: warning above 1 s, critical above 3 s."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "ns",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [
+                {
+                  "value": 1000000000.0,
+                  "unit": "ns",
+                  "color": "#F5A524",
+                  "label": "warning"
+                },
+                {
+                  "value": 3000000000.0,
+                  "unit": "ns",
+                  "color": "#E5484D",
+                  "label": "critical"
+                }
+              ],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "signal": "traces",
+                          "aggregations": [
+                            {
+                              "expression": "p50(duration_nano)"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server'"
+                          },
+                          "legend": "p50"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "signal": "traces",
+                          "aggregations": [
+                            {
+                              "expression": "p95(duration_nano)"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server'"
+                          },
+                          "legend": "p95"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "C",
+                          "signal": "traces",
+                          "aggregations": [
+                            {
+                              "expression": "p99(duration_nano)"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server'"
+                          },
+                          "legend": "p99"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "api-latency-by-route": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "p95 by route",
+            "description": "95th percentile of request duration per route."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "s",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "http.server.request.duration.bucket",
+                        "temporality": "cumulative",
+                        "timeAggregation": "",
+                        "spaceAggregation": "p95"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "http.route"
+                      }
+                    ],
+                    "legend": "{{http.route}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "api-slowest-routes": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Slowest routes",
+            "description": "Routes by p95 request duration over the selected range."
+          },
+          "plugin": {
+            "kind": "signoz/TablePanel",
+            "spec": {
+              "formatting": {
+                "columnUnits": {
+                  "A": "s"
+                },
+                "decimalPrecision": "2"
+              },
+              "thresholds": []
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "http.server.request.duration.bucket",
+                        "temporality": "cumulative",
+                        "timeAggregation": "",
+                        "spaceAggregation": "p95",
+                        "reduceTo": "avg"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "http.route"
+                      },
+                      {
+                        "name": "http.request.method"
+                      }
+                    ],
+                    "order": [
+                      {
+                        "key": {
+                          "name": "p95(http.server.request.duration.bucket)"
+                        },
+                        "direction": "desc"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "usecase-p95": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "p95 per use case",
+            "description": "Handler duration per use case. Alert: warning above 2 s, critical above 8 s (imports, AI calls and archives excluded)."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "ms",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [
+                {
+                  "value": 2000,
+                  "unit": "ms",
+                  "color": "#F5A524",
+                  "label": "warning"
+                },
+                {
+                  "value": 8000,
+                  "unit": "ms",
+                  "color": "#E5484D",
+                  "label": "critical"
+                }
+              ],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "culina.usecase.duration.bucket",
+                        "temporality": "cumulative",
+                        "timeAggregation": "",
+                        "spaceAggregation": "p95"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "usecase"
+                      }
+                    ],
+                    "legend": "{{usecase}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "usecase-failures": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Use case failures",
+            "description": "Results other than success, by use case and error code. Expected failures (not found, invalid input) show here too."
+          },
+          "plugin": {
+            "kind": "signoz/BarChartPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "culina.usecase.duration.count",
+                        "temporality": "cumulative",
+                        "timeAggregation": "increase",
+                        "spaceAggregation": "sum"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}' AND outcome != 'success'"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "usecase"
+                      },
+                      {
+                        "name": "outcome"
+                      }
+                    ],
+                    "legend": "{{usecase}} {{outcome}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "usecase-table": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Use cases by p95",
+            "description": "Every use case's p95 over the selected range."
+          },
+          "plugin": {
+            "kind": "signoz/TablePanel",
+            "spec": {
+              "formatting": {
+                "columnUnits": {
+                  "A": "ms"
+                },
+                "decimalPrecision": "2"
+              },
+              "thresholds": []
+            }
+          },
+          "queries": [
+            {
+              "kind": "scalar",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "culina.usecase.duration.bucket",
+                        "temporality": "cumulative",
+                        "timeAggregation": "",
+                        "spaceAggregation": "p95",
+                        "reduceTo": "avg"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "usecase"
+                      }
+                    ],
+                    "order": [
+                      {
+                        "key": {
+                          "name": "p95(culina.usecase.duration.bucket)"
+                        },
+                        "direction": "desc"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "outbound-latency": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Outbound p95 by host",
+            "description": "Calls the API makes: recipe sources, AI providers."
+          },
+          "plugin": {
+            "kind": "signoz/TimeSeriesPanel",
+            "spec": {
+              "formatting": {
+                "unit": "s",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "http.client.request.duration.bucket",
+                        "temporality": "cumulative",
+                        "timeAggregation": "",
+                        "spaceAggregation": "p95"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "server.address"
+                      }
+                    ],
+                    "legend": "{{server.address}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "outbound-requests": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Outbound requests by status",
+            "description": "Calls per interval, by host and HTTP status code."
+          },
+          "plugin": {
+            "kind": "signoz/BarChartPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "metrics",
+                    "aggregations": [
+                      {
+                        "metricName": "http.client.request.duration.count",
+                        "temporality": "cumulative",
+                        "timeAggregation": "increase",
+                        "spaceAggregation": "sum"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "server.address"
+                      },
+                      {
+                        "name": "http.response.status_code"
+                      }
+                    ],
+                    "legend": "{{server.address}} {{http.response.status_code}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "At a glance"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 3,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/api-requests-total"
+              }
+            },
+            {
+              "x": 3,
+              "y": 0,
+              "width": 3,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/api-error-share"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 3,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/api-p95-number"
+              }
+            },
+            {
+              "x": 9,
+              "y": 0,
+              "width": 3,
+              "height": 4,
+              "content": {
+                "$ref": "#/spec/panels/api-active"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Traffic"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/api-requests-by-status"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/api-error-rate"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Latency"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/api-latency-percentiles"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/api-latency-by-route"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/api-slowest-routes"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Use cases"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/usecase-p95"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/usecase-failures"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 12,
+              "height": 7,
+              "content": {
+                "$ref": "#/spec/panels/usecase-table"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Outbound"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/outbound-latency"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/outbound-requests"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

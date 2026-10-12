@@ -63,6 +63,21 @@ public class WebAppTelemetryTests
         Assert.Single(host.Services.GetServices<ILoggerProvider>().OfType<WebAppLoggerProvider>());
     }
 
+    /// <summary>The SigNoz alert rules match on event ids, which the OTLP exporter only sends when asked.</summary>
+    [Theory]
+    [InlineData(null, "true")]
+    [InlineData("false", "false")]
+    public void EventIds_ShouldBeExported_UnlessAnOperatorSaidOtherwise(string? configured, string expected)
+    {
+        var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
+        builder.Configuration.AddInMemoryCollection(
+            new Dictionary<string, string?> { [ObservabilityExtensions.EventIdKey] = configured });
+
+        builder.AddObservability();
+
+        Assert.Equal(expected, builder.Configuration[ObservabilityExtensions.EventIdKey]);
+    }
+
     /// <summary>compose.prod.yaml and .env.example set culina-api, which must still pair with culina-web.</summary>
     [Theory]
     [InlineData(null, "culina-api", "culina-web")]

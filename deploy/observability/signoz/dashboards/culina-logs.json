@@ -1,0 +1,659 @@
+{
+  "schemaVersion": "v6",
+  "name": "culina-logs",
+  "tags": [
+    {
+      "key": "app",
+      "value": "culina"
+    }
+  ],
+  "spec": {
+    "display": {
+      "name": "Culina · Logs and jobs",
+      "description": "What the API logged, its background work, the assistant and what browsers reported."
+    },
+    "duration": "6h",
+    "refreshInterval": "0s",
+    "variables": [],
+    "panels": {
+      "logs-by-level": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Lines by level",
+            "description": "Everything the API logged, by severity."
+          },
+          "plugin": {
+            "kind": "signoz/BarChartPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "logs",
+                    "aggregations": [
+                      {
+                        "expression": "count()"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}'"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "severity_text"
+                      }
+                    ],
+                    "legend": "{{severity_text}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "logs-errors-by-event": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Warnings and errors by event",
+            "description": "Warning and above, by event id. Look the id up in docs/operations.md."
+          },
+          "plugin": {
+            "kind": "signoz/BarChartPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "logs",
+                    "aggregations": [
+                      {
+                        "expression": "count()"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}' AND severity_number >= 13"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "logrecord.event.id"
+                      }
+                    ],
+                    "legend": "{{logrecord.event.id}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "logs-errors-list": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Latest errors",
+            "description": "Error and critical lines. TraceId is the request id the user was shown."
+          },
+          "plugin": {
+            "kind": "signoz/ListPanel",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "raw",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "logs",
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}' AND severity_number >= 17"
+                    },
+                    "order": [
+                      {
+                        "key": {
+                          "name": "timestamp"
+                        },
+                        "direction": "desc"
+                      }
+                    ],
+                    "limit": 50
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "jobs-failures": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Failed background work",
+            "description": "1211 import defect, 1212 recipe not imported, 1921 session sweep, 1951 and 1952 trash purge. Alert: warning on any, critical above 4 an hour."
+          },
+          "plugin": {
+            "kind": "signoz/BarChartPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "logs",
+                    "aggregations": [
+                      {
+                        "expression": "count()"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}' AND attribute.logrecord.event.id IN (1211, 1212, 1921, 1951, 1952)"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "logrecord.event.id"
+                      }
+                    ],
+                    "legend": "event {{logrecord.event.id}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "jobs-runs": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Background runs",
+            "description": "Finished imports (1213), session sweeps (1920), reindexes (1940) and trash purges (1950)."
+          },
+          "plugin": {
+            "kind": "signoz/BarChartPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "logs",
+                    "aggregations": [
+                      {
+                        "expression": "count()"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}' AND attribute.logrecord.event.id IN (1213, 1920, 1940, 1950)"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "logrecord.event.id"
+                      }
+                    ],
+                    "legend": "event {{logrecord.event.id}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "assistant-calls": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Assistant calls",
+            "description": "Settled calls (1502) by outcome."
+          },
+          "plugin": {
+            "kind": "signoz/BarChartPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "logs",
+                    "aggregations": [
+                      {
+                        "expression": "count()"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}' AND attribute.logrecord.event.id = 1502"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "Outcome"
+                      }
+                    ],
+                    "legend": "{{Outcome}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "assistant-failures": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Provider refusals",
+            "description": "Calls a provider refused (1501), by provider. Alert: warning above 2, critical above 19 in 15 minutes."
+          },
+          "plugin": {
+            "kind": "signoz/BarChartPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "logs",
+                    "aggregations": [
+                      {
+                        "expression": "count()"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_API_SERVICE}' AND attribute.logrecord.event.id = 1501"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "Provider"
+                      }
+                    ],
+                    "legend": "{{Provider}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "assistant-tokens": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Tokens by model",
+            "description": "Input and output tokens of settled calls, by model."
+          },
+          "plugin": {
+            "kind": "signoz/BarChartPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/CompositeQuery",
+                  "spec": {
+                    "queries": [
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "A",
+                          "signal": "logs",
+                          "aggregations": [
+                            {
+                              "expression": "sum(InputTokens)"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND attribute.logrecord.event.id = 1502"
+                          },
+                          "groupBy": [
+                            {
+                              "name": "Model"
+                            }
+                          ],
+                          "legend": "{{Model}} in"
+                        }
+                      },
+                      {
+                        "type": "builder_query",
+                        "spec": {
+                          "name": "B",
+                          "signal": "logs",
+                          "aggregations": [
+                            {
+                              "expression": "sum(OutputTokens)"
+                            }
+                          ],
+                          "filter": {
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND attribute.logrecord.event.id = 1502"
+                          },
+                          "groupBy": [
+                            {
+                              "name": "Model"
+                            }
+                          ],
+                          "legend": "{{Model}} out"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "web-reports": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Browser reports",
+            "description": "What the web app reported (1700), by build. Anybody can send these. Alert: warning above 20 in 15 minutes."
+          },
+          "plugin": {
+            "kind": "signoz/BarChartPanel",
+            "spec": {
+              "formatting": {
+                "unit": "short",
+                "decimalPrecision": "2"
+              },
+              "thresholds": [],
+              "legend": {
+                "position": "bottom"
+              }
+            }
+          },
+          "queries": [
+            {
+              "kind": "time_series",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "logs",
+                    "aggregations": [
+                      {
+                        "expression": "count()"
+                      }
+                    ],
+                    "filter": {
+                      "expression": "service.name = '${CULINA_WEB_SERVICE}' AND attribute.logrecord.event.id = 1700"
+                    },
+                    "groupBy": [
+                      {
+                        "name": "culina.web.app_version"
+                      }
+                    ],
+                    "legend": "{{culina.web.app_version}}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "web-reports-list": {
+        "kind": "Panel",
+        "spec": {
+          "display": {
+            "name": "Latest browser reports",
+            "description": "Each names the build, the browser and the route."
+          },
+          "plugin": {
+            "kind": "signoz/ListPanel",
+            "spec": {}
+          },
+          "queries": [
+            {
+              "kind": "raw",
+              "spec": {
+                "plugin": {
+                  "kind": "signoz/BuilderQuery",
+                  "spec": {
+                    "name": "A",
+                    "signal": "logs",
+                    "filter": {
+                      "expression": "service.name = '${CULINA_WEB_SERVICE}' AND attribute.logrecord.event.id = 1700"
+                    },
+                    "order": [
+                      {
+                        "key": {
+                          "name": "timestamp"
+                        },
+                        "direction": "desc"
+                      }
+                    ],
+                    "limit": 50
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "layouts": [
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Log lines"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/logs-by-level"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/logs-errors-by-event"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 12,
+              "height": 8,
+              "content": {
+                "$ref": "#/spec/panels/logs-errors-list"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Background work"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/jobs-failures"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/jobs-runs"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Assistant"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/assistant-calls"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/assistant-failures"
+              }
+            },
+            {
+              "x": 0,
+              "y": 6,
+              "width": 12,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/assistant-tokens"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "kind": "Grid",
+        "spec": {
+          "display": {
+            "title": "Browsers"
+          },
+          "items": [
+            {
+              "x": 0,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/web-reports"
+              }
+            },
+            {
+              "x": 6,
+              "y": 0,
+              "width": 6,
+              "height": 6,
+              "content": {
+                "$ref": "#/spec/panels/web-reports-list"
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

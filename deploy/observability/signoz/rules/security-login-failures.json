@@ -1,0 +1,62 @@
+{
+  "alert": "Culina: refused sign-ins",
+  "alertType": "METRIC_BASED_ALERT",
+  "labels": {
+    "area": "security",
+    "service": "${CULINA_API_SERVICE}"
+  },
+  "annotations": {
+    "summary": "{{$value}} refused sign-ins in 5 minutes (threshold {{$threshold}})",
+    "description": "Somebody is guessing passwords, or a client keeps retrying a stale one. Events 1001 (sign-in) and 1002 (password confirmation) carry ClientAddress, never the email that was tried: find it in Logs (attribute.logrecord.event.id IN (1001, 1002)) and ban it at the proxy or with fail2ban/CrowdSec. docs/operations.md, section Alerts."
+  },
+  "evaluation": {
+    "kind": "rolling",
+    "spec": {
+      "evalWindow": "5m",
+      "frequency": "1m"
+    }
+  },
+  "condition": {
+    "compositeQuery": {
+      "queries": [
+        {
+          "type": "builder_query",
+          "spec": {
+            "name": "A",
+            "signal": "metrics",
+            "stepInterval": "1m",
+            "aggregations": [
+              {
+                "metricName": "culina.auth.login_failures",
+                "temporality": "cumulative",
+                "timeAggregation": "increase",
+                "spaceAggregation": "sum"
+              }
+            ],
+            "filter": {
+              "expression": "service.name = '${CULINA_API_SERVICE}'"
+            }
+          }
+        }
+      ]
+    },
+    "selectedQueryName": "A",
+    "thresholds": {
+      "kind": "basic",
+      "spec": [
+        {
+          "name": "critical",
+          "target": 100,
+          "op": "above",
+          "matchType": "in_total"
+        },
+        {
+          "name": "warning",
+          "target": 20,
+          "op": "above",
+          "matchType": "in_total"
+        }
+      ]
+    }
+  }
+}
