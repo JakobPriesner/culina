@@ -22,7 +22,7 @@ The installed apps (`docs/native-app-design.md`, part 3) sign in with
 bearer request needs no CSRF token, because a browser never attaches that
 header by itself. When a request carries both, the cookie wins.
 
-The apps call from fixed origins (`capacitor://localhost`,
+The apps call from fixed origins (`capacitor://app.culina.localhost`,
 `https://app.culina.localhost`). Only those origins get CORS headers, never
 `Access-Control-Allow-Credentials`, with `ETag`, `Retry-After`, `Location` and
 `X-Request-Id` exposed. `GET /setup` reports `apiVersion`, so an app can tell

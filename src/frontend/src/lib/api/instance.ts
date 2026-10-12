@@ -38,7 +38,7 @@ export function apiUrl(path: string): string {
 
 /**
  * The address people open Culina at, for links meant for somebody else (a shared recipe, an invitation): this origin on
- * the website, the connected server's in the app, whose own origin (`capacitor://localhost`) means nothing elsewhere.
+ * the website, the connected server's in the app, whose own origin (`capacitor://app.culina.localhost`) means nothing elsewhere.
  */
 export function publicOrigin(): string {
   return (native ? origin : null) ?? globalThis.location.origin;

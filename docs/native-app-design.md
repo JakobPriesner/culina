@@ -224,6 +224,28 @@ Run on a real iPhone and a mid-range Android phone, not only simulators
    a configured instance (part 3).
 6. Cold-start time and bundle size compared with the PWA on the same phone.
 
+**Status (13 October 2026, `tj23.7`).** The shell exists:
+`src/frontend/capacitor.config.ts`, plus `native/ios` and `native/android`
+(Capacitor 8.5, SPM), on the hostname `app.culina.localhost`. Native HTTP and
+cookie patching are off. `lib/app/nativeShell.ts` registers:
+- the Keychain/Keystore token store (`@aparajita/capacitor-secure-storage`, no
+  iCloud sync);
+- the photo source;
+- `@capacitor-community/keep-awake` in place of the web view's Wake Lock, so
+  item 2 no longer depends on WKWebView;
+- Taptic/vibration haptics (`@capacitor/haptics`), since iOS has no
+  `navigator.vibrate`;
+- Android's Back: close the top popover or dialog, else go back, else leave.
+
+A website build replaces these modules with stubs (`build-tools/nativeOnly.ts`),
+and `verify:release` fails if Capacitor's plugin names appear in `build/`.
+iOS allows plain http only on the local network (`NSAllowsLocalNetworking`).
+Android permits cleartext, and the app itself refuses http to public hosts.
+
+None of this has been compiled or run yet. The planning Mac's Xcode cannot load
+its simulator plug-in, so `xcodebuild` fails before building, and it has no
+Android SDK. The checklist above is open as its own bead.
+
 ---
 
 ## 3. Connecting to an instance: network, auth, streaming
@@ -317,10 +339,9 @@ not ambient, because a page can only send it if it already holds it. The API
 therefore never sends `Access-Control-Allow-Credentials`, and allowing an extra
 origin grants nothing to a page without the token. The allow-list stays narrow
 anyway:
-- `capacitor://localhost` on iOS.
-- A fixed Android origin such as `https://app.culina.localhost` (Capacitor's
-  `server.hostname`), not the shared `https://localhost` that any local dev
-  server also uses.
+- `capacitor://app.culina.localhost` on iOS and `https://app.culina.localhost`
+  on Android: Capacitor's `server.hostname` sets both. Plain `localhost` is
+  avoided because any local dev server shares it.
 - The Tauri origins, if part 2 is ever revisited.
 
 ### 3.4 Authentication and sessions

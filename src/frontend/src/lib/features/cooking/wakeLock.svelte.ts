@@ -1,3 +1,16 @@
+/** The installed app's keep-awake, which holds for as long as it is asked (no browser to release it behind our back). */
+export interface NativeWakeLock {
+  hold(): Promise<void>;
+  release(): Promise<void>;
+}
+
+let nativeLock: NativeWakeLock | null = null;
+
+/** Registered by the installed app (lib/app/nativeShell.ts): the web view's own Wake Lock is not dependable there. */
+export function useNativeWakeLock(lock: NativeWakeLock): void {
+  nativeLock = lock;
+}
+
 /** Keeps a cooking session awake; browser release is reflected immediately. */
 export function createWakeLock() {
   let held = $state(false);
@@ -5,7 +18,8 @@ export function createWakeLock() {
   let generation = 0;
   let engaged = false;
   let requesting = false;
-  const supported = () => typeof navigator !== 'undefined' && 'wakeLock' in navigator;
+  const supported = () =>
+    nativeLock !== null || (typeof navigator !== 'undefined' && 'wakeLock' in navigator);
 
   async function take() {
     if (
@@ -18,6 +32,19 @@ export function createWakeLock() {
       return;
     requesting = true;
     const version = generation;
+    if (nativeLock) {
+      const lock = nativeLock;
+      try {
+        await lock.hold();
+        held = engaged && version === generation;
+        if (!held) await lock.release();
+      } catch {
+        held = false;
+      } finally {
+        requesting = false;
+      }
+      return;
+    }
     try {
       const lock = await navigator.wakeLock.request('screen');
       if (!engaged || version !== generation) {
@@ -61,9 +88,11 @@ export function createWakeLock() {
         generation++;
         document.removeEventListener('visibilitychange', retake);
         const lock = sentinel;
+        const wasHeld = held;
         sentinel = null;
         held = false;
         void lock?.release().catch(() => {});
+        if (nativeLock && wasHeld) void nativeLock.release().catch(() => {});
       };
     }
   };

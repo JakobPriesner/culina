@@ -14,7 +14,7 @@ namespace IntegrationTests.Users;
 public class NativeAppSessionTests(PostgresFixture postgres)
 {
     private const string Password = "correct horse battery staple";
-    private const string AppOrigin = "capacitor://localhost";
+    private const string AppOrigin = "capacitor://app.culina.localhost";
 
     [Fact]
     public async Task SignIn_ShouldReturnTheTokenInTheBody_AndSetNoCookie_ForAnApp()
