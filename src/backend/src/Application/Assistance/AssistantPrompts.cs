@@ -81,16 +81,18 @@ internal static class AssistantPrompts
            {UnitList}
 
          Another word is allowed where none of those fits, and it must be a word:
-         never a unit with a digit in it, never "200g" as one lump.
+         never a unit with a digit in it, never "200g" as one lump. Write "piece"
+         only where the material itself counts in pieces ("3 Stück Ingwer"); any
+         other count is a quantity with no unit.
 
          Use one unnamed ingredient group unless the recipe genuinely has parts —
          a dough and a filling, a stew and its topping. Two groups called
          "Ingredients" and "More ingredients" are one group.
 
-         A step is one action in plain sentences. Split a step that does two
-         things. Keep each step within {LongestStep} characters, because a step
-         is read on a phone screen while cooking: split a longer instruction into
-         several steps rather than cutting it short. Do not number the steps or
+         A step is written in plain sentences.
+         Keep each step within {LongestStep} characters, because a step is read on
+         a phone screen while cooking: split a longer instruction into several
+         steps, between two sentences, rather than cutting it short. Do not number the steps or
          write "Step 1" in the text; the app numbers them. Give a step a title
          only where it genuinely names a stage of the work, and answer null for
          the rest. Set durationSeconds only for an unattended wait — a rise, a
@@ -101,9 +103,11 @@ internal static class AssistantPrompts
          answered null rather than left out. Null is a real answer here and
          costs nothing: it is how the app is told the recipe does not say.
 
-         Tags are two to six lowercase words that say what kind of thing this is:
-         its cuisine, its course, its method, a diet it fits. Not "recipe", not
-         "delicious", not the name of the dish.
+         Give two to six tags, each one or two lowercase words, that say what kind
+         of thing this is: its cuisine, its course, its method, a diet it fits.
+         Not "recipe", not "delicious", not the name of the dish. Tags are yours
+         to choose in every job, even one that otherwise invents nothing: they
+         sort the recipe and claim nothing about it.
          """;
 
     /// <summary>Rewrites a recipe somebody already wrote.</summary>
@@ -125,8 +129,18 @@ internal static class AssistantPrompts
 
     /// <summary>Escaped source data, never instructions or a cache prefix.</summary>
     internal static string SocialMaterial(string? caption, string? transcript) =>
-        $"<untrusted_caption>{System.Net.WebUtility.HtmlEncode(caption ?? string.Empty)}</untrusted_caption>\n"
-        + $"<untrusted_transcript>{System.Net.WebUtility.HtmlEncode(transcript ?? string.Empty)}</untrusted_transcript>";
+        $"<untrusted_caption>{Escaped(caption)}</untrusted_caption>\n"
+        + $"<untrusted_transcript>{Escaped(transcript)}</untrusted_transcript>";
+
+    /// <summary>Only what could close or open a block; the rest stays as written.</summary>
+    /// <remarks>
+    /// Not <c>WebUtility.HtmlEncode</c>: it turns "Olivenöl", "½" and "°C" into numeric entities,
+    /// which a model then copies into the recipe.
+    /// </remarks>
+    private static string Escaped(string? text) =>
+        (text ?? string.Empty).Replace("&", "&amp;", StringComparison.Ordinal)
+        .Replace("<", "&lt;", StringComparison.Ordinal)
+        .Replace(">", "&gt;", StringComparison.Ordinal);
 
     private const string SocialJob =
         """
@@ -138,19 +152,18 @@ internal static class AssistantPrompts
         Discard sponsorships, discount codes, affiliate links, engagement bait
         ('comment RECIPE', 'link in bio'), hashtags, emojis and lifestyle anecdotes.
         They are not ingredients or cooking instructions. If there is no recipe,
-        return an empty title, no ingredients and no steps.
+        return an empty title, no ingredients, no steps and no tags.
 
         Preserve every culinary fact. When caption and speech conflict, prefer
         explicit measured written quantities in the caption or screenshot over
         casual spoken estimates. Reconstruct the chronological cooking sequence
         from video cuts, combining repetitions without inventing missing actions.
 
-        Decompose each ingredient into quantity, unit, a singular base food name
-        and a preparation note. Missing, unreadable or merely guessed quantities
-        must be null; put 'quantity not given' (in the answer's language) in the
-        ingredient note. Never invent measurements, ingredients, yields, times or
-        temperatures. A vague 'splash' remains a note with a null quantity.
-        Keep uncertainty visible for the person comparing the draft to the source.
+        Split each ingredient line as shown above. Missing, unreadable or merely
+        guessed quantities must be null. Never invent measurements, ingredients,
+        yields, times or temperatures. A vague 'splash' remains a note with a
+        null quantity. A null is how the person comparing the draft to the source
+        sees what it did not give, so leave it null rather than explaining it.
         """;
 
     private static readonly FrozenDictionary<Language, string> SocialBuilt =
@@ -288,8 +301,9 @@ internal static class AssistantPrompts
                    their own kitchen.
 
                    Put the steps in a sensible order, make the wording plain, and make
-                   the ingredient list consistent with itself. You are changing how it
-                   reads, not what it makes.
+                   the ingredient list consistent with itself. Give each step one action:
+                   split a step that does two things. You are changing how it reads, not
+                   what it makes.
 
                    Do not invent anything. Every ingredient in the material must appear
                    in your answer, with the same amount and the same measure — none
@@ -309,7 +323,7 @@ internal static class AssistantPrompts
 
                    Write something they could actually cook this evening: ordinary
                    ingredients, ordinary equipment, and steps that say what to do rather
-                   than what to achieve. If they named ingredients they have, build it
+                   than what to achieve, one action to a step. If they named ingredients they have, build it
                    around those. If they named a constraint — a diet, a time, a pan —
                    hold to it.
 
@@ -325,8 +339,8 @@ internal static class AssistantPrompts
                somebody pasted, so that it can be typed into their recipe book.
 
                Transcribe what is there. Keep their words, their amounts and their
-               order. Do not improve the writing, do not tidy the steps, and do not
-               fill in anything the source does not say — if an amount, a time, a
+               order. Do not improve the writing, do not tidy the steps beyond
+               splitting one that is too long, and do not fill in anything the source does not say — if an amount, a time, a
                yield or a step is missing, unreadable or cut off at the edge, answer
                null for that field. Null is the correct answer; a plausible number you
                inferred is not, and is worse than a blank because nobody can see that
@@ -336,7 +350,7 @@ internal static class AssistantPrompts
                in a margin or a second column.
 
                If what you are given is not a recipe at all, answer with an empty
-               title, no ingredients and no steps rather than making one up.
+               title, no ingredients, no steps and no tags rather than making one up.
                """;
     }
 

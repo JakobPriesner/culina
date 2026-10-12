@@ -55,6 +55,19 @@ public class AssistantPromptsTests
         });
     }
 
+    /// <summary>
+    /// Reading copies steps as written, so only the jobs that rewrite steps may ask for one action
+    /// each.
+    /// </summary>
+    [Fact]
+    public void OnlyTheJobsThatRewriteSteps_ShouldAskForOneActionEach()
+    {
+        Assert.Contains("split a step that does two things", AssistantPrompts.Improve(), StringComparison.Ordinal);
+        Assert.Contains("one action to a step", AssistantPrompts.Draft(Language.En), StringComparison.Ordinal);
+        Assert.DoesNotContain("one action", AssistantPrompts.Read(Language.En), StringComparison.Ordinal);
+        Assert.DoesNotContain("one action", AssistantPrompts.Social(Language.En), StringComparison.Ordinal);
+    }
+
     [Fact]
     public void TwoLanguagesOfOneJob_ShouldDifferOnlyInTheirLastParagraph()
     {
