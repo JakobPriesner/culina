@@ -33,7 +33,8 @@ blob-report/
 .env.*
 !.env.example
 src/backend/src/Api/appsettings.*.local.json
-data/
+# The repository root's only: unanchored, it would also hide an Android source package named `data`.
+/data/
 
 # ── Deliberately NOT ignored ───────────────────────────────────────
 # src/backend/openapi/Api.json  — the API contract is committed on purpose;

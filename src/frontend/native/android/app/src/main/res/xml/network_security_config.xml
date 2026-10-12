@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A self-hosted Culina may be on the home network over plain http (http://192.168.x.y, *.local). Android cannot name
+  private address ranges here, so cleartext is allowed and the app itself refuses http for anything but a private
+  address (src/frontend/src/lib/api/connect.ts).
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

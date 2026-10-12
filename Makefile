@@ -36,7 +36,8 @@ endef
 .DEFAULT_GOAL := help
 .PHONY: help dev db-up db-down db-reset db-shell backend frontend \
         build test test-backend test-frontend test-e2e ci lint format api \
-        alerts-check alerts-apply image image-run clean
+        alerts-check alerts-apply image image-run clean \
+        native-sync native-ios native-android
 
 help: ## Show this help
 	@grep -hE '^[a-z0-9-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -133,6 +134,18 @@ api: openapi ## Export the OpenAPI document and regenerate the frontend client
 
 openapi: db-up ## Export the OpenAPI document to src/backend/openapi/Api.json
 	cd $(API) && dotnet run -- --export-openapi ../../openapi/Api.json
+
+# ── Native apps ──────────────────────────────────────────────────────────────
+# docs/native-app-design.md, part 5; prerequisites in src/frontend/native/README.md.
+
+native-sync: ## Build the app bundle and copy it into the iOS and Android projects
+	cd $(FRONTEND) && pnpm native:sync
+
+native-ios: ## Build the app bundle and open the iOS project in Xcode
+	cd $(FRONTEND) && pnpm native:ios
+
+native-android: ## Build the app bundle and open the Android project in Android Studio
+	cd $(FRONTEND) && pnpm native:android
 
 # ── Alerts ───────────────────────────────────────────────────────────────────
 

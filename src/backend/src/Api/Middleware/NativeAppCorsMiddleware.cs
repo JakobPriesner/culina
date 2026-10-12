@@ -19,8 +19,8 @@ namespace Api.Middleware;
 /// </remarks>
 internal sealed class NativeAppCorsMiddleware(RequestDelegate next)
 {
-    /// <summary>The origins the apps serve their UI from: Capacitor's iOS scheme, and the Android hostname the app sets.</summary>
-    internal static readonly IReadOnlyList<string> Origins = ["capacitor://localhost", "https://app.culina.localhost"];
+    /// <summary>The origins the apps serve their UI from: Capacitor's iOS scheme and Android's https, both on the hostname the app sets (src/frontend/capacitor.config.ts).</summary>
+    internal static readonly IReadOnlyList<string> Origins = ["capacitor://app.culina.localhost", "https://app.culina.localhost"];
 
     private const string AllowedMethods = "GET, POST, PUT, PATCH, DELETE";
 
