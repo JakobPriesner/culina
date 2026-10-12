@@ -165,6 +165,18 @@ public class CookbookTests
         Assert.Equal(["quick"], rules.ShouldBeSuccess().Ingredients);
     }
 
+    [Theory]
+    [InlineData("%")]
+    [InlineData("_")]
+    [InlineData("!!!")]
+    public void Rules_ShouldRefuseAnIngredientThatNamesNoWord(string ingredient)
+    {
+        // Every word must be in the name, and none is a condition every recipe meets.
+        var rules = CookbookRules.Create([], [ingredient], null);
+
+        rules.ShouldBeFailure(CookbookErrors.InvalidRule);
+    }
+
     [Fact]
     public void Rules_ShouldRefuseATimeNoRecipeCouldTake()
     {
