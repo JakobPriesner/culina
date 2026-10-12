@@ -1844,5 +1844,6 @@
   "problem.cookbooks.invalid_cover": "Das Titelbild muss ein Rezept aus diesem Kochbuch mit Foto sein.",
   "cookbooks.cover.label": "Titelbild",
   "cookbooks.cover.hint": "Ein Foto für das ganze Titelbild oder die ersten Fotos im Regal.",
-  "cookbooks.cover.automatic": "Erste Fotos"
+  "cookbooks.cover.automatic": "Erste Fotos",
+  "problem.auth.invalid_client": "Diese Art von Gerät kennt Culina nicht."
 }

@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 
 namespace Api.Authentication;
 
-/// <summary>Turns the session cookie into a principal; reads the session row per request so revocation is immediate.</summary>
+/// <summary>Turns the session cookie, or an app's bearer token, into a principal; reads the session row per request so revocation is immediate.</summary>
 internal sealed class SessionAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory logger,
@@ -22,10 +22,20 @@ internal sealed class SessionAuthenticationHandler(
 {
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        if (SessionCookies.Read(Context, cookies) is not { Length: > 0 } token)
+        // The cookie wins when both are present, so a browser can never be steered onto a token and
+        // past the CSRF check.
+        var cookie = SessionCookies.Read(Context, cookies);
+        var bearer = cookie is { Length: > 0 } ? null : BearerToken.Read(Context);
+
+        if ((cookie is { Length: > 0 } ? cookie : bearer) is not { } token)
         {
-            // No cookie is not a failure: anonymous requests are the norm.
+            // No credential is not a failure: anonymous requests are the norm.
             return AuthenticateResult.NoResult();
+        }
+
+        if (bearer is not null)
+        {
+            RequestContext.MarkBearer(Context);
         }
 
         var now = time.GetUtcNow();
@@ -72,7 +82,8 @@ internal sealed class SessionAuthenticationHandler(
 
         var renewed = await sessions.RenewAsync(session, Context.RequestAborted).ConfigureAwait(false);
 
-        // Runs before any endpoint, so the response has not started.
+        // Runs before any endpoint, so the response has not started. A bearer request has no cookie to
+        // slide (Renew does nothing without one); the row's expiry is what moved.
         return renewed.Tap(() => SessionCookies.Renew(Context, cookies, now));
     }
 

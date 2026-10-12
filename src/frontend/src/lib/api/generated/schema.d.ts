@@ -131,7 +131,7 @@ export interface paths {
         put?: never;
         /**
          * Sign in
-         * @description Starts a session. Sets the session cookie and returns the CSRF token to echo in X-Culina-CSRF on every unsafe request. Failure is always auth.invalid_credentials, whether or not the address is registered.
+         * @description Starts a session. For a browser, sets the session cookie and returns the CSRF token to echo in X-Culina-CSRF on every unsafe request. For an app (client ios or android), returns the session token instead, to send as Authorization: Bearer with no CSRF token. Failure is always auth.invalid_credentials, whether or not the address is registered.
          */
         post: operations["signInV1"];
         delete?: never;
@@ -4981,6 +4981,8 @@ export interface components {
             ipAddress?: string | null;
             /** @description What browser started it. */
             userAgent?: string | null;
+            /** @description What it was started from: `browser`, `ios` or `android`. */
+            client: string;
             /** @description Whether this is the session making the request. */
             isCurrent: boolean;
         };
@@ -4990,6 +4992,12 @@ export interface components {
             email: string;
             /** @description The account's password. */
             password: string;
+            /**
+             * @description `browser` (the default) for the session cookie; `ios` or `android` for an app,
+             *             which receives the session token in the response and sends it as
+             *             `Authorization: Bearer`.
+             */
+            client?: string | null;
         };
         /** @description Who signed in, and the token their requests must echo. */
         SessionsSignInResponse: {
@@ -5006,6 +5014,12 @@ export interface components {
             isAdmin: boolean;
             /** @description The CSRF token to send in `X-Culina-CSRF` on every unsafe request. */
             csrfToken: string;
+            /**
+             * @description The session token, for an app only (`client``ios` or `android`); null for a
+             *     browser, whose token is the HttpOnly cookie and never readable by script. Sent as
+             *     `Authorization: Bearer`, it needs no CSRF token.
+             */
+            sessionToken?: string | null;
         };
         /** @description One provider, and whether it is ready to be used. */
         SettingsGetAssistanceConnectionContract: {
@@ -5690,6 +5704,12 @@ export interface components {
              *     client can tell the restart is over.
              */
             startedAt: string;
+            /**
+             * Format: int32
+             * @description The generation of the API contract this server speaks (int ApiContract.Version), so
+             *     an installed app can tell whether it understands this server before signing in.
+             */
+            apiVersion: number;
         };
         /** @description Something to put on the list. */
         ShoppingAddItemRequest: {

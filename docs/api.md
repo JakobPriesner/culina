@@ -11,10 +11,22 @@ Every failure is an RFC 9457 problem document with `code`, `detail` and
 
 ## Authentication at a glance
 
-Cookie only. `__Host-culina.session` (HttpOnly, Secure, SameSite=Lax, opaque),
-plus a readable `culina.csrf` companion cookie whose value is echoed in
-`X-Culina-CSRF` on every unsafe request. No bearer tokens, no CORS — the SPA is
-served from the same origin.
+Browsers: cookie only. `__Host-culina.session` (HttpOnly, Secure, SameSite=Lax,
+opaque), plus a readable `culina.csrf` companion cookie whose value is echoed in
+`X-Culina-CSRF` on every unsafe request. The SPA is served from the same origin,
+so a browser never needs CORS.
+
+The installed apps (`docs/native-app-design.md`, part 3) sign in with
+`client: "ios"` or `"android"`. They get the same session's token in the body
+(`sessionToken`), not as a cookie, and send it as `Authorization: Bearer`. A
+bearer request needs no CSRF token, because a browser never attaches that
+header by itself. When a request carries both, the cookie wins.
+
+The apps call from fixed origins (`capacitor://localhost`,
+`https://app.culina.localhost`). Only those origins get CORS headers, never
+`Access-Control-Allow-Credentials`, with `ETag`, `Retry-After`, `Location` and
+`X-Request-Id` exposed. `GET /setup` reports `apiVersion`, so an app can tell
+whether it understands the server before signing in.
 
 `me` is the alias for the authenticated user.
 
@@ -27,9 +39,9 @@ served from the same origin.
 | `PATCH` | `/users/me` | Display name. `If-Match` required. |
 | `GET` | `/users/me/settings` | locale, theme, mode, measurement system. |
 | `PUT` | `/users/me/settings` | |
-| `POST` | `/sessions` | Log in. `201`. Returns the CSRF token and the user. Rate limited per IP **and** per account. Failure is always `auth.invalid_credentials` — never "no such user". |
+| `POST` | `/sessions` | Log in. `201`. Returns the CSRF token and the user; with `client` `ios`/`android`, also `sessionToken` and no cookie. Rate limited per IP **and** per account. Failure is always `auth.invalid_credentials` — never "no such user". |
 | `DELETE` | `/sessions/current` | Log out. Deletes the server-side session, then expires the cookie. `204`. |
-| `GET` | `/sessions` | Your active sessions — device, IP, last seen. Powers "sign out everywhere". |
+| `GET` | `/sessions` | Your active sessions — device (`client`: browser, ios, android), IP, last seen. Powers "sign out everywhere". |
 | `DELETE` | `/sessions/{sessionId}` | Revoke one. `204`. |
 | `PUT` | `/users/me/password` | Change password. Needs `currentPassword`; a wrong one is `400 users.incorrect_password`, never a `401` (which would sign the caller out). Revokes every other session; this one stays. `204`. |
 | `GET` | `/users/me/recovery-codes` | How many saved recovery codes are left, and when they were made. Never the codes. |

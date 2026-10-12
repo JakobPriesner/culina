@@ -10,7 +10,7 @@ internal sealed class SessionStore(DbExecutor executor, ISecretTokens tokens) : 
 {
     private const string Columns =
         "id, user_id, token_hash, csrf_token_hash, created_at, last_seen_at, expires_at, "
-        + "host(ip_address) as ip_address, user_agent, revoked_at";
+        + "host(ip_address) as ip_address, user_agent, revoked_at, client";
 
     public async Task<Result<Session>> FindActiveByTokenAsync(
         string token,
@@ -53,9 +53,9 @@ internal sealed class SessionStore(DbExecutor executor, ISecretTokens tokens) : 
         await executor.ExecuteAsync(
             """
             insert into sessions (id, user_id, token_hash, csrf_token_hash, created_at,
-                                  last_seen_at, expires_at, ip_address, user_agent)
+                                  last_seen_at, expires_at, ip_address, user_agent, client)
             values (@id, @userId, @tokenHash, @csrfTokenHash, @createdAt,
-                    @lastSeenAt, @expiresAt, cast(@ipAddress as inet), @userAgent);
+                    @lastSeenAt, @expiresAt, cast(@ipAddress as inet), @userAgent, @client);
             """,
             new
             {
@@ -67,7 +67,8 @@ internal sealed class SessionStore(DbExecutor executor, ISecretTokens tokens) : 
                 lastSeenAt = session.LastSeenAt,
                 expiresAt = session.ExpiresAt,
                 ipAddress = session.IpAddress,
-                userAgent = session.UserAgent
+                userAgent = session.UserAgent,
+                client = SessionRowMappings.Of(session.Client)
             },
             cancellationToken).ConfigureAwait(false);
 

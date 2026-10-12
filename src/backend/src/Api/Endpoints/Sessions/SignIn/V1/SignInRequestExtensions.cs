@@ -19,6 +19,7 @@ internal static class SignInRequestExtensions
             request.Password,
             context.ClientAddress(),
             context.Request.Headers.UserAgent.ToString(),
-            SessionCookies.Read(context, cookies));
+            SessionCookies.Read(context, cookies) ?? BearerToken.Read(context),
+            request.Client);
     }
 }

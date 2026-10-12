@@ -25,6 +25,9 @@ public sealed record SessionSummary
     /// <summary>What browser started it.</summary>
     public string? UserAgent { get; init; }
 
+    /// <summary>What it was started from: <c>browser</c>, <c>ios</c> or <c>android</c>.</summary>
+    public required string Client { get; init; }
+
     /// <summary>Whether this is the session making the request.</summary>
     public required bool IsCurrent { get; init; }
 }

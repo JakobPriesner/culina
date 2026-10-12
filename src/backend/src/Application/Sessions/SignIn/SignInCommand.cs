@@ -17,14 +17,19 @@ namespace Application.Sessions.SignIn;
 /// </param>
 /// <param name="UserAgent">The browser, for the devices screen.</param>
 /// <param name="PreviousSessionToken">
-/// The session cookie this browser already held, which the new one replaces.
+/// The session this device already held (cookie or bearer token), which the new one replaces.
+/// </param>
+/// <param name="Client">
+/// <c>browser</c> (or null) for a cookie session; <c>ios</c> or <c>android</c> for an app's bearer
+/// token.
 /// </param>
 public sealed record SignInCommand(
     string Email,
     string Password,
     string? IpAddress,
     string? UserAgent,
-    string? PreviousSessionToken);
+    string? PreviousSessionToken,
+    string? Client = null);
 
 internal sealed class SignInCommandHandler(
     IUserRepository users,
@@ -43,6 +48,13 @@ internal sealed class SignInCommandHandler(
         ArgumentNullException.ThrowIfNull(command);
 
         using var tracked = UseCaseActivity.Start("Sessions.SignIn");
+
+        // Checked before the attempt budget: a malformed request is not a guess.
+        if (ToClient(command.Client) is not { } client)
+        {
+            return tracked.Record(Result<SignInOutcome>.Failure(
+                new FieldError("client", SessionErrors.InvalidClient.Code, SessionErrors.InvalidClient.Description)));
+        }
 
         var now = dependencies.Time.GetUtcNow();
         var accountKey = AccountKey.For(command.Email);
@@ -77,7 +89,7 @@ internal sealed class SignInCommandHandler(
             await UpgradeHashAsync(user, command.Password, cancellationToken).ConfigureAwait(false);
         }
 
-        var outcome = await StartSessionAsync(user, command, now, cancellationToken).ConfigureAwait(false);
+        var outcome = await StartSessionAsync(user, command, client, now, cancellationToken).ConfigureAwait(false);
 
         await outcome.Match(
             _ => EndReplacedSessionAsync(command.PreviousSessionToken, now, cancellationToken),
@@ -141,9 +153,18 @@ internal sealed class SignInCommandHandler(
         await users.UpdateAsync(user, user.Version, cancellationToken).ConfigureAwait(false);
     }
 
+    private static SessionClient? ToClient(string? client) => client switch
+    {
+        null or "browser" => SessionClient.Browser,
+        "ios" => SessionClient.Ios,
+        "android" => SessionClient.Android,
+        _ => null
+    };
+
     private async Task<Result<SignInOutcome>> StartSessionAsync(
         User user,
         SignInCommand command,
+        SessionClient client,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
@@ -157,12 +178,13 @@ internal sealed class SignInCommandHandler(
             now,
             dependencies.Cookies.SessionLifetime,
             command.IpAddress,
-            command.UserAgent);
+            command.UserAgent,
+            client);
 
         var stored = await sessions.AddAsync(session, cancellationToken).ConfigureAwait(false);
         var isAdmin = await users.IsAdminAsync(user.Id, cancellationToken).ConfigureAwait(false);
 
         return stored.Bind(() => Result<SignInOutcome>.Success(
-            new SignInOutcome(user.ToSignInResponse(isAdmin, csrfToken), sessionToken)));
+            new SignInOutcome(user.ToSignInResponse(isAdmin, csrfToken), sessionToken, client)));
     }
 }
