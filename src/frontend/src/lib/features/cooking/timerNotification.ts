@@ -1,7 +1,12 @@
+import { native } from '$api';
 import { m } from '$shell/i18n';
+import { closeNativeTimer, requestNativeTimerPermission } from './nativeTimers';
 import { alarmCadence, type TimerNotice } from './timerState';
 
+/* In the app the operating system rings timers it was given ahead of time (nativeTimers.ts); these are the website's. */
+
 export async function requestTimerNotificationPermission(): Promise<void> {
+  if (native) return requestNativeTimerPermission();
   if (typeof window === 'undefined' || !('Notification' in window)) return;
   if (Notification.permission === 'default') {
     try {
@@ -14,6 +19,7 @@ export async function requestTimerNotificationPermission(): Promise<void> {
 
 export async function notifyTimerDone(label: string, notice: TimerNotice): Promise<void> {
   if (
+    native ||
     typeof window === 'undefined' ||
     !('Notification' in window) ||
     Notification.permission !== 'granted'
@@ -67,6 +73,7 @@ export async function notifyTimerDone(label: string, notice: TimerNotice): Promi
 }
 
 export async function closeTimerNotification(sessionId: string, stepIndex?: number) {
+  if (native) return closeNativeTimer(sessionId, stepIndex);
   try {
     const reg = await navigator.serviceWorker?.getRegistration();
     const notifications = await reg?.getNotifications();

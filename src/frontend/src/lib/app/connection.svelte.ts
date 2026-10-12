@@ -39,6 +39,9 @@ export function forgetCachedReads(): void {
     void forgetOfflineReads();
     void import('$features/cooking/timerState').then(({ forgetKitchen }) => forgetKitchen());
     void import('./nativeImages').then(({ forgetNativeImages }) => forgetNativeImages());
+    void import('$features/cooking/nativeTimers').then(({ forgetNativeTimers }) =>
+      forgetNativeTimers()
+    );
 
     return;
   }
