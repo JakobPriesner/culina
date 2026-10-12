@@ -12,3 +12,7 @@
 # Generated, but committed so a contract change shows up in review.
 src/frontend/src/lib/api/generated/** linguist-generated=true
 src/backend/openapi/*.json linguist-generated=true
+
+# Windows batch files run only with CRLF; Gradle's wrapper ships one.
+*.bat text eol=crlf
+*.jar binary

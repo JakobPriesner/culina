@@ -1,6 +1,7 @@
 import { paraglideVitePlugin } from '@inlang/paraglide-js';
 
 import { galleryOnly } from './build-tools/gallery.js';
+import { nativeOnly } from './build-tools/nativeOnly.js';
 import { paraglideOptions } from './build-tools/paraglide.js';
 import { siteFiles } from './build-tools/siteFiles.js';
 import adapter from '@sveltejs/adapter-static';
@@ -39,6 +40,9 @@ export default defineConfig({
   plugins: [
     // First: replaces the gallery's components with empty ones in release builds.
     galleryOnly(galleryWanted),
+
+    // Also first: replaces the app's own modules (Capacitor and all) with empty ones in the website's build.
+    nativeOnly(nativeTarget),
 
     // Tree-shakeable message functions. The dev server gets one module per locale because per-message modules made page loads ~850ms.
     // `pnpm messages` writes the dev layout too, so checks beside a dev server do not restore the slow one.

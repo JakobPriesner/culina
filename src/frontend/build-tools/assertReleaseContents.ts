@@ -6,8 +6,11 @@ import { join } from 'node:path';
  * none of it shows in review: a build flag that stops folding ships everything behind it.
  */
 
-/** Text only the app's code holds (lib/api/client.ts `toInstance`); in the website it means `__CULINA_NATIVE__` stopped folding. */
-const nativeOnly = ['No server is connected.'];
+/**
+ * Text only the app's code holds: `toInstance`'s error (lib/api/client.ts) means `__CULINA_NATIVE__` stopped folding;
+ * the Capacitor plugin names mean build-tools/nativeOnly.ts stopped stubbing the native shell.
+ */
+const nativeOnly = ['No server is connected.', 'SecureStorage', 'KeepAwake'];
 
 export async function findNativeText(buildDir: string): Promise<string[]> {
   const found: string[] = [];
