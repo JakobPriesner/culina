@@ -39,7 +39,8 @@
   const atMin = $derived(value <= min);
   const atMax = $derived(value >= max);
 
-  function set(next: number) {
+  /** Returns what the value is afterwards, which is not always what was asked for. */
+  function set(next: number): number {
     // Clamped here, so typing 500 doesn't produce a shopping list for a wedding.
     const clamped = Math.min(max, Math.max(min, Math.round(next)));
 
@@ -47,6 +48,13 @@
       value = clamped;
       onchange?.(clamped);
     }
+
+    return clamped;
+  }
+
+  // The input is one-way, so a typed 500 clamped to an unchanged 99 would never repaint: written back by hand.
+  function type(input: HTMLInputElement) {
+    input.value = String(set(Number(input.value)));
   }
 </script>
 
@@ -74,7 +82,7 @@
     aria-label={label}
     aria-describedby={describedBy}
     value={String(value)}
-    onchange={(event) => set(Number(event.currentTarget.value))}
+    onchange={(event) => type(event.currentTarget)}
   />
 
   <IconButton

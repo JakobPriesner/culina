@@ -39,6 +39,26 @@ describe('Stepper', () => {
     expect(onchange).toHaveBeenLastCalledWith(12);
   });
 
+  it('shows the clamped value even when it equals the current one', async () => {
+    renderWithProviders(StepperHarness, { props: { value: 99, max: 99 } });
+
+    await userEvent.clear(servings());
+    await userEvent.type(servings(), '500');
+    await userEvent.tab();
+
+    // The value did not change, so nothing would repaint the box on its own.
+    expect(servings()).toHaveValue(99);
+  });
+
+  it('shows the minimum when the box is cleared at the minimum', async () => {
+    renderWithProviders(StepperHarness, { props: { value: 1, min: 1 } });
+
+    await userEvent.clear(servings());
+    await userEvent.tab();
+
+    expect(servings()).toHaveValue(1);
+  });
+
   it('can still be typed into, for the person who wants eighteen', async () => {
     const onchange = vi.fn();
 
