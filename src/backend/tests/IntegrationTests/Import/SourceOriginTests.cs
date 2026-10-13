@@ -1,10 +1,10 @@
 using Domain.Import;
-using Infrastructure.Import.Tandoor;
+using Infrastructure.Import;
 
 namespace IntegrationTests.Import;
 
-/// <summary>The picture address is data from the other server, so only the connection's own origin is followed.</summary>
-public class TandoorPictureAddressTests
+/// <summary>An address from the other server, such as a picture, is followed only on the connection's own origin.</summary>
+public class SourceOriginTests
 {
     [Theory]
     [InlineData("/media/recipes/pie.jpg", "https://recipes.example.com/media/recipes/pie.jpg")]
@@ -14,7 +14,7 @@ public class TandoorPictureAddressTests
         "https://recipes.example.com/media/pie.jpg")]
     public void APictureOnTheSameServer_ShouldBeFollowed(string written, string expected)
     {
-        var url = TandoorLibrary.OnTheSameServer(Source(), written);
+        var url = SourceOrigin.Resolve(Address(), written);
 
         // A path is the usual case; a whole address is what an instance configured with one produces.
         Assert.Equal(expected, url?.ToString());
@@ -34,7 +34,7 @@ public class TandoorPictureAddressTests
     [InlineData("file:///etc/passwd")]
     public void APictureAnywhereElse_ShouldNotBe(string written)
     {
-        var url = TandoorLibrary.OnTheSameServer(Source(), written);
+        var url = SourceOrigin.Resolve(Address(), written);
 
         Assert.Null(url);
     }
@@ -44,24 +44,10 @@ public class TandoorPictureAddressTests
     [InlineData("   ")]
     public void ARecipeWithNoPicture_ShouldAskForNothing(string written)
     {
-        Assert.Null(TandoorLibrary.OnTheSameServer(Source(), written));
+        Assert.Null(SourceOrigin.Resolve(Address(), written));
     }
 
-    private static RecipeSource Source()
-    {
-        var address = SourceAddress.Create("https://recipes.example.com")
+    private static SourceAddress Address() =>
+        SourceAddress.Create("https://recipes.example.com")
             .Match(value => value, error => throw new InvalidOperationException(error.Code));
-
-        return RecipeSource.Restore(
-            Guid.NewGuid(),
-            Guid.NewGuid(),
-            SourceKind.Tandoor,
-            "recipes.example.com",
-            address,
-            "tda_secret",
-            Guid.NewGuid(),
-            DateTimeOffset.UnixEpoch,
-            lastUsedAt: null,
-            version: 1);
-    }
 }

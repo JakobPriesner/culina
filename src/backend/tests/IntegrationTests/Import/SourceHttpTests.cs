@@ -81,6 +81,37 @@ public class SourceHttpTests
     }
 
     [Fact]
+    public async Task PostJsonAsync_ShouldSayOnlyCouldNotFetch_WhenAPrivateServerRefusesIt()
+    {
+        using var server = new LoopbackServer("{}", 401, "application/json");
+        using var http = new SourceHttp(Storage, admits: _ => true);
+
+        var result = await http
+            .PostJsonAsync<JsonElement>(
+                new Uri($"http://127.0.0.1:{server.Port}/api/users/api-tokens"),
+                new { name = "Culina" },
+                Token,
+                Cancellation)
+            .ConfigureAwait(true);
+
+        result.ShouldBeFailure(ImportErrors.CouldNotFetch);
+        Assert.Equal(1, server.Requests);
+    }
+
+    [Fact]
+    public async Task PostJsonAsync_ShouldReadTheAnswer()
+    {
+        using var server = new LoopbackServer("""{"token":"made"}""", 201, "application/json");
+        using var http = new SourceHttp(Storage, admits: _ => true);
+
+        var result = await http
+            .PostJsonAsync<JsonElement>(server.Url, new { name = "Culina" }, Token, Cancellation)
+            .ConfigureAwait(true);
+
+        Assert.Equal("made", result.ShouldBeSuccess().GetProperty("token").GetString());
+    }
+
+    [Fact]
     public async Task GetAsync_ShouldStillReadTheAnswer_WhenTheServerIsOnAPrivateAddress()
     {
         // Vague about failure, not deaf: a recipe server on the LAN still works.
