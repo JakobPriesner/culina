@@ -417,7 +417,7 @@ settings).
 | Area | Rules |
 | --- | --- |
 | Availability | no telemetry from the API for 10 minutes; share of failed requests |
-| Performance | API p95 latency; p95 per use case (imports, AI calls and archives excluded: slow by design) |
+| Performance | API p95 latency (event streams excluded: they stay open while watched); p95 per use case (imports, AI calls and archives excluded: slow by design) |
 | Security | refused sign-ins, recovery codes, CSRF, origin and rate-limit rejections |
 | Resources | memory against the container limit; storage per directory; thread pool backlog |
 | Database | pool in use, requests waiting, timeouts, a connection held too long (1971) |

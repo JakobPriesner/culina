@@ -150,7 +150,7 @@
         "spec": {
           "display": {
             "name": "p95 latency",
-            "description": "95th percentile of server span duration."
+            "description": "95th percentile of server span duration, event streams left out."
           },
           "plugin": {
             "kind": "signoz/NumberPanel",
@@ -192,7 +192,7 @@
                       }
                     ],
                     "filter": {
-                      "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server'"
+                      "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server' AND culina.stream NOT EXISTS"
                     }
                   }
                 }
@@ -393,7 +393,7 @@
         "spec": {
           "display": {
             "name": "Request latency",
-            "description": "p50, p95 and p99 of server span duration. Alert on p95: warning above 1 s, critical above 3 s."
+            "description": "p50, p95 and p99 of server span duration, event streams left out. Alert on p95: warning above 1 s, critical above 3 s."
           },
           "plugin": {
             "kind": "signoz/TimeSeriesPanel",
@@ -440,7 +440,7 @@
                             }
                           ],
                           "filter": {
-                            "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server'"
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server' AND culina.stream NOT EXISTS"
                           },
                           "legend": "p50"
                         }
@@ -456,7 +456,7 @@
                             }
                           ],
                           "filter": {
-                            "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server'"
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server' AND culina.stream NOT EXISTS"
                           },
                           "legend": "p95"
                         }
@@ -472,7 +472,7 @@
                             }
                           ],
                           "filter": {
-                            "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server'"
+                            "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server' AND culina.stream NOT EXISTS"
                           },
                           "legend": "p99"
                         }
