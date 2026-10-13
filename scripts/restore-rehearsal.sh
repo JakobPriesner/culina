@@ -44,6 +44,17 @@ trap cleanup EXIT
 
 say() { printf '\n\033[1m%s\033[0m\n' "$*"; }
 
+# Over TCP: a fresh volume's entrypoint first runs a temporary server on the Unix socket only, while
+# db-init.sh creates culina_app, then restarts. Asking the socket can catch that server, or the gap.
+wait_for_database() {
+  local deadline=$((SECONDS + 60))
+
+  until compose exec -T db pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1; do
+    [ "$SECONDS" -lt "$deadline" ] || { echo "database never came up"; exit 1; }
+    sleep 1
+  done
+}
+
 wait_for_ready() {
   local deadline=$((SECONDS + 120))
 
@@ -117,7 +128,7 @@ say "Restoring"
 STARTED_AT="$SECONDS"
 
 compose up -d db >/dev/null
-until compose exec -T db pg_isready -U postgres >/dev/null 2>&1; do sleep 1; done
+wait_for_database
 
 compose exec -T db psql -U postgres -d postgres -c "drop database if exists culina;" >/dev/null
 compose exec -T db psql -U postgres -d postgres -c "create database culina owner culina_app;" >/dev/null
