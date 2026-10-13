@@ -1,9 +1,7 @@
-import { csrfToken } from './cookies';
+import { csrfHeader, csrfToken } from './cookies';
 import { drain, type Stream, type StreamHandlers } from './eventStream';
 import { clientError, ErrorCodes, offline, toAppError, type AppError } from './problem';
 import { sessionExpired } from './session';
-
-const csrfHeader = 'X-Culina-CSRF';
 
 /**
  * POSTs to start server work and streams its events. Unlike `watch` it cannot resume (a second call is a second bill), so a dropped connection fails.

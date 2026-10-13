@@ -1,11 +1,9 @@
 import type { Middleware } from 'openapi-fetch';
 
-import { csrfToken } from './cookies';
+import { csrfHeader, csrfToken } from './cookies';
 import { cached, invalidate, remember, type CachedResponse } from './etagCache';
 import { ErrorCodes } from './problem';
 import { sessionExpired } from './session';
-
-const csrfHeader = 'X-Culina-CSRF';
 
 const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
