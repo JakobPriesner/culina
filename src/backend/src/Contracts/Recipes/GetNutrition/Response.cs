@@ -156,11 +156,14 @@ public sealed record NutritionVariant
     public decimal? EnergyKcal { get; init; }
 }
 
-/// <summary>A food of the Bundeslebensmittelschlüssel.</summary>
+/// <summary>A food of the Bundeslebensmittelschlüssel, or one the household typed from a package.</summary>
 public sealed record NutritionFood
 {
-    /// <summary>The BLS code.</summary>
+    /// <summary>The BLS code, or a household food's (<c>h:</c> and its id).</summary>
     public required string Code { get; init; }
+
+    /// <summary>Where its values come from: <c>bls</c>, or <c>package</c> for a label a household typed.</summary>
+    public required string Source { get; init; }
 
     /// <summary>The German BLS name, the citation.</summary>
     public required string NameDe { get; init; }

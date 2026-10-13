@@ -1,15 +1,25 @@
 import type { components } from '$api/generated/schema';
 
-import type { IngredientFact, Nutrition, NutritionLine, NutritionVia } from './types';
+import type {
+  IngredientFact,
+  Nutrition,
+  NutritionFood,
+  NutritionLine,
+  NutritionVia
+} from './types';
 
 type Wire = components['schemas']['RecipesGetNutritionResponse'];
 type WireLine = components['schemas']['RecipesGetNutritionNutritionIngredient'];
+type WireFood = components['schemas']['RecipesGetNutritionNutritionFood'];
+
+const toFood = (wire: WireFood | null | undefined): NutritionFood | null =>
+  wire ? { ...wire, source: wire.source === 'package' ? 'package' : 'bls' } : null;
 
 const toLine = (wire: WireLine): NutritionLine => ({
   ingredientId: wire.ingredientId,
   status: wire.status,
   reason: wire.reason ?? null,
-  food: wire.food ?? null,
+  food: toFood(wire.food),
   grams: wire.grams ?? null,
   // The document's enum still lacks the two newest ways; the server sends them.
   via: (wire.via as NutritionVia | null | undefined) ?? null,
@@ -48,6 +58,6 @@ type WireFact = components['schemas']['NutritionIngredientFact'];
 export const toFact = (wire: WireFact): IngredientFact => ({
   name: wire.name,
   corrected: wire.corrected,
-  food: wire.food ?? null,
+  food: toFood(wire.food),
   weights: wire.weights
 });

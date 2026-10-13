@@ -5,7 +5,9 @@
   import IngredientNounsPanel from '$features/ingredients/IngredientNounsPanel.svelte';
   import MergeSuggestionsPanel from '$features/ingredients/MergeSuggestionsPanel.svelte';
   import { ingredientNames } from '$features/ingredients/stores/ingredientNames.svelte';
+  import HouseholdFoodsPanel from '$features/nutrition/HouseholdFoodsPanel.svelte';
   import IngredientFactsPanel from '$features/nutrition/IngredientFactsPanel.svelte';
+  import { householdFoods } from '$features/nutrition/stores/householdFoods.svelte';
   import { nouns } from '$features/recipes/stores/nouns.svelte';
   import { ingredientFacts } from '$features/nutrition/stores/ingredientFacts.svelte';
   import { m } from '$shell/i18n';
@@ -19,6 +21,7 @@
     if (household) {
       void ingredientNames.load(household.householdId);
       void nouns.load(household.householdId);
+      void householdFoods.load(household.householdId);
     }
   });
 
@@ -67,6 +70,14 @@
     bare
   >
     <IngredientFactsPanel householdId={household.householdId} />
+  </SettingsSection>
+
+  <SettingsSection
+    title={m['nutrition.package.listTitle']()}
+    description={m['nutrition.package.listBody']()}
+    bare
+  >
+    <HouseholdFoodsPanel householdId={household.householdId} onremoved={merged} />
   </SettingsSection>
 {:else}
   <p class="none">{m['me.household.none']()}</p>

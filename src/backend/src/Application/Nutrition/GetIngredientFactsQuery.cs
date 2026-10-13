@@ -18,7 +18,8 @@ internal sealed class GetIngredientFactsQueryHandler(
     IHouseholdRepository households,
     INutritionCorrectionRepository choices,
     INutritionWeightRepository weights,
-    IFoodTable foods)
+    IFoodTable foods,
+    IHouseholdFoodRepository ownFoods)
     : IQueryHandler<GetIngredientFactsQuery, IngredientFactsResponse>
 {
     public async Task<Result<IngredientFactsResponse>> Handle(
@@ -44,6 +45,8 @@ internal sealed class GetIngredientFactsQueryHandler(
     {
         var corrections = await choices.AllAsync(householdId, cancellationToken).ConfigureAwait(false);
         var weighed = await weights.AllAsync(householdId, cancellationToken).ConfigureAwait(false);
+        var library = await HouseholdAccess.LibraryAsync(households, householdId, cancellationToken).ConfigureAwait(false);
+        var find = FoodLookup.With(foods, await ownFoods.ForLibraryAsync(library, cancellationToken).ConfigureAwait(false));
 
         var items = corrections.Keys.Union(weighed.Keys, StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)
@@ -51,7 +54,7 @@ internal sealed class GetIngredientFactsQueryHandler(
             {
                 Name = name,
                 Corrected = corrections.ContainsKey(name),
-                Food = corrections.GetValueOrDefault(name) is { } code ? FoodOf(code) : null,
+                Food = corrections.GetValueOrDefault(name) is { } code ? FoodOf(find, code) : null,
                 Weights =
                 [
                     .. weighed.GetValueOrDefault(name, new Dictionary<string, decimal>())
@@ -64,10 +67,10 @@ internal sealed class GetIngredientFactsQueryHandler(
     }
 
     // A code the table no longer has is shown as not counted rather than failing the whole list.
-    private Contracts.Recipes.GetNutrition.NutritionFood? FoodOf(string code)
+    private static Contracts.Recipes.GetNutrition.NutritionFood? FoodOf(Func<string, Food?> find, string code)
     {
         var entry = FoodNames.All.FirstOrDefault(one => one.Code == code);
 
-        return foods.Find(code)?.ToContract(entry?.LabelDe, entry?.LabelEn);
+        return find(code)?.ToContract(entry?.LabelDe, entry?.LabelEn);
     }
 }

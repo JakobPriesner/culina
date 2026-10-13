@@ -33,7 +33,9 @@ export interface NutritionValues {
 
 export interface NutritionFood {
   readonly code: string;
-  /** The BLS names, the citation. */
+  /** Where its values come from: the table, or a package's label the household typed; absent is the table. */
+  readonly source?: 'bls' | 'package';
+  /** The BLS names, the citation; a household's own name for a food from a package. */
   readonly nameDe: string;
   readonly nameEn: string;
   /** What a reader calls it; the BLS name when the food has no label of its own. */
@@ -99,7 +101,7 @@ export interface Nutrition {
 }
 
 /** A food of the table as the search offers it; the kilocalories per 100 g tell the many foods of one name apart. */
-export interface FoodHit extends Pick<NutritionFood, 'code' | 'nameDe' | 'nameEn'> {
+export interface FoodHit extends Pick<NutritionFood, 'code' | 'nameDe' | 'nameEn' | 'source'> {
   readonly energyKcal: number | null;
 }
 

@@ -37,7 +37,8 @@ internal sealed class GetNutritionQueryHandler(
     IHouseholdRepository households,
     IFoodTable foods,
     INutritionCorrectionRepository choices,
-    INutritionWeightRepository weights)
+    INutritionWeightRepository weights,
+    IHouseholdFoodRepository ownFoods)
     : IQueryHandler<GetNutritionQuery, RecipeNutrition>
 {
     public async Task<Result<RecipeNutrition>> Handle(
@@ -67,11 +68,12 @@ internal sealed class GetNutritionQueryHandler(
                 var corrections = await choices.ForNamesAsync(library, names, cancellationToken).ConfigureAwait(false);
                 var weighed = await weights.ForNamesAsync(library, names, cancellationToken).ConfigureAwait(false);
                 var useTypical = await weights.UsesTypicalWeightsAsync(household, cancellationToken).ConfigureAwait(false);
+                var own = await ownFoods.ForLibraryAsync(library, cancellationToken).ConfigureAwait(false);
 
                 var figure = NutritionCalculator.Calculate(
                     recipe.Ingredients,
                     recipe.Yield,
-                    foods.Find,
+                    FoodLookup.With(foods, own),
                     corrections.ToDictionary(pair => pair.Key, pair => pair.Value.FoodCode, StringComparer.Ordinal),
                     weighed.ToDictionary(
                         pair => pair.Key,

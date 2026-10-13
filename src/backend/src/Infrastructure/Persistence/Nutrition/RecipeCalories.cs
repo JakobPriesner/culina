@@ -10,7 +10,8 @@ internal sealed class RecipeCalories(
     DbExecutor executor,
     IFoodTable foods,
     INutritionCorrectionRepository corrections,
-    INutritionWeightRepository weights) : IRecipeCalories
+    INutritionWeightRepository weights,
+    IHouseholdFoodRepository ownFoods) : IRecipeCalories
 {
     // Recovery and facets may ask several times within a request. Household choices are read once.
     private readonly Dictionary<string, IReadOnlyDictionary<Guid, LabelValue>> libraries = [];
@@ -58,6 +59,7 @@ internal sealed class RecipeCalories(
                 pair => (IReadOnlyDictionary<string, decimal>)pair.Value.ToDictionary(unit => unit.Key, unit => unit.Value.Grams),
                 StringComparer.Ordinal);
         var typical = await weights.UsesTypicalWeightsAsync(householdId, cancellationToken).ConfigureAwait(false);
+        var find = FoodLookup.With(foods, await ownFoods.ForLibraryAsync(library, cancellationToken).ConfigureAwait(false));
         var lines = inputs.Ingredients.ToLookup(line => line.RecipeId);
         var figures = new Dictionary<Guid, LabelValue>();
 
@@ -74,7 +76,7 @@ internal sealed class RecipeCalories(
                     Unit = line.Unit,
                     Name = line.Name,
                     Note = line.Note
-                })), yield, foods.Find, choices, weighed, typical);
+                })), yield, find, choices, weighed, typical);
             if (figure.Counted > 0)
             {
                 figures[recipe.Id] = figure.Values.EnergyKcal;

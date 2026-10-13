@@ -331,7 +331,7 @@ Run the golden search evaluation (`IntegrationTests/Recipes/Evaluation`) before 
 
 The §E questions were settled with the defaults this document proposed (bead `culina-v2-p8tf.9`):
 - variants are grouped under their head on the shopping list, not summed;
-- there are no household foods yet;
+- household foods were first left out, then built (`culina-v2-p8tf.12`): a value typed from a label counts as a cited source;
 - "Bio" is a descriptor;
 - notes are not carried to the shopping list.
 
@@ -342,4 +342,4 @@ The §E questions were settled with the defaults this document proposed (bead `c
 | 3. The name reading | `Domain/Ingredients/IngredientWords` + `IngredientReading`. Used by lookalikes, the lexicon (no *Character* concept from an ingredient, `Version` 5), the ingredient filters (migration 0038, `IngredientSql`), and the line parser (`qualifierWords.ts`) |
 | 4. Shopping by identity | `ItemMergePolicy.NamesMatch` reads names. A new kind is placed under the first one (`ShoppingList.PlaceFor`). A remembered section is found for the same ingredient written otherwise |
 | 5. Singular and plural | `Domain/Ingredients/IngredientNouns` and its frontend copy `nounForms.ts`, held together by a test. Recipe lines are scaled through `Scaling.nameFor`, and a shopping line's name follows its amount. A household lists its own words in both numbers on the Ingredients page (`ingredient_nouns`, migration 0040, `GET/PUT/DELETE /households/{id}/ingredient-nouns`); they are served beside the recipe, not in it, so a shared recipe stays household-free, and `ShoppingListWrites` fits names with them after every change |
-| 6. Nutrition | `NutritionCalculator` tries the other spellings (`IngredientWords.Spellings`), applies a household correction to the same ingredient written otherwise, and reports `unknownKind` for an unlisted kind |
+| 6. Nutrition | `NutritionCalculator` tries the other spellings (`IngredientWords.Spellings`), applies a household correction to the same ingredient written otherwise, and reports `unknownKind` for an unlisted kind. A household types a food the table lacks from its package's label (`household_foods`, migration 0041, `/households/{id}/foods`), cited "from the package" and chosen in the correction sheet like a BLS food: its code is `h:` and the id, so corrections, merges and the `PUT {food}` contract are unchanged (bead `culina-v2-p8tf.12`; the §E.2 decision was yes) |

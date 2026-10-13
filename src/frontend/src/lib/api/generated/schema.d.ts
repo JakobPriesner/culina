@@ -1499,6 +1499,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/households/{householdId}/foods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a household's foods from a package
+         * @description Foods this household, and the households it inherits from, typed from a package's label, per 100 g, for what the Bundeslebensmittelschlüssel does not have. Each one's `code` is chosen for an ingredient like a BLS code, with `PUT /households/{householdId}/ingredients/{name}`.
+         */
+        get: operations["getHouseholdFoodsV1"];
+        put?: never;
+        /**
+         * Add a food from a package
+         * @description Keeps a food with the values its package's label gives per 100 g, cited as "from the package". Kilocalories are required; kilojoules follow from them when left out, and any other value left out is unknown, never zero. A food is not edited: remove it and add it again. Any member may add.
+         */
+        post: operations["createHouseholdFoodV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/foods/{foodId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a food from a package
+         * @description Removes one of this household's foods. Every choice of it, an heir's too, goes with it, so those ingredients count as they did before it was chosen. Only the household that added a food removes it. Idempotent; 204.
+         */
+        delete: operations["deleteHouseholdFoodV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/households/{householdId}/ingredient-names": {
         parameters: {
             query?: never;
@@ -3136,6 +3180,51 @@ export interface components {
             /** @description One to ten records, oldest first. */
             records: components["schemas"]["LogRecordsCreateRecord"][];
         };
+        /** @description A food from a package's label, per 100 g. */
+        NutritionCreateHouseholdFoodRequest: {
+            /** @description What to call it: "Kokosmilch light". */
+            name: string;
+            /**
+             * Format: double
+             * @description Energy in kilojoules; worked out from the kilocalories when left out.
+             */
+            energyKj?: number | null;
+            /**
+             * Format: double
+             * @description Energy in kilocalories.
+             */
+            energyKcal: number;
+            /**
+             * Format: double
+             * @description Fat in grams; null when the label does not say.
+             */
+            fat?: number | null;
+            /**
+             * Format: double
+             * @description Saturated fat in grams.
+             */
+            saturatedFat?: number | null;
+            /**
+             * Format: double
+             * @description Carbohydrate in grams.
+             */
+            carbohydrate?: number | null;
+            /**
+             * Format: double
+             * @description Sugars in grams.
+             */
+            sugars?: number | null;
+            /**
+             * Format: double
+             * @description Protein in grams.
+             */
+            protein?: number | null;
+            /**
+             * Format: double
+             * @description Salt in grams.
+             */
+            salt?: number | null;
+        };
         /** @description A food of the Bundeslebensmittelschlüssel, as a search result. */
         NutritionFoodSummary: {
             /** @description The BLS code. */
@@ -3154,6 +3243,65 @@ export interface components {
         NutritionFoodsResponse: {
             /** @description The foods, best first. */
             items: components["schemas"]["NutritionFoodSummary"][];
+        };
+        /** @description A food a household typed from a package's label, per 100 g; null is unknown. */
+        NutritionHouseholdFoodDetail: {
+            /**
+             * Format: uuid
+             * @description The food's id, which names it in the path.
+             */
+            id: string;
+            /** @description The code to choose it by, as for a BLS food: `h:` and the id. */
+            code: string;
+            /** @description What the household calls it. */
+            name: string;
+            /**
+             * Format: double
+             * @description Energy in kilojoules.
+             */
+            energyKj: number;
+            /**
+             * Format: double
+             * @description Energy in kilocalories.
+             */
+            energyKcal: number;
+            /**
+             * Format: double
+             * @description Fat in grams.
+             */
+            fat?: number | null;
+            /**
+             * Format: double
+             * @description Saturated fat in grams.
+             */
+            saturatedFat?: number | null;
+            /**
+             * Format: double
+             * @description Carbohydrate in grams.
+             */
+            carbohydrate?: number | null;
+            /**
+             * Format: double
+             * @description Sugars in grams.
+             */
+            sugars?: number | null;
+            /**
+             * Format: double
+             * @description Protein in grams.
+             */
+            protein?: number | null;
+            /**
+             * Format: double
+             * @description Salt in grams.
+             */
+            salt?: number | null;
+            /** @description Whether the household asking typed it; otherwise one it inherits from did, and only that one removes it. */
+            own: boolean;
+        };
+        /** @description The foods a household can choose from beyond the table: its own and those of the households it inherits from. */
+        NutritionHouseholdFoodsResponse: {
+            /** @description The foods, by name. */
+            items: components["schemas"]["NutritionHouseholdFoodDetail"][];
         };
         /** @description What a household has said about one ingredient name. */
         NutritionIngredientFact: {
@@ -3788,10 +3936,12 @@ export interface components {
             /** @description What it says. */
             body: string;
         };
-        /** @description A food of the Bundeslebensmittelschlüssel. */
+        /** @description A food of the Bundeslebensmittelschlüssel, or one the household typed from a package. */
         RecipesGetNutritionNutritionFood: {
-            /** @description The BLS code. */
+            /** @description The BLS code, or a household food's (`h:` and its id). */
             code: string;
+            /** @description Where its values come from: `bls`, or `package` for a label a household typed. */
+            source: string;
             /** @description The German BLS name, the citation. */
             nameDe: string;
             /** @description The English BLS name, the citation. */
@@ -10633,6 +10783,138 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["NutritionIngredientFactsResponse"];
                 };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getHouseholdFoodsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NutritionHouseholdFoodsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createHouseholdFoodV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NutritionCreateHouseholdFoodRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NutritionHouseholdFoodDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    deleteHouseholdFoodV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                foodId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Unauthorized */
             401: {

@@ -199,6 +199,9 @@ public static class DependencyInjection
             .AddScoped<IQueryHandler<GetNutritionSettingsQuery, Contracts.Nutrition.NutritionSettings>, GetNutritionSettingsQueryHandler>()
             .AddScoped<ICommandHandler<SetNutritionSettingsCommand, Contracts.Nutrition.NutritionSettings>, SetNutritionSettingsCommandHandler>()
             .AddScoped<IQueryHandler<GetIngredientFactsQuery, Contracts.Nutrition.IngredientFactsResponse>, GetIngredientFactsQueryHandler>()
+            .AddScoped<IQueryHandler<GetHouseholdFoodsQuery, Contracts.Nutrition.HouseholdFoodsResponse>, GetHouseholdFoodsQueryHandler>()
+            .AddScoped<ICommandHandler<CreateHouseholdFoodCommand, Contracts.Nutrition.HouseholdFoodDetail>, CreateHouseholdFoodCommandHandler>()
+            .AddScoped<ICommandHandler<DeleteHouseholdFoodCommand>, DeleteHouseholdFoodCommandHandler>()
             .AddScoped<IQueryHandler<GetFoodsQuery, Contracts.Nutrition.FoodsResponse>, GetFoodsQueryHandler>()
             .AddScoped<IQueryHandler<GetShoppingListQuery,
                 Contracts.Shopping.Response>, GetShoppingListQueryHandler>()

@@ -6110,6 +6110,185 @@
         }
       }
     },
+    "/api/v1/households/{householdId}/foods": {
+      "get": {
+        "tags": [
+          "Nutrition"
+        ],
+        "summary": "List a household's foods from a package",
+        "description": "Foods this household, and the households it inherits from, typed from a package's label, per 100 g, for what the Bundeslebensmittelschlüssel does not have. Each one's `code` is chosen for an ingredient like a BLS code, with `PUT /households/{householdId}/ingredients/{name}`.",
+        "operationId": "getHouseholdFoodsV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NutritionHouseholdFoodsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Nutrition"
+        ],
+        "summary": "Add a food from a package",
+        "description": "Keeps a food with the values its package's label gives per 100 g, cited as \"from the package\". Kilocalories are required; kilojoules follow from them when left out, and any other value left out is unknown, never zero. A food is not edited: remove it and add it again. Any member may add.",
+        "operationId": "createHouseholdFoodV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NutritionCreateHouseholdFoodRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NutritionHouseholdFoodDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/foods/{foodId}": {
+      "delete": {
+        "tags": [
+          "Nutrition"
+        ],
+        "summary": "Remove a food from a package",
+        "description": "Removes one of this household's foods. Every choice of it, an heir's too, goes with it, so those ingredients count as they did before it was chosen. Only the household that added a food removes it. Idempotent; 204.",
+        "operationId": "deleteHouseholdFoodV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "foodId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/households/{householdId}/ingredient-names": {
       "get": {
         "tags": [
@@ -10850,6 +11029,67 @@
         },
         "description": "What the web app noticed since it last reported."
       },
+      "NutritionCreateHouseholdFoodRequest": {
+        "required": [
+          "name",
+          "energyKcal"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "What to call it: \"Kokosmilch light\"."
+          },
+          "energyKj": {
+            "type": "number",
+            "description": "Energy in kilojoules; worked out from the kilocalories when left out.",
+            "format": "double",
+            "nullable": true
+          },
+          "energyKcal": {
+            "type": "number",
+            "description": "Energy in kilocalories.",
+            "format": "double"
+          },
+          "fat": {
+            "type": "number",
+            "description": "Fat in grams; null when the label does not say.",
+            "format": "double",
+            "nullable": true
+          },
+          "saturatedFat": {
+            "type": "number",
+            "description": "Saturated fat in grams.",
+            "format": "double",
+            "nullable": true
+          },
+          "carbohydrate": {
+            "type": "number",
+            "description": "Carbohydrate in grams.",
+            "format": "double",
+            "nullable": true
+          },
+          "sugars": {
+            "type": "number",
+            "description": "Sugars in grams.",
+            "format": "double",
+            "nullable": true
+          },
+          "protein": {
+            "type": "number",
+            "description": "Protein in grams.",
+            "format": "double",
+            "nullable": true
+          },
+          "salt": {
+            "type": "number",
+            "description": "Salt in grams.",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "description": "A food from a package's label, per 100 g."
+      },
       "NutritionFoodSummary": {
         "required": [
           "code",
@@ -10895,6 +11135,99 @@
           }
         },
         "description": "Foods that fit what was typed."
+      },
+      "NutritionHouseholdFoodDetail": {
+        "required": [
+          "id",
+          "code",
+          "name",
+          "energyKj",
+          "energyKcal",
+          "own"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The food's id, which names it in the path.",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string",
+            "description": "The code to choose it by, as for a BLS food: `h:` and the id."
+          },
+          "name": {
+            "type": "string",
+            "description": "What the household calls it."
+          },
+          "energyKj": {
+            "type": "number",
+            "description": "Energy in kilojoules.",
+            "format": "double"
+          },
+          "energyKcal": {
+            "type": "number",
+            "description": "Energy in kilocalories.",
+            "format": "double"
+          },
+          "fat": {
+            "type": "number",
+            "description": "Fat in grams.",
+            "format": "double",
+            "nullable": true
+          },
+          "saturatedFat": {
+            "type": "number",
+            "description": "Saturated fat in grams.",
+            "format": "double",
+            "nullable": true
+          },
+          "carbohydrate": {
+            "type": "number",
+            "description": "Carbohydrate in grams.",
+            "format": "double",
+            "nullable": true
+          },
+          "sugars": {
+            "type": "number",
+            "description": "Sugars in grams.",
+            "format": "double",
+            "nullable": true
+          },
+          "protein": {
+            "type": "number",
+            "description": "Protein in grams.",
+            "format": "double",
+            "nullable": true
+          },
+          "salt": {
+            "type": "number",
+            "description": "Salt in grams.",
+            "format": "double",
+            "nullable": true
+          },
+          "own": {
+            "type": "boolean",
+            "description": "Whether the household asking typed it; otherwise one it inherits from did, and only that one removes it."
+          }
+        },
+        "description": "A food a household typed from a package's label, per 100 g; null is unknown."
+      },
+      "NutritionHouseholdFoodsResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NutritionHouseholdFoodDetail"
+            },
+            "description": "The foods, by name."
+          }
+        },
+        "description": "The foods a household can choose from beyond the table: its own and those of the households it inherits from."
       },
       "NutritionIngredientFact": {
         "required": [
@@ -12181,6 +12514,7 @@
       "RecipesGetNutritionNutritionFood": {
         "required": [
           "code",
+          "source",
           "nameDe",
           "nameEn",
           "labelDe",
@@ -12190,7 +12524,11 @@
         "properties": {
           "code": {
             "type": "string",
-            "description": "The BLS code."
+            "description": "The BLS code, or a household food's (`h:` and its id)."
+          },
+          "source": {
+            "type": "string",
+            "description": "Where its values come from: `bls`, or `package` for a label a household typed."
           },
           "nameDe": {
             "type": "string",
@@ -12209,7 +12547,7 @@
             "description": "What a reader calls the food in English; the BLS name for a food chosen by correction that has no label of its own."
           }
         },
-        "description": "A food of the Bundeslebensmittelschlüssel."
+        "description": "A food of the Bundeslebensmittelschlüssel, or one the household typed from a package."
       },
       "RecipesGetNutritionNutritionIngredient": {
         "required": [

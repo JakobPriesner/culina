@@ -127,6 +127,7 @@ function nutrition(
         status: 'counted' as const,
         food: {
           code: kind.code,
+          source: 'bls',
           nameDe: kind.labelDe,
           nameEn: kind.labelEn,
           labelDe: kind.labelDe,
@@ -172,6 +173,7 @@ function nutrition(
         status: 'counted' as const,
         food: {
           code: 'G410100',
+          source: 'bls',
           nameDe: 'Zwiebel, roh',
           nameEn: 'Onion, raw',
           labelDe: 'Zwiebel',
@@ -206,6 +208,7 @@ function nutrition(
         status: 'counted' as const,
         food: {
           code: code!,
+          source: 'bls',
           nameDe: 'Rapsöl',
           nameEn: 'Rapeseed oil',
           labelDe: 'Rapsöl',
@@ -221,6 +224,7 @@ function nutrition(
     // The table's long names are the citation; what the reader calls it is shorter.
     const food = (nameDe: string, nameEn: string, labelDe = nameDe, labelEn = nameEn) => ({
       code: 'X',
+      source: 'bls',
       nameDe,
       nameEn,
       labelDe,
@@ -479,6 +483,7 @@ export async function responsiveData(
                 code !== undefined || [...corrections.keys()].some((k) => fold(k) === name),
               food: kind && {
                 code: kind.code,
+                source: 'bls',
                 nameDe: kind.labelDe,
                 nameEn: kind.labelEn,
                 labelDe: kind.labelDe,
