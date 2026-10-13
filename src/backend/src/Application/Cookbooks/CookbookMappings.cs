@@ -24,6 +24,7 @@ internal static class CookbookMappings
         RecipeCount = shelf.RecipeCount,
         CoverRecipeIds = [.. shelf.Cover.Select(picture => picture.RecipeId)],
         CoverPictures = [.. shelf.Cover.Select(ToContract)],
+        CoverRecipeId = shelf.Cookbook.CoverRecipeId,
         UpdatedAt = shelf.Cookbook.UpdatedAt
     };
 
@@ -38,6 +39,7 @@ internal static class CookbookMappings
         RecipeCount = shelf.RecipeCount,
         CoverRecipeIds = [.. shelf.Cover.Select(picture => picture.RecipeId)],
         CoverPictures = [.. shelf.Cover.Select(ToContract)],
+        CoverRecipeId = shelf.Cookbook.CoverRecipeId,
         CreatedBy = shelf.Cookbook.CreatedBy,
         CreatedAt = shelf.Cookbook.CreatedAt,
         UpdatedAt = shelf.Cookbook.UpdatedAt,

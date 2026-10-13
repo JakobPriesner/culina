@@ -181,6 +181,7 @@ internal sealed class CreateCookbookCommandHandler(
 
 internal sealed class UpdateCookbookCommandHandler(
     ICookbookRepository cookbooks,
+    IRecipeRepository recipes,
     IHouseholdRepository households,
     IUnitOfWork unitOfWork,
     TimeProvider time)
@@ -225,18 +226,41 @@ internal sealed class UpdateCookbookCommandHandler(
         return await renamed.Match(
             async () =>
             {
+                var cover = command.Draft.CoverRecipeId;
+
+                if (cover is { } chosen && !await IsCoverAsync(shelf.Cookbook.Id, chosen, cancellationToken).ConfigureAwait(false))
+                {
+                    return CookbookErrors.InvalidCover;
+                }
+
+                shelf.Cookbook.UseAsCover(cover, time.GetUtcNow());
+
                 var saved = await cookbooks
                     .SaveAsync(shelf.Cookbook, command.ExpectedVersion, cancellationToken)
                     .ConfigureAwait(false);
 
-                return saved.Map(version =>
-                {
-                    shelf.Cookbook.AcceptVersion(version);
-
-                    return shelf.ToDetail();
-                });
+                // Read again when the cover changed: the pictures come from the shelf, not the request.
+                return await saved.Match(
+                    async _ => (await cookbooks.DescribeAsync(shelf.Cookbook.Id, cancellationToken).ConfigureAwait(false))
+                        .Map(one => one.ToDetail()),
+                    error => Task.FromResult(Result<CookbookDetail>.Failure(error))).ConfigureAwait(false);
             },
             error => Task.FromResult(Result<CookbookDetail>.Failure(error))).ConfigureAwait(false);
+    }
+
+    /// <summary>A cover is a recipe on this shelf that has a photograph; anything else would draw nothing.</summary>
+    private async Task<bool> IsCoverAsync(Guid cookbookId, Guid recipeId, CancellationToken cancellationToken)
+    {
+        var onShelf = await cookbooks.RecipeIdsAsync(cookbookId, cancellationToken).ConfigureAwait(false);
+
+        if (!onShelf.Contains(recipeId))
+        {
+            return false;
+        }
+
+        var pictured = await recipes.ImageHashesAsync([recipeId], cancellationToken).ConfigureAwait(false);
+
+        return pictured.ContainsKey(recipeId);
     }
 }
 

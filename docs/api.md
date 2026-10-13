@@ -421,7 +421,7 @@ whole library has, with no second implementation of any of them.
 | `GET` | `/cookbooks?householdId=…` | Wrapped, cursor-paginated, most recently changed first. Each carries `recipeCount` and up to four `coverRecipeIds` for the cover mosaic. |
 | `POST` | `/cookbooks` | `201` + `Location`. Only `householdId` and `name` are required. |
 | `GET` | `/cookbooks/{cookbookId}` | `200` + ETag, `304` on `If-None-Match`. The shelf's own metadata — **not** the recipes on it. |
-| `PATCH` | `/cookbooks/{cookbookId}` | Name and description together. `If-Match` required. |
+| `PATCH` | `/cookbooks/{cookbookId}` | The edit form whole: name, description, rules and `coverRecipeId` (a photographed recipe on it, or null for the first photos). `If-Match` required. |
 | `DELETE` | `/cookbooks/{cookbookId}` | `204`, and `204` again when already gone. **Every recipe that was on it survives.** Into the household's bin for 30 days. |
 | `POST` | `/cookbooks/{cookbookId}/restorations` | Any member of its household, until it is purged; back with the recipes it held. `204`. |
 | `PUT` | `/cookbooks/{cookbookId}/recipes/{recipeId}` | Put a recipe on. `204`. `409` on a cookbook that fills itself. |

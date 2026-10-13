@@ -178,7 +178,8 @@ internal sealed class ExportArchiveQueryHandler(
                         : null,
                     Rules = cookbook.Kind == CookbookKind.Smart
                         ? new ArchivedRules(cookbook.Rules.Tags, cookbook.Rules.Ingredients, cookbook.Rules.MaxMinutes)
-                        : null
+                        : null,
+                    Cover = cookbook.CoverRecipeId is { } cover && positions.TryGetValue(cover, out var at) ? at : null
                 };
 
                 writer.WriteRawValue(

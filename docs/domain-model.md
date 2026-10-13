@@ -299,8 +299,12 @@ whole order at once (`PUT /cookbooks/{id}/recipes`, every recipe on the shelf
 once, `If-Match` required), so a list that no longer covers the shelf is refused
 rather than guessed at. `AddedAt` keeps meaning "when it went on", which the
 suggestion ranker reads. The cover is the first photographed recipes in that
-order, so arranging a shelf is also how its cover is chosen until an explicit
-one exists.
+order, unless somebody chose one (`CoverRecipeId`, migration 0044): then that
+recipe's photograph is the whole cover. A chosen cover draws only while the
+recipe is on the shelf and has a photograph; otherwise the derived cover is
+back on its own, so taking the recipe off, deleting its photo or a smart
+cookbook's rules no longer matching it needs no cleanup. Choosing one that is
+not a photographed recipe on the shelf is `cookbooks.invalid_cover`.
 
 `CookbookRecipe.RecipeId` cascades, as `MealPlanEntry.RecipeId` does: a deleted
 recipe drops off every shelf it was on — hidden while it is in the bin, and gone
