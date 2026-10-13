@@ -4,6 +4,8 @@ import { http, request, type AppError } from '$api';
 export interface ShelfLine {
   readonly id: string;
   readonly title: string;
+  /** Its picture, which a cover can be chosen from. */
+  readonly imageId: string | null;
 }
 
 /** The server's page size cap: a shelf is read whole, a hundred at a time. */
@@ -30,7 +32,13 @@ export async function readShelfOrder(
       return { ok: false, error: result.error };
     }
 
-    lines.push(...result.value.items.map((item) => ({ id: item.recipeId, title: item.title })));
+    lines.push(
+      ...result.value.items.map((item) => ({
+        id: item.recipeId,
+        title: item.title,
+        imageId: item.imageId ?? null
+      }))
+    );
     cursor = result.value.nextCursor ?? undefined;
   } while (cursor);
 

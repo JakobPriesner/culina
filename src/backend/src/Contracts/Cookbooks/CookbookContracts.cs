@@ -41,6 +41,9 @@ public sealed record CookbookSummary
     /// <summary>The same pictures, with each recipe's current image id so a replaced picture gets a new address.</summary>
     public required IReadOnlyList<CookbookCoverPicture> CoverPictures { get; init; }
 
+    /// <summary>The recipe chosen for the cover, or null when the cover is the first photos on the shelf.</summary>
+    public Guid? CoverRecipeId { get; init; }
+
     /// <summary>When it, or what is on it, last changed.</summary>
     public required DateTimeOffset UpdatedAt { get; init; }
 }
@@ -99,6 +102,9 @@ public sealed record CookbookDetail
     /// <summary>The same pictures, with which picture each recipe has now.</summary>
     public required IReadOnlyList<CookbookCoverPicture> CoverPictures { get; init; }
 
+    /// <summary>The recipe chosen for the cover, or null when the cover is the first photos on the shelf.</summary>
+    public Guid? CoverRecipeId { get; init; }
+
     /// <summary>Whose idea it was.</summary>
     public required Guid CreatedBy { get; init; }
 
@@ -139,6 +145,12 @@ public sealed record UpdateCookbookRequest
 
     /// <summary>What it should now ask for. Required for a smart cookbook, refused for a manual one.</summary>
     public CookbookRulesContract? Rules { get; init; }
+
+    /// <summary>
+    /// The recipe whose photo should be the whole cover: one on this cookbook that has a photo. Null, or left out,
+    /// for the first photos on the shelf, since this is the whole form like the name.
+    /// </summary>
+    public Guid? CoverRecipeId { get; init; }
 }
 
 /// <summary>Which recipes are on a cookbook, by id. Not paged: it answers "is it already on?" for a whole picker.</summary>

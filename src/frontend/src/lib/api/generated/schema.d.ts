@@ -2508,6 +2508,11 @@ export interface components {
             coverPictures: components["schemas"]["CookbooksCookbookCoverPicture"][];
             /**
              * Format: uuid
+             * @description The recipe chosen for the cover, or null when the cover is the first photos on the shelf.
+             */
+            coverRecipeId?: string | null;
+            /**
+             * Format: uuid
              * @description Whose idea it was.
              */
             createdBy: string;
@@ -2568,6 +2573,11 @@ export interface components {
             /** @description The same pictures, with each recipe's current image id so a replaced picture gets a new address. */
             coverPictures: components["schemas"]["CookbooksCookbookCoverPicture"][];
             /**
+             * Format: uuid
+             * @description The recipe chosen for the cover, or null when the cover is the first photos on the shelf.
+             */
+            coverRecipeId?: string | null;
+            /**
              * Format: date-time
              * @description When it, or what is on it, last changed.
              */
@@ -2625,6 +2635,12 @@ export interface components {
             /** @description The new description, or null to clear it. */
             description?: string | null;
             rules?: (null) | components["schemas"]["CookbooksCookbookRulesContract"];
+            /**
+             * Format: uuid
+             * @description The recipe whose photo should be the whole cover: one on this cookbook that has a photo. Null, or left out,
+             *     for the first photos on the shelf, since this is the whole form like the name.
+             */
+            coverRecipeId?: string | null;
         };
         /** @description The role to give a member. */
         HouseholdsChangeMemberRoleRequest: {

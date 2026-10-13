@@ -1840,5 +1840,9 @@
   "cookbooks.arrange.failed": "Die Rezepte dieses Kochbuchs konnten nicht geladen werden.",
   "cookbooks.arrange.retry": "Erneut versuchen",
   "cookbooks.arrange.changed": "Jemand hat das Kochbuch inzwischen geändert. So sieht es jetzt aus; ordne es noch einmal.",
-  "cookbooks.arrange.saved": "Die neue Reihenfolge ist gespeichert."
+  "cookbooks.arrange.saved": "Die neue Reihenfolge ist gespeichert.",
+  "problem.cookbooks.invalid_cover": "Das Titelbild muss ein Rezept aus diesem Kochbuch mit Foto sein.",
+  "cookbooks.cover.label": "Titelbild",
+  "cookbooks.cover.hint": "Ein Foto für das ganze Titelbild oder die ersten Fotos im Regal.",
+  "cookbooks.cover.automatic": "Erste Fotos"
 }

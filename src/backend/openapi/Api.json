@@ -9867,6 +9867,12 @@
             },
             "description": "The same pictures, with which picture each recipe has now."
           },
+          "coverRecipeId": {
+            "type": "string",
+            "description": "The recipe chosen for the cover, or null when the cover is the first photos on the shelf.",
+            "format": "uuid",
+            "nullable": true
+          },
           "createdBy": {
             "type": "string",
             "description": "Whose idea it was.",
@@ -9995,6 +10001,12 @@
               "$ref": "#/components/schemas/CookbooksCookbookCoverPicture"
             },
             "description": "The same pictures, with each recipe's current image id so a replaced picture gets a new address."
+          },
+          "coverRecipeId": {
+            "type": "string",
+            "description": "The recipe chosen for the cover, or null when the cover is the first photos on the shelf.",
+            "format": "uuid",
+            "nullable": true
           },
           "updatedAt": {
             "type": "string",
@@ -10147,6 +10159,12 @@
                 "$ref": "#/components/schemas/CookbooksCookbookRulesContract"
               }
             ]
+          },
+          "coverRecipeId": {
+            "type": "string",
+            "description": "The recipe whose photo should be the whole cover: one on this cookbook that has a photo. Null, or left out,\nfor the first photos on the shelf, since this is the whole form like the name.",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "description": "Renames a cookbook, and rewrites what it is for. Both fields together: they are one form."

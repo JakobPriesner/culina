@@ -1840,5 +1840,9 @@
   "cookbooks.arrange.failed": "The recipes on this cookbook couldn't be loaded.",
   "cookbooks.arrange.retry": "Try again",
   "cookbooks.arrange.changed": "Somebody changed this cookbook meanwhile. This is its order now; arrange it again.",
-  "cookbooks.arrange.saved": "The new order is saved."
+  "cookbooks.arrange.saved": "The new order is saved.",
+  "problem.cookbooks.invalid_cover": "The cover has to be a recipe on this cookbook that has a photo.",
+  "cookbooks.cover.label": "Cover",
+  "cookbooks.cover.hint": "One photo for the whole cover, or the first photos on the shelf.",
+  "cookbooks.cover.automatic": "First photos"
 }

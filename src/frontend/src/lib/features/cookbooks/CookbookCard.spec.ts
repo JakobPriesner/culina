@@ -13,6 +13,7 @@ const cookbook = (over: Partial<Cookbook> = {}): Cookbook => ({
   rules: null,
   recipeCount: 3,
   cover: [],
+  coverRecipeId: null,
   updatedAt: '2026-09-14T00:00:00Z',
   ...over
 });

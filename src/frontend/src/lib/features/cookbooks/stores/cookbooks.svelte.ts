@@ -85,9 +85,10 @@ class CookbookStore {
     cookbookId: string,
     name: string,
     description: string | null,
-    rules?: CookbookRules | null
+    rules?: CookbookRules | null,
+    coverRecipeId?: string | null
   ): Promise<boolean> {
-    return this.#shelves.rename(cookbookId, name, description, rules);
+    return this.#shelves.rename(cookbookId, name, description, rules, coverRecipeId);
   }
 
   arrange(cookbookId: string, recipeIds: readonly string[]): Promise<AppError | null> {

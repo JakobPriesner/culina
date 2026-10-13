@@ -183,11 +183,13 @@ export class Shelves {
     return created;
   }
 
+  /** The whole edit form: name, description, rules and cover; a cover left out keeps the one chosen now. */
   async rename(
     cookbookId: string,
     name: string,
     description: string | null,
-    rules?: CookbookRules | null
+    rules?: CookbookRules | null,
+    coverRecipeId?: string | null
   ): Promise<boolean> {
     const current = this.#open;
 
@@ -195,10 +197,17 @@ export class Shelves {
       return false;
     }
 
+    const cover = coverRecipeId === undefined ? current.coverRecipeId : coverRecipeId;
+
     const result = await request(() =>
       http.PATCH('/api/v1/cookbooks/{cookbookId}', {
         params: { path: { cookbookId } },
-        body: { name, description: description ?? undefined, rules: toWireRules(rules) },
+        body: {
+          name,
+          description: description ?? undefined,
+          rules: toWireRules(rules),
+          coverRecipeId: cover ?? undefined
+        },
         headers: { 'If-Match': `"v${current.version}"` }
       })
     );
@@ -214,7 +223,13 @@ export class Shelves {
     this.#open = renamed;
     this.#items = this.#items.map((shelf) =>
       shelf.id === cookbookId
-        ? { ...shelf, name: renamed.name, description: renamed.description }
+        ? {
+            ...shelf,
+            name: renamed.name,
+            description: renamed.description,
+            cover: renamed.cover,
+            coverRecipeId: renamed.coverRecipeId
+          }
         : shelf
     );
     this.#error = null;
