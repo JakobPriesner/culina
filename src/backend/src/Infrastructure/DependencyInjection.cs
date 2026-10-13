@@ -61,6 +61,7 @@ public static class DependencyInjection
             .AddAssistance()
             .AddScoped<IRecipeIntakeJobs, RecipeIntakeJobs>()
             .AddSingleton<PushTransport>()
+            .AddSingleton<RelayTransport>()
             .AddScoped<IIntakeNotifications, IntakeNotifications>()
             .AddHostedService<RecipeIntakeWorker>()
             .AddImageStorage()

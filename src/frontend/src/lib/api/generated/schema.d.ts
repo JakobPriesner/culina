@@ -2222,6 +2222,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/push/relay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether the installed apps can be notified
+         * @description True when an administrator named a push relay (Push:RelayUrl). An app asks for notification permission only when it is.
+         */
+        get: operations["getPushRelayV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/push/devices/{deviceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Register an installed app's device for import notifications
+         * @description The app picks the device id and sends the relay token it got from the push relay; the same device signing in again, as anyone, replaces its row. Ten per person (409 Push.TooManyDevices). 409 push.relay_off when this server names no relay.
+         */
+        put: operations["registerPushDeviceV1"];
+        post?: never;
+        /**
+         * Forget an installed app's device
+         * @description On sign-out. 204, also when it was never registered.
+         */
+        delete: operations["removePushDeviceV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/suggestions": {
         parameters: {
             query?: never;
@@ -4427,6 +4471,13 @@ export interface components {
             /** @description An ordinary failure code, without provider secrets. */
             errorCode?: string | null;
         };
+        /** @description An installed app's device, by the relay token the push relay gave it (docs/native-app-design.md, 7.1). */
+        RecipesIntakePushDeviceRegistration: {
+            /** @description The relay's stand-in for the phone's store token; holding it is the permission to push to the phone. */
+            relayToken: string;
+            /** @description `en` or `de`, the language notifications are written in. */
+            language?: string | null;
+        };
         /** @description The public application key for registering Web Push. */
         RecipesIntakePushKey: {
             publicKey: string;
@@ -4441,6 +4492,11 @@ export interface components {
             auth: string;
             /** @description The notification language. */
             language?: string;
+        };
+        /** @description Whether this server can reach the installed apps, so an app asks for notification permission only when it can. */
+        RecipesIntakePushRelay: {
+            /** @description True when an administrator named a push relay. */
+            available: boolean;
         };
         /** @description A recipe in full. */
         RecipesRecipeDetail: {
@@ -5322,6 +5378,14 @@ export interface components {
             /** @description Proxy networks, as CIDR ranges. */
             knownNetworks: string[];
         };
+        /** @description The push relay the installed apps are reached through (docs/native-app-design.md, 7.3). */
+        SettingsGetServerPushContract: {
+            /**
+             * @description The relay's https:// address, or null for none. Naming one sends the words of each notification (never a recipe,
+             *     a name or this server's address) to that service.
+             */
+            relayUrl?: string | null;
+        };
         /** @description The ceilings on what one client may ask for. */
         SettingsGetServerRateLimitsContract: {
             /**
@@ -5381,6 +5445,7 @@ export interface components {
             forwardedHeaders: components["schemas"]["SettingsGetServerForwardedHeadersContract"];
             rateLimits: components["schemas"]["SettingsGetServerRateLimitsContract"];
             telemetry: components["schemas"]["SettingsGetServerTelemetryContract"];
+            push: components["schemas"]["SettingsGetServerPushContract"];
             connection: components["schemas"]["SettingsGetServerConnectionContract"];
             /**
              * @description The settings the deployment fixes, by environment variable (`Cookies__Secure`); saving
@@ -5621,6 +5686,14 @@ export interface components {
             /** @description Proxy networks, as CIDR ranges. */
             knownNetworks: string[];
         };
+        /** @description The push relay the installed apps are reached through (docs/native-app-design.md, 7.3). */
+        SettingsUpdateServerPushContract: {
+            /**
+             * @description The relay's https:// address, or null for none. Naming one sends the words of each notification (never a recipe,
+             *     a name or this server's address) to that service.
+             */
+            relayUrl?: string | null;
+        };
         /** @description The ceilings on what one client may ask for. */
         SettingsUpdateServerRateLimitsContract: {
             /**
@@ -5683,6 +5756,7 @@ export interface components {
             forwardedHeaders: components["schemas"]["SettingsUpdateServerForwardedHeadersContract"];
             rateLimits: components["schemas"]["SettingsUpdateServerRateLimitsContract"];
             telemetry: components["schemas"]["SettingsUpdateServerTelemetryContract"];
+            push: components["schemas"]["SettingsUpdateServerPushContract"];
         };
         /** @description Where traces, metrics and logs go. */
         SettingsUpdateServerTelemetryContract: {
@@ -12963,6 +13037,81 @@ export interface operations {
             };
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getPushRelayV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesIntakePushRelay"];
+                };
+            };
+        };
+    };
+    registerPushDeviceV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deviceId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipesIntakePushDeviceRegistration"];
+            };
+        };
+        responses: {
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    removePushDeviceV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deviceId: string;
+            };
             cookie?: never;
         };
         requestBody?: never;

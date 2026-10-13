@@ -59,6 +59,12 @@ internal static class ServerSettingsFile
         [TelemetrySettings.ProtocolKey] = telemetry.Protocol
     };
 
+    /// <summary>The relay's one key; none is written as empty, so it overrides one set further down.</summary>
+    internal static Dictionary<string, string> ToConfigurationValues(this PushSettings push) => new()
+    {
+        [Key(PushSettings.SectionName, nameof(PushSettings.RelayUrl))] = push.RelayUrl?.OriginalString ?? string.Empty
+    };
+
     /// <summary>The database group, by key, password included.</summary>
     internal static Dictionary<string, string> ToConfigurationValues(this DatabaseSettings database) => new()
     {

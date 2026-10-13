@@ -306,6 +306,12 @@ app.
 | `Site__SecurityContact` | unset | Where a vulnerability report about this instance should go — a `mailto:`, `https://` or `tel:` address you actually read. Set, `/.well-known/security.txt` (RFC 9116) names it; unset, that path is a `404`, because a contact nobody reads is worse than none. |
 | `Site__Url` | unset | This instance's public address, such as `https://culina.example.com`. Gives security.txt its `Canonical:` line. |
 
+## App notifications
+
+| Variable | Default | |
+| --- | --- | --- |
+| `Push__RelayUrl` | unset | In the app (Server, "App notifications"). The push relay the iOS and Android apps are notified through, run by whoever publishes them (`deploy/relay/README.md`). `https://` only. Naming one sends each notification's words, never a recipe, a name or this server's address, to that service; unset, the apps get no notifications and say so. Browsers use Web Push and need none of this. |
+
 ## Telemetry
 
 | Variable | Default | |

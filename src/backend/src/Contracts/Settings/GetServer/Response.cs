@@ -17,6 +17,9 @@ public sealed record Response
     /// <summary>Where traces, metrics and logs go.</summary>
     public required TelemetryContract Telemetry { get; init; }
 
+    /// <summary>The push relay for the installed apps; with none, the apps get no notifications.</summary>
+    public required PushContract Push { get; init; }
+
     /// <summary>How the request that asked for this reached the server.</summary>
     public required ConnectionContract Connection { get; init; }
 
@@ -116,4 +119,14 @@ public sealed record ConnectionContract
 
     /// <summary>Whether Culina believed it, because the proxy is trusted.</summary>
     public required bool ProxyTrusted { get; init; }
+}
+
+/// <summary>The push relay the installed apps are reached through (docs/native-app-design.md, 7.3).</summary>
+public sealed record PushContract
+{
+    /// <summary>
+    /// The relay's https:// address, or null for none. Naming one sends the words of each notification (never a recipe,
+    /// a name or this server's address) to that service.
+    /// </summary>
+    public string? RelayUrl { get; init; }
 }

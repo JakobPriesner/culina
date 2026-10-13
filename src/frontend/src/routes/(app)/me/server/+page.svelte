@@ -12,6 +12,7 @@
   import SaveStatus from '$features/server/SaveStatus.svelte';
   import SecureCookiesField from '$features/server/SecureCookiesField.svelte';
   import SessionFields from '$features/server/SessionFields.svelte';
+  import PushRelayFields from '$features/server/PushRelayFields.svelte';
   import TelemetryFields from '$features/server/TelemetryFields.svelte';
   import { server, type SaveOutcome } from '$features/server/stores/server.svelte';
   import {
@@ -151,6 +152,12 @@
   <SettingsSection title={m['server.telemetry']()} description={m['server.telemetry.hint']()}>
     <div class="fields">
       <TelemetryFields bind:draft={serverDraft} {facts} disabled={readonly || busy} />
+    </div>
+  </SettingsSection>
+
+  <SettingsSection title={m['server.push']()} description={m['server.push.hint']()}>
+    <div class="fields">
+      <PushRelayFields bind:draft={serverDraft} {facts} disabled={readonly || busy} />
     </div>
   </SettingsSection>
 

@@ -7,7 +7,7 @@ using Draft = Contracts.Recipes.Drafts.Response;
 
 namespace Infrastructure.Persistence.Import;
 
-internal sealed class RecipeIntakeJobs(DbExecutor db, IntakeChanges changes) : IRecipeIntakeJobs
+internal sealed class RecipeIntakeJobs(DbExecutor db, IntakeChanges changes, Application.Abstractions.Settings.PushSettings push) : IRecipeIntakeJobs
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     private const string Columns = "id, household_id, stage, created_at, recipe_id, draft::text, material::text as material, (select count(*) from recipe_intake_photos p where p.job_id=recipe_intake_jobs.id)::int as photo_count, error_code";
@@ -129,6 +129,16 @@ internal sealed class RecipeIntakeJobs(DbExecutor db, IntakeChanges changes) : I
             select j.id,s.endpoint from recipe_intake_jobs j join web_push_subscriptions s on s.user_id=j.user_id
             where j.id=@Id and j.stage='ready' on conflict do nothing
             """, new { Id = id }, token).ConfigureAwait(false);
+
+        // Only while a relay is named: rows queued with none would all go out the day one is, about old imports.
+        if (push.RelayOn)
+        {
+            await db.ExecuteAsync("""
+                insert into recipe_intake_device_notifications(job_id,device_id)
+                select j.id,d.device_id from recipe_intake_jobs j join native_push_devices d on d.user_id=j.user_id
+                where j.id=@Id and j.stage='ready' on conflict do nothing
+                """, new { Id = id }, token).ConfigureAwait(false);
+        }
     }
 
     public Task FailAsync(Guid id, string errorCode, CancellationToken token) => ChangeAsync(

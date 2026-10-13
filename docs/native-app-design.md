@@ -1152,8 +1152,16 @@ the SHA-256 of each relay token beside its platform and store token; APNs and FC
 are called directly (an ES256 provider token from the `.p8` key, an RS256
 service-account grant), with no SDK. A store's "unregistered" becomes `410` and
 the device is forgotten; a store that cannot take it now becomes `502`, which the
-server's outbox retries. Tracked still: `culina-v2-tj23.15` (server devices and
-outbox), `culina-v2-tj23.16` (app registration).
+server's outbox retries.
+
+Built on the server (`culina-v2-tj23.15`): `Push:RelayUrl` with the other server
+settings, `GET /api/v1/push/relay` (whether one is named), `PUT`/`DELETE
+/api/v1/push/devices/{deviceId}` (`409 push.relay_off` with none named),
+migration 0046 (`native_push_devices` and its outbox,
+`recipe_intake_device_notifications`, filled only while a relay is named, so old
+imports never announce themselves the day one is), and `RelayTransport` in the
+intake worker's delivery loop beside Web Push. Tracked still:
+`culina-v2-tj23.16` (app registration).
 
 ---
 

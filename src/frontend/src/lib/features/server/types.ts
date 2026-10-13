@@ -45,6 +45,8 @@ export interface ServerDraft {
   limits: Record<RateLimit, string>;
   otlpEndpoint: string;
   otlpProtocol: OtlpProtocol;
+  /** The push relay for the installed apps; empty for none. */
+  pushRelayUrl: string;
 }
 
 /** What the server says about itself beside the values: what is fixed, and how this request arrived. */
@@ -88,7 +90,8 @@ export const variables = {
   knownProxies: 'ForwardedHeaders__KnownProxies',
   knownNetworks: 'ForwardedHeaders__KnownNetworks',
   otlpEndpoint: 'OTEL_EXPORTER_OTLP_ENDPOINT',
-  otlpProtocol: 'OTEL_EXPORTER_OTLP_PROTOCOL'
+  otlpProtocol: 'OTEL_EXPORTER_OTLP_PROTOCOL',
+  pushRelayUrl: 'Push__RelayUrl'
 } as const;
 
 /** `loginPerIpPerMinute` → `RateLimits__LoginPerIpPerMinute`. */
@@ -122,7 +125,8 @@ export function toServerDraft(wire: ServerWire): ServerDraft {
       rateLimits.map((limit) => [limit, String(wire.rateLimits[limit])])
     ) as Record<RateLimit, string>,
     otlpEndpoint: wire.telemetry.otlpEndpoint ?? '',
-    otlpProtocol: wire.telemetry.otlpProtocol === 'http_protobuf' ? 'http_protobuf' : 'grpc'
+    otlpProtocol: wire.telemetry.otlpProtocol === 'http_protobuf' ? 'http_protobuf' : 'grpc',
+    pushRelayUrl: wire.push.relayUrl ?? ''
   };
 }
 
@@ -168,6 +172,9 @@ export function toServerRequest(draft: ServerDraft): ServerRequest {
     telemetry: {
       otlpEndpoint: draft.otlpEndpoint.trim() || null,
       otlpProtocol: draft.otlpProtocol
+    },
+    push: {
+      relayUrl: draft.pushRelayUrl.trim() || null
     }
   };
 }

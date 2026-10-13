@@ -9,7 +9,12 @@ using Lib.Net.Http.WebPush;
 
 namespace Infrastructure.Import;
 
-internal sealed class IntakeNotifications(DbExecutor db, ISecretProtector secrets, PushTransport transport) : IIntakeNotifications
+internal sealed class IntakeNotifications(
+    DbExecutor db,
+    ISecretProtector secrets,
+    PushTransport transport,
+    RelayTransport relay,
+    Application.Abstractions.Settings.PushSettings push) : IIntakeNotifications
 {
     public async Task<string> PublicKeyAsync(CancellationToken token) => (await IdentityAsync(token).ConfigureAwait(false)).PublicKey;
 
@@ -38,8 +43,39 @@ internal sealed class IntakeNotifications(DbExecutor db, ISecretProtector secret
     public Task RemoveAsync(Guid userId, string endpoint, CancellationToken token) => db.ExecuteAsync(
         "delete from web_push_subscriptions where endpoint=@Endpoint and user_id=@UserId", new { Endpoint = endpoint, UserId = userId }, token);
 
+    public async Task<Result> RegisterDeviceAsync(Guid userId, Guid deviceId, string relayToken, string? language, CancellationToken token)
+    {
+        if (!push.RelayOn)
+        {
+            return new Error("push.relay_off", "This server sends no notifications to the apps.", ErrorType.Conflict);
+        }
+
+        if (string.IsNullOrWhiteSpace(relayToken) || relayToken.Length > 200)
+        {
+            return new Error("push.invalid_device", "That device registration is not valid.", ErrorType.Validation);
+        }
+
+        var count = await db.ExecuteScalarAsync<int>("select count(*) from native_push_devices where user_id=@UserId and device_id<>@DeviceId", new { UserId = userId, DeviceId = deviceId }, token).ConfigureAwait(false);
+        if (count >= 10)
+        {
+            return new Error("Push.TooManyDevices", "Ten devices are already registered.", ErrorType.Conflict);
+        }
+
+        // The same phone signing in as somebody else takes the row over: its notifications follow who is signed in.
+        await db.ExecuteAsync("""
+            insert into native_push_devices(device_id,user_id,relay_token,language) values(@DeviceId,@UserId,@RelayToken,@Language)
+            on conflict(device_id) do update set user_id=excluded.user_id,relay_token=excluded.relay_token,language=excluded.language
+            """, new { DeviceId = deviceId, UserId = userId, RelayToken = relayToken, Language = language == "de" ? "de" : "en" }, token).ConfigureAwait(false);
+        return Result.Success();
+    }
+
+    public Task RemoveDeviceAsync(Guid userId, Guid deviceId, CancellationToken token) => db.ExecuteAsync(
+        "delete from native_push_devices where device_id=@DeviceId and user_id=@UserId", new { DeviceId = deviceId, UserId = userId }, token);
+
     public async Task DeliverAsync(CancellationToken token)
     {
+        await DeliverToDevicesAsync(token).ConfigureAwait(false);
+
         var deliveries = await db.QueryAsync<Delivery>("""
             select n.job_id,s.endpoint,s.p256dh,s.auth,s.language,j.recipe_id
             from recipe_intake_notifications n join web_push_subscriptions s on s.endpoint=n.endpoint
@@ -63,11 +99,11 @@ internal sealed class IntakeNotifications(DbExecutor db, ISecretProtector secret
                 continue;
             }
 
-            var german = delivery.Language == "de";
+            var (title, body) = Words(delivery.Language);
             var payload = JsonSerializer.Serialize(new
             {
-                title = german ? "Dein Rezept ist bereit" : "Your recipe is ready",
-                body = german ? "Olli hat es gespeichert. Schau es dir in Ruhe an." : "Olli has saved it. It is ready for your review.",
+                title,
+                body,
                 url = $"/recipes/imports/{delivery.JobId}",
                 tag = $"recipe-intake-{delivery.JobId}"
             });
@@ -86,6 +122,56 @@ internal sealed class IntakeNotifications(DbExecutor db, ISecretProtector secret
             }
         }
     }
+
+    // The installed apps, through the relay: the same claim, retry and give-up rules as Web Push below.
+    private async Task DeliverToDevicesAsync(CancellationToken token)
+    {
+        if (push.RelayUrl is not { } relayUrl)
+        {
+            return;
+        }
+
+        var deliveries = await db.QueryAsync<DeviceDelivery>("""
+            select n.job_id,d.device_id,d.relay_token,d.language
+            from recipe_intake_device_notifications n join native_push_devices d on d.device_id=n.device_id
+            join recipe_intake_jobs j on j.id=n.job_id join recipes r on r.id=j.recipe_id
+            where n.delivered_at is null and n.retry_at<=now() and n.attempts<12 and j.stage='ready' and d.user_id=j.user_id
+            order by n.retry_at limit 10
+            """, null, token).ConfigureAwait(false);
+
+        foreach (var delivery in deliveries)
+        {
+            var claimed = await db.ExecuteAsync("update recipe_intake_device_notifications set attempts=attempts+1,retry_at=now()+interval '1 minute' where job_id=@JobId and device_id=@DeviceId and retry_at<=now() and delivered_at is null", delivery, token).ConfigureAwait(false);
+            if (claimed == 0)
+            {
+                continue;
+            }
+
+            var (title, body) = Words(delivery.Language);
+            var outcome = await relay.SendAsync(
+                relayUrl,
+                new RelayNotification(delivery.RelayToken, title, body, $"/recipes/imports/{delivery.JobId}", $"recipe-intake-{delivery.JobId}"),
+                token).ConfigureAwait(false);
+
+            switch (outcome)
+            {
+                case RelayOutcome.Delivered:
+                    await db.ExecuteAsync("update recipe_intake_device_notifications set delivered_at=now() where job_id=@JobId and device_id=@DeviceId", delivery, token).ConfigureAwait(false);
+                    break;
+                case RelayOutcome.Gone:
+                    // The phone revoked its token or the store dropped it; its pending rows go with it.
+                    await db.ExecuteAsync("delete from native_push_devices where device_id=@DeviceId", delivery, token).ConfigureAwait(false);
+                    break;
+                default:
+                    await db.ExecuteAsync("update recipe_intake_device_notifications set retry_at=now()+ least(power(2,attempts),60) * interval '1 minute' where job_id=@JobId and device_id=@DeviceId", delivery, token).ConfigureAwait(false);
+                    break;
+            }
+        }
+    }
+
+    private static (string Title, string Body) Words(string language) => language == "de"
+        ? ("Dein Rezept ist bereit", "Olli hat es gespeichert. Schau es dir in Ruhe an.")
+        : ("Your recipe is ready", "Olli has saved it. It is ready for your review.");
 
     private async Task<Identity> IdentityAsync(CancellationToken token)
     {
@@ -121,4 +207,5 @@ internal sealed class IntakeNotifications(DbExecutor db, ISecretProtector secret
     }
     private sealed record Identity(string PublicKey, string PrivateKey);
     private sealed record Delivery(Guid JobId, string Endpoint, string P256dh, string Auth, string Language, Guid RecipeId);
+    private sealed record DeviceDelivery(Guid JobId, Guid DeviceId, string RelayToken, string Language);
 }

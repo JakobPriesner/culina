@@ -25,5 +25,6 @@ public static class BootstrapSettingsExtensions
             .AddForwardedHeadersSettings(configuration)
             .AddImportSettings(configuration)
             .AddSiteSettings(configuration)
-            .AddTelemetrySettings(configuration);
+            .AddTelemetrySettings(configuration)
+            .AddPushSettings(configuration);
 }
