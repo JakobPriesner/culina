@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Domain.Cookbooks;
 using Domain.Shared;
+using Infrastructure.Persistence.Recipes;
 
 namespace Infrastructure.Persistence.Cookbooks;
 
@@ -53,18 +54,27 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
 
     // Shared by the count and the cover so they cannot disagree. A smart shelf applies the same conditions
     // as recipe search, only over the household's own and inherited recipes, so a recipe that stops being
-    // inherited drops off and returns with the inheritance.
+    // inherited drops off and returns with the inheritance. Two branches, of which the shelf's kind runs one:
+    // a chosen shelf reads its own rows rather than the whole library, and a smart one counts ingredient
+    // matches once, set-based, rather than asking every recipe (5.5 s for a page of cookbooks at 10,000 recipes).
     private static readonly string OnTheShelf = $"""
         select r.id, r.image_id, cr.sort_order
+        from cookbook_recipes cr
+        join recipes r on r.id = cr.recipe_id
+        where c.kind = 'manual'
+          and cr.cookbook_id = c.id
+          and r.household_id = any(array(select household_library(c.household_id)))
+        union all
+        select r.id, r.image_id, null::int
         from recipes r
-        left join cookbook_recipes cr
-               on cr.cookbook_id = c.id and cr.recipe_id = r.id
-        where r.household_id = any(array(select household_library(c.household_id)))
-          and (
-            case when c.kind = 'manual' then cr.recipe_id is not null
-            else
-                {SmartShelfSql.Matches("c.rule_tags", "c.rule_ingredients", "c.rule_max_minutes")}
-            end)
+        left join ({IngredientSql.Holders("c.rule_ingredients", "array(select household_library(c.household_id))")}) held
+               on held.recipe_id = r.id
+        left join ({SmartShelfSql.Carriers("c.rule_tags")}) tagged
+               on tagged.recipe_id = r.id
+        where c.kind = 'smart'
+          and r.household_id = any(array(select household_library(c.household_id)))
+          and {SmartShelfSql.Matches(
+              "c.rule_tags", "c.rule_ingredients", "c.rule_max_minutes", "coalesce(held.matched, 0)", "coalesce(tagged.matched, 0)")}
         """;
 
     private const string ShelfColumns = """
