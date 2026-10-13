@@ -219,6 +219,28 @@ describe('conditional requests', () => {
     expect(second).toEqual({ ok: true, value: { id: 'u1' } });
   });
 
+  it('serves a 304 from what was sent, even when a write dropped it meanwhile', async () => {
+    respondWith(json({ id: 'u1' }, { headers: { ETag: '"v3"' } }), () => {
+      forgetEverything();
+
+      return new Response(null, { status: 304 });
+    });
+
+    await request(() => http.GET(me));
+    const second = await request(() => http.GET(me));
+
+    expect(second).toEqual({ ok: true, value: { id: 'u1' } });
+  });
+
+  it('asks again for the whole thing when a 304 has nothing to replay', async () => {
+    respondWith(new Response(null, { status: 304 }), json({ id: 'u1' }));
+
+    const result = await request(() => http.GET(me, { headers: { 'If-None-Match': '"v3"' } }));
+
+    expect(sent[1]?.headers.get('If-None-Match')).toBeNull();
+    expect(result).toEqual({ ok: true, value: { id: 'u1' } });
+  });
+
   it('sends If-Match on a write, so a stale edit is refused rather than applied', async () => {
     respondWith(json({ mode: 'dark' }, { headers: { ETag: '"v3"' } }), json({ version: 4 }));
 

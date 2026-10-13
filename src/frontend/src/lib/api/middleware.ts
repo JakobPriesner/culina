@@ -1,7 +1,7 @@
 import type { Middleware } from 'openapi-fetch';
 
 import { csrfToken } from './cookies';
-import { cached, invalidate, remember } from './etagCache';
+import { cached, invalidate, remember, type CachedResponse } from './etagCache';
 import { ErrorCodes } from './problem';
 import { sessionExpired } from './session';
 
@@ -31,12 +31,15 @@ export const csrf: Middleware = {
   }
 };
 
+/** The cached response each conditional read was sent with, by request id, until it is answered. */
+const validated = new Map<string, CachedResponse>();
+
 /**
  * Turns a re-read into a 304 and a write into a safe one: `If-None-Match` on reads, `If-Match` on
  * writes (412 on a lost race); a caller's own `If-Match` is left alone.
  */
 export const conditionalRequests: Middleware = {
-  onRequest({ request }) {
+  onRequest({ id, request }) {
     const entry = cached(request.url);
 
     if (!entry) {
@@ -45,6 +48,7 @@ export const conditionalRequests: Middleware = {
 
     if (request.method === 'GET') {
       request.headers.set('If-None-Match', entry.etag);
+      validated.set(id, entry);
     } else if (isUnsafe(request) && !request.headers.has('If-Match')) {
       request.headers.set('If-Match', entry.etag);
     }
@@ -52,12 +56,15 @@ export const conditionalRequests: Middleware = {
     return request;
   },
 
-  async onResponse({ request, response }) {
-    if (response.status === 304) {
-      const entry = cached(request.url);
+  async onResponse({ id, request, response, options }) {
+    const sent = validated.get(id);
 
-      // A 304 without our cached body is unusable: ask again for the whole thing.
-      return entry ? replay(entry.body) : undefined;
+    validated.delete(id);
+
+    if (response.status === 304) {
+      // What was sent is replayed even if a write or a sign-out dropped it meanwhile; without it
+      // there is nothing to replay, so ask again for the whole thing.
+      return sent ? replay(sent.body) : options.fetch(withoutValidator(request));
     }
 
     if (!response.ok) {
@@ -75,6 +82,12 @@ export const conditionalRequests: Middleware = {
     if (request.method === 'GET' && etag) {
       remember(request.url, etag, await response.clone().text());
     }
+
+    return undefined;
+  },
+
+  onError({ id }) {
+    validated.delete(id);
 
     return undefined;
   }
@@ -110,3 +123,11 @@ const replay = (body: string) =>
     status: 200,
     headers: { 'Content-Type': 'application/json' }
   });
+
+function withoutValidator(request: Request): Request {
+  const fresh = new Request(request);
+
+  fresh.headers.delete('If-None-Match');
+
+  return fresh;
+}
