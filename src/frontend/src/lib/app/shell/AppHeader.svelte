@@ -73,7 +73,7 @@
     grid-area: header;
     position: sticky;
     top: 0;
-    z-index: var(--z-sticky);
+    z-index: var(--z-shell);
     pointer-events: none;
   }
 

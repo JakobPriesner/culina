@@ -19,7 +19,7 @@
     grid-area: bar;
     position: sticky;
     bottom: 0;
-    z-index: var(--z-sticky);
+    z-index: var(--z-shell);
     border-top: 1px solid var(--border);
     background: var(--surface-raised);
     /* Clear of the home indicator. */
