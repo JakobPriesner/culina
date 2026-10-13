@@ -27,6 +27,11 @@ public interface IRecipeSourceRepository
     Task DeleteAsync(Guid sourceId, CancellationToken cancellationToken);
 }
 
+/// <summary>The recipe an earlier import made of something over there.</summary>
+/// <param name="RecipeId">The recipe here.</param>
+/// <param name="InBin">Deleted and not yet purged: it holds the origin but nobody sees it.</param>
+public sealed record ImportedCopy(Guid RecipeId, bool InBin);
+
 /// <summary>Stores where imported recipes came from.</summary>
 public interface IRecipeOriginRepository
 {
@@ -38,12 +43,13 @@ public interface IRecipeOriginRepository
 
     /// <summary>
     /// Which of these external ids have already been brought into this kitchen, as a map from the
-    /// id over there to the recipe here.
+    /// id over there to the copy here, whether it is in the library or in the bin.
     /// </summary>
     /// <remarks>
-    /// One query per page: a browse of fifty recipes should not be fifty queries.
+    /// One query per page: a browse of fifty recipes should not be fifty queries. A binned copy
+    /// still holds its origin (it can be restored), so it is reported rather than left out.
     /// </remarks>
-    Task<IReadOnlyDictionary<string, Guid>> AlreadyHereAsync(
+    Task<IReadOnlyDictionary<string, ImportedCopy>> AlreadyHereAsync(
         Guid householdId,
         SourceKind kind,
         IReadOnlyList<string> externalIds,

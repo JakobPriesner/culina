@@ -276,7 +276,12 @@ internal sealed class BrowseSourceQueryHandler(
                         cancellationToken)
                     .ConfigureAwait(false);
 
-                return Result<SourceRecipesResponse>.Success(read.ToResponse(here));
+                // A copy in the bin is not here: browsing offers it, and importing it restores it.
+                var inLibrary = here
+                    .Where(copy => !copy.Value.InBin)
+                    .ToDictionary(copy => copy.Key, copy => copy.Value.RecipeId, StringComparer.Ordinal);
+
+                return Result<SourceRecipesResponse>.Success(read.ToResponse(inLibrary));
             },
             error => Task.FromResult(Result<SourceRecipesResponse>.Failure(error))).ConfigureAwait(false);
     }
