@@ -8,6 +8,10 @@ namespace Application.Assistance;
 /// Writes a stored recipe as plain text for a model. Text, not JSON, so untrusted material does not
 /// resemble the trusted schema; ids are left out because the returned draft has none.
 /// </summary>
+/// <remarks>
+/// A step's link to an ingredient is written as the editor writes it, <c>@name</c>. The improve job
+/// is told to keep each one, so the editor can link it again when the tidied steps are saved.
+/// </remarks>
 internal static class RecipeAsText
 {
     /// <summary>Renders it the way a person would write it down.</summary>
@@ -92,7 +96,9 @@ internal static class RecipeAsText
         var words = string.Concat(step.Segments.Select(segment => segment switch
         {
             TextSegment text => text.Value,
-            IngredientSegment mention => named.GetValueOrDefault(mention.RecipeIngredientId, string.Empty),
+            IngredientSegment mention => named.GetValueOrDefault(mention.RecipeIngredientId) is { } name
+                ? $"@{name}"
+                : string.Empty,
             _ => string.Empty
         }));
 

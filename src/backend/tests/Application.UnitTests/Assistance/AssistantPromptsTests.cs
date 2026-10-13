@@ -100,6 +100,18 @@ public class AssistantPromptsTests
     }
 
     /// <summary>
+    /// Only the improve job reads steps with @ mentions, so only it is told to keep them; it is what
+    /// lets the editor link the tidied steps to their ingredients again.
+    /// </summary>
+    [Fact]
+    public void OnlyImprove_ShouldAskToKeepTheAtMentions()
+    {
+        Assert.Contains("Keep every such mention", AssistantPrompts.Improve(), StringComparison.Ordinal);
+        Assert.DoesNotContain("@", AssistantPrompts.Draft(Language.En), StringComparison.Ordinal);
+        Assert.DoesNotContain("@", AssistantPrompts.Read(Language.En), StringComparison.Ordinal);
+    }
+
+    /// <summary>
     /// Tidying must not pick a language: a German recipe is tidied in German whatever it is stored
     /// as.
     /// </summary>
