@@ -66,6 +66,7 @@ jobs:
           dotnet test tests/Domain.UnitTests --no-build
           dotnet test tests/Application.UnitTests --no-build
           dotnet test tests/ArchitectureTests --no-build
+          dotnet test tests/Relay.Tests --no-build
 
       # Testcontainers starts a real PostgreSQL. Slower and worth it: the SQL is
       # hand-written, and a fake would only prove the fake works.
