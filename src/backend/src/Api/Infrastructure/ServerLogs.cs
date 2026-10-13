@@ -38,7 +38,7 @@ internal static partial class ServerLogs
     [LoggerMessage(
         EventId = LogEvents.ServerBase + 2,
         Level = LogLevel.Information,
-        Message = "Culina {Version} starting in {Environment}: database {DatabaseHost}:{DatabasePort}/{DatabaseName}, images in {ImagePath}, telemetry export to {TelemetryExport}")]
+        Message = "Culina {Version} starting in {Environment}: database {DatabaseHost}:{DatabasePort}/{DatabaseName}, images in {Images}, telemetry export to {TelemetryExport}")]
     internal static partial void Starting(
         this ILogger logger,
         string version,
@@ -46,7 +46,7 @@ internal static partial class ServerLogs
         string databaseHost,
         int databasePort,
         string databaseName,
-        string imagePath,
+        string images,
         string telemetryExport);
 
     /// <summary>

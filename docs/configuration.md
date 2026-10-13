@@ -119,10 +119,36 @@ says `scram-sha-256` rather than `md5` or `password`.
 
 | Variable | Default | |
 | --- | --- | --- |
-| `Storage__ImagePath` | `/data/images` in the image | **Must be a volume.** Recipe photographs, re-encoded. Not in the database and not rebuildable: without a volume, every photo in the instance disappears on the next deploy and nothing says so. |
+| `Storage__ImagePath` | `/data/images` in the image | **Must be a volume**, unless photos go to a bucket (below). Recipe photographs, re-encoded. Not in the database and not rebuildable: without a volume, every photo in the instance disappears on the next deploy and nothing says so. |
 | `Storage__DataProtectionKeyPath` | `/data/keys` in the image | **Must be a volume.** The ASP.NET data-protection key ring, which encrypts the secrets stored in the database. |
 | `Storage__MaxImageBytes` | `10485760` | 10 MB. |
 | `Storage__ConfigPath` | `/data/config` in the image | **Should be a volume.** Where `culina.json` — everything saved from the setup and settings screens — lives. Not required to be writable: without it Culina still starts, and the settings screen shows the settings but says it cannot save them. |
+
+### Photos in an S3-compatible bucket
+
+Optional. With these set, recipe and cook photos are kept in the bucket instead
+of `Storage__ImagePath`, which then needs no volume; the database, the key ring
+and `culina.json` stay where they are. Any S3-compatible service works: AWS S3,
+MinIO, Hetzner Object Storage, Cloudflare R2, Wasabi.
+
+| Variable | Default | |
+| --- | --- | --- |
+| `Storage__S3__Endpoint` | — | The service's `http://` or `https://` address, such as `https://s3.eu-central-1.amazonaws.com` or `https://fsn1.your-objectstorage.com`. |
+| `Storage__S3__Bucket` | — | An existing bucket. Culina does not create it. Keep it private: photos are served through Culina, which checks who may see them. |
+| `Storage__S3__AccessKey` | — | |
+| `Storage__S3__SecretKey` | — | |
+| `Storage__S3__Region` | `us-east-1` | The region requests are signed for. Hetzner: the location, such as `fsn1`. |
+| `Storage__S3__ForcePathStyle` | `false` | `true` puts the bucket in the path instead of the host name. MinIO usually needs it. |
+
+Set Endpoint, Bucket, AccessKey and SecretKey together, or leave all six
+variables unset. If only some are set, Culina refuses to start and names the
+missing one. It does not quietly fall back to a directory nobody mounted.
+
+The keys in the bucket match the paths under `Storage__ImagePath`
+(`ab/cd/abcd…-800.webp`), so to move an existing instance, copy the directory
+into the bucket before switching:
+`aws s3 sync /data/images s3://culina-images/ --endpoint-url …` or
+`mc mirror /data/images host/culina-images`.
 
 A note on the key ring, because the usual warning is the wrong one: Culina's
 session cookie carries an opaque reference, not an encrypted payload, so losing
