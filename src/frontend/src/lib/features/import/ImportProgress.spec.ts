@@ -46,6 +46,21 @@ describe('an import as it runs', () => {
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuetext', '15 of 40');
   });
 
+  it('keeps the per-recipe counter out of a live region, and announces the finish once', () => {
+    const props = { ondone: () => {}, onlook: () => {}, onanyway: () => {} };
+    const { rerender } = renderWithProviders(ImportProgress, {
+      props: { ...props, run: run({ done: 15, finished: false }) }
+    });
+
+    // Eight hundred events would be eight hundred announcements; the progressbar already carries the number.
+    expect(screen.getByText('15 of 40').closest('[role="status"], [aria-live]')).toBeNull();
+    expect(screen.getByRole('status')).toHaveTextContent('Importing');
+
+    rerender({ ...props, run: run() });
+
+    expect(screen.getByRole('status')).toHaveTextContent('Import complete');
+  });
+
   it('offers the way out while it is still going', () => {
     renderWithProviders(ImportProgress, {
       props: {
