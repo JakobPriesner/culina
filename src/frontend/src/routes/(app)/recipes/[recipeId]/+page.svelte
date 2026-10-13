@@ -26,7 +26,6 @@
   import { yieldFrom } from '$features/recipes/surface/yieldInUrl';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
-  import NotFound from '$shell/NotFound.svelte';
   import Page from '$shell/Page.svelte';
 
   const recipeId = $derived(page.params.recipeId ?? '');
@@ -117,7 +116,10 @@
   <RecipeBackLink title={recipes.detail?.title} condensed={!titleInView} />
 
   {#if recipes.detailStatus === 'failed' && recipes.detailError?.status === 404}
-    <NotFound kind="recipe" level={1} />
+    <!-- Downloaded only for a missing recipe, not with every one: this is the heaviest cold load in the app. -->
+    {#await import('$shell/NotFound.svelte') then { default: NotFound }}
+      <NotFound kind="recipe" level={1} />
+    {/await}
   {:else if recipes.detailStatus === 'failed'}
     <ErrorState
       title={m['recipes.failed.title']()}

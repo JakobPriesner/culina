@@ -1,6 +1,5 @@
 <script lang="ts">
   import Self from './StepInline.svelte';
-  import IngredientQuickLook from './IngredientQuickLook.svelte';
   import type { Scaling } from './scaled.svelte';
   import type { Inline } from './stepMarkdown';
   import type { Ingredient } from '../types';
@@ -65,15 +64,15 @@
           <span class="name">{scaling.nameFor(node)}</span>{:else}<span class="name"
             >{node.name}</span
           >{/if}</button
-      >{#if activeQuickLook === index && buttonRefs[index]}<IngredientQuickLook
-          anchor={buttonRefs[index]}
-          name={scaling.nameFor(node)}
-          stepAmount={amount}
-          totalAmount={totalFor(node.ingredientId)}
-          note={noteFor(node.ingredientId)}
-          onclose={() => (activeQuickLook = null)}
-          onlocate={onlocate ? () => onlocate?.(node.ingredientId) : undefined}
-        />{/if}{:else}<strong class="ingredient-plain"
+      >{#if activeQuickLook === index && buttonRefs[index]}{#await import('./IngredientQuickLook.svelte') then { default: IngredientQuickLook }}<IngredientQuickLook
+            anchor={buttonRefs[index]}
+            name={scaling.nameFor(node)}
+            stepAmount={amount}
+            totalAmount={totalFor(node.ingredientId)}
+            note={noteFor(node.ingredientId)}
+            onclose={() => (activeQuickLook = null)}
+            onlocate={onlocate ? () => onlocate?.(node.ingredientId) : undefined}
+          />{/await}{/if}{:else}<strong class="ingredient-plain"
         >{#if amount}{amount} {scaling.nameFor(node)}{:else}{node.name}{/if}</strong
       >{/if}{:else if node.kind === 'code'}<code>{node.text}</code
     >{:else if node.kind === 'link'}{#if interactive}<a
