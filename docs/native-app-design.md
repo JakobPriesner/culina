@@ -1146,8 +1146,14 @@ server image. It is deployed and monitored separately, and the server treats
 it like any other optional outbound dependency: an outage only delays
 "import ready" notifications.
 
-Tracked: `culina-v2-tj23.14` (the relay), `culina-v2-tj23.15` (server devices
-and outbox), `culina-v2-tj23.16` (app registration).
+Built (`culina-v2-tj23.14`): `src/backend/src/Relay`, its own image
+(`deploy/relay/Dockerfile`, operations in `deploy/relay/README.md`). SQLite holds
+the SHA-256 of each relay token beside its platform and store token; APNs and FCM
+are called directly (an ES256 provider token from the `.p8` key, an RS256
+service-account grant), with no SDK. A store's "unregistered" becomes `410` and
+the device is forgotten; a store that cannot take it now becomes `502`, which the
+server's outbox retries. Tracked still: `culina-v2-tj23.15` (server devices and
+outbox), `culina-v2-tj23.16` (app registration).
 
 ---
 
