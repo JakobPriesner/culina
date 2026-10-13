@@ -116,6 +116,8 @@
   --press-scale-small: 0.94;
 
   --z-sticky: 10;
+  /* The app's own navigation: above anything a page makes sticky, so a page can never paint over it. */
+  --z-shell: 20;
   --z-overlay: 100;
   --z-toast: 200;
 }
