@@ -15,7 +15,10 @@ internal sealed record CalibrationResult(
     ReplayReport AfterReport,
     IReadOnlyList<string> Changes);
 
-/// <summary>Coordinate descent over the weights against replay recall@5; see <c>docs/suggestions-research.md</c> §M.3.</summary>
+/// <summary>
+/// Coordinate descent over the weights against replay recall@5, held to a ceiling on how often a shortlist repeats itself;
+/// see <c>docs/suggestions-research.md</c> §M.3.
+/// </summary>
 /// <remarks>
 /// It proposes, never applies: weights are code, changed in a commit that carries the before-and-after numbers.
 /// A step is kept only if every rule in <see cref="RankingRules"/> still holds, so a vector cannot win on recall by breaking an ordering promise.
@@ -33,6 +36,18 @@ internal sealed class WeightCalibration(
     private const int SamplePoints = 150;
 
     private const int Rounds = 2;
+
+    /// <summary>
+    /// The share of shown recipes that may already have been shown within the week before variety starts to cost recall.
+    /// Below it recall alone decides; above it every point of repetition takes a point of recall away, so a vector
+    /// that predicts dinner by showing the same five recipes all week does not win.
+    /// </summary>
+    /// <remarks>
+    /// A choice, not a measurement: the first readings come from a simulated kitchen. Revisit it against a real cook log.
+    /// It is compared with repetition on the thinned sample, which reads lower than the full report (0.52 against 0.78 at the
+    /// shipped weights, because the first days of every kept week have no list a week back to repeat).
+    /// </remarks>
+    internal const double RepetitionCeiling = 0.5;
 
     // Where each weight is tried, as multiples of its starting value.
     private static readonly decimal[] Grid = [0m, 0.5m, 0.75m, 1m, 1.25m, 1.5m, 2m, 3m];
@@ -58,14 +73,21 @@ internal sealed class WeightCalibration(
         Func<RankingWeights, decimal> Get,
         Func<RankingWeights, decimal, RankingWeights> With);
 
-    private sealed record Candidate(RankingWeights Weights, double RecallAt5);
+    private sealed record Candidate(RankingWeights Weights, ReplayScore Score)
+    {
+        internal double Objective => ObjectiveOf(Score);
+    }
+
+    /// <summary>What a descent step must raise: recall@5, less whatever repetition exceeds <see cref="RepetitionCeiling"/>.</summary>
+    internal static double ObjectiveOf(ReplayScore score) =>
+        score.RecallAt5 - Math.Max(0, score.Quality.RepetitionRate - RepetitionCeiling);
 
     internal async Task<CalibrationResult> RunAsync(RankingWeights start, CancellationToken cancellationToken)
     {
         var sample = Sample();
-        var best = new Candidate(start, await RecallAt5Async(start, sample, cancellationToken));
+        var best = new Candidate(start, await ScoreAsync(start, sample, cancellationToken));
 
-        log(Line($"start: recall@5 {best.RecallAt5:0.000} over {sample.Sum(household => household.Points.Count)} points"));
+        log(Line($"start: {Describe(best)} over {sample.Sum(household => household.Points.Count)} points"));
 
         for (var round = 1; round <= Rounds; round++)
         {
@@ -85,7 +107,7 @@ internal sealed class WeightCalibration(
                 .Select(coordinate => Line($"{coordinate.Name}: {coordinate.Get(start):0.00} -> {coordinate.Get(best.Weights):0.00}"))]);
     }
 
-    // Tries one weight across the grid and keeps the best value that beats the current recall and keeps every rule.
+    // Tries one weight across the grid and keeps the best value that beats the current objective and keeps every rule.
     // Scored first, guarded second: the rules are slow, so only would-be-kept candidates are asked.
     private async Task<Candidate> SweepAsync(
         Coordinate coordinate,
@@ -105,34 +127,36 @@ internal sealed class WeightCalibration(
                 continue;
             }
 
-            var recall = await RecallAt5Async(weights, sample, cancellationToken);
+            var candidate = new Candidate(weights, await ScoreAsync(weights, sample, cancellationToken));
 
-            if (recall > best.RecallAt5)
+            if (candidate.Objective > best.Objective)
             {
-                better.Add(new Candidate(weights, recall));
+                better.Add(candidate);
             }
         }
 
-        foreach (var candidate in better.OrderByDescending(candidate => candidate.RecallAt5))
+        foreach (var candidate in better.OrderByDescending(candidate => candidate.Objective))
         {
             var broken = await brokenRules(candidate.Weights);
             var value = coordinate.Get(candidate.Weights);
 
             if (broken.Count == 0)
             {
-                log(Line($"{coordinate.Name} {value:0.00}: recall@5 {best.RecallAt5:0.000} -> {candidate.RecallAt5:0.000}, kept"));
+                log(Line($"{coordinate.Name} {value:0.00}: {Describe(best)} -> {Describe(candidate)}, kept"));
 
                 return candidate;
             }
 
-            log(Line($"{coordinate.Name} {value:0.00}: recall@5 {candidate.RecallAt5:0.000}, rejected — {string.Join("; ", broken)}"));
+            log(Line($"{coordinate.Name} {value:0.00}: {Describe(candidate)}, rejected — {string.Join("; ", broken)}"));
         }
 
         return best;
     }
 
-    // The frozen slice only, thinned to SamplePoints: no earlier ranking can have shaped it,
+    // The frozen slice only, thinned to about SamplePoints: no earlier ranking can have shaped it,
     // whereas later cooks would reward agreeing with the app.
+    // Thinned by whole weeks, not by every n-th evening: repetition looks a week back, and a list whose
+    // neighbours were skipped would look new every time.
     private List<HouseholdReplay> Sample()
     {
         var frozen = households
@@ -142,19 +166,25 @@ internal sealed class WeightCalibration(
             })
             .ToList();
 
-        var stride = Math.Max(1, frozen.Sum(household => household.Points.Count) / SamplePoints);
+        var every = Math.Max(1, frozen.Sum(household => household.Points.Count) / SamplePoints);
 
         return [.. frozen.Select(household => household with
         {
-            Points = [.. household.Points.Where((_, index) => index % stride == 0)]
+            Points = [.. household.Points.Where(point => WeekOf(point, household.Points) % every == 0)]
         })];
     }
 
-    private static async Task<double> RecallAt5Async(
+    private static int WeekOf(ReplayPoint point, IReadOnlyList<ReplayPoint> points) =>
+        (int)((point.MadeAt - points.Min(one => one.MadeAt)).TotalDays / 7);
+
+    private static async Task<ReplayScore> ScoreAsync(
         RankingWeights weights,
         IReadOnlyList<HouseholdReplay> replays,
         CancellationToken cancellationToken) =>
-        ReplayScore.Of(await OutcomesAsync(weights, replays, cancellationToken)).RecallAt5;
+        ReplayScore.Of(await OutcomesAsync(weights, replays, cancellationToken));
+
+    private static string Describe(Candidate candidate) =>
+        Line($"objective {candidate.Objective:0.000} (recall@5 {candidate.Score.RecallAt5:0.000}, repeats {candidate.Score.Quality.RepetitionRate:0.000})");
 
     private async Task<ReplayReport> ReportAsync(RankingWeights weights, CancellationToken cancellationToken) =>
         ReplayReport.Of(await OutcomesAsync(weights, households, cancellationToken));
