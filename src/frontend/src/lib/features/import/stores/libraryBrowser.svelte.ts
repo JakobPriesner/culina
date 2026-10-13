@@ -24,6 +24,9 @@ export class LibraryBrowser {
   #query = '';
   #generation = 0;
 
+  /** The page being read, so a second caller waits for it instead of returning before it lands. */
+  #pending: Promise<void> | null = null;
+
   get open(): ConnectedSource | null {
     return this.#open;
   }
@@ -70,21 +73,18 @@ export class LibraryBrowser {
     await this.#read(source, null);
   }
 
-  async more(): Promise<void> {
-    if (!this.#open || this.#nextPage === null || this.#loadingMore || this.#moreFailed) {
-      return;
+  more(): Promise<void> {
+    if (this.#pending) {
+      return this.#pending;
     }
 
-    const generation = this.#generation;
-
-    this.#loadingMore = true;
-
-    await this.#read(this.#open, this.#nextPage);
-
-    // A superseded look no longer owns the flag.
-    if (generation === this.#generation) {
-      this.#loadingMore = false;
+    if (!this.#open || this.#nextPage === null || this.#moreFailed) {
+      return Promise.resolve();
     }
+
+    this.#pending = this.#readMore(this.#open, this.#nextPage);
+
+    return this.#pending;
   }
 
   /**
@@ -134,6 +134,21 @@ export class LibraryBrowser {
     this.#loadingMore = false;
     this.#loadingAll = false;
     this.#moreFailed = false;
+    this.#pending = null;
+  }
+
+  async #readMore(source: ConnectedSource, page: string): Promise<void> {
+    const generation = this.#generation;
+
+    this.#loadingMore = true;
+
+    await this.#read(source, page);
+
+    // A superseded look no longer owns the flag.
+    if (generation === this.#generation) {
+      this.#loadingMore = false;
+      this.#pending = null;
+    }
   }
 
   async #read(source: ConnectedSource, page: string | null): Promise<void> {
