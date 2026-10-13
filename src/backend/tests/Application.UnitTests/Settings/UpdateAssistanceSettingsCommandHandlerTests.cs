@@ -151,6 +151,19 @@ public class UpdateAssistanceSettingsCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ShouldRefuse_AJobTheAssistantCannotBeSetUpToDo()
+    {
+        var world = new World();
+
+        var result = await world.Handle(Command(
+            connections: [Hosted("openai", "sk-one")],
+            uses: [Use("wash-up", "openai")]));
+
+        // Its own code: "unknown provider" would send the admin to a provider that is fine.
+        result.ShouldBeFailure(AssistanceErrors.UnknownCapability);
+    }
+
+    [Fact]
     public async Task Handle_ShouldAcceptAJobPointedAtAProviderNobodyHasConnectedYet()
     {
         var world = new World();

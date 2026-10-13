@@ -29,6 +29,12 @@ public static class AssistanceErrors
         "That is not a model provider this knows how to talk to.",
         ErrorType.Validation);
 
+    /// <summary>A job named in the settings is not one the assistant can be set up to do.</summary>
+    public static readonly Error UnknownCapability = new(
+        "assistance.unknown_capability",
+        "That is not something the assistant can be set up to do.",
+        ErrorType.Validation);
+
     /// <summary>The month's budget is spent. Rate-limited because the answer is to wait.</summary>
     public static readonly Error BudgetExhausted = new(
         "assistance.budget_exhausted",

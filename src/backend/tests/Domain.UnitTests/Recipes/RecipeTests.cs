@@ -39,6 +39,24 @@ public class RecipeTests
     }
 
     [Fact]
+    public void Ingredient_ShouldBlameTheNote_WhenOnlyTheNoteIsTooLong()
+    {
+        var result = RecipeIngredient.Create(
+            null, 0, Quantity.Unmeasured, "Salz", new string('x', RecipeIngredient.MaxNoteLength + 1));
+
+        result.ShouldBeFailure(RecipeErrors.InvalidIngredientNote);
+    }
+
+    [Fact]
+    public void Group_ShouldBlameItsName_WhenTheNameIsTooLong()
+    {
+        var result = IngredientGroup.Create(
+            null, new string('x', IngredientGroup.MaxNameLength + 1), 0, [AnIngredient("flour")]);
+
+        result.ShouldBeFailure(RecipeErrors.InvalidGroupName);
+    }
+
+    [Fact]
     public void TotalMinutes_ShouldBeNull_WhenNeitherTimeIsGiven()
     {
         var recipe = ARecipe();

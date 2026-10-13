@@ -45,7 +45,7 @@ public sealed class IngredientGroup
 
         if (trimmed?.Length > MaxNameLength)
         {
-            return RecipeErrors.InvalidIngredientName;
+            return RecipeErrors.InvalidGroupName;
         }
 
         return new IngredientGroup(

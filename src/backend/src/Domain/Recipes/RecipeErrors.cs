@@ -71,6 +71,24 @@ public static class RecipeErrors
         "An ingredient needs a name of at most 120 characters.",
         ErrorType.Validation);
 
+    /// <summary>An ingredient's note is too long.</summary>
+    public static readonly Error InvalidIngredientNote = new(
+        "recipes.invalid_ingredient_note",
+        "A note on an ingredient may be at most 200 characters.",
+        ErrorType.Validation);
+
+    /// <summary>An ingredient group's name is too long.</summary>
+    public static readonly Error InvalidGroupName = new(
+        "recipes.invalid_group_name",
+        "A group of ingredients is named in at most 80 characters.",
+        ErrorType.Validation);
+
+    /// <summary>The recipe is said to be written in a language Culina does not know.</summary>
+    public static readonly Error InvalidLanguage = new(
+        "recipes.invalid_language",
+        "A recipe is written in 'en' or 'de'.",
+        ErrorType.Validation);
+
     /// <summary>A step's text is blank or too long.</summary>
     public static readonly Error InvalidStepText = new(
         "recipes.invalid_step_text",

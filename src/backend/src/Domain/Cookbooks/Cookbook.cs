@@ -172,7 +172,7 @@ public sealed class Cookbook
 
         if (Kind == CookbookKind.Manual && rules is { Empty: false })
         {
-            return CookbookErrors.RulesDecideMembership;
+            return CookbookErrors.RulesNotAllowed;
         }
 
         Name = name;
