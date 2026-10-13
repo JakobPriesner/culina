@@ -37,7 +37,8 @@
     {#if withDetail.has(outcome.error.code)}
       <p class="detail">{outcome.error.detail}</p>
     {/if}
-    {#each outcome.error.fields as cause (cause.detail)}
+    <!-- By position: two settings can earn the same sentence, and none of these is ever reordered. -->
+    {#each outcome.error.fields as cause, index (index)}
       <p class="detail">{cause.detail}</p>
     {/each}
   </div>
