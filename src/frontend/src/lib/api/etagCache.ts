@@ -1,5 +1,5 @@
 /** Last response per URL, for 304 re-reads and write versions. Memory only: private data must not outlive the session. */
-interface CachedResponse {
+export interface CachedResponse {
   readonly etag: string;
   readonly body: string;
   readonly path: string;
