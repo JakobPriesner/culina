@@ -46,7 +46,8 @@ internal sealed class GetRelatedRecipesEndpoint : IEndpoint
                 + "cursor-paginated, each with what it has in "
                 + "common with this one: what they both are, or what they are both made from. Worked "
                 + "out from the concepts the recipes are indexed under, and weighted by how rare each "
-                + "is in the household. Empty when nothing is alike enough to say so. Not cached: it "
+                + "is in the household. Empty when nothing is alike enough to say so, and past the closest "
+                + "three it ends where the rest are far less alike than the closest. Not cached: it "
                 + "changes with every other recipe in the household.")
             .WithRepeatableQueryParameters(["cursor", "limit"], [], ["limit"])
             .Produces<Response>()

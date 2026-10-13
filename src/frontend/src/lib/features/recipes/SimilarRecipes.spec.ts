@@ -72,6 +72,32 @@ describe('recipes like this one', () => {
     expect((fetched.mock.calls[0] as unknown as [Request])[0].url).toContain('/recipes/r1/related');
   });
 
+  it('stops at twelve, however many more the server would give', async () => {
+    const fetched = vi.fn(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({
+            items: Array.from({ length: 12 }, (_, at) =>
+              item(`r${at + 2}`, `Pasta ${at + 2}`, 'kinds', ['pasta'])
+            ),
+            nextCursor: 'more'
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      )
+    );
+
+    vi.stubGlobal('fetch', fetched);
+
+    renderWithProviders(SimilarRecipes, { props: { recipeId: 'r1' } });
+    await settle();
+
+    expect(screen.getAllByText('Also: pasta')).toHaveLength(12);
+    // No skeleton waiting at the end, so nothing asks for a next page.
+    expect(document.querySelectorAll('li[aria-hidden="true"]')).toHaveLength(0);
+    expect(fetched).toHaveBeenCalledTimes(1);
+  });
+
   it('shows nothing at all below three', async () => {
     serverAnswers([
       item('r2', 'Lasagne Bolognese', 'kinds', ['Bolognese']),

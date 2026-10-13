@@ -15,6 +15,16 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
     // Measured on the golden library; 0.1 gives every one of the sixty at least three results.
     internal const double Floor = 0.1d;
 
+    // Past the closest few, how close to the best match a recipe must also be. A big kitchen clears the
+    // floor with dozens of recipes that share one ingredient; a shelf of those is a list, not a suggestion.
+    // On the golden library 0.3 ends Bolognese after Gemüselasagne rather than at Tiramisu; 0.5 cost the
+    // curry its Tikka Masala.
+    internal const double ShareOfBest = 0.3d;
+
+    // How many clear the floor alone: the shelf shows three or nothing, and a small kitchen's best
+    // three can be far apart.
+    internal const int Closest = 3;
+
     public async Task<RelatedPage> FindAsync(
         Guid recipeId,
         IReadOnlyList<Guid> library,
@@ -53,6 +63,8 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
                 stuff,
                 limit = limit + 1,
                 floor = Floor,
+                share = ShareOfBest,
+                closest = Closest,
                 score = resume?.Score ?? 0m,
                 updatedAt = resume?.UpdatedAt ?? DateTimeOffset.MinValue,
                 cursorId = resume?.Id ?? Guid.Empty
@@ -121,7 +133,13 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
         ranked as (
             select s.*,
                    round((0.6 * s.kind_score + 0.4 * s.stuff_score)::numeric, 6) as score
-            from scored s)
+            from scored s
+            where 0.6 * s.kind_score + 0.4 * s.stuff_score >= @floor),
+        placed as (
+            select s.*,
+                   row_number() over (order by s.score desc, s.recipe_id desc) as place,
+                   max(s.score) over () as best
+            from ranked s)
         select r.id as recipe_id, r.household_id, r.title, r.image_id,
                {{RecipeSql.TotalMinutes()}} as total_minutes,
                r.yield_amount, r.yield_kind, r.yield_label, r.updated_at,
@@ -133,7 +151,7 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
                mine.last_cooked_at,
                d.ingredient_count,
                s.kinds, s.stuff, s.kind_score, s.stuff_score, s.score
-        from ranked s
+        from placed s
         join recipes r on r.id = s.recipe_id
         join recipe_search_documents d on d.recipe_id = s.recipe_id
         left join lateral (
@@ -141,7 +159,7 @@ internal sealed class RelatedRecipes(DbExecutor executor) : IRelatedRecipes
             from cook_log_entries c
             where c.recipe_id = r.id and c.user_id = @userId
         ) mine on true
-        where 0.6 * s.kind_score + 0.4 * s.stuff_score >= @floor
+        where (s.place <= @closest or s.score >= s.best * @share)
           {resume}
         order by s.score desc, r.updated_at desc, r.id desc
         limit @limit;
