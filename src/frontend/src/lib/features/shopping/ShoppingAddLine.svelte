@@ -1,46 +1,62 @@
 <script lang="ts">
   import { Button } from '$ds';
-  import IngredientFields, {
+  import {
     emptyDraft,
     fromLine,
-    toIngredient,
-    type IngredientDraft
+    toIngredient
   } from '$features/recipes/editor/IngredientFields.svelte';
+  import ComboField from '$features/recipes/editor/ComboField.svelte';
+  import { ingredients as known } from '$features/recipes/stores/ingredients.svelte';
   import { unitFor } from '$features/recipes/quantityLabels';
   import { units } from '$features/recipes/stores/units.svelte';
   import { m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
+  import { nameOf, type Section } from './sections';
   import { shopping } from './stores/shopping.svelte';
 
   interface Props {
     householdId: string | null;
+    onaddrecipe: () => void;
   }
+  let { householdId, onaddrecipe }: Props = $props();
+  let typed = $state('');
+  let focused = $state(false);
+  let asked = $state('');
+  const draft = $derived(fromLine({ ...emptyDraft, name: typed }, units.own));
+  const wanted = $derived(draft.name.trim());
+  const answered = $derived(Boolean(wanted) && asked === wanted && known.answered === wanted);
+  // Keep a written quantity when a suggested ingredient name is selected.
+  const options = $derived(
+    answered
+      ? known.items
+          .filter((item) => item.name.toLowerCase() !== wanted.toLowerCase())
+          .map((item) => ({
+            value: [draft.amount, draft.unit, item.name].filter(Boolean).join(' '),
+            label: item.name,
+            detail: item.own ? undefined : nameOf(item.section as Section)
+          }))
+      : []
+  );
 
-  let { householdId }: Props = $props();
+  $effect(() => {
+    if (!focused || !householdId || !wanted) return;
+    const id = householdId;
+    const query = wanted;
+    const language = preferences.locale;
+    const timer = setTimeout(() => {
+      asked = query;
+      void known.suggest(id, query, language);
+    }, 180);
+    return () => clearTimeout(timer);
+  });
 
-  let typed = $state<IngredientDraft>(emptyDraft);
-
-  /** Adds one line using the recipe editor's ingredient fields, so household units and known names are offered too. */
   async function add() {
-    // "500 g Hackfleisch" in the name field is read into its parts, the same way the recipe editor reads it.
-    const draft = fromLine(typed, units.own);
     const line = toIngredient(draft, '');
-
-    // The name is the item; an amount alone is dropped.
-    if (!line.name || !householdId) {
-      return;
-    }
-
-    // Remembered on submit, not per keystroke, so partial typing ("S", "Sc") doesn't become a unit.
+    if (!line.name || !householdId) return;
     const unit = unitFor(draft.unit);
-
-    if (unit) {
-      units.remember(unit);
-    }
-
-    typed = emptyDraft;
-    document.getElementById('shopping-add-amount')?.focus();
-
+    if (unit) units.remember(unit);
+    typed = '';
+    document.getElementById('shopping-add-name')?.focus();
     await shopping.add(
       householdId,
       line.name,
@@ -51,56 +67,65 @@
 </script>
 
 <div class="adding">
-  <!-- Enter adds the line and refocuses the amount, so a list can be typed without the mouse. -->
-  <div class="add">
-    <IngredientFields
-      id="shopping-add"
-      label={m['shopping.addFields']()}
-      nameLabel={m['shopping.itemName']()}
-      note={false}
+  <div class="add" role="group" aria-label={m['shopping.addFields']()}>
+    <ComboField
+      id="shopping-add-name"
+      label={m['shopping.itemName']()}
+      showLabel={false}
+      placeholder={m['shopping.quickAdd.placeholder']()}
+      listLabel={m['editor.ingredientListLabel']()}
       value={typed}
-      onchange={(draft) => (typed = draft)}
+      {options}
+      oninput={(value) => (typed = value)}
       onsubmit={add}
-      householdId={householdId ?? ''}
-      language={preferences.locale}
+      bind:focused
     />
-
-    <Button variant="primary" onclick={add} disabled={!typed.name.trim()}>
-      {m['shopping.add']()}
+    <Button
+      label={m['shopping.add']()}
+      onclick={add}
+      disabled={!typed.trim() || !householdId}
+      variant="primary"
+      size="sm"
+    >
+      <span class="plus" aria-hidden="true">+</span>
     </Button>
   </div>
-
-  <p class="hint">{m['shopping.addHint']()}</p>
+  <Button variant="ghost" size="sm" onclick={onaddrecipe}>
+    {#snippet icon()}
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M12 5C9 3 5 3 3 4v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-2-1-6-1-9 1v15" />
+      </svg>
+    {/snippet}
+    {m['shopping.addRecipe']()}
+  </Button>
 </div>
 
 <style>
+  .plus {
+    display: block;
+    width: var(--space-6);
+    font-size: var(--text-lg);
+    line-height: 1;
+  }
   .adding {
-    container: shopping-entry / inline-size;
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
-    padding: var(--space-4);
-    border-radius: var(--radius-lg);
-    background: var(--surface-sunken);
-    margin-bottom: var(--space-8);
+    align-items: flex-start;
+    gap: var(--space-2);
+    margin-bottom: var(--space-6);
   }
-
   .add {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: end;
-    gap: var(--space-3);
-  }
-
-  .hint {
-    color: var(--text-muted);
-    font-size: var(--text-xs);
-  }
-
-  /* Fields already stack on a phone; the button goes underneath. */
-  @container shopping-entry (width < 40rem) {
-    .add {
-      grid-template-columns: 1fr;
-    }
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
   }
 </style>

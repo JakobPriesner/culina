@@ -46,15 +46,14 @@
 
 <style>
   .section {
-    margin-bottom: var(--space-8);
+    margin-bottom: var(--space-6);
   }
 
   .heading-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-    margin-bottom: var(--space-3);
+    gap: var(--space-2);
+    margin-bottom: var(--space-1);
     padding-block: var(--space-2);
   }
 
@@ -71,10 +70,8 @@
     grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--space-3);
-    min-height: var(--control-sm);
-    margin-inline: calc(var(--space-3) * -1);
-    padding-inline: var(--space-3);
-    border-radius: var(--radius-md);
+    min-height: var(--control-lg);
+    border-bottom: 1px solid var(--border);
   }
 
   .check {

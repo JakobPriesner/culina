@@ -19,14 +19,7 @@
   let { label, count, apart = false, items, action, oncheck, onremove, onmove }: Props = $props();
 </script>
 
-<section class="section" class:bought={apart}>
-  <!-- Sticky so the aisle label stays visible while its lines scroll. -->
-  <h2 class="heading-row sticky">
-    <span class="label">{label}</span>
-    {#if count !== undefined}<span class="count">{count}</span>{/if}
-    {@render action?.()}
-  </h2>
-
+{#snippet rows()}
   <ul class="list">
     {#each items as item (item.itemId)}
       <ShoppingItemRow
@@ -37,52 +30,91 @@
       />
     {/each}
   </ul>
-</section>
+{/snippet}
+
+{#if apart}
+  <details class="section bought">
+    <summary class="heading-row">
+      <svg
+        class="chevron"
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        ><path d="m9 6 6 6-6 6" stroke-linecap="round" stroke-linejoin="round" /></svg
+      >
+      <span class="label">{label}</span>
+      {#if count !== undefined}<span class="count">{count}</span>{/if}
+    </summary>
+    {@render rows()}
+    {#if action}<div class="completion-actions">{@render action()}</div>{/if}
+  </details>
+{:else}
+  <section class="section">
+    <h2 class="heading-row sticky">
+      <span class="label">{label}</span>
+      {#if count !== undefined}<span class="count">{count}</span>{/if}
+      {@render action?.()}
+    </h2>
+    {@render rows()}
+  </section>
+{/if}
 
 <style>
   .section {
-    margin-bottom: var(--space-8);
+    margin-bottom: var(--space-6);
   }
-
   .heading-row {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-    margin-bottom: var(--space-3);
+    gap: var(--space-2);
+    margin-bottom: var(--space-1);
   }
-
-  /* Opaque, since rows pass underneath; bled to the gutter so they vanish at the screen edge. */
   .sticky {
     position: sticky;
-    top: var(--space-24);
-    /* Above the rows, below the app header; sharing the header's layer put an aisle name over the navigation. */
+    top: var(--header-inset);
     z-index: 1;
-    margin-inline: calc(var(--layout-gutter) * -1);
-    padding: var(--space-2) var(--layout-gutter);
+    padding-block: var(--space-2);
     background: var(--surface);
   }
-
   .label {
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
     font-weight: var(--weight-semibold);
-    color: var(--text-muted);
+    color: var(--accent);
   }
-
   .count {
-    color: var(--text-subtle);
+    color: var(--text-muted);
     font-size: var(--text-xs);
     font-variant-numeric: tabular-nums;
   }
-
-  /* Set apart rather than dimmed: section opacity would also lower its button's contrast. */
   .bought {
-    margin-top: var(--space-12);
-    padding-top: var(--space-6);
-    border-top: 1px solid var(--border);
+    margin-top: var(--space-6);
   }
-
+  .bought .label {
+    color: var(--text-muted);
+  }
+  summary {
+    min-height: var(--control-sm);
+    cursor: pointer;
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  .chevron {
+    width: var(--space-4);
+    height: var(--space-4);
+    color: var(--text-muted);
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+  details[open] .chevron {
+    transform: rotate(90deg);
+  }
+  .completion-actions {
+    margin-top: var(--space-3);
+  }
   .list {
     margin: 0;
     padding: 0;

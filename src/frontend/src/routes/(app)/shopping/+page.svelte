@@ -70,7 +70,7 @@
 <svelte:head><title>{m['shopping.title']()}</title></svelte:head>
 
 <Page width="reading">
-  <ShoppingHeader {remaining} onaddrecipe={() => (picking = true)} />
+  <ShoppingHeader {remaining} done={shopping.bought.length} total={shopping.items.length} />
 
   <!-- A glanceable bar for how much of the shop is done; the sentence above gives what is left. -->
   {#if started}
@@ -87,7 +87,7 @@
     </div>
   {/if}
 
-  <ShoppingAddLine {householdId} />
+  <ShoppingAddLine {householdId} onaddrecipe={() => (picking = true)} />
 
   {#if shopping.status === 'failed'}
     <ErrorState
@@ -129,7 +129,8 @@
     {#if shopping.bought.length > 0}
       <ShoppingSection
         apart
-        label={m['shopping.bought']({ count: shopping.bought.length })}
+        label={m['shopping.completed']()}
+        count={shopping.bought.length}
         items={shopping.bought}
         oncheck={check}
         onremove={remove}
@@ -152,6 +153,6 @@
 
 <style>
   .progress {
-    margin-block: var(--space-6) var(--space-4);
+    margin-block: var(--space-2) var(--space-6);
   }
 </style>
