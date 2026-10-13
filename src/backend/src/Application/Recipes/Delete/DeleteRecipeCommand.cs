@@ -35,8 +35,25 @@ internal sealed class DeleteRecipeCommandHandler(
                 token => recipes.DeleteAsync(
                     recipe.Id, command.ExpectedVersion, command.UserId, time.GetUtcNow(), token),
                 cancellationToken),
-            error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
+            error => AlreadyGoneAsync(command, error, cancellationToken)).ConfigureAwait(false);
 
         return tracked.Record(result);
+    }
+
+    /// <summary>
+    /// Deleting something already gone is the outcome the caller wanted, so a second DELETE
+    /// succeeds. A recipe the caller can still read, only not change, is not gone: it stays
+    /// not-found, as it is for every other change.
+    /// </summary>
+    private async Task<Result> AlreadyGoneAsync(
+        DeleteRecipeCommand command,
+        Error error,
+        CancellationToken cancellationToken)
+    {
+        var visible = await RecipeAccess
+            .VisibleHouseholdAsync(recipes, households, command.RecipeId, command.UserId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return visible.Match(_ => Result.Failure(error), _ => Result.Success());
     }
 }
