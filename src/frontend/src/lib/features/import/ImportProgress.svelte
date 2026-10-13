@@ -1,6 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { Button, Checkbox, ProgressBar } from '$ds';
+  import { Button, Checkbox, ProgressBar, SectionLabel } from '$ds';
 
   import type { AppError } from '$api';
   import { explain } from '$shell/explain';
@@ -65,14 +65,14 @@
   {#if run.finished}
     <dl class="tally">
       <div class="item">
-        <dt>{m['import.run.imported']()}</dt>
+        <SectionLabel as="dt" tone="muted">{m['import.run.imported']()}</SectionLabel>
         <dd>{run.imported}</dd>
       </div>
 
       {#if run.skipped > 0}
         <div class="item">
           <!-- Not a failure: re-running an import is how you catch up on what is new. -->
-          <dt>{m['import.run.skipped']()}</dt>
+          <SectionLabel as="dt" tone="muted">{m['import.run.skipped']()}</SectionLabel>
           <dd>{run.skipped}</dd>
         </div>
       {/if}
@@ -80,14 +80,14 @@
       {#if run.held.length > 0}
         <div class="item">
           <!-- Not a failure: held back only so somebody can say whether they want two. -->
-          <dt>{m['import.run.held']()}</dt>
+          <SectionLabel as="dt" tone="muted">{m['import.run.held']()}</SectionLabel>
           <dd>{run.held.length}</dd>
         </div>
       {/if}
 
       {#if run.failures.length > 0}
         <div class="item">
-          <dt>{m['import.run.failed']()}</dt>
+          <SectionLabel as="dt" tone="muted">{m['import.run.failed']()}</SectionLabel>
           <dd>{run.failures.length}</dd>
         </div>
       {/if}
@@ -219,12 +219,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
-  }
-
-  dt {
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
   }
 
   dd {

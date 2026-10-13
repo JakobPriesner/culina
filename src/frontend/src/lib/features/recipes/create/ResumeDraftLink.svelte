@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Chevron } from '$ds';
+  import { Chevron, SectionLabel } from '$ds';
   import { resolve } from '$app/paths';
   import type { LastDraft } from '$features/recipes/editor/lastDraft';
   import { m } from '$shell/i18n';
@@ -17,7 +17,7 @@
      remember. -->
 <a class="resume" href={resolve('/(app)/recipes/[recipeId]/edit', { recipeId: draft.recipeId })}>
   <span class="resume-text">
-    <span class="resume-label">{m['editor.continueDraftLabel']()}</span>
+    <SectionLabel tone="muted" as="span">{m['editor.continueDraftLabel']()}</SectionLabel>
     <span class="resume-title">{draft.title}</span>
   </span>
 
@@ -52,12 +52,6 @@
     flex-direction: column;
     gap: var(--space-1);
     min-width: 0;
-  }
-
-  .resume-label {
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
   }
 
   .resume-title {

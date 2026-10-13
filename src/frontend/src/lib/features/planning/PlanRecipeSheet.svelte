@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import { Button, SegmentedControl, Sheet, Skeleton } from '$ds';
+  import { Button, SectionLabel, SegmentedControl, Sheet, Skeleton } from '$ds';
 
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
@@ -153,7 +153,7 @@
       </fieldset>
 
       <div class="slot">
-        <span class="caption">{m['plan.pick.slot']()}</span>
+        <SectionLabel tone="muted" as="span" spacing="tight">{m['plan.pick.slot']()}</SectionLabel>
         <SegmentedControl
           {segments}
           selected={slot}
@@ -187,12 +187,6 @@
   }
 
   legend,
-  .caption {
-    margin-bottom: var(--space-2);
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
-  }
 
   /* One row of days that scrolls sideways, like a calendar's week strip; the edges bleed so a cut-off day says "there is more". */
   .strip {
