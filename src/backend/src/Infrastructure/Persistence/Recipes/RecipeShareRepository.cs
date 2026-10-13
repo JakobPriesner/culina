@@ -50,20 +50,15 @@ internal sealed class RecipeShareRepository(DbExecutor executor) : IRecipeShareR
     {
         ArgumentNullException.ThrowIfNull(share);
 
-        // Insert and read in one statement, so concurrent shares get the identical link;
-        // `returning` alone returns nothing when the conflict fires.
+        // An update that changes nothing, not `do nothing`: `returning` then hands back the row that
+        // won, even when it was committed after this statement began. A select of it in the same
+        // statement could not see it, so a concurrent caller would get no link at all.
         var row = await executor.QuerySingleOrDefaultAsync<RecipeShareRow>(
             $"""
-             with inserted as (
-                 insert into recipe_shares (recipe_id, token, created_by, created_at)
-                 values (@recipeId, @token, @createdBy, @createdAt)
-                 on conflict (recipe_id) do nothing
-                 returning {Columns}
-             )
-             select {Columns} from inserted
-             union all
-             select {Columns} from recipe_shares where recipe_id = @recipeId
-             limit 1;
+             insert into recipe_shares (recipe_id, token, created_by, created_at)
+             values (@recipeId, @token, @createdBy, @createdAt)
+             on conflict (recipe_id) do update set token = recipe_shares.token
+             returning {Columns};
              """,
             new
             {
