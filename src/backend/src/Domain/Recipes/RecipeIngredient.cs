@@ -61,7 +61,7 @@ public sealed class RecipeIngredient
 
         if (trimmedNote?.Length > MaxNoteLength)
         {
-            return RecipeErrors.InvalidIngredientName;
+            return RecipeErrors.InvalidIngredientNote;
         }
 
         return new RecipeIngredient(

@@ -17,7 +17,7 @@ internal static class RecipeWords
     {
         "en" => Language.En,
         "de" => Language.De,
-        _ => new FieldError("language", RecipeErrors.InvalidTitle.Code, "Language must be 'en' or 'de'.")
+        _ => new FieldError("language", RecipeErrors.InvalidLanguage.Code, RecipeErrors.InvalidLanguage.Description)
     };
 
     internal static Result<YieldKind> ToYieldKind(string? value) => value switch

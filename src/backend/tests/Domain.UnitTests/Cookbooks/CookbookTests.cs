@@ -207,7 +207,7 @@ public class CookbookTests
 
         var revised = cookbook.Revise(NameOf("Egal"), null, RulesOf(["schnell"], [], null), Now);
 
-        revised.ShouldBeFailure(CookbookErrors.RulesDecideMembership);
+        revised.ShouldBeFailure(CookbookErrors.RulesNotAllowed);
         Assert.Equal(CookbookKind.Manual, cookbook.Kind);
     }
 

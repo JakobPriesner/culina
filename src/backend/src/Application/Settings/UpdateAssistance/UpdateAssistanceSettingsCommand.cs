@@ -135,7 +135,7 @@ internal sealed class UpdateAssistanceSettingsCommandHandler(
     {
         if (Capability.Parse(use.Capability) is not { } capability)
         {
-            return Field("capability", AssistanceErrors.UnknownProvider);
+            return Field("capability", AssistanceErrors.UnknownCapability);
         }
 
         if (use.Model.Length > AssistanceSettings.MaxModelLength)
