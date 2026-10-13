@@ -32,6 +32,10 @@ class SourceStore {
     return this.#connections.connectError;
   }
 
+  get disconnectError(): AppError | null {
+    return this.#connections.disconnectError;
+  }
+
   get open(): ConnectedSource | null {
     return this.#library.open;
   }

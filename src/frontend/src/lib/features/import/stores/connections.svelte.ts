@@ -30,6 +30,9 @@ export class Connections {
   #connecting = $state(false);
   #connectError = $state<AppError | null>(null);
 
+  /** Its own field: `error` is the list failing, which swaps the page for a retry. */
+  #disconnectError = $state<AppError | null>(null);
+
   get items(): readonly ConnectedSource[] {
     return this.#items;
   }
@@ -48,6 +51,10 @@ export class Connections {
 
   get connectError(): AppError | null {
     return this.#connectError;
+  }
+
+  get disconnectError(): AppError | null {
+    return this.#disconnectError;
   }
 
   async list(householdId: string): Promise<void> {
@@ -120,6 +127,8 @@ export class Connections {
   async disconnect(sourceId: string): Promise<void> {
     const before = this.#items;
 
+    this.#disconnectError = null;
+
     // Optimistic: the answer is 204 even for an already-gone source.
     this.#items = this.#items.filter((one) => one.sourceId !== sourceId);
 
@@ -129,7 +138,7 @@ export class Connections {
 
     if (!result.ok) {
       this.#items = before;
-      this.#error = result.error;
+      this.#disconnectError = result.error;
     }
   }
 
@@ -140,5 +149,6 @@ export class Connections {
     this.#error = null;
     this.#connecting = false;
     this.#connectError = null;
+    this.#disconnectError = null;
   }
 }

@@ -495,6 +495,48 @@ describe('importing', () => {
     });
   });
 
+  it('keeps the first run’s tally and failures when the held ones come over', async () => {
+    // A fresh answer per start: the follow-up asks too.
+    importServer();
+
+    await sources.import(source.sourceId, ['1', '2', '3']);
+    await settle();
+
+    const first = FakeStream.last!;
+
+    first.send({ recipe: imported('1'), done: 1, total: 3 });
+    first.send({
+      recipe: { externalId: '2', outcome: 'failed', title: 'Oma’s Kuchen', reason: 'x' },
+      done: 2,
+      total: 3
+    });
+    first.send({
+      recipe: {
+        externalId: '3',
+        outcome: 'looks_like',
+        recipeId: 'r-mine',
+        title: 'Spaghetti Bolognese',
+        looksLike: { title: 'Spaghetti Bolognese', sharedIngredients: 4, cookCount: 12 }
+      },
+      done: 3,
+      total: 3
+    });
+    first.send({ done: 3, total: 3, finished: true });
+    await vi.waitFor(() => expect(sources.run?.finished).toBe(true));
+
+    FakeStream.last = null;
+    await sources.importAnyway(['3']);
+    await settle();
+
+    FakeStream.last!.send({ recipe: imported('3'), done: 1, total: 1 });
+    FakeStream.last!.send({ done: 1, total: 1, finished: true });
+    await vi.waitFor(() => expect(sources.run?.finished).toBe(true));
+
+    expect(sources.run?.imported).toBe(2);
+    expect(sources.run?.failures).toEqual(['Oma’s Kuchen']);
+    expect(sources.run?.held).toEqual([]);
+  });
+
   it('ignores the ticks that only keep the connection open', async () => {
     importServer({ start: json(started(2)) });
 
