@@ -176,6 +176,22 @@ describe('createRecipeDraft', () => {
     editor.dispose();
   });
 
+  it('never says the work is kept here when this device could not keep it', async () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('QuotaExceededError');
+    });
+    vi.mocked(recipes.update).mockResolvedValue({ code: 'client.offline' } as never);
+
+    const editor = createRecipeDraft(() => 'recipe-1');
+
+    editor.takeLoaded();
+    editor.change({ title: 'Paella' });
+    await vi.advanceTimersByTimeAsync(1000);
+
+    expect(editor.saveState.tone).not.toBe('local');
+    editor.dispose();
+  });
+
   it('opens on what this device kept in place of the server copy', () => {
     localStorage.setItem(
       'culina.draft.user-1.recipe-1',

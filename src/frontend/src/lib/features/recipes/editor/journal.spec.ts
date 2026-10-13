@@ -73,7 +73,7 @@ describe('the editor journal', () => {
       throw new DOMException('QuotaExceededError');
     });
 
-    expect(() => remember('u1', 'r1', recipe)).not.toThrow();
+    expect(remember('u1', 'r1', recipe)).toBe(false);
 
     vi.restoreAllMocks();
   });
