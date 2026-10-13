@@ -149,7 +149,9 @@ internal sealed partial class SafeWebPageFetcher : IWebPageFetcher, IDisposable
                 {
                     return new WebPage(
                         url,
-                        System.Text.Encoding.UTF8.GetString(buffer.ToArray()));
+                        PageEncoding.Decode(
+                            buffer.ToArray(),
+                            response.Content.Headers.ContentType?.CharSet));
                 }
 
                 await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken)
