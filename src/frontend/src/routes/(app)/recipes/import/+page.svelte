@@ -66,6 +66,7 @@
         ondone={again}
         onlook={() => sources.reconnect()}
         onanyway={(externalIds) => void sources.importAnyway(externalIds)}
+        anywayError={sources.importError}
       />
     {:else if sources.open}
       <div>
@@ -95,6 +96,11 @@
             </Button>
           {/snippet}
         </ErrorState>
+      {/if}
+
+      {#if sources.disconnectError}
+        <!-- The row came back; without this it looks like the button did nothing. -->
+        <p class="refused" role="alert">{explain(sources.disconnectError)}</p>
       {/if}
 
       {#if sources.items.length > 0}
@@ -245,6 +251,11 @@
   .adding {
     display: flex;
     flex-direction: column;
+  }
+
+  .refused {
+    color: var(--text-danger);
+    font-size: var(--text-sm);
   }
 
   .elsewhere {
