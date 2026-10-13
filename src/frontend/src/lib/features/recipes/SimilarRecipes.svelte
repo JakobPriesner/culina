@@ -15,23 +15,25 @@
    */
   interface Props {
     recipeId: string;
+    /** The household reading it, whose nutrition choices the calories on the cards follow; null for the recipe's own. */
+    householdId?: string | null;
     /** Households this one inherits from, by id with names; a recipe from one says so. */
     inherited?: Readonly<Record<string, string>>;
   }
 
-  let { recipeId, inherited = {} }: Props = $props();
+  let { recipeId, householdId = null, inherited = {} }: Props = $props();
 
-  const items = $derived(related.of(recipeId));
+  const items = $derived(related.of(recipeId, householdId));
 
   /** Four rows of three: below a recipe, more is a library to browse, not a suggestion. */
   const mostShown = 12;
 
-  const hasMore = $derived(related.hasMore(recipeId) && items.length < mostShown);
+  const hasMore = $derived(related.hasMore(recipeId, householdId) && items.length < mostShown);
 
   // The page asks as soon as it knows the id; load is idempotent, so this is for use without it.
   $effect(() => {
     if (recipeId) {
-      void related.load(recipeId);
+      void related.load(recipeId, householdId);
     }
   });
 
@@ -58,7 +60,10 @@
            afresh after each page; no margin, so it fires at the real end. -->
       {#if hasMore}
         {#key items.length}
-          <li aria-hidden="true" {@attach whenVisible(() => void related.more(recipeId), '0px')}>
+          <li
+            aria-hidden="true"
+            {@attach whenVisible(() => void related.more(recipeId, householdId), '0px')}
+          >
             <RecipeCardSkeleton />
           </li>
         {/key}

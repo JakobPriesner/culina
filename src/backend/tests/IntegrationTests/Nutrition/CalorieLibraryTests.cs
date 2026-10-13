@@ -105,6 +105,48 @@ public class CalorieLibraryTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Related_ShouldCarryTheDetailCalories_AsTheNamedHouseholdReadsThem()
+    {
+        var kitchen = await Kitchen.OpenAsync(postgres);
+        var target = await RecipeAsync(kitchen, "A", 100m);
+        await RecipeAsync(kitchen, "B", 300m);
+        await RecipeAsync(kitchen, "C", 900m);
+        await RecipeAsync(kitchen, "D", 100m, unknown: true);
+
+        // Flour must be in at most half the kitchen to be a reason worth giving.
+        for (var salad = 1; salad <= 5; salad++)
+        {
+            await kitchen.SaveAsync($"Gurkensalat {salad}", "de", 5, null, [("Gurke", "g")], [], "Schneiden.");
+        }
+
+        var heir = (await kitchen.Client.PostAsync("/api/v1/households",
+            new { name = "Other kitchen", inheritsFrom = kitchen.HouseholdId }, Token))
+            .Json!.Value.GetProperty("householdId").GetGuid();
+        var correction = await kitchen.Client.PutAsync($"/api/v1/households/{heir}/ingredients/Mehl",
+            new { food = "Q120000" }, Token);
+        Assert.Equal(HttpStatusCode.NoContent, correction.StatusCode);
+
+        foreach (var reader in new[] { string.Empty, $"&householdId={heir}" })
+        {
+            var related = await kitchen.Client.GetAsync($"/api/v1/recipes/{target}/related?limit=12{reader}", Token);
+            Assert.Equal(HttpStatusCode.OK, related.StatusCode);
+            Assert.Equal(3, Items(related).Length);
+
+            foreach (var card in Items(related))
+            {
+                var detail = await kitchen.Client.GetAsync(
+                    $"/api/v1/recipes/{card.GetProperty("recipeId").GetGuid()}/nutrition?{reader.TrimStart('&')}", Token);
+                Assert.Equal(detail.Json!.Value.GetProperty("values").GetProperty("energyKcal").GetRawText(),
+                    card.GetProperty("calories").GetRawText());
+            }
+        }
+
+        var own = await kitchen.Client.GetAsync($"/api/v1/recipes/{target}/related", Token);
+        var heirs = await kitchen.Client.GetAsync($"/api/v1/recipes/{target}/related?householdId={heir}", Token);
+        Assert.NotEqual(Items(own)[0].GetProperty("calories").GetRawText(), Items(heirs)[0].GetProperty("calories").GetRawText());
+    }
+
+    [Fact]
     public async Task SavedSearch_ShouldRoundTripACalorieOnlyFilter_AndRejectInvalidLimits()
     {
         var kitchen = await Kitchen.OpenAsync(postgres);

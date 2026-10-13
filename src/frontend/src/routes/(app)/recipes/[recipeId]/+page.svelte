@@ -97,7 +97,7 @@
   // that must not read the note and the attempts again.
   $effect(() => {
     if (recipeId) {
-      void related.load(recipeId);
+      void related.load(recipeId, session.activeHouseholdId);
     }
   });
 
@@ -187,7 +187,11 @@
       <PersonalNotePanel {recipeId} />
     {/key}
 
-    <SimilarRecipes {recipeId} inherited={session.inheritedFrom} />
+    <SimilarRecipes
+      {recipeId}
+      householdId={session.activeHouseholdId}
+      inherited={session.inheritedFrom}
+    />
   {:else}
     <RecipeSurfaceSkeleton />
   {/if}

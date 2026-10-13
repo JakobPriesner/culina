@@ -13,14 +13,16 @@ namespace Application.Recipes.GetRelated;
 /// <summary>Asks which recipes of the same household are most like this one.</summary>
 /// <param name="RecipeId">Which recipe.</param>
 /// <param name="UserId">Who is asking.</param>
+/// <param name="HouseholdId">Whose nutrition choices the calories are read with, as on the recipe's nutrition; null for the recipe's own household.</param>
 /// <param name="Cursor">Where the previous page ended, or null for the first.</param>
 /// <param name="Limit">How many at most.</param>
-public sealed record GetRelatedRecipesQuery(Guid RecipeId, Guid UserId, string? Cursor, int Limit);
+public sealed record GetRelatedRecipesQuery(Guid RecipeId, Guid UserId, Guid? HouseholdId, string? Cursor, int Limit);
 
 internal sealed class GetRelatedRecipesQueryHandler(
     IRecipeRepository recipes,
     IHouseholdRepository households,
-    IRelatedRecipes related)
+    IRelatedRecipes related,
+    IRecipeCalories calories)
     : IQueryHandler<GetRelatedRecipesQuery, Response>
 {
     /// <summary>
@@ -34,9 +36,12 @@ internal sealed class GetRelatedRecipesQueryHandler(
 
         using var tracked = UseCaseActivity.Start("Recipes.GetRelated");
 
-        var visible = await RecipeAccess
-            .VisibleAsync(recipes, households, query.RecipeId, query.UserId, cancellationToken)
-            .ConfigureAwait(false);
+        // Named, the household must be the caller's and have the recipe, as for its nutrition.
+        var visible = query.HouseholdId is null
+            ? await RecipeAccess.VisibleAsync(recipes, households, query.RecipeId, query.UserId, cancellationToken)
+                .ConfigureAwait(false)
+            : await RecipeAccess.VisibleInAsync(recipes, households, query.RecipeId, query.HouseholdId, query.UserId, cancellationToken)
+                .ConfigureAwait(false);
 
         var result = await visible.Match(
             async recipe =>
@@ -61,6 +66,22 @@ internal sealed class GetRelatedRecipesQueryHandler(
                     cursor = page.NextCursor;
                 }
                 while (items.Count < query.Limit && cursor is not null);
+
+                // The reader's household sees the recipe's whole library, so its figures cover every one.
+                var reader = query.HouseholdId ?? recipe.HouseholdId;
+                var readerLibrary = query.HouseholdId is null
+                    ? library
+                    : await HouseholdAccess.LibraryAsync(households, reader, cancellationToken).ConfigureAwait(false);
+                var figures = await calories
+                    .ReadAsync(reader, readerLibrary, [.. items.Select(item => item.RecipeId)], cancellationToken)
+                    .ConfigureAwait(false);
+
+                items = [.. items.Select(item => item with
+                {
+                    Calories = figures.TryGetValue(item.RecipeId, out var energy)
+                        ? new Contracts.Recipes.GetNutrition.NutritionValue { Value = energy.Value, AtLeast = energy.AtLeast, Estimated = energy.Estimated }
+                        : null
+                })];
 
                 return Result<Response>.Success(new Response { Items = items, NextCursor = cursor });
             },

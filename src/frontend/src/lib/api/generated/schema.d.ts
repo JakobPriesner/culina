@@ -907,7 +907,7 @@ export interface paths {
         };
         /**
          * Recipes like this one
-         * @description Recipes of the same household, the closest first, three to a page by default and cursor-paginated, each with what it has in common with this one: what they both are, or what they are both made from. Worked out from the concepts the recipes are indexed under, and weighted by how rare each is in the household. Empty when nothing is alike enough to say so, and past the closest three it ends where the rest are far less alike than the closest. Not cached: it changes with every other recipe in the household.
+         * @description Recipes of the same household, the closest first, three to a page by default and cursor-paginated, each with what it has in common with this one: what they both are, or what they are both made from. Worked out from the concepts the recipes are indexed under, and weighted by how rare each is in the household. Empty when nothing is alike enough to say so, and past the closest three it ends where the rest are far less alike than the closest. Each carries its calories per portion as the recipe's nutrition reads them for householdId, a household the caller is in that has the recipe; left out, the recipe's own household. Not cached: it changes with every other recipe in the household.
          */
         get: operations["getRelatedRecipesV1"];
         put?: never;
@@ -4130,6 +4130,7 @@ export interface components {
         };
         /** @description A recipe like the one being read, and why. */
         RecipesGetRelatedRelatedRecipe: {
+            calories?: (null) | components["schemas"]["RecipesGetNutritionNutritionValue"];
             /**
              * Format: uuid
              * @description Which recipe.
@@ -8877,6 +8878,7 @@ export interface operations {
             query?: {
                 cursor?: string;
                 limit?: number;
+                householdId?: string;
             };
             header?: never;
             path: {
