@@ -47,15 +47,16 @@ internal sealed class InvitationRepository(DbExecutor executor, ISecretTokens to
 
     public async Task<IReadOnlyList<HouseholdInvitation>> OpenForHouseholdAsync(
         Guid householdId,
+        DateTimeOffset now,
         CancellationToken cancellationToken)
     {
         var rows = await executor.QueryAsync<InvitationRow>(
             $"""
              select {Columns} from household_invitations
-             where household_id = @householdId and redeemed_at is null
+             where household_id = @householdId and redeemed_at is null and expires_at > @now
              order by created_at desc;
              """,
-            new { householdId },
+            new { householdId, now },
             cancellationToken).ConfigureAwait(false);
 
         return [.. rows.Select(row => row.ToDomain())];
@@ -123,6 +124,12 @@ internal sealed class InvitationRepository(DbExecutor executor, ISecretTokens to
 
         return affected == 0 ? HouseholdErrors.InvitationInvalid : Result.Success();
     }
+
+    public Task<int> DeleteExpiredAsync(DateTimeOffset now, CancellationToken cancellationToken) =>
+        executor.ExecuteAsync(
+            "delete from household_invitations where redeemed_at is null and expires_at <= @now;",
+            new { now },
+            cancellationToken);
 }
 
 /// <summary>Turns a stored row back into a domain invitation.</summary>
