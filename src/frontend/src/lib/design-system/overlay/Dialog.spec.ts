@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -8,6 +8,7 @@ import { renderWithProviders } from '$lib/test/render';
 // These prove the native dialog is opened as modal, since the browser provides the focus trap and inert background.
 const open = () => screen.getByRole('button', { name: 'Open' });
 const dialog = () => screen.getByRole('dialog');
+const field = () => screen.queryByRole('textbox', { hidden: true });
 
 // jsdom has no top layer, so showModal/close are stubbed to the open state and close event.
 beforeEach(() => {
@@ -89,6 +90,32 @@ describe('a modal dialog', () => {
     await waitFor(() => expect(onclose).toHaveBeenCalledOnce());
   });
 
+  it('closes on a click that starts and ends on the backdrop', async () => {
+    const onclose = vi.fn();
+
+    renderWithProviders(DialogHarness, { props: { onclose } });
+
+    await userEvent.click(open());
+    await userEvent.click(dialog());
+
+    await waitFor(() => expect(onclose).toHaveBeenCalledOnce());
+  });
+
+  it('stays open when a press inside the panel is released over the backdrop', async () => {
+    const onclose = vi.fn();
+
+    renderWithProviders(DialogHarness, { props: { onclose } });
+
+    await userEvent.click(open());
+
+    // Selecting text in a field: down in the panel, up outside it, and the browser clicks the common ancestor.
+    fireEvent.pointerDown(field()!);
+    fireEvent.click(dialog());
+
+    expect(onclose).not.toHaveBeenCalled();
+    expect(dialog()).toBeInTheDocument();
+  });
+
   it('closes from inside, so an action can finish the task', async () => {
     renderWithProviders(DialogHarness, {});
 
@@ -101,8 +128,6 @@ describe('a modal dialog', () => {
 
 // Pages mount every sheet they might offer, so content must not be built until opened.
 describe("a dialog's content", () => {
-  const field = () => screen.queryByRole('textbox', { hidden: true });
-
   it('is not built until the dialog is opened', async () => {
     renderWithProviders(DialogHarness, {});
 
