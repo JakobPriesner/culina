@@ -16,7 +16,7 @@ public sealed record ImportInto(
     Guid UserId,
     Language Language,
     bool AllowLookalikes = false,
-    IReadOnlyDictionary<string, Guid>? AlreadyHere = null);
+    IReadOnlyDictionary<string, ImportedCopy>? AlreadyHere = null);
 
 /// <summary>One recipe: fetched, translated, written and remembered. Never returns a failure; every outcome is a line to show.</summary>
 /// <remarks>
@@ -28,6 +28,7 @@ internal sealed class RecipeImporter(
     IRecipeRepository recipes,
     ILookalikeRecipes lookalikes,
     ICookbookRepository cookbooks,
+    ITrashRepository trash,
     IImageStore images,
     IUnitOfWork unitOfWork,
     TimeProvider time)
@@ -53,14 +54,19 @@ internal sealed class RecipeImporter(
                 .AlreadyHereAsync(into.Source.HouseholdId, into.Source.Kind, [externalId], cancellationToken)
                 .ConfigureAwait(false);
 
-        if (here.TryGetValue(externalId, out var mine))
+        if (here.TryGetValue(externalId, out var copy) && copy.InBin)
+        {
+            return await RestoreAsync(into, externalId, copy.RecipeId, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (copy is { } mine)
         {
             // Not a failure: re-running an import is the ordinary way to catch up.
             return new ImportedRecipe
             {
                 ExternalId = externalId,
                 Outcome = AlreadyHere,
-                RecipeId = mine
+                RecipeId = mine.RecipeId
             };
         }
 
@@ -150,6 +156,44 @@ internal sealed class RecipeImporter(
                     CookCount = alike.CookCount
                 }
             };
+    }
+
+    /// <summary>
+    /// Brings a binned copy back onto this import's shelf. Importing a fresh one is impossible (the
+    /// copy still holds the origin) and would lose its notes and cooking history anyway.
+    /// </summary>
+    private async Task<ImportedRecipe> RestoreAsync(
+        ImportInto into,
+        string externalId,
+        Guid recipeId,
+        CancellationToken cancellationToken)
+    {
+        var now = time.GetUtcNow();
+
+        var restored = await unitOfWork.InTransactionAsync(
+                async token =>
+                {
+                    // Already restored by a run alongside this one: then it is simply here.
+                    if (!await trash.RestoreRecipeAsync(recipeId, token).ConfigureAwait(false))
+                    {
+                        return Result<bool>.Success(false);
+                    }
+
+                    await cookbooks.AddRecipeAsync(into.CookbookId, recipeId, into.UserId, now, token)
+                        .ConfigureAwait(false);
+                    await cookbooks.TouchAsync(into.CookbookId, now, token).ConfigureAwait(false);
+
+                    return Result<bool>.Success(true);
+                },
+                cancellationToken)
+            .ConfigureAwait(false);
+
+        return new ImportedRecipe
+        {
+            ExternalId = externalId,
+            Outcome = restored.Match(fromBin => fromBin ? Imported : AlreadyHere, _ => Failed),
+            RecipeId = recipeId
+        };
     }
 
     private async Task<ImportedRecipe> StoreAsync(
