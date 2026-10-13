@@ -1,4 +1,5 @@
 using System.Net;
+using Application.Abstractions;
 using Application.Abstractions.Settings;
 using IntegrationTests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
@@ -320,6 +321,39 @@ public class InvitationEndpointTests(PostgresFixture postgres)
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, read.StatusCode);
+    }
+
+    [Fact]
+    public async Task List_ShouldLeaveOutExpiredInvitations_AndTheSweepShouldDeleteThem()
+    {
+        // Arrange
+        var (owner, joiner) = await TwoUsersAsync();
+        using var ownerClient = owner;
+        using var joinerClient = joiner;
+        var householdId = await FirstHouseholdIdAsync(owner);
+
+        var used = await IssueCodeAsync(owner, householdId);
+        await joiner.PostAsync($"/api/v1/invitations/{used}/redemptions", new { }, Token);
+        await IssueCodeAsync(owner, householdId);
+        await postgres.ExecuteAsync(
+            "update household_invitations set expires_at = now() - interval '1 day';",
+            Token);
+        await IssueCodeAsync(owner, householdId);
+
+        // Act
+        var listed = await owner.GetAsync($"/api/v1/households/{householdId}/invitations", Token);
+
+        await using var scope = postgres.Api.Services.CreateAsyncScope();
+        var swept = await scope.ServiceProvider
+            .GetRequiredService<IInvitationRepository>()
+            .DeleteExpiredAsync(DateTimeOffset.UtcNow, Token);
+
+        // Assert
+        // Only the fresh one is open; the expired one could no longer be used anyway.
+        Assert.Single(listed.Json!.Value.GetProperty("items").EnumerateArray());
+        // The used one stays as the record of who joined.
+        Assert.Equal(1, swept);
+        Assert.Equal(2L, await postgres.QuerySingleAsync<long>("select count(*) from household_invitations;", Token));
     }
 
     private static CancellationToken Token => TestContext.Current.CancellationToken;

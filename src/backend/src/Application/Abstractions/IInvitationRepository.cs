@@ -15,9 +15,10 @@ public interface IInvitationRepository
         string code,
         CancellationToken cancellationToken);
 
-    /// <summary>The household's invitations that have not been used.</summary>
+    /// <summary>The household's invitations that have neither been used nor expired.</summary>
     Task<IReadOnlyList<HouseholdInvitation>> OpenForHouseholdAsync(
         Guid householdId,
+        DateTimeOffset now,
         CancellationToken cancellationToken);
 
     /// <summary>Stores a new invitation.</summary>
@@ -37,4 +38,8 @@ public interface IInvitationRepository
         Guid invitationId,
         Guid householdId,
         CancellationToken cancellationToken);
+
+    /// <summary>Deletes invitations that expired unused; a used one stays as the record of who joined.</summary>
+    /// <returns>How many were deleted.</returns>
+    Task<int> DeleteExpiredAsync(DateTimeOffset now, CancellationToken cancellationToken);
 }
