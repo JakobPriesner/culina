@@ -77,6 +77,49 @@ afterEach(() => {
 });
 
 describe('the correction sheet', () => {
+  it('keeps what it showed while it fades out after an answer', async () => {
+    respond();
+
+    let finishExit!: () => void;
+    const exit = new Promise<void>((resolve) => (finishExit = resolve));
+
+    HTMLDialogElement.prototype.getAnimations = () => [{ finished: exit } as unknown as Animation];
+    HTMLDialogElement.prototype.close = function close(this: HTMLDialogElement) {
+      this.open = false;
+      this.dispatchEvent(new Event('close'));
+    };
+
+    const handlers = {
+      onchoose: vi.fn(),
+      onexclude: vi.fn(),
+      onreset: vi.fn(),
+      onweigh: vi.fn(),
+      onclose: vi.fn()
+    };
+    const view = renderWithProviders(NutritionCorrectionSheet, {
+      props: { name: 'Butter', line: counted, ...handlers }
+    });
+
+    expect(await screen.findByRole('dialog', { name: 'What is “Butter”?' })).toBeInTheDocument();
+
+    // The caller empties both the moment a choice is made; the sheet is still on its way out.
+    await view.rerender({ name: null, line: null });
+
+    expect(
+      screen.getByRole('heading', { name: 'What is “Butter”?', hidden: true })
+    ).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Counts as', hidden: true })).toBeInTheDocument();
+
+    finishExit();
+    Reflect.deleteProperty(HTMLDialogElement.prototype, 'getAnimations');
+
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('list', { name: 'Counts as', hidden: true })
+      ).not.toBeInTheDocument()
+    );
+  });
+
   it('names the ingredient and says the answer holds for every recipe', async () => {
     respond();
     show();
