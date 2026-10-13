@@ -255,6 +255,16 @@ internal static class SuggestionScoringSql
               and dismissed_at > @scAsOf::timestamptz - make_interval(days => @scDismissalDays::int)
         ),
 
+        -- The last day before today the front page showed this person each recipe. Today's own rows never count:
+        -- the list is fixed for the day, so showing it must not change it.
+        sc_shown as (
+            select recipe_id, max(shown_on) as day
+            from suggestion_impressions
+            where user_id = @userId::uuid
+              and shown_on < (@scAsOf::timestamptz at time zone 'UTC')::date
+            group by recipe_id
+        ),
+
         sc_scores as (
             select
                 r.id as recipe_id,
@@ -270,6 +280,13 @@ internal static class SuggestionScoringSql
                     else exp(-(greatest(extract(epoch from (@scAsOf::timestamptz - lc.at)), 0) / 86400.0
                                / @scRepetitionDecay::numeric)::numeric)
                 end as repetition,
+
+                -- Smooth as repetition is, and much gentler: shown is not eaten. Zero unless the question is "what shall I cook".
+                -@wShown::numeric * case
+                    when sh.day is null then 0
+                    else exp(-(((@scAsOf::timestamptz at time zone 'UTC')::date - sh.day)::numeric
+                               / @scShownDecay::numeric)::numeric)
+                end as shown,
 
                 -- Only for something they liked: scaling by affinity surfaces loved-and-forgotten recipes, not tried-once ones.
                 @wRediscovery::numeric * case
@@ -323,6 +340,7 @@ internal static class SuggestionScoringSql
             left join sc_household h on h.recipe_id = r.id
             left join sc_household_top ht on ht.recipe_id = r.id
             left join sc_last_cooked lc on lc.recipe_id = r.id
+            left join sc_shown sh on sh.recipe_id = r.id
             left join sc_season se on se.recipe_id = r.id
             left join sc_slot sl on sl.recipe_id = r.id
             left join sc_effort ef on ef.recipe_id = r.id
@@ -341,6 +359,7 @@ internal static class SuggestionScoringSql
                    round(s.affinity, 6) as affinity,
                    round(s.content, 6) as content,
                    round(s.repetition, 6) as repetition,
+                   round(s.shown, 6) as shown,
                    round(s.rediscovery, 6) as rediscovery,
                    round(s.slot, 6) as slot,
                    round(s.effort, 6) as effort,
@@ -355,7 +374,7 @@ internal static class SuggestionScoringSql
                    s.household_subject,
                    s.dismissed,
                    round(
-                       s.affinity + s.content + s.repetition + s.rediscovery + s.slot + s.effort
+                       s.affinity + s.content + s.repetition + s.shown + s.rediscovery + s.slot + s.effort
                        + s.household + s.novelty + s.freshness + s.season + s.similarity
                        + s.exploration,
                        6) as score
@@ -382,6 +401,7 @@ internal static class SuggestionScoringSql
 
         parameters.Add("scHalfLife", weights.HalfLifeDays);
         parameters.Add("scRepetitionDecay", weights.RepetitionDecayDays);
+        parameters.Add("scShownDecay", weights.ShownDecayDays);
         parameters.Add("scRediscoveryFrom", weights.RediscoveryFromDays);
         parameters.Add("scRediscoveryFull", weights.RediscoveryFullDays);
         parameters.Add("scFreshnessHalfLife", weights.FreshnessHalfLifeDays);
@@ -396,6 +416,9 @@ internal static class SuggestionScoringSql
         parameters.Add("wAffinity", weights.Affinity * personal);
         parameters.Add("wContent", weights.Content);
         parameters.Add("wRepetition", weights.Repetition);
+
+        // Only a shortlist can go stale: a browsed library has no "same five", and "more like this" is about one recipe.
+        parameters.Add("wShown", context.Purpose == SuggestionPurpose.Decide ? weights.Shown : 0m);
         parameters.Add("wRediscovery", weights.Rediscovery * personal);
         parameters.Add("wSlot", weights.Slot);
         parameters.Add("wEffort", weights.Effort);

@@ -98,13 +98,14 @@ describe('opening the library', () => {
     renderWithProviders(LibraryPage);
     await settle();
 
-    // Exactly five calls (list, shortlist, saved searches, and this week and next for tonight's meal):
-    // every extra one is an effect re-triggering itself.
+    // Exactly six calls (list, shortlist, saved searches, this week and next for tonight's meal, and telling the server
+    // which recipes the shortlist drew): every extra one is an effect re-triggering itself.
     const asked = (part: string) => fetched.mock.calls.filter(([r]) => r.url.includes(part)).length;
 
-    expect(fetched).toHaveBeenCalledTimes(5);
+    expect(fetched).toHaveBeenCalledTimes(6);
     expect(asked('/meal-plan')).toBe(2);
-    expect(asked('/suggestions')).toBe(1);
+    expect(asked('/suggestions?')).toBe(1);
+    expect(asked('/suggestions/impressions')).toBe(1);
     expect(asked('/searches')).toBe(1);
     expect(asked('/recipes?')).toBe(1);
   });

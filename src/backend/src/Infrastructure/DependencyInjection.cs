@@ -179,3 +179,4 @@ public static class DependencyInjection
             // After the migrations: it reads tables they renamed.
             .AddHostedService<TrashPurger>();
 }
+            .AddScoped<ISuggestionImpressions, SuggestionImpressionRepository>()
