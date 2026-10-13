@@ -129,26 +129,27 @@
     >{/if}{/each}
 
 <style>
-  /* Marked words, not a control (a full box read as a form field): pale wash, baseline edge, weight on the amount.
-     Colour-only hover that lets go slowly; a button's own tight line-height keeps lines with references no taller. */
+  /* Marked words, not a control: a highlighter stroke under the lower half, weight on the amount.
+     Padding paid back by margin, so the words sit exactly where plain prose would; a button's own
+     tight line-height keeps lines with references no taller. */
   .ingredient {
     display: inline-block;
     max-width: 100%;
-    padding: 0.1em 0.3em;
-    margin: 0 0.05em;
+    padding: 0 0.12em;
+    margin: 0 -0.12em;
     border: 0;
     border-radius: var(--radius-sm);
-    background: var(--surface-accent-subtle);
-    box-shadow: inset 0 -1px 0 var(--border-accent);
+    background-image: linear-gradient(var(--surface-highlight), var(--surface-highlight));
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    background-size: 100% 0.6em;
     color: var(--text);
     font: inherit;
     line-height: var(--leading-tight);
     text-align: inherit;
     vertical-align: baseline;
     cursor: pointer;
-    transition:
-      background-color var(--duration-slow) ease,
-      box-shadow var(--duration-slow) ease;
+    transition: background-size var(--duration-slow) ease;
   }
 
   .ingredient .amount {
@@ -159,14 +160,13 @@
 
   .ingredient:focus-visible {
     outline: 2px solid var(--border-focus);
-    outline-offset: 1px;
+    outline-offset: 2px;
   }
 
-  /* Pointed at (here or from the ingredient list) deepens the wash and firms the edge inside the capsule, not as a ring that would read as focus; the open quick look stays lit. */
+  /* Pointed at (here or from the ingredient list) the stroke fills the words, not a ring that would read as focus; the open quick look stays lit. */
   .ingredient:hover,
   .ingredient.is-highlighted {
-    background: var(--surface-highlight);
-    box-shadow: inset 0 -2px 0 var(--accent);
+    background-size: 100% 100%;
     transition-duration: var(--duration-fast);
     transition-timing-function: var(--ease-out);
   }
@@ -206,7 +206,6 @@
       border: 0;
       background: none;
       color: inherit;
-      box-shadow: none;
     }
   }
 </style>
