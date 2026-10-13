@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- The push relay the app's publisher runs (docs/native-app-design.md, part 7). Deployed on its own, never in
+       Culina's image, and referencing none of Culina's projects: it knows devices, not servers or people. -->
+  <PropertyGroup>
+    <RootNamespace>Relay</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Relay.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+  </ItemGroup>
+
+</Project>

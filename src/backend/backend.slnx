@@ -5,12 +5,14 @@
     <Project Path="src/Contracts/Contracts.csproj" />
     <Project Path="src/Domain/Domain.csproj" />
     <Project Path="src/Infrastructure/Infrastructure.csproj" />
+    <Project Path="src/Relay/Relay.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Application.UnitTests/Application.UnitTests.csproj" />
     <Project Path="tests/ArchitectureTests/ArchitectureTests.csproj" />
     <Project Path="tests/Domain.UnitTests/Domain.UnitTests.csproj" />
     <Project Path="tests/IntegrationTests/IntegrationTests.csproj" />
+    <Project Path="tests/Relay.Tests/Relay.Tests.csproj" />
     <Project Path="tests/TestSupport/TestSupport.csproj" />
   </Folder>
 </Solution>
