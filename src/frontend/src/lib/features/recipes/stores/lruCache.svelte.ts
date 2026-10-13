@@ -58,20 +58,12 @@ export class LruCache<TValue> {
     this.#version += 1;
   }
 
-  update(change: (value: TValue) => TValue): void {
+  /** Rewrites every entry in place, without counting as use. */
+  update(change: (value: TValue, key: string) => TValue): void {
     for (const [key, value] of this.#entries) {
-      this.#entries.set(key, change(value));
+      this.#entries.set(key, change(value, key));
     }
 
-    this.#version += 1;
-  }
-
-  snapshot(): Map<string, TValue> {
-    return new Map(this.#entries);
-  }
-
-  restore(snapshot: Map<string, TValue>): void {
-    this.#entries = new Map(snapshot);
     this.#version += 1;
   }
 

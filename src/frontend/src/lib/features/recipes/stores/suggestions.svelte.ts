@@ -143,9 +143,7 @@ class SuggestionStore {
 
   /** Stops suggesting a recipe everywhere, optimistically; every cached answer is filtered. */
   async dismiss(recipeId: string): Promise<AppError | null> {
-    const before = this.#answers.snapshot();
-
-    this.#without(recipeId);
+    const removed = this.#without(recipeId);
 
     const result = await request(() =>
       http.PUT('/api/v1/recipes/{recipeId}/suggestion-dismissal', {
@@ -154,7 +152,21 @@ class SuggestionStore {
     );
 
     if (!result.ok) {
-      this.#answers.restore(before);
+      // Only the card goes back: a page or an answer that arrived meanwhile stays.
+      this.#answers.update((answer, key) => {
+        const was = removed[key];
+
+        return was && !answer.items.some((item) => item.id === recipeId)
+          ? {
+              ...answer,
+              items: [
+                ...answer.items.slice(0, was.index),
+                was.item,
+                ...answer.items.slice(was.index)
+              ]
+            }
+          : answer;
+      });
 
       return result.error;
     }
@@ -183,11 +195,23 @@ class SuggestionStore {
     this.#without(recipeId);
   }
 
-  #without(recipeId: string): void {
-    this.#answers.update((answer) => ({
-      ...answer,
-      items: answer.items.filter((item) => item.id !== recipeId)
-    }));
+  /** Takes the recipe out of every answer and says where it stood in each, for an undo. */
+  #without(recipeId: string): Record<string, { item: Suggestion; index: number }> {
+    const removed: Record<string, { item: Suggestion; index: number }> = {};
+
+    this.#answers.update((answer, key) => {
+      const index = answer.items.findIndex((item) => item.id === recipeId);
+
+      if (index < 0) {
+        return answer;
+      }
+
+      removed[key] = { item: answer.items[index]!, index };
+
+      return { ...answer, items: answer.items.filter((item) => item.id !== recipeId) };
+    });
+
+    return removed;
   }
 
   reset(): void {
