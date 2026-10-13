@@ -16,15 +16,18 @@ const keyFor = (userId: string, recipeId: string) => `culina.draft.${userId}.${r
 
 const prefix = 'culina.draft.';
 
-/** Writes the draft; never throws, since a full or blocked store isn't worth an error. */
-export function remember(userId: string, recipeId: string, recipe: Recipe): void {
+/** Writes the draft and says whether it is kept; never throws, since a full or blocked store isn't worth an error. */
+export function remember(userId: string, recipeId: string, recipe: Recipe): boolean {
   try {
     localStorage.setItem(
       keyFor(userId, recipeId),
       JSON.stringify({ recipe, at: new Date().toISOString() } satisfies JournalEntry)
     );
+
+    return true;
   } catch {
     // Private browsing or no room: the editor works, it just doesn't claim the work is kept here.
+    return false;
   }
 }
 
