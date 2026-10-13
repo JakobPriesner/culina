@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import { Button } from '$ds';
+  import { Button, SectionLabel } from '$ds';
   import { session } from '$features/auth/session.svelte';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
@@ -52,7 +52,7 @@
     <Olli pose={poseFor(job.stage)} size="lg" {working} />
   </div>
   <div class="status-copy">
-    <p class="eyebrow">{m['intake.activity']()}</p>
+    <SectionLabel spacing="tight">{m['intake.activity']()}</SectionLabel>
     <h1>
       {job.stage === 'ready' || job.stage === 'reviewed'
         ? (job.draft?.title ?? m['intake.ready']())
@@ -139,12 +139,6 @@
     font-family: var(--font-editorial);
     font-size: clamp(1.7rem, 4vw, 2.5rem);
     line-height: 1.15;
-  }
-  .eyebrow {
-    color: var(--text-subtle);
-    font-size: var(--text-sm);
-    margin-bottom: var(--space-2);
-    font-weight: var(--weight-semibold);
   }
   .stage {
     font-weight: var(--weight-medium);

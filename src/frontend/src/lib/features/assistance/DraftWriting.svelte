@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { GenerationAura, Skeleton } from '$ds';
+  import { GenerationAura, SectionLabel, Skeleton } from '$ds';
   import { m } from '$shell/i18n';
 
   import DraftProgress from './DraftProgress.svelte';
@@ -40,7 +40,7 @@
 
   {#if lines.length > 0}
     <div class="part arrival">
-      <h4 class="part-title">{m['assist.part.ingredients']()}</h4>
+      <SectionLabel as="h4">{m['assist.part.ingredients']()}</SectionLabel>
       <ul class="lines">
         {#each lines as line, index (index)}
           <li class="arrival">
@@ -54,7 +54,7 @@
 
   {#if steps.length > 0}
     <div class="part arrival">
-      <h4 class="part-title">{m['assist.part.steps']()}</h4>
+      <SectionLabel as="h4">{m['assist.part.steps']()}</SectionLabel>
       <ol class="steps">
         {#each steps as step, index (index)}
           <li class="arrival">
@@ -98,12 +98,6 @@
     flex-direction: column;
     gap: var(--space-2);
     min-width: 0;
-  }
-
-  .part-title {
-    color: var(--text-subtle);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
   }
 
   .lines,

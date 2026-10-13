@@ -3,7 +3,7 @@
 
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import { Button, Disclosure } from '$ds';
+  import { Button, Disclosure, SectionLabel } from '$ds';
   import { m } from '$shell/i18n';
 
   import FormField from '$features/auth/FormField.svelte';
@@ -159,7 +159,9 @@
 
 <div class="setup">
   <header class="intro">
-    <p class="eyebrow">{m['setup.step']({ current: position, total: steps.length })}</p>
+    <SectionLabel tone="accent" spacing="loose">
+      {m['setup.step']({ current: position, total: steps.length })}
+    </SectionLabel>
     <h1 class="title">
       {#if step === 'database'}
         {m['setup.database.title']()}
@@ -286,13 +288,6 @@
 
   .intro {
     margin-bottom: var(--space-2);
-  }
-
-  .eyebrow {
-    color: var(--accent);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
-    margin-bottom: var(--space-3);
   }
 
   .subtitle {

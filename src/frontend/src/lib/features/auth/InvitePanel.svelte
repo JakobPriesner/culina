@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button } from '$ds';
+  import { Button, SectionLabel } from '$ds';
   import { invitations } from './invitations.svelte';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
@@ -71,7 +71,7 @@
     </div>
   {/if}
 
-  <h3>{m['me.invite.outstanding']()}</h3>
+  <SectionLabel as="h3">{m['me.invite.outstanding']()}</SectionLabel>
 
   {#if invitations.items.length === 0}
     <p class="empty">{m['me.invite.none']()}</p>
@@ -97,13 +97,6 @@
     flex-direction: column;
     gap: var(--space-4);
     align-items: flex-start;
-  }
-
-  h3 {
-    margin-top: var(--space-2);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
-    color: var(--text-subtle);
   }
 
   .fresh {

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { SectionLabel } from '$ds';
+
   import type { Snippet } from 'svelte';
 
   interface Props {
@@ -13,7 +15,7 @@
 
 <header class="page-header">
   <div class="heading">
-    {#if eyebrow}<p class="eyebrow">{eyebrow}</p>{/if}
+    {#if eyebrow}<SectionLabel tone="accent" spacing="loose">{eyebrow}</SectionLabel>{/if}
     <h1>{title}</h1>
     {#if subtitle}<p class="subtitle">{subtitle}</p>{/if}
   </div>
@@ -31,12 +33,6 @@
   }
   .heading {
     min-width: 0;
-  }
-  .eyebrow {
-    color: var(--accent);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
-    margin-bottom: var(--space-3);
   }
   h1 {
     font-family: var(--font-editorial);

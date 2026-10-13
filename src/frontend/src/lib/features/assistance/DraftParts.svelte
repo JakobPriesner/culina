@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Checkbox } from '$ds';
+  import { Checkbox, SectionLabel } from '$ds';
   import { m } from '$shell/i18n';
 
   import type { DraftPart } from './draftParts';
@@ -23,11 +23,11 @@
 
       <div class="compare">
         <p class="side">
-          <span class="which">{m['assist.before']()}</span>
+          <SectionLabel as="span">{m['assist.before']()}</SectionLabel>
           <span class="was">{before || m['assist.empty']()}</span>
         </p>
         <p class="side">
-          <span class="which">{m['assist.after']()}</span>
+          <SectionLabel as="span">{m['assist.after']()}</SectionLabel>
           <span>{after || m['assist.empty']()}</span>
         </p>
       </div>
@@ -77,12 +77,6 @@
     flex-direction: column;
     gap: var(--space-1);
     min-width: 0;
-  }
-
-  .which {
-    color: var(--text-subtle);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
   }
 
   .was {

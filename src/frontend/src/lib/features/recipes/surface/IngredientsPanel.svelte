@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { SegmentedControl } from '$ds';
+  import { SectionLabel, SegmentedControl } from '$ds';
 
   import { m } from '$shell/i18n';
   import type { createIngredientPanel } from './ingredientPanel.svelte';
@@ -39,7 +39,7 @@
   {#if panel.panel.length > 0}
     <!-- Beside the steps this is only the ingredients no step named, so say so. -->
     {#if perStep}
-      <p class="leftovers">{m['recipe.notInAnyStep']()}</p>
+      <SectionLabel spacing="tight">{m['recipe.notInAnyStep']()}</SectionLabel>
     {/if}
 
     <IngredientList ingredients={panel.panel} {scaling} {highlighted} onhover={onhighlight} />
@@ -73,13 +73,6 @@
     grid-column: 1;
     grid-row: 1;
     position: static;
-  }
-
-  .leftovers {
-    margin-bottom: var(--space-2);
-    color: var(--text-subtle);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
   }
 
   .empty {
