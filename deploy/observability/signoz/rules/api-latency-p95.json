@@ -7,7 +7,7 @@
   },
   "annotations": {
     "summary": "API p95 latency {{$value}} (threshold {{$threshold}})",
-    "description": "Requests have been slow for the whole window. Sort the related traces by duration: a long Npgsql span is the database (see the pool alerts), a long HttpClient span an import source or AI provider. docs/operations.md, section Alerts."
+    "description": "Requests have been slow for the whole window. Sort the related traces by duration: a long Npgsql span is the database (see the pool alerts), a long HttpClient span an import source or AI provider. Event streams (culina.stream) are left out: they stay open as long as someone watches. docs/operations.md, section Alerts."
   },
   "evaluation": {
     "kind": "rolling",
@@ -31,7 +31,7 @@
               }
             ],
             "filter": {
-              "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server'"
+              "expression": "service.name = '${CULINA_API_SERVICE}' AND kind_string = 'Server' AND culina.stream NOT EXISTS"
             }
           }
         }

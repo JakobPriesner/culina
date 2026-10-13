@@ -192,6 +192,15 @@ internal static class ObservabilityExtensions
                 // readers must not be handed what it opens.
                 options.EnrichWithHttpRequest = (activity, request) =>
                     activity.SetTag("url.path", SecretPaths.Redact(request.PathBase.Add(request.Path)));
+
+                // An event stream lasts as long as someone watches: the latency alert leaves it out.
+                options.EnrichWithHttpResponse = (activity, response) =>
+                {
+                    if (response.ContentType?.StartsWith("text/event-stream", StringComparison.Ordinal) == true)
+                    {
+                        activity.SetTag("culina.stream", true);
+                    }
+                };
             })
             .AddHttpClientInstrumentation()
             .AddNpgsql();
