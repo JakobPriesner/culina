@@ -4,6 +4,7 @@ using Application.Abstractions.Messaging;
 using Application.Households;
 using Application.Recipes;
 using Application.Telemetry;
+using Domain.Cookbooks;
 using Domain.Recipes;
 using Domain.Shared;
 
@@ -22,6 +23,7 @@ public sealed record ArchiveRestored(int Restored, int Skipped);
 
 internal sealed class RestoreArchiveCommandHandler(
     IRecipeRepository recipes,
+    ICookbookRepository cookbooks,
     IHouseholdRepository households,
     IUnitOfWork unitOfWork,
     TimeProvider time)
@@ -86,12 +88,17 @@ internal sealed class RestoreArchiveCommandHandler(
         var restored = 0;
         var skipped = 0;
 
+        // The new id at each archive position, or null where that recipe was skipped.
+        var written = new List<Guid?>(archive.Recipes.Count);
+
         foreach (var entry in archive.Recipes)
         {
-            var written = await WriteOneAsync(command, entry, cancellationToken)
+            var id = await WriteOneAsync(command, entry, cancellationToken)
                 .ConfigureAwait(false);
 
-            if (written)
+            written.Add(id);
+
+            if (id is not null)
             {
                 restored += 1;
             }
@@ -101,11 +108,16 @@ internal sealed class RestoreArchiveCommandHandler(
             }
         }
 
+        foreach (var shelf in archive.Cookbooks ?? [])
+        {
+            await WriteCookbookAsync(command, shelf, written, cancellationToken).ConfigureAwait(false);
+        }
+
         return new ArchiveRestored(restored, skipped);
     }
 
     // One recipe per transaction, not all or nothing: an archive is restored because something went wrong, so one odd recipe must not block the rest. Failures are counted.
-    private async Task<bool> WriteOneAsync(
+    private async Task<Guid?> WriteOneAsync(
         RestoreArchiveCommand command,
         ArchivedRecipe entry,
         CancellationToken cancellationToken)
@@ -119,9 +131,58 @@ internal sealed class RestoreArchiveCommandHandler(
                     token => recipes.AddAsync(recipe, token),
                     cancellationToken).ConfigureAwait(false);
 
-                return added.Match(() => true, _ => false);
+                return added.Match(() => (Guid?)recipe.Id, _ => null);
             },
-            _ => Task.FromResult(false)).ConfigureAwait(false);
+            _ => Task.FromResult<Guid?>(null)).ConfigureAwait(false);
+    }
+
+    // A shelf in its own transaction, like a recipe, and passed over when it does not hold together. Its recipes are
+    // the copies this restore just wrote, never the household's originals: a restore adds.
+    private async Task WriteCookbookAsync(
+        RestoreArchiveCommand command,
+        ArchivedCookbook entry,
+        List<Guid?> written,
+        CancellationToken cancellationToken)
+    {
+        var now = time.GetUtcNow();
+        var name = CookbookName.Create(entry.Name);
+        var built = entry.Rules is { } rules
+            ? CookbookRules.Create(rules.Tags, rules.Ingredients, rules.MaxMinutes).Bind(asked => name.Bind(named =>
+                Cookbook.CreateSmart(command.HouseholdId, named, entry.Description, asked, command.UserId, now)))
+            : name.Bind(named => Cookbook.Create(command.HouseholdId, named, entry.Description, command.UserId, now));
+
+        var onShelf = entry.Rules is null
+            ? (entry.Recipes ?? [])
+                .Where(position => position >= 0 && position < written.Count)
+                .Select(position => written[position])
+                .OfType<Guid>()
+                .Distinct()
+                .ToList()
+            : [];
+
+        await built.Match(
+            cookbook => unitOfWork.InTransactionAsync(
+                async token =>
+                {
+                    var added = await cookbooks.AddAsync(cookbook, token).ConfigureAwait(false);
+
+                    return await added.Match(
+                        async () =>
+                        {
+                            // A microsecond apart, so the shelf reads back in the archive's order.
+                            foreach (var (recipeId, at) in onShelf.Select((id, index) => (id, index)))
+                            {
+                                await cookbooks
+                                    .AddRecipeAsync(cookbook.Id, recipeId, command.UserId, now.AddTicks(at * 10), token)
+                                    .ConfigureAwait(false);
+                            }
+
+                            return Result.Success();
+                        },
+                        error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
+                },
+                cancellationToken),
+            _ => Task.FromResult(Result.Success())).ConfigureAwait(false);
     }
 
     private Result<Recipe> Build(Guid householdId, Guid userId, ArchivedRecipe entry)

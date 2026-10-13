@@ -61,7 +61,7 @@ public interface ICookbookRepository
     /// </summary>
     Task TouchAsync(Guid cookbookId, DateTimeOffset now, CancellationToken cancellationToken);
 
-    /// <summary>Every recipe on a shelf, whichever kind it is, by id.</summary>
+    /// <summary>Every recipe on a shelf, whichever kind it is, by id, in shelf order.</summary>
     Task<IReadOnlyList<Guid>> RecipeIdsAsync(Guid cookbookId, CancellationToken cancellationToken);
 
     /// <summary>Which of this household's shelves a recipe is on.</summary>

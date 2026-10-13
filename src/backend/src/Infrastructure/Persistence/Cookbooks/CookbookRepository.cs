@@ -302,13 +302,14 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
         Guid cookbookId,
         CancellationToken cancellationToken)
     {
-        // Ids only: answers "already on?" for a whole picker at once.
+        // Ids only: answers "already on?" for a whole picker at once. In shelf order, which the archive keeps.
         var ids = await executor.QueryAsync<Guid>(
             $"""
             select on_shelf.id
             from cookbooks c
             cross join lateral ({OnTheShelf}) as on_shelf
-            where c.id = @cookbookId;
+            where c.id = @cookbookId
+            order by on_shelf.added_at nulls last, on_shelf.id;
             """,
             new { cookbookId },
             cancellationToken).ConfigureAwait(false);
