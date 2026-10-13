@@ -87,10 +87,11 @@ test.describe('responsive production layouts @offline', () => {
                 }
               }
               if (path === '/' && width >= 1920) {
-                // Large screens add columns to the grid while headings keep the page's width.
+                // Large screens widen the whole page (90vw, at most 120rem, less its 3rem gutters) and the
+                // grid fills it with more columns, not bigger cards.
                 expect(columns).toBeGreaterThan(width >= 2560 ? 4 : 3);
                 const box = (await grid.boundingBox())!;
-                expect(box.width).toBeGreaterThan(Math.min(width, 2400) * 0.8);
+                expect(box.width).toBeGreaterThanOrEqual(Math.min(width * 0.9, 1920) - 2 * 48 - 1);
               } else {
                 expect(columns).toBe(
                   width < 640 ? 1 : width < 1024 ? 2 : path === '/plan' && width >= 1280 ? 7 : 3
