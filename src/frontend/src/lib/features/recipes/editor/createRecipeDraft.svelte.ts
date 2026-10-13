@@ -88,8 +88,7 @@ export function createRecipeDraft(recipeId: () => string) {
     recovered = false;
 
     if (session.user) {
-      remember(session.user.userId, recipeId(), draft);
-      unsent = true;
+      unsent = remember(session.user.userId, recipeId(), draft);
     }
 
     autosave.touch();
@@ -181,7 +180,7 @@ export function createRecipeDraft(recipeId: () => string) {
 
       // The journal is reopened in place of the server copy, so it needs the step too.
       if (unsent && session.user) {
-        remember(session.user.userId, recipeId(), draft);
+        unsent = remember(session.user.userId, recipeId(), draft);
       }
     },
 
