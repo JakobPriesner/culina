@@ -137,7 +137,7 @@ Point your reverse proxy at it — TLS is the proxy's job, deliberately. The fir
 
 Three volumes are mandatory, and the compose file declares all of them:
 `/data/images` holds the only copy of every photograph, and losing it on a
-redeploy would say nothing at all; `/data/keys` holds the ASP.NET data-protection keys; `/data/config` holds what was set up in the app, the database password among it.
+redeploy would say nothing at all; `/data/keys` holds the key ring that encrypts the assistant's API key, the push-notification key and connected libraries' tokens; `/data/config` holds what was set up in the app, the database password among it.
 
 [`docs/operations.md`](docs/operations.md) has installing, upgrading, backup,
 a tested restore, and the proxy configuration the app expects.
