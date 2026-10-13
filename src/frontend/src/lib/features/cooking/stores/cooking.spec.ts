@@ -49,7 +49,7 @@ describe('resuming on boot', () => {
   });
 
   it('says so plainly when nothing is', async () => {
-    serverAnswers(() => json({ code: 'cooking.session_not_found', detail: 'No.' }, 404));
+    serverAnswers(() => new Response(null, { status: 204 }));
 
     await cooking.resume();
 
@@ -233,7 +233,7 @@ describe('the timers of a session that ended', () => {
   it('are dropped when it ended on another device', async () => {
     await cookingWithATimer();
 
-    serverAnswers(() => json({ code: 'cooking.session_not_found', detail: 'No.' }, 404));
+    serverAnswers(() => new Response(null, { status: 204 }));
     await cooking.resume();
 
     expect(localStorage.getItem(key)).toBeNull();

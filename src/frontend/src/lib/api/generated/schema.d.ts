@@ -1228,7 +1228,7 @@ export interface paths {
         };
         /**
          * What you are cooking
-         * @description 404 when nothing is being cooked. Drives the bar that lets you pick a recipe back up where you left it, so the answer carries the recipe's title and needs no second request.
+         * @description 204 when nothing is being cooked. Drives the bar that lets you pick a recipe back up where you left it, so the answer carries the recipe's title and needs no second request.
          */
         get: operations["getCurrentCookSessionV1"];
         put?: never;
@@ -9799,17 +9799,15 @@ export interface operations {
                     "application/json": components["schemas"]["CookSessionsResponse"];
                 };
             };
-            /** @description Unauthorized */
-            401: {
+            /** @description No Content */
+            204: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/problem+json": components["schemas"]["ProblemDetails"];
-                };
+                content?: never;
             };
-            /** @description Not Found */
-            404: {
+            /** @description Unauthorized */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -471,7 +471,7 @@ of the list.
 | Method | Path | Notes |
 | --- | --- | --- |
 | `POST` | `/cook-sessions` | Start. `201`. Abandons any other active session for this user — there is exactly one. |
-| `GET` | `/cook-sessions/current` | `200` or `404`. Drives the "now cooking" bar. |
+| `GET` | `/cook-sessions/current` | `200`, or `204` when nothing is being cooked. Drives the "now cooking" bar. |
 | `GET` | `/cook-sessions/{cookSessionId}` | `200` + ETag. |
 | `PATCH` | `/cook-sessions/{cookSessionId}` | `currentStepIndex`, `servings`, or `completedAt`. High frequency — the client debounces and sends optimistically. |
 | `DELETE` | `/cook-sessions/{cookSessionId}` | Abandon. `204`. |

@@ -385,7 +385,7 @@ public class InheritanceTests(PostgresFixture postgres)
         // Assert
         // Revoked access takes effect at once, including the resume bar's title.
         Assert.Equal(HttpStatusCode.Created, started.StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, current.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, current.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, moved.StatusCode);
         Assert.DoesNotContain("Bolognese", current.Body, StringComparison.Ordinal);
         Assert.DoesNotContain("Bolognese", moved.Body, StringComparison.Ordinal);
