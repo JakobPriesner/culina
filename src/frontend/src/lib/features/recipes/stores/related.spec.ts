@@ -136,3 +136,34 @@ describe('the end of a shelf', () => {
     expect(related.hasMore('r1')).toBe(false);
   });
 });
+
+describe('the reading household', () => {
+  it('has a shelf of its own, asked for in its name, so the calories follow its choices', async () => {
+    const fetched = vi.fn((input: Request) => {
+      const reader = new URL(input.url).searchParams.get('householdId');
+
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            items: [{ ...item('r2'), calories: { value: reader ? 500 : 300, atLeast: false } }]
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+      );
+    });
+
+    vi.stubGlobal('fetch', fetched);
+
+    await related.load('r1');
+    await related.load('r1', 'h2');
+    await related.load('r1', 'h2');
+
+    expect(fetched).toHaveBeenCalledTimes(2);
+    expect(related.of('r1')[0]?.calories?.value).toBe(300);
+    expect(related.of('r1', 'h2')[0]?.calories?.value).toBe(500);
+
+    related.forget('r1');
+
+    expect(related.statusOf('r1', 'h2')).toBe('idle');
+  });
+});

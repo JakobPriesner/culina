@@ -26,8 +26,9 @@ internal sealed class GetRelatedRecipesEndpoint : IEndpoint
             {
                 var query = context.Request.Query;
 
-                var request = query.ReadInt("limit", 1, MaxLimit, DefaultLimit).Map(limit =>
-                    new GetRelatedRecipesQuery(recipeId, context.CurrentUser().UserId, query["cursor"], limit));
+                var request = query.ReadInt("limit", 1, MaxLimit, DefaultLimit).Bind(limit =>
+                    query.ReadGuid("householdId").Map(household =>
+                        new GetRelatedRecipesQuery(recipeId, context.CurrentUser().UserId, household.Value, query["cursor"], limit)));
 
                 return await request.Match(
                     async asked =>
@@ -47,9 +48,11 @@ internal sealed class GetRelatedRecipesEndpoint : IEndpoint
                 + "common with this one: what they both are, or what they are both made from. Worked "
                 + "out from the concepts the recipes are indexed under, and weighted by how rare each "
                 + "is in the household. Empty when nothing is alike enough to say so, and past the closest "
-                + "three it ends where the rest are far less alike than the closest. Not cached: it "
-                + "changes with every other recipe in the household.")
-            .WithRepeatableQueryParameters(["cursor", "limit"], [], ["limit"])
+                + "three it ends where the rest are far less alike than the closest. Each carries its "
+                + "calories per portion as the recipe's nutrition reads them for householdId, a household "
+                + "the caller is in that has the recipe; left out, the recipe's own household. Not "
+                + "cached: it changes with every other recipe in the household.")
+            .WithRepeatableQueryParameters(["cursor", "limit", "householdId"], [], ["limit"])
             .Produces<Response>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
