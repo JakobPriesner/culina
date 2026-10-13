@@ -248,6 +248,33 @@ None of this has been compiled or run yet. The planning Mac's Xcode cannot load
 its simulator plug-in, so `xcodebuild` fails before building, and it has no
 Android SDK. The checklist above is open as its own bead.
 
+**What could be checked without a phone (14 October 2026, `tj23.13`).** The
+same Mac still has no CoreSimulator (Xcode 27 has not finished its first launch),
+so neither a simulator nor `xcodebuild` ran. Checked instead:
+
+- `pnpm build:native` and `cap sync ios` succeed; `build-native/` has no source
+  maps.
+- The Swift sources type-check against the iOS SDK and the Capacitor 8.5.3
+  xcframeworks: the app with `CulinaTimers` (iOS 15) and the timer widget
+  (iOS 16.2), both clean.
+- The app bundle ran in Chromium against an API built from the same tree,
+  served from one origin so no CORS was involved (vite preview of
+  `build-native/` proxying `/api`). Connect, the two refusals (nothing at the
+  address; an older server), sign-in, photos through the bearer-token source,
+  and "Use another server" (forgets the address, the token and the kept copies)
+  all work.
+- Two bugs found and fixed. **Every cold start signed the person out**: the
+  `(app)` layout's session load runs beside the root layout's, so the first
+  `/users/me` left before the token was read from the Keychain, and its 401
+  deleted the token. **An offline cold start showed "Culina is not answering"**
+  when a proxy answered 502 for a stopped server, instead of the kept recipes
+  and shopping list; a gateway error now reads the kept copy. Also a layout
+  fix on the account page's server row.
+
+Still open, and only answerable on devices: items 1 (Android Back, the native
+scheme), 2, 3, 4, 5 against a LAN and an https instance, 6, and the timer checks
+of 4.6.
+
 ---
 
 ## 3. Connecting to an instance: network, auth, streaming
