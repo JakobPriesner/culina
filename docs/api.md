@@ -356,6 +356,7 @@ own suggestions is not the same sentence as deleting it.
 | Method | Path | Notes |
 | --- | --- | --- |
 | `GET` | `/suggestions?householdId=…` | A bounded set with a reason for each, best first. Not paged. |
+| `POST` | `/suggestions/impressions` | Which recipes the shortlist drew, sent once it is on screen, so the next days' lists lean away from them. `204`, idempotent. |
 | `PUT` | `/recipes/{recipeId}/suggestion-dismissal` | Stop suggesting this to me. `204`, idempotent. |
 | `DELETE` | `/recipes/{recipeId}/suggestion-dismissal` | Undo that. `204`, and `204` when it was never hidden. |
 

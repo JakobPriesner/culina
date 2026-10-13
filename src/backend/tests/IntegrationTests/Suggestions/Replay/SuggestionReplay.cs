@@ -43,6 +43,9 @@ internal sealed record ReplayOutcome(ReplayPoint Point, IReadOnlyList<ScoredReci
 /// The future is deleted inside a transaction, the production <see cref="SuggestionRanker"/> runs, and the transaction is rolled back,
 /// so the SQL under test is unaltered. Edits in place cannot be rewound (current tags stand in), and plan entries from that day on count as
 /// not yet planned: knowing too little is the safe direction.
+/// What the front page showed is simulated: each person's first list of a day is remembered as that day's impressions, as the endpoint writes
+/// them, and given back to the ranker on later days. Only evenings with a cook are replayed, so a real front page, shown every day, would
+/// remember more than this does.
 /// </remarks>
 /// <param name="session">One connection for the whole run; every point is a rolled-back transaction.</param>
 /// <param name="householdId">Whose cook log.</param>
@@ -82,6 +85,7 @@ internal sealed class SuggestionReplay(DbSession session, Guid householdId)
     {
         var ranker = new SuggestionRanker(new SuggestionReader(executor, weights), weights);
         List<ReplayOutcome> outcomes = [];
+        List<Impression> shown = [];
 
         foreach (var point in points)
         {
@@ -89,10 +93,20 @@ internal sealed class SuggestionReplay(DbSession session, Guid householdId)
 
             try
             {
+                var day = DateOnly.FromDateTime(point.MadeAt.UtcDateTime);
                 var librarySize = await RewindAsync(point.MadeAt, cancellationToken);
+
+                await RememberAsync([.. shown.Where(one => one.UserId == point.UserId && one.Day < day)], point.UserId, cancellationToken);
+
                 var suggested = await ranker.RankAsync(ContextFor(point), cancellationToken);
 
                 outcomes.Add(new ReplayOutcome(point, suggested, librarySize));
+
+                // The list is fixed for the day, so the first one asked for is the one that was shown.
+                if (!shown.Any(one => one.UserId == point.UserId && one.Day == day))
+                {
+                    shown.AddRange(suggested.Take(ShortlistQuality.Shown).Select(item => new Impression(point.UserId, item.Recipe.RecipeId, day)));
+                }
             }
             finally
             {
@@ -103,6 +117,24 @@ internal sealed class SuggestionReplay(DbSession session, Guid householdId)
 
         return outcomes;
     }
+
+    private sealed record Impression(Guid UserId, Guid RecipeId, DateOnly Day);
+
+    // What the front page showed this person on earlier days, written as the endpoint writes it. Anything already in the table is a real
+    // front page's, which this replay is answering in its place.
+    private async Task RememberAsync(IReadOnlyList<Impression> earlier, Guid userId, CancellationToken cancellationToken) =>
+        await executor.ExecuteAsync(
+            """
+            delete from suggestion_impressions where user_id = @userId;
+
+            insert into suggestion_impressions (user_id, recipe_id, shown_on)
+            select @userId, r.id, d.day
+            from unnest(@recipeIds::uuid[], @days::date[]) as d(recipe_id, day)
+            join recipes r on r.id = d.recipe_id
+            on conflict do nothing;
+            """,
+            new { userId, recipeIds = earlier.Select(one => one.RecipeId).ToArray(), days = earlier.Select(one => one.Day).ToArray() },
+            cancellationToken);
 
     // Deletes everything the household did at or after `at`, and says how many recipes are left.
     private async Task<int> RewindAsync(DateTimeOffset at, CancellationToken cancellationToken)

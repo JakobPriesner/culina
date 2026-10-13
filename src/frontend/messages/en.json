@@ -1065,6 +1065,7 @@
   "problem.suggestions.invalid_limit": "Culina couldn't handle that request. Reload the page and try again.",
   "problem.suggestions.missing_like_recipe": "Culina couldn't handle that request. Reload the page and try again.",
   "problem.suggestions.unknown_purpose": "Culina couldn't handle that request. Reload the page and try again.",
+  "problem.suggestions.too_many_impressions": "Culina couldn't send that many recipes at once. Reload the page and try again.",
   "problem.suggestions.unknown_slot": "That isn't a meal of the day Culina knows.",
   "problem.users.email_already_used": "That email address is already registered.",
   "problem.users.invalid_display_name": "A name is required, and it can be at most 80 characters.",

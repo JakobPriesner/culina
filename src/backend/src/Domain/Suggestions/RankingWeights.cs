@@ -31,6 +31,16 @@ public sealed record RankingWeights
     /// </remarks>
     public decimal Repetition { get; init; } = 2.20m;
 
+    /// <summary>How hard to push down something the front page showed this person on an earlier day.</summary>
+    /// <remarks>
+    /// Without it a deterministic ranker shows the same five all week. Sized to outweigh the gap between a
+    /// list's first and sixth place, so a shown recipe steps aside for a day or two; far below
+    /// <see cref="Repetition"/>, since being shown is not being eaten. Counts only for
+    /// <see cref="SuggestionPurpose.Decide"/>: browsing the library or asking for recipes like one is not a
+    /// shortlist that can go stale.
+    /// </remarks>
+    public decimal Shown { get; init; } = 0.80m;
+
     /// <summary>How hard to lift something they liked and have not made for months.</summary>
     public decimal Rediscovery { get; init; } = 0.60m;
 
@@ -84,6 +94,9 @@ public sealed record RankingWeights
 
     /// <summary>How fast the repetition penalty fades, in days.</summary>
     public int RepetitionDecayDays { get; init; } = 10;
+
+    /// <summary>How fast the recently-shown penalty fades, in days.</summary>
+    public int ShownDecayDays { get; init; } = 4;
 
     /// <summary>
     /// When rediscovery starts to count, in days since the household last cooked it.

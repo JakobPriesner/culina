@@ -39,6 +39,30 @@ public class SuggestionReplayTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Run_ShouldRepeatItselfLess_WhenTheFrontPageRemembersWhatItShowed()
+    {
+        var householdId = await ReplayKitchen.BuildAsync(postgres, Token);
+
+        await using var session = postgres.NewSession();
+        var replay = new SuggestionReplay(session, householdId);
+        var points = await replay.PointsAsync(Token);
+
+        var forgetful = ReplayReport.Of(await replay.RunAsync(points, RankingWeights.Default with { Shown = 0m }, Token));
+        var remembering = ReplayReport.Of(await replay.RunAsync(points, RankingWeights.Default, Token));
+
+        TestContext.Current.TestOutputHelper?.WriteLine(forgetful.ToString());
+        TestContext.Current.TestOutputHelper?.WriteLine(remembering.ToString());
+
+        // The same shortlist all week is what a memory of what was shown is for (culina-v2-9y8y.6).
+        Assert.True(
+            remembering.Frozen.Quality.RepetitionRate < forgetful.Frozen.Quality.RepetitionRate,
+            remembering.ToString());
+        Assert.True(
+            remembering.Frozen.Quality.Coverage > forgetful.Frozen.Quality.Coverage,
+            remembering.ToString());
+    }
+
+    [Fact]
     public async Task Run_ShouldLeaveTheHouseholdExactlyAsItFoundIt()
     {
         var householdId = await ReplayKitchen.BuildAsync(postgres, Token);
@@ -84,6 +108,7 @@ public class SuggestionReplayTests(PostgresFixture postgres)
         new DbExecutor(session).ExecuteScalarAsync<long>(
             """
             select (select count(*) from cook_log_entries)
+                 + (select count(*) from suggestion_impressions)
                  + (select count(*) from recipes)
                  + (select count(*) from recipe_ingredients);
             """,

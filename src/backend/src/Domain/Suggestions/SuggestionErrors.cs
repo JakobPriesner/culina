@@ -22,4 +22,10 @@ public static class SuggestionErrors
         "suggestions.missing_like_recipe",
         "Asking for recipes like one means naming it: send 'likeRecipeId'.",
         ErrorType.Validation);
+
+    /// <summary>More recipes were reported as shown than a set can hold.</summary>
+    public static readonly Error TooManyImpressions = new(
+        "suggestions.too_many_impressions",
+        "A suggestion set holds at most 12 recipes, so no more than that can have been shown at once.",
+        ErrorType.Validation);
 }

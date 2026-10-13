@@ -466,6 +466,18 @@ Constraints, stated up front: household-scoped, 90-day retention swept by a
 `BackgroundService`, never leaves the instance, excluded from the archive export
 (like every other person-owned table, per `domain-model.md`).
 
+> **As built (culina-v2-9y8y.6).** One row per person, recipe and *day*
+> (`suggestion_impressions(user_id, recipe_id, shown_on)`): the list is fixed for
+> the day, so rank, score and reason would only repeat what the ranking can
+> recompute. Written by `POST /suggestions/impressions`, which the library page
+> sends once the shortlist is on screen (§K.2 stays a read). The server's day is
+> used, and a reported id outside the household's library is ignored. The sweep
+> is not a service: a person's rows older than 90 days go whenever that person is
+> next shown something. The ranking reads it as one more named term, **Shown**:
+> `−w · exp(−days since last shown / 4)`, with `w = 0.8`, counting only days
+> *before* today (so showing a list never changes it) and only for the
+> `Decide` purpose.
+
 ### C.5 The signal that is documented but missing
 
 `shopping_list_item_sources` (§A.5) would give **"added to the shopping list"**
@@ -1830,13 +1842,20 @@ involvement:
 These four are the ones that catch the small-catalogue failure mode, and they
 need no user feedback at all.
 
-> **As built.** `suggestion_impressions` was not built (see 9y8y.2), and these
-> four do not need it: the replay knows exactly which five recipes the front
-> page would have shown on every evening it predicts, so `ShortlistQuality`
-> computes them from the replayed lists — with no write on render, and for
-> weight vectors nobody has shipped. The first reading, on the simulated
-> kitchen, is the failure this section predicts: repeats 0.78, novelty 0.00
-> (culina-v2-9y8y.6).
+> **As built.** These four are computed from replayed lists, not from the table
+> (it exists since 9y8y.6, but only to keep a shortlist from repeating): the
+> replay knows exactly which five recipes the front page would have shown on
+> every evening it predicts, so `ShortlistQuality` computes them from the
+> replayed lists, for weight vectors nobody has shipped. The first reading, on
+> the simulated kitchen, was the failure this section predicts: repeats 0.78,
+> novelty 0.00. The replay now also plays the front page's memory (each person's
+> first list of a day becomes that day's impressions), and with the Shown term
+> repeats fall to 0.64 and coverage rises from 0.46 to 0.60, for recall@5 0.37 →
+> 0.33. Still high: only evenings with a cook are replayed, so a real front page,
+> shown every day, remembers more. Novelty stays 0.00, as every recipe of the
+> simulated kitchen has been cooked. Calibration with a repetition ceiling
+> proposed nothing worth shipping for `Shown` (0.8 → 0.6 trades repetition for
+> recall); confirm on a real cook log before moving any weight.
 
 ### M.3 Weight calibration without an ML pipeline
 
