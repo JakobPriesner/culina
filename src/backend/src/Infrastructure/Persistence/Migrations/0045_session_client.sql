@@ -5,9 +5,6 @@
 -- bearer header (docs/native-app-design.md, part 3). The row is the same
 -- either way; the devices screen says which kind of device it is, which the
 -- user agent of an app's web view does not.
---
--- Numbered 0041, not 0039: 0039 and 0040 are taken by work in progress
--- elsewhere, and the runner applies every unapplied file in order.
 
 alter table sessions
     add column client text not null default 'browser'
