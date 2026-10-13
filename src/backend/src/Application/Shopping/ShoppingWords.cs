@@ -37,6 +37,6 @@ internal static class ShoppingWords
         "drinks" => ShoppingSection.Drinks,
         "household" => ShoppingSection.Household,
         "other" => ShoppingSection.Other,
-        _ => new FieldError("section", ShoppingErrors.ItemNotFound.Code, $"'{value}' is not a section.")
+        _ => new FieldError("section", ShoppingErrors.UnknownSection.Code, $"'{value}' is not a section.")
     };
 }

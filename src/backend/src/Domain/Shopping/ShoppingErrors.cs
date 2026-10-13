@@ -23,6 +23,12 @@ public static class ShoppingErrors
         "That item is not on the list.",
         ErrorType.NotFound);
 
+    /// <summary>A section the list does not have.</summary>
+    public static readonly Error UnknownSection = new(
+        "shopping.unknown_section",
+        "That is not a section of the shopping list.",
+        ErrorType.Validation);
+
     /// <summary>The amount is not a plausible one.</summary>
     public static readonly Error InvalidQuantity = new(
         "shopping.invalid_quantity",

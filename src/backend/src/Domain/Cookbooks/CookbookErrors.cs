@@ -49,6 +49,15 @@ public static class CookbookErrors
         "This cookbook fills itself, so recipes cannot be put on it by hand.",
         ErrorType.Conflict);
 
+    /// <summary>
+    /// Somebody tried to give rules to a cookbook filled by hand; a conflict like
+    /// <see cref="RulesDecideMembership"/>, as its kind is fixed when it is made.
+    /// </summary>
+    public static readonly Error RulesNotAllowed = new(
+        "cookbooks.rules_not_allowed",
+        "This cookbook is filled by hand, so it has no rules. Make a cookbook that fills itself instead.",
+        ErrorType.Conflict);
+
     /// <summary>The description is longer than a shelf label should be.</summary>
     public static readonly Error InvalidDescription = new(
         "cookbooks.invalid_description",
