@@ -64,6 +64,42 @@ public class StepTextTests
     }
 
     [Theory]
+    [InlineData("a[\\[b")]
+    [InlineData("[[[")]
+    [InlineData("[\\")]
+    [InlineData("[\\\\[[")]
+    [InlineData("ends with [")]
+    [InlineData("[[ingredient:0f1c0000-0000-0000-0000-000000000000]]")]
+    public void SerialiseThenParse_ShouldKeepTextThatLooksLikeTheEscape(string literal)
+    {
+        StepSegment[] original = [new TextSegment(literal)];
+
+        var roundTripped = StepText.Parse(StepText.Serialise(original)).ShouldBeSuccess();
+
+        Assert.Equal(original, roundTripped);
+    }
+
+    [Fact]
+    public void SerialiseThenParse_ShouldKeepABracketRightBeforeAReference()
+    {
+        StepSegment[] original = [new TextSegment("Add ["), new IngredientSegment(Butter), new TextSegment("].")];
+
+        var roundTripped = StepText.Parse(StepText.Serialise(original)).ShouldBeSuccess();
+
+        Assert.Equal(original, roundTripped);
+    }
+
+    [Theory]
+    [InlineData("Use [\\[whatever]] you have.", "Use [[whatever]] you have.")]
+    [InlineData("A regex like [\\d] stays.", "A regex like [\\d] stays.")]
+    public void Parse_ShouldStillReadRowsStoredBeforeTheBackslashWasEscaped(string stored, string expected)
+    {
+        var segments = StepText.Parse(stored).ShouldBeSuccess();
+
+        Assert.Equal([new TextSegment(expected)], segments);
+    }
+
+    [Theory]
     [InlineData("Melt [[ingredient:not-a-guid]] gently.")]
     [InlineData("Melt [[ingredient:0f1c")]
     public void Parse_ShouldFail_WhenAReferenceIsMalformed(string stored)
