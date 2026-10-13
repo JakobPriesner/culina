@@ -97,19 +97,35 @@ public class SignInEndpointTests(PostgresFixture postgres)
         using var client = await RegisteredClientAsync("ada@example.com");
         await Warm(client);
 
-        var known = await TimeAsync(() => client.PostAsync(
+        Task<ApiResponse> SignIn(string email) => client.PostAsync(
             "/api/v1/sessions",
-            new { email = "ada@example.com", password = "not the password" },
-            Token));
-        var unknown = await TimeAsync(() => client.PostAsync(
-            "/api/v1/sessions",
-            new { email = "nobody@example.com", password = "not the password" },
-            Token));
+            new { email, password = "not the password" },
+            Token);
+
+        // Interleaved, in alternating order, and compared by median: a single pair measured one
+        // load spike in a busy full run (the hasher queues for a core) rather than the hash.
+        const int Rounds = 7;
+        var known = new List<double>();
+        var unknown = new List<double>();
+
+        for (var round = 0; round < Rounds; round += 1)
+        {
+            if (round % 2 == 0)
+            {
+                known.Add((await TimeAsync(() => SignIn("ada@example.com"))).TotalMilliseconds);
+                unknown.Add((await TimeAsync(() => SignIn("nobody@example.com"))).TotalMilliseconds);
+            }
+            else
+            {
+                unknown.Add((await TimeAsync(() => SignIn("nobody@example.com"))).TotalMilliseconds);
+                known.Add((await TimeAsync(() => SignIn("ada@example.com"))).TotalMilliseconds);
+            }
+        }
 
         // Skipping the hash for an unknown address would make that response far faster and leak
         // which addresses are registered. The bound is loose: it asserts the work happens, not that
         // timings match.
-        var ratio = known.TotalMilliseconds / Math.Max(unknown.TotalMilliseconds, 1);
+        var ratio = Median(known) / Math.Max(Median(unknown), 1);
         Assert.InRange(ratio, 0.2, 5.0);
     }
 
@@ -289,6 +305,13 @@ public class SignInEndpointTests(PostgresFixture postgres)
             "/api/v1/sessions",
             new { email = "warm@example.com", password = Password },
             Token);
+
+    private static double Median(List<double> samples)
+    {
+        samples.Sort();
+
+        return samples[samples.Count / 2];
+    }
 
     private static async Task<TimeSpan> TimeAsync(Func<Task<ApiResponse>> work)
     {
