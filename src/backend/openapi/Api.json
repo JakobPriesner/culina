@@ -9076,6 +9076,105 @@
         }
       }
     },
+    "/api/v1/push/relay": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Whether the installed apps can be notified",
+        "description": "True when an administrator named a push relay (Push:RelayUrl). An app asks for notification permission only when it is.",
+        "operationId": "getPushRelayV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesIntakePushRelay"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/push/devices/{deviceId}": {
+      "put": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Register an installed app's device for import notifications",
+        "description": "The app picks the device id and sends the relay token it got from the push relay; the same device signing in again, as anyone, replaces its row. Ten per person (409 Push.TooManyDevices). 409 push.relay_off when this server names no relay.",
+        "operationId": "registerPushDeviceV1",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipesIntakePushDeviceRegistration"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Forget an installed app's device",
+        "description": "On sign-out. 204, also when it was never registered.",
+        "operationId": "removePushDeviceV1",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/suggestions": {
       "get": {
         "tags": [
@@ -13678,6 +13777,24 @@
         },
         "description": "A persisted import and its recoverable progress."
       },
+      "RecipesIntakePushDeviceRegistration": {
+        "required": [
+          "relayToken"
+        ],
+        "type": "object",
+        "properties": {
+          "relayToken": {
+            "type": "string",
+            "description": "The relay's stand-in for the phone's store token; holding it is the permission to push to the phone."
+          },
+          "language": {
+            "type": "string",
+            "description": "`en` or `de`, the language notifications are written in.",
+            "nullable": true
+          }
+        },
+        "description": "An installed app's device, by the relay token the push relay gave it (docs/native-app-design.md, 7.1)."
+      },
       "RecipesIntakePushKey": {
         "required": [
           "publicKey"
@@ -13716,6 +13833,19 @@
           }
         },
         "description": "The browser's Web Push subscription."
+      },
+      "RecipesIntakePushRelay": {
+        "required": [
+          "available"
+        ],
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean",
+            "description": "True when an administrator named a push relay."
+          }
+        },
+        "description": "Whether this server can reach the installed apps, so an app asks for notification permission only when it can."
       },
       "RecipesRecipeDetail": {
         "required": [
@@ -15397,6 +15527,17 @@
         },
         "description": "Which proxies may say who the client really is."
       },
+      "SettingsGetServerPushContract": {
+        "type": "object",
+        "properties": {
+          "relayUrl": {
+            "type": "string",
+            "description": "The relay's https:// address, or null for none. Naming one sends the words of each notification (never a recipe,\na name or this server's address) to that service.",
+            "nullable": true
+          }
+        },
+        "description": "The push relay the installed apps are reached through (docs/native-app-design.md, 7.3)."
+      },
       "SettingsGetServerRateLimitsContract": {
         "required": [
           "loginPerIpPerMinute",
@@ -15471,6 +15612,7 @@
           "forwardedHeaders",
           "rateLimits",
           "telemetry",
+          "push",
           "connection",
           "pinned",
           "writable"
@@ -15488,6 +15630,9 @@
           },
           "telemetry": {
             "$ref": "#/components/schemas/SettingsGetServerTelemetryContract"
+          },
+          "push": {
+            "$ref": "#/components/schemas/SettingsGetServerPushContract"
           },
           "connection": {
             "$ref": "#/components/schemas/SettingsGetServerConnectionContract"
@@ -15987,6 +16132,17 @@
         },
         "description": "Which proxies may say who the client really is."
       },
+      "SettingsUpdateServerPushContract": {
+        "type": "object",
+        "properties": {
+          "relayUrl": {
+            "type": "string",
+            "description": "The relay's https:// address, or null for none. Naming one sends the words of each notification (never a recipe,\na name or this server's address) to that service.",
+            "nullable": true
+          }
+        },
+        "description": "The push relay the installed apps are reached through (docs/native-app-design.md, 7.3)."
+      },
       "SettingsUpdateServerRateLimitsContract": {
         "required": [
           "loginPerIpPerMinute",
@@ -16060,7 +16216,8 @@
           "cookies",
           "forwardedHeaders",
           "rateLimits",
-          "telemetry"
+          "telemetry",
+          "push"
         ],
         "type": "object",
         "properties": {
@@ -16075,6 +16232,9 @@
           },
           "telemetry": {
             "$ref": "#/components/schemas/SettingsUpdateServerTelemetryContract"
+          },
+          "push": {
+            "$ref": "#/components/schemas/SettingsUpdateServerPushContract"
           }
         },
         "description": "The server settings to run with from now on. Every group is complete: a\nvalue left out is not \"unchanged\", it is missing."

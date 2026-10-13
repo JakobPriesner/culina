@@ -51,3 +51,18 @@ public sealed record PushRegistration
 
 /// <summary>The public application key for registering Web Push.</summary>
 public sealed record PushKey(string PublicKey);
+
+/// <summary>An installed app's device, by the relay token the push relay gave it (docs/native-app-design.md, 7.1).</summary>
+public sealed record PushDeviceRegistration
+{
+    /// <summary>The relay's stand-in for the phone's store token; holding it is the permission to push to the phone.</summary>
+    public required string RelayToken { get; init; }
+
+    /// <summary><c>en</c> or <c>de</c>, the language notifications are written in.</summary>
+    public string? Language { get; init; }
+}
+
+/// <summary>Whether this server can reach the installed apps, so an app asks for notification permission only when it can.</summary>
+/// <param name="Available">True when an administrator named a push relay.</param>
+public sealed record PushRelay(bool Available);
+

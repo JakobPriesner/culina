@@ -1862,5 +1862,11 @@
   "me.server.switchBody": "Meldet dich hier ab und fragt nach einer anderen Adresse.",
   "kitchen.native.paused": "Pausiert",
   "kitchen.native.more": "+{count} weitere",
-  "error.backgrounded": "Das ist abgebrochen, während Culina im Hintergrund war. Was schon da ist, bleibt; versuch es noch einmal, um es fertigzustellen."
+  "error.backgrounded": "Das ist abgebrochen, während Culina im Hintergrund war. Was schon da ist, bleibt; versuch es noch einmal, um es fertigzustellen.",
+  "server.push": "App-Benachrichtigungen",
+  "server.push.hint": "Die Culina-Apps für iPhone und Android können melden, wenn ein Import fertig ist, aber nur über ein Relay, das betreibt, wer die Apps veröffentlicht: Apple und Google nehmen Benachrichtigungen von niemand anderem an. Ist eines eingetragen, gehen die Worte jeder Benachrichtigung („Dein Rezept ist bereit“) an diesen Dienst, nie ein Rezept, ein Name oder die Adresse dieses Servers. Bleibt das Feld leer, bekommen die Apps keine Benachrichtigungen; Browser betrifft das nicht.",
+  "server.push.relay": "Relay-Adresse",
+  "server.push.relay.hint": "Eine https://-Adresse wie https://relay.example.com.",
+  "problem.push.relay_off": "Dieser Server schickt den Apps keine Benachrichtigungen. Eine Administratorin oder ein Administrator kann unter Server ein Relay eintragen.",
+  "problem.push.invalid_device": "Dieses Gerät konnte nicht für Benachrichtigungen angemeldet werden."
 }

@@ -50,6 +50,10 @@ public interface IIntakeNotifications
     Task<Result> RegisterAsync(Guid userId, PushRegistration subscription, CancellationToken token);
     /// <summary>Removes this device's subscription.</summary>
     Task RemoveAsync(Guid userId, string endpoint, CancellationToken token);
+    /// <summary>Registers an installed app's device by the relay token it got from the push relay; ten per person.</summary>
+    Task<Result> RegisterDeviceAsync(Guid userId, Guid deviceId, string relayToken, string? language, CancellationToken token);
+    /// <summary>Forgets an installed app's device, on sign-out.</summary>
+    Task RemoveDeviceAsync(Guid userId, Guid deviceId, CancellationToken token);
     /// <summary>Delivers pending notifications only for already saved recipes.</summary>
     Task DeliverAsync(CancellationToken token);
 }

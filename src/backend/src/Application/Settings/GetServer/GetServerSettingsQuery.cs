@@ -22,6 +22,7 @@ internal sealed class GetServerSettingsQueryHandler(
     ForwardedHeadersSettings proxies,
     RateLimitSettings limits,
     TelemetrySettings telemetry,
+    PushSettings push,
     IServerConfiguration configuration)
     : IQueryHandler<GetServerSettingsQuery, Response>
 {
@@ -36,7 +37,8 @@ internal sealed class GetServerSettingsQueryHandler(
             .. cookies.ToConfigurationValues().Keys,
             .. proxies.ToConfigurationValues().Keys,
             .. limits.ToConfigurationValues().Keys,
-            .. telemetry.ToConfigurationValues().Keys
+            .. telemetry.ToConfigurationValues().Keys,
+            .. push.ToConfigurationValues().Keys
         ];
 
         return Task.FromResult(tracked.Record(Result<Response>.Success(new Response
@@ -71,6 +73,7 @@ internal sealed class GetServerSettingsQueryHandler(
                 OtlpEndpoint = telemetry.Endpoint?.OriginalString,
                 OtlpProtocol = OtlpProtocols.ToWire(telemetry.Protocol)
             },
+            Push = new PushContract { RelayUrl = push.RelayUrl?.OriginalString },
             Connection = new ConnectionContract
             {
                 RemoteAddress = query.RemoteAddress,
