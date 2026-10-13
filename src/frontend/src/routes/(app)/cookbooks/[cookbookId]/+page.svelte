@@ -48,14 +48,14 @@
 <svelte:head><title>{cookbook?.name ?? m['cookbooks.title']()}</title></svelte:head>
 
 <Page>
-  {#if cookbooks.status === 'failed' && !cookbook && cookbooks.error?.status === 404}
+  {#if cookbooks.openStatus === 'failed' && !cookbook && cookbooks.openError?.status === 404}
     <NotFound kind="cookbook" level={1} />
-  {:else if cookbooks.status === 'failed' && !cookbook}
+  {:else if cookbooks.openStatus === 'failed' && !cookbook}
     <ErrorState
       title={m['cookbooks.detail.failed']()}
       body={m['cookbooks.detail.failed.body']()}
       requestIdLabel={m['error.reference']()}
-      requestId={cookbooks.error?.requestId}
+      requestId={cookbooks.openError?.requestId}
     >
       {#snippet action()}
         <Button variant="primary" href={resolve('/(app)/cookbooks')}>
@@ -65,7 +65,7 @@
     </ErrorState>
   {:else}
     <header class="head">
-      <CookbookHeading {cookbook} loading={cookbooks.status === 'loading'} {automatic} />
+      <CookbookHeading {cookbook} loading={cookbooks.openStatus === 'loading'} {automatic} />
 
       <CookbookActions
         {automatic}

@@ -16,10 +16,15 @@ const toWireRules = (rules?: CookbookRules | null) =>
       }
     : undefined;
 
-/** A household's cookbook shelves and the open one; membership lives in `cookbookMemberships.svelte.ts`. */
+/**
+ * A household's cookbook shelves and the open one, each with its own status so one page never
+ * shows the other's failure; membership lives in `cookbookMemberships.svelte.ts`.
+ */
 export class Shelves {
   #items = $state<Cookbook[]>([]);
   #open = $state<CookbookDetail | null>(null);
+  #openStatus = $state<LoadStatus>('idle');
+  #openError = $state<AppError | null>(null);
   #status = $state<LoadStatus>('idle');
   #cursor = $state<string | null>(null);
   #loadingMore = $state(false);
@@ -27,6 +32,7 @@ export class Shelves {
   #error = $state<AppError | null>(null);
 
   // Not $state: `list` runs in an $effect, and a tracked read here would make it re-run on its own writes.
+  // True once a read has worked, so a retry after a failure shows the skeleton, not the failure.
   #loaded = false;
 
   // Not $state, for the same reason as `#loaded`.
@@ -38,6 +44,14 @@ export class Shelves {
 
   get open(): CookbookDetail | null {
     return this.#open;
+  }
+
+  get openStatus(): LoadStatus {
+    return this.#openStatus;
+  }
+
+  get openError(): AppError | null {
+    return this.#openError;
   }
 
   get status(): LoadStatus {
@@ -79,7 +93,7 @@ export class Shelves {
       })
     );
 
-    this.#loaded = true;
+    this.#loaded = result.ok;
 
     if (result.ok) {
       this.#items = result.value.items.map(toCookbook);
@@ -123,8 +137,8 @@ export class Shelves {
   }
 
   async load(cookbookId: string): Promise<void> {
-    this.#status = 'loading';
-    this.#error = null;
+    this.#openStatus = 'loading';
+    this.#openError = null;
 
     const result = await request(() =>
       http.GET('/api/v1/cookbooks/{cookbookId}', { params: { path: { cookbookId } } })
@@ -132,13 +146,13 @@ export class Shelves {
 
     if (result.ok) {
       this.#open = toDetail(result.value);
-      this.#status = 'ready';
+      this.#openStatus = 'ready';
 
       return;
     }
 
-    this.#error = result.error;
-    this.#status = 'failed';
+    this.#openError = result.error;
+    this.#openStatus = 'failed';
   }
 
   /** Creates a cookbook; rules make it fill itself, with no separate flag. */
@@ -264,6 +278,8 @@ export class Shelves {
   reset(): void {
     this.#items = [];
     this.#open = null;
+    this.#openStatus = 'idle';
+    this.#openError = null;
     this.#status = 'idle';
     this.#error = null;
     this.#cursor = null;

@@ -160,6 +160,37 @@ describe('what is on a shelf, all of it', () => {
   });
 });
 
+describe('the list and the open shelf', () => {
+  it('keep their own status, so a shelf that failed to open does not fail the list', async () => {
+    serverAnswers(() => listOf(shelf('c1', 'Christmas')));
+    await cookbooks.list(household);
+
+    serverAnswers(() => json({ code: 'server.error' }, 500));
+    await cookbooks.load('c1');
+
+    expect(cookbooks.openStatus).toBe('failed');
+    expect(cookbooks.status).toBe('ready');
+
+    serverAnswers(() => listOf(shelf('c1', 'Christmas')));
+    const reading = cookbooks.list(household);
+
+    expect(cookbooks.status).not.toBe('failed');
+    await reading;
+    expect(cookbooks.status).toBe('ready');
+  });
+
+  it('shows the skeleton, not the failure, while a failed list is read again', async () => {
+    serverAnswers(() => json({ code: 'server.error' }, 500));
+    await cookbooks.list(household);
+
+    serverAnswers(() => listOf(shelf('c1', 'Christmas')));
+    const reading = cookbooks.list(household);
+
+    expect(cookbooks.status).toBe('loading');
+    await reading;
+  });
+});
+
 describe('deleting a shelf', () => {
   beforeEach(async () => {
     serverAnswers(() => listOf(shelf('c1', 'Christmas'), shelf('c2', 'Weeknights')));
