@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
+
   import { Button, Checkbox, Sheet } from '$ds';
 
   import { m } from '$shell/i18n';
@@ -27,6 +29,22 @@
       void cookbooks.loadMemberships(recipeId, householdId);
     }
   });
+
+  // Every page, not just the first: a recipe has to reach every cookbook from here. Untracked, so
+  // only a new cursor or a retry asks for the next one.
+  $effect(() => {
+    if (open && cookbooks.hasMore && !cookbooks.moreFailed) {
+      untrack(() => void cookbooks.loadMore(householdId));
+    }
+  });
+
+  const failed = $derived(cookbooks.status === 'failed' || cookbooks.moreFailed);
+
+  function retry() {
+    void (cookbooks.status === 'failed'
+      ? cookbooks.list(householdId)
+      : cookbooks.loadMore(householdId));
+  }
 
   async function toggle(cookbookId: string, name: string, on: boolean) {
     const done = await cookbooks.setOn(recipeId, { id: cookbookId, name }, on);
@@ -70,9 +88,7 @@
                  and the disabled tick says whether the recipe is on it. -->
             <Checkbox
               label={cookbook.name}
-              checked={cookbook.kind === 'smart'
-                ? cookbooks.contains(recipeId, cookbook.id)
-                : cookbooks.contains(recipeId, cookbook.id)}
+              checked={cookbooks.contains(recipeId, cookbook.id)}
               disabled={cookbook.kind === 'smart'}
               onchange={(on) => void toggle(cookbook.id, cookbook.name, on)}
             />
@@ -83,6 +99,13 @@
           </li>
         {/each}
       </ul>
+    {/if}
+
+    {#if failed}
+      <div class="failure" role="alert">
+        <p>{m['cookbooks.failed.title']()}</p>
+        <Button variant="secondary" size="sm" onclick={retry}>{m['error.retry']()}</Button>
+      </div>
     {/if}
 
     <Button onclick={() => (making = true)}>{m['cookbooks.new.action']()}</Button>
@@ -119,6 +142,14 @@
 
   .nothing {
     color: var(--text-muted);
+  }
+
+  .failure {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    color: var(--text-danger);
   }
 
   .automatic {
