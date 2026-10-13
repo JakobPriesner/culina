@@ -61,7 +61,21 @@ public class RelatedRecipeTests(PostgresFixture postgres)
         var golden = GoldenLibrary.Load();
         var kitchen = await Kitchen.OpenAsync(postgres);
         var ids = await golden.SeedAsync(kitchen);
-        var recipeId = ids["Spaghetti Bolognese"];
+
+        // A shelf longer than one page; most stop at three, the rest being far less alike.
+        Guid? longest = null;
+
+        foreach (var id in ids.Values)
+        {
+            if ((await PageAsync(kitchen.Client, $"/api/v1/recipes/{id}/related?limit=12")).GetProperty("items").GetArrayLength() > 3)
+            {
+                longest = id;
+                break;
+            }
+        }
+
+        Assert.NotNull(longest);
+        var recipeId = longest.Value;
 
         List<string> walked = [];
         string? cursor = null;
@@ -85,6 +99,26 @@ public class RelatedRecipeTests(PostgresFixture postgres)
         Assert.True(walked.Count > 3, string.Join(" · ", walked));
         Assert.Equal(walked.Count, walked.Distinct(StringComparer.Ordinal).Count());
         Assert.Equal(once, walked.Take(once.Count));
+    }
+
+    /// <summary>
+    /// Past the closest three, only what is still near the best: without the cut Bolognese ran on through all
+    /// twelve, as far as Tiramisu and a Greek salad.
+    /// </summary>
+    [Fact]
+    public async Task Related_ShouldStopShort_OfRecipesFarLessAlikeThanTheClosest()
+    {
+        var golden = GoldenLibrary.Load();
+        var kitchen = await Kitchen.OpenAsync(postgres);
+        var ids = await golden.SeedAsync(kitchen);
+
+        var related = (await PageAsync(kitchen.Client, $"/api/v1/recipes/{ids["Spaghetti Bolognese"]}/related?limit=12"))
+            .GetProperty("items").EnumerateArray().Select(Title).ToList();
+
+        Assert.Contains("Lasagne Bolognese", related);
+        Assert.InRange(related.Count, 3, 11);
+        Assert.DoesNotContain("Tiramisu", related);
+        Assert.DoesNotContain("Griechischer Salat", related);
     }
 
     [Fact]

@@ -9,8 +9,9 @@
   import type { RelatedReason } from './types';
 
   /**
-   * Recipes close to this one, on a shelf like the cookbook's; similarity is content (never "also cooked":
-   * co-occurrence is noise at household size) and every card says why. The similarity floor ends paging.
+   * Recipes close to this one, in a grid like the library's; similarity is content (never "also cooked":
+   * co-occurrence is noise at household size) and every card says why. The server ends paging where the
+   * rest are far less alike than the closest; {@link mostShown} ends it in a kitchen of near twins.
    */
   interface Props {
     recipeId: string;
@@ -22,7 +23,10 @@
 
   const items = $derived(related.of(recipeId));
 
-  const hasMore = $derived(related.hasMore(recipeId));
+  /** Four rows of three: below a recipe, more is a library to browse, not a suggestion. */
+  const mostShown = 12;
+
+  const hasMore = $derived(related.hasMore(recipeId) && items.length < mostShown);
 
   // The page asks as soon as it knows the id; load is idempotent, so this is for use without it.
   $effect(() => {
@@ -42,8 +46,8 @@
   <section class="similar" aria-labelledby="similar-heading">
     <h2 id="similar-heading">{m['suggestions.similar.title']()}</h2>
 
-    <ul class="shelf">
-      {#each items as recipe (recipe.id)}
+    <ul class="grid">
+      {#each items.slice(0, mostShown) as recipe (recipe.id)}
         <li>
           <RecipeCard {recipe} from={inheritedFrom(recipe, inherited)} />
           <p class="because">{because(recipe.reason)}</p>
@@ -77,28 +81,18 @@
     font-weight: var(--weight-regular);
   }
 
-  .shelf {
+  .grid {
     display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(14rem, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-6);
     margin: 0;
-    /* Room for the focus ring, else the scroll container clips it on the first and last card. */
-    padding: var(--space-1);
-    overflow-x: auto;
-    scroll-snap-type: x proximity;
+    padding: 0;
     list-style: none;
   }
 
-  /* Snapping fights keyboard walking: each Tab would be undone as the browser re-settles the scroll. */
-  .shelf:focus-within {
-    scroll-snap-type: none;
-  }
-
-  .shelf > li {
+  .grid > li {
     display: flex;
     flex-direction: column;
-    scroll-snap-align: start;
     min-width: 0;
   }
 
@@ -108,16 +102,20 @@
     font-size: var(--text-sm);
   }
 
-  @media (min-width: 64rem) {
-    .shelf {
-      grid-auto-flow: row;
-      grid-auto-columns: auto;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      overflow-x: visible;
+  /* The library's columns, so a phone scrolls on down the page instead of sideways. */
+  @media (min-width: 40rem) {
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 
-  /* Paper has no shelf to scroll. */
+  @media (min-width: 64rem) {
+    .grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  /* Paper has no use for suggestions. */
   @media print {
     .similar {
       display: none;

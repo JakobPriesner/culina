@@ -3279,6 +3279,13 @@ plain overlap fraction makes everything related to everything. What shipped
 - A floor of 0.1 on the combined score. At 0.15 a salmon recipe lost the fish
   tacos and the Frikadellen lost every other mince recipe; at 0.1 all sixty
   golden recipes have at least three, each with a reason.
+- Past the closest three, a recipe must also score at least 0.3 of the best
+  match (`culina-v2-kfd1`). The floor alone let a shelf run on: Bolognese went
+  through all twelve of a page as far as Tiramisu and a Greek salad, and in a
+  big kitchen dozens of recipes clear 0.1 on one shared ingredient. At 0.3 it
+  ends after Gemüselasagne and the Hähnchen-Curry after Linsen-Dal; at 0.5 the
+  curry already lost Chicken Tikka Masala. The closest three are exempt because
+  the shelf shows three or nothing and a small kitchen's three can be far apart.
 - A reason names only *telling* concepts — carried by at most half the
   kitchen — drops a concept that is only there as an ancestor of another shared
   one ("Hähnchen", never "Hähnchen, Geflügel, Fleisch"), and names at most
