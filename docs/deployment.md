@@ -42,15 +42,17 @@ Three volumes are mandatory, and forgetting one is a silent failure:
 | Path | Why |
 | --- | --- |
 | `/data/images` | Recipe images. Content-addressed; lost on redeploy otherwise. |
-| `/data/keys` | ASP.NET data-protection keys. |
+| `/data/keys` | The key ring that encrypts the secrets stored in the database. |
 | `/data/config` | `culina.json`: what an administrator set up in the app. Without it the settings screen cannot save. |
 
-A note on `/data/keys`, because the usual warning does **not** apply here:
+A note on `/data/keys`, because the usual warning is the wrong one here:
 Culina's session cookie carries an opaque reference, not an encrypted payload,
-so the session row is what authenticates a request and a lost key ring does not
-sign anyone out. The volume is still configured — anything the framework
-protects later would otherwise change key on every restart — but the volume that
-genuinely must survive a redeploy is `/data/images`.
+so a lost key ring signs nobody out. What it does encrypt is the model
+provider's API key, the key push notifications are signed with, and the API
+tokens of connected recipe libraries. Lose it and the assistant has to be given
+its key again, finished imports stop notifying anyone, and every connected
+library has to be connected again. Back it up, apart from the dump —
+`operations.md` says how.
 
 ## The image
 

@@ -120,15 +120,16 @@ says `scram-sha-256` rather than `md5` or `password`.
 | Variable | Default | |
 | --- | --- | --- |
 | `Storage__ImagePath` | `/data/images` in the image | **Must be a volume.** Recipe photographs, re-encoded. Not in the database and not rebuildable: without a volume, every photo in the instance disappears on the next deploy and nothing says so. |
-| `Storage__DataProtectionKeyPath` | `/data/keys` in the image | **Must be a volume.** The ASP.NET data-protection key ring. |
+| `Storage__DataProtectionKeyPath` | `/data/keys` in the image | **Must be a volume.** The ASP.NET data-protection key ring, which encrypts the secrets stored in the database. |
 | `Storage__MaxImageBytes` | `10485760` | 10 MB. |
 | `Storage__ConfigPath` | `/data/config` in the image | **Should be a volume.** Where `culina.json` — everything saved from the setup and settings screens — lives. Not required to be writable: without it Culina still starts, and the settings screen shows the settings but says it cannot save them. |
 
-A note on the key ring, because the usual warning does not apply: Culina's
-session cookie carries an opaque reference, not an encrypted payload, so the
-session row is what authenticates a request and losing the keys does not sign
-anyone out. The volume is still configured, because anything the framework
-protects later would otherwise change key on every restart.
+A note on the key ring, because the usual warning is the wrong one: Culina's
+session cookie carries an opaque reference, not an encrypted payload, so losing
+the keys signs nobody out. They encrypt the model provider's API key, the key
+push notifications are signed with, and the API tokens of connected recipe
+libraries; without them those have to be entered or connected again.
+`operations.md` covers backing it up and restoring it.
 
 ## Cookies
 
