@@ -1823,5 +1823,8 @@
   "nutrition.package.remove": "Entfernen",
   "nutrition.package.removeLabel": "„{name}“ entfernen",
   "nutrition.package.removed": "„{name}“ ist entfernt; Zutaten, die es verwendet haben, zählen wie vorher.",
-  "problem.nutrition.invalid_food": "Ein Lebensmittel braucht einen Namen und seine Kilokalorien pro 100 g, und jeder Wert muss in 100 g passen."
+  "problem.nutrition.invalid_food": "Ein Lebensmittel braucht einen Namen und seine Kilokalorien pro 100 g, und jeder Wert muss in 100 g passen.",
+  "shopping.quickAdd.placeholder": "z. B. 200 g Butter",
+  "shopping.completed": "Erledigt",
+  "shopping.itemActions": "Aktionen für {name}"
 }

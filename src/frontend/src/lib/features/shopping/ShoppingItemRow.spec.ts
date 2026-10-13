@@ -66,7 +66,8 @@ describe('a line on the shopping list', () => {
 
     expect(screen.queryByRole('link', { name: 'Waffles' })).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: '2 recipes' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for Milch' }));
+    await fireEvent.click(screen.getByRole('button', { name: '2 recipes', hidden: true }));
 
     expect(screen.getByRole('link', { name: 'Waffles' })).toHaveAttribute('href', '/recipes/r1');
     expect(screen.getByRole('link', { name: 'Custard' })).toHaveAttribute('href', '/recipes/r2');
@@ -81,7 +82,7 @@ describe('a line on the shopping list', () => {
 
     render(ShoppingItemRow, { item: milk, oncheck: () => {}, onremove: () => {}, onmove });
 
-    await userEvent.click(screen.getByRole('button', { name: 'Move Milch to another section' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for Milch' }));
 
     // jsdom has no popover, so the panel never opens; its contents are still pressable.
     const current = screen.getByRole('button', { name: 'Dairy & eggs', hidden: true });
@@ -100,8 +101,6 @@ describe('a line on the shopping list', () => {
 
     row({ ...milk, isChecked: true });
 
-    expect(
-      screen.queryByRole('button', { name: 'Move Milch to another section' })
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Frozen', hidden: true })).not.toBeInTheDocument();
   });
 });
