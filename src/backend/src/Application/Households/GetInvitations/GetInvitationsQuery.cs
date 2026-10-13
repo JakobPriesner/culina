@@ -14,7 +14,8 @@ public sealed record GetInvitationsQuery(Guid HouseholdId, Guid UserId);
 
 internal sealed class GetInvitationsQueryHandler(
     IHouseholdRepository households,
-    IInvitationRepository invitations)
+    IInvitationRepository invitations,
+    TimeProvider time)
     : IQueryHandler<GetInvitationsQuery, Response>
 {
     public async Task<Result<Response>> Handle(
@@ -35,7 +36,7 @@ internal sealed class GetInvitationsQueryHandler(
             {
                 Items =
                 [
-                    .. (await invitations.OpenForHouseholdAsync(query.HouseholdId, cancellationToken)
+                    .. (await invitations.OpenForHouseholdAsync(query.HouseholdId, time.GetUtcNow(), cancellationToken)
                         .ConfigureAwait(false))
                     .Select(invitation => new InvitationSummary
                     {

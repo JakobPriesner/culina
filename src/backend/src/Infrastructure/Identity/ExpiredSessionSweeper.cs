@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Identity;
 
-/// <summary>Deletes sessions that have lapsed or been revoked. Housekeeping, not security: expired sessions already fail to authenticate.</summary>
+/// <summary>Deletes sessions that have lapsed or been revoked, and household invitations that expired unused. Housekeeping, not security: neither works once expired.</summary>
 internal sealed class ExpiredSessionSweeper(
     IServiceScopeFactory scopeFactory,
     TimeProvider time,
@@ -43,15 +43,26 @@ internal sealed class ExpiredSessionSweeper(
 
         await using (scope.ConfigureAwait(false))
         {
+            var now = time.GetUtcNow();
             var sessions = scope.ServiceProvider.GetRequiredService<ISessionStore>();
+            var invitations = scope.ServiceProvider.GetRequiredService<IInvitationRepository>();
 
             var removed = await sessions
-                .DeleteExpiredAsync(time.GetUtcNow(), cancellationToken)
+                .DeleteExpiredAsync(now, cancellationToken)
                 .ConfigureAwait(false);
 
             if (removed > 0)
             {
                 IdentityLogs.SweptSessions(logger, removed);
+            }
+
+            var lapsed = await invitations
+                .DeleteExpiredAsync(now, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (lapsed > 0)
+            {
+                IdentityLogs.SweptInvitations(logger, lapsed);
             }
         }
     }

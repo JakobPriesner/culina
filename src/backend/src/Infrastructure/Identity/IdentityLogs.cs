@@ -16,6 +16,12 @@ internal static partial class IdentityLogs
     [LoggerMessage(
         EventId = 1921,
         Level = LogLevel.Error,
-        Message = "Sweeping expired sessions failed; trying again at the next run")]
+        Message = "Sweeping expired sessions and invitations failed; trying again at the next run")]
     internal static partial void SweepFailed(ILogger logger, Exception exception);
+
+    [LoggerMessage(
+        EventId = 1922,
+        Level = LogLevel.Information,
+        Message = "Removed {Count} invitations that expired unused")]
+    internal static partial void SweptInvitations(ILogger logger, int count);
 }

@@ -1,4 +1,5 @@
 using Application.Abstractions;
+using Domain.Households;
 using Domain.Sessions;
 using Domain.Shared;
 using Infrastructure.Identity;
@@ -23,7 +24,10 @@ public sealed class ExpiredSessionSweeperTests : IDisposable
     public ExpiredSessionSweeperTests()
     {
         loggers = LoggerFactory.Create(builder => builder.AddProvider(logs));
-        services = new ServiceCollection().AddScoped<ISessionStore>(_ => store).BuildServiceProvider();
+        services = new ServiceCollection()
+            .AddScoped<ISessionStore>(_ => store)
+            .AddScoped<IInvitationRepository, NoInvitations>()
+            .BuildServiceProvider();
         sweeper = new ExpiredSessionSweeper(
             services.GetRequiredService<IServiceScopeFactory>(),
             time,
@@ -82,6 +86,28 @@ public sealed class ExpiredSessionSweeperTests : IDisposable
         services.Dispose();
         loggers.Dispose();
         logs.Dispose();
+    }
+
+    /// <summary>Nothing to sweep: these tests are about the session store failing.</summary>
+    private sealed class NoInvitations : IInvitationRepository
+    {
+        public Task<int> DeleteExpiredAsync(DateTimeOffset now, CancellationToken cancellationToken) =>
+            Task.FromResult(0);
+
+        public Task<Result<HouseholdInvitation>> FindByCodeAsync(string code, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlyList<HouseholdInvitation>> OpenForHouseholdAsync(Guid householdId, DateTimeOffset now, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<Result> AddAsync(HouseholdInvitation invitation, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<Result> MarkRedeemedAsync(HouseholdInvitation invitation, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<Result> RevokeAsync(Guid invitationId, Guid householdId, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 
     /// <summary>Throws on the first sweep, as Postgres restarting would, then succeeds.</summary>
