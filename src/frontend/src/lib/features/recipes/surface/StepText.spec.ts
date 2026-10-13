@@ -1,7 +1,9 @@
-import { render } from '@testing-library/svelte';
+import { render, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
+// Loaded here so the quick look's on-demand import resolves at once rather than waiting on a busy transform.
+import './IngredientQuickLook.svelte';
 import StepText from './StepText.svelte';
 import type { Scaling } from './scaled.svelte';
 import type { Step } from '../types';
@@ -141,7 +143,8 @@ describe('StepText', () => {
 
     await userEvent.click(button);
 
-    expect(container.querySelector('.quick-look')).toBeInTheDocument();
+    // Downloaded on the first click, so it arrives a moment later.
+    await waitFor(() => expect(container.querySelector('.quick-look')).toBeInTheDocument());
     expect(container.querySelector('.quick-look .name')?.textContent).toBe('butter');
   });
 });

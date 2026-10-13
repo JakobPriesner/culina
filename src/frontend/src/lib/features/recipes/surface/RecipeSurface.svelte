@@ -7,7 +7,6 @@
   import { createScaling } from './scaled.svelte';
   import CookingAction from './CookingAction.svelte';
   import IngredientsPanel from './IngredientsPanel.svelte';
-  import ScaleToAmountSheet from './ScaleToAmountSheet.svelte';
   import StepList from './StepList.svelte';
   import SurfaceHead from './SurfaceHead.svelte';
   import SurfaceHero from './SurfaceHero.svelte';
@@ -76,6 +75,13 @@
 
   let highlighted = $state<string | null>(null);
   let scalingByAmount = $state(false);
+  // Downloaded the first time it is asked for, not with the recipe; then it stays to animate closed.
+  let scaledByAmount = $state(false);
+
+  function scaleByAmount() {
+    scalingByAmount = true;
+    scaledByAmount = true;
+  }
 
   const locateIngredient = (ingredientId: string) => {
     highlighted = ingredientId;
@@ -140,13 +146,7 @@
     {nutrition}
   />
 
-  <SurfaceServings
-    {recipe}
-    {servings}
-    {scaling}
-    {onservings}
-    onscaleto={() => (scalingByAmount = true)}
-  />
+  <SurfaceServings {recipe} {servings} {scaling} {onservings} onscaleto={scaleByAmount} />
 
   <!-- After the servings band, not under the title: on a phone that keeps the servings on the first screen. -->
   {#if whereabouts && !cooking}
@@ -178,11 +178,15 @@
     />
   </div>
 
-  <ScaleToAmountSheet
-    bind:open={scalingByAmount}
-    {recipe}
-    onapply={(value) => onservings?.(value)}
-  />
+  {#if scaledByAmount}
+    {#await import('./ScaleToAmountSheet.svelte') then { default: ScaleToAmountSheet }}
+      <ScaleToAmountSheet
+        bind:open={scalingByAmount}
+        {recipe}
+        onapply={(value) => onservings?.(value)}
+      />
+    {/await}
+  {/if}
 
   <CookingAction {cooking} {canCook} {onstartcooking} {onstopcooking} />
 </article>

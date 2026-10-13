@@ -6,11 +6,10 @@
 <script lang="ts">
   import { untrack } from 'svelte';
 
-  import DeleteRecipeDialog from '$features/recipes/DeleteRecipeDialog.svelte';
   import type { useRecipeDeletion } from './useRecipeDeletion.svelte';
 
   /**
-   * Each sheet is downloaded the first time it opens, not with the recipe, which is the heaviest cold load in the app;
+   * Each sheet, and the delete dialog, is downloaded the first time it opens, not with the recipe, which is the heaviest cold load in the app;
    * once there it stays mounted so it can animate closed and open again at once.
    */
   interface Props {
@@ -25,6 +24,7 @@
   let { recipeId, title, householdId, servings, open = $bindable(), deletion }: Props = $props();
 
   let opened = $state<readonly RecipeSheet[]>([]);
+  let askedToDelete = $state(false);
 
   $effect.pre(() => {
     const wanted = open;
@@ -35,17 +35,27 @@
     }
   });
 
+  $effect.pre(() => {
+    if (deletion.ui.doomed) {
+      askedToDelete = true;
+    }
+  });
+
   const close = () => (open = null);
 </script>
 
-<DeleteRecipeDialog
-  open={deletion.ui.doomed !== null}
-  title={deletion.ui.doomed?.title ?? ''}
-  deleting={deletion.ui.deleting}
-  error={deletion.ui.failure}
-  onconfirm={() => void deletion.confirm()}
-  onclose={deletion.cancel}
-/>
+{#if askedToDelete}
+  {#await import('$features/recipes/DeleteRecipeDialog.svelte') then { default: DeleteRecipeDialog }}
+    <DeleteRecipeDialog
+      open={deletion.ui.doomed !== null}
+      title={deletion.ui.doomed?.title ?? ''}
+      deleting={deletion.ui.deleting}
+      error={deletion.ui.failure}
+      onconfirm={() => void deletion.confirm()}
+      onclose={deletion.cancel}
+    />
+  {/await}
+{/if}
 
 {#if opened.includes('share')}
   {#await import('$features/recipes/ShareRecipeSheet.svelte') then { default: ShareRecipeSheet }}

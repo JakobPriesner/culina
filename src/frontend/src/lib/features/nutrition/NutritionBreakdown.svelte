@@ -15,7 +15,6 @@
   import { wholeOrTenth } from './format';
   import { gramsWords } from './weights';
   import { perWords } from './headline';
-  import NutritionCorrectionSheet from './NutritionCorrectionSheet.svelte';
   import { roundForLabel } from './rounding';
   import { nutrition as store } from './stores/nutrition.svelte';
   import type {
@@ -63,6 +62,13 @@
   /** The row whose sheet is open; read from `rows` so the sheet shows what the answer now says. */
   let section = $state<HTMLElement>();
   let editing = $state<string | null>(null);
+  // The sheet is downloaded the first time a line is corrected, not with the recipe; then it stays to fade out.
+  let corrected = $state(false);
+
+  function edit(id: string) {
+    editing = id;
+    corrected = true;
+  }
 
   const editedRow = $derived(rows.find((row) => row.ingredient.id === editing) ?? null);
 
@@ -268,7 +274,7 @@
     <IconButton
       label={m['nutrition.change']({ name: ingredient.name })}
       size="sm"
-      onclick={() => (editing = ingredient.id)}
+      onclick={() => edit(ingredient.id)}
     >
       <!-- A pencil: this is named differently, not removed. -->
       <svg
@@ -344,7 +350,7 @@
             {@render written(ingredient)}
             <span class="detail">{reason(line)}</span>
             {#if householdId && line.unitKey}
-              <button type="button" class="weigh" onclick={() => (editing = ingredient.id)}>
+              <button type="button" class="weigh" onclick={() => edit(ingredient.id)}>
                 {m['nutrition.weight.set']()}<VisuallyHidden>{ingredient.name}</VisuallyHidden>
               </button>
             {/if}
@@ -357,18 +363,22 @@
   {/if}
 </section>
 
-<NutritionCorrectionSheet
-  name={editedRow?.ingredient.name ?? null}
-  {householdId}
-  line={editedRow?.line ?? null}
-  unit={editedRow ? unitWordOf(editedRow) : null}
-  perUnit={editedRow ? perUnitOf(editedRow) : null}
-  onchoose={choose}
-  onweigh={(grams) => void weigh(grams)}
-  onexclude={() => void correct({ kind: 'exclude' })}
-  onreset={() => void correct({ kind: 'default' })}
-  onclose={() => (editing = null)}
-/>
+{#if corrected}
+  {#await import('./NutritionCorrectionSheet.svelte') then { default: NutritionCorrectionSheet }}
+    <NutritionCorrectionSheet
+      name={editedRow?.ingredient.name ?? null}
+      {householdId}
+      line={editedRow?.line ?? null}
+      unit={editedRow ? unitWordOf(editedRow) : null}
+      perUnit={editedRow ? perUnitOf(editedRow) : null}
+      onchoose={choose}
+      onweigh={(grams) => void weigh(grams)}
+      onexclude={() => void correct({ kind: 'exclude' })}
+      onreset={() => void correct({ kind: 'default' })}
+      onclose={() => (editing = null)}
+    />
+  {/await}
+{/if}
 
 <style>
   .breakdown {
