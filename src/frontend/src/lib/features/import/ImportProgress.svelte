@@ -26,9 +26,12 @@
 </script>
 
 <section class="run" aria-labelledby="run-heading">
-  <h2 id="run-heading" class="heading">
-    {run.finished ? m['import.run.done']() : m['import.run.working']()}
-  </h2>
+  <!-- The one live region of the run: the heading changes once, at the end, so the finish is announced once. The counter below changes on every recipe and stays silent; the progressbar carries it. -->
+  <div role="status">
+    <h2 id="run-heading" class="heading">
+      {run.finished ? m['import.run.done']() : m['import.run.working']()}
+    </h2>
+  </div>
 
   <ProgressBar
     value={run.done}
@@ -37,7 +40,7 @@
     valueText={m['import.run.of']({ done: run.done, total: run.total })}
   />
 
-  <p class="line" role="status">{m['import.run.of']({ done: run.done, total: run.total })}</p>
+  <p class="line">{m['import.run.of']({ done: run.done, total: run.total })}</p>
 
   {#if run.lost && !run.finished}
     <!-- What stopped is usually this page, not the import; the reason is quoted because "connection went" and "import is gone" differ in whether to wait. -->
