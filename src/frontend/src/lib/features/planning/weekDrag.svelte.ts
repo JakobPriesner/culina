@@ -80,7 +80,8 @@ export class WeekDrag {
 
   /** Starts watching a press; nothing is lifted until it becomes a drag. */
   press(event: PointerEvent, held: Omit<Held, 'width'>, onDrop: OnDrop): void {
-    if (event.button !== 0) {
+    // `data-no-drag` marks a control inside the card (remove): pressing it must stay a click, not lift the card.
+    if (event.button !== 0 || (event.target as Element).closest('[data-no-drag]')) {
       return;
     }
 
@@ -96,7 +97,7 @@ export class WeekDrag {
 
     window.addEventListener('pointermove', this.#move);
     window.addEventListener('pointerup', this.#release);
-    window.addEventListener('pointercancel', this.#release);
+    window.addEventListener('pointercancel', this.#cancel);
 
     if (event.pointerType === 'touch') {
       this.#hold = setTimeout(() => this.#lift(this.#start.x, this.#start.y), holdMs);
@@ -176,6 +177,11 @@ export class WeekDrag {
     }
   };
 
+  /** The browser or OS took the gesture over (scroll takeover, an incoming call): nothing was dropped, so nothing moves. */
+  #cancel = () => {
+    this.stop();
+  };
+
   /** Scrolls near an edge; seven days never fit on a phone. */
   #autoScroll(y: number): void {
     const above = edge - y;
@@ -207,7 +213,7 @@ export class WeekDrag {
   #detach(): void {
     window.removeEventListener('pointermove', this.#move);
     window.removeEventListener('pointerup', this.#release);
-    window.removeEventListener('pointercancel', this.#release);
+    window.removeEventListener('pointercancel', this.#cancel);
     document.removeEventListener('touchmove', preventDefault);
     document.removeEventListener('contextmenu', preventDefault);
 
