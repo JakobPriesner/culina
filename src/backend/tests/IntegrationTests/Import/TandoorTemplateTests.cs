@@ -26,6 +26,21 @@ public class TandoorTemplateTests
     }
 
     [Fact]
+    public void ACommentNamingTheIngredient_ShouldLeaveOnlyTheReference()
+    {
+        // Cooks label a bare index for themselves; Tandoor never shows the comment.
+        var theirs = Recipe(
+            "{{ ingredients[0] }}{# Mehl #} sieben.",
+            Line(200m, "g", "Mehl"));
+
+        var step = Assert.Single(TandoorMapping.ToSource(theirs).Steps);
+
+        Assert.Equal(
+            [new SourceIngredientReference(0), new SourceTextSegment(" sieben.")],
+            step.Segments);
+    }
+
+    [Fact]
     public void AnIndex_ShouldBeItsOwnStepsRatherThanTheRecipes()
     {
         // Both steps say ingredients[0] and mean different ingredients.
@@ -133,6 +148,7 @@ public class TandoorTemplateTests
 
     [Theory]
     [InlineData("Backen {% if servings %}lange{% endif %}.", "Backen lange.")]
+    [InlineData("Backen {# nicht zu lange #}.", "Backen .")]
     [InlineData("Backen {{ ingredients|length }}.", "Backen .")]
     [InlineData("Backen {{ ingredients[0].kalorien }}.", "Backen .")]
     public void AnythingElse_ShouldNotSurviveAsBraces(string instruction, string expected)
