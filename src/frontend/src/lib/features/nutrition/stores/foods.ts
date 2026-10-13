@@ -11,6 +11,6 @@ export async function searchFoods(query: string, limit = 20): Promise<FoodSearch
   );
 
   return result.ok
-    ? { ok: true, foods: result.value.items.map((one) => ({ ...one })) }
+    ? { ok: true, foods: result.value.items.map((one) => ({ ...one, source: 'bls' as const })) }
     : { ok: false, error: result.error };
 }

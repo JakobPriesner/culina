@@ -151,12 +151,13 @@
     }
   };
 
-  // A food from the search is a BLS food: its label is its name.
+  // A food from the search has no label of its own: its label is its name.
   const choose = (hit: FoodHit) =>
     correct({
       kind: 'food',
       food: {
         code: hit.code,
+        source: hit.source,
         nameDe: hit.nameDe,
         nameEn: hit.nameEn,
         labelDe: hit.nameDe,
@@ -173,6 +174,10 @@
 
   /** The table's own name, as the citation under the friendlier one; nothing when they are the same words. */
   const blsName = (line: NutritionLine) => {
+    if (line.food?.source === 'package') {
+      return m['nutrition.fromPackage']();
+    }
+
     const name = line.food
       ? preferences.locale === 'de'
         ? line.food.nameDe

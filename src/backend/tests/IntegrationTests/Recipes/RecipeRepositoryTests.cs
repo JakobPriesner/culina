@@ -333,7 +333,7 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
                 executor,
                 new TagWriter(executor),
                 new RecipeSearcher(executor, TimeProvider.System, RankingWeights.Default,
-                    new RecipeCalories(executor, BlsFoodTable.Load(), new NutritionCorrectionRepository(executor, TimeProvider.System), new NutritionWeightRepository(executor, TimeProvider.System))),
+                    new RecipeCalories(executor, BlsFoodTable.Load(), new NutritionCorrectionRepository(executor, TimeProvider.System), new NutritionWeightRepository(executor, TimeProvider.System), new HouseholdFoodRepository(executor))),
                 new SearchDocumentWriter(executor),
                 new IngredientNameRepository(executor, new SearchDocumentWriter(executor))),
             new UserRepository(executor),

@@ -11,6 +11,12 @@ public static class NutritionErrors
         "No food in the Bundeslebensmittelschlüssel has that code.",
         ErrorType.Validation);
 
+    /// <summary>A food from a package needs a name and the label's values, each one a label could print.</summary>
+    public static readonly Error InvalidFood = new(
+        "nutrition.invalid_food",
+        "A food needs a name and its kilocalories per 100 g; every value must fit in 100 g.",
+        ErrorType.Validation);
+
     /// <summary>A weight per unit must be more than nothing and no more than one unit could plausibly weigh.</summary>
     public static readonly Error InvalidGrams = new(
         "nutrition.invalid_grams",
