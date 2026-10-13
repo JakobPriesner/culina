@@ -29,6 +29,12 @@ public sealed class FakeAssistant(AssistantKind? kind = null) : IAssistant
 
     public int Calls { get; private set; }
 
+    /// <summary>
+    /// Thrown by the next compose or draw instead of answering, as a defect the adapter did not
+    /// map would be.
+    /// </summary>
+    public Exception? Throws { get; set; }
+
     /// <summary>Queues the next answer to a compose.</summary>
     public FakeAssistant WillCompose(Result<Composed> answer)
     {
@@ -65,6 +71,11 @@ public sealed class FakeAssistant(AssistantKind? kind = null) : IAssistant
         LastComposition = request;
         LastConnection = @using;
         Calls++;
+
+        if (Throws is { } defect)
+        {
+            throw defect;
+        }
 
         return Task.FromResult(compositions.Count > 0
             ? compositions.Dequeue()
@@ -107,6 +118,11 @@ public sealed class FakeAssistant(AssistantKind? kind = null) : IAssistant
         LastDrawing = request;
         LastConnection = @using;
         Calls++;
+
+        if (Throws is { } defect)
+        {
+            throw defect;
+        }
 
         return Task.FromResult(drawings.Count > 0
             ? drawings.Dequeue()

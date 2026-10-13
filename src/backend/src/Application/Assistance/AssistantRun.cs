@@ -121,24 +121,20 @@ public sealed partial class AssistantRun(
         }
 
         /// <summary>Asks for the picture, and settles whatever it came to.</summary>
-        public async Task<Result<Drawn>> AskAsync(
+        public Task<Result<Drawn>> AskAsync(
             Drawing request,
-            CancellationToken cancellationToken)
-        {
-            var answered = await ready.Chosen.Assistant
-                .DrawAsync(ready.Chosen.Connected, request, cancellationToken)
-                .ConfigureAwait(false);
+            CancellationToken cancellationToken) =>
+            run.CallAsync(
+                ready,
+                async (assistant, connected, token) =>
+                {
+                    var answered = await assistant
+                        .DrawAsync(connected, request, token)
+                        .ConfigureAwait(false);
 
-            await run.SettleAsync(
-                    ready,
-                    answered.Match(drawn => drawn.Usage, _ => default),
-                    answered.Match(_ => "ok", error => error.Code))
-                .ConfigureAwait(false);
-
-            return answered.Match(
-                Result<Drawn>.Success,
-                error => Result<Drawn>.Failure(Leaving(error)));
-        }
+                    return answered.Map(drawn => (drawn, drawn.Usage));
+                },
+                cancellationToken);
     }
 
     private async Task<Result<TAnswer>> RunAsync<TAnswer>(
@@ -246,25 +242,35 @@ public sealed partial class AssistantRun(
         return taken.Map(id => new Reserved(id, capability, chosen, time.GetTimestamp()));
     }
 
-    // Settles even a failed call: an unsettled reservation holds its estimate until the month turns.
+    // Settles in a finally, even a call that threw: an unsettled reservation holds its estimate
+    // until the month turns.
     private async Task<Result<TAnswer>> CallAsync<TAnswer>(
         Reserved ready,
         Func<IAssistant, Connected, CancellationToken, Task<Result<(TAnswer Answer, ModelUsage Usage)>>> call,
         CancellationToken cancellationToken)
         where TAnswer : notnull
     {
-        var answered = await call(ready.Chosen.Assistant, ready.Chosen.Connected, cancellationToken)
-            .ConfigureAwait(false);
+        var usage = default(ModelUsage);
 
-        await SettleAsync(
-                ready,
-                answered.Match(ok => ok.Usage, _ => default),
-                answered.Match(_ => "ok", error => error.Code))
-            .ConfigureAwait(false);
+        // Not "ok" until the adapter says so: a call that threw may still have been billed.
+        var outcome = "failed";
 
-        return answered.Match(
-            ok => Result<TAnswer>.Success(ok.Answer),
-            error => Result<TAnswer>.Failure(Leaving(error)));
+        try
+        {
+            var answered = await call(ready.Chosen.Assistant, ready.Chosen.Connected, cancellationToken)
+                .ConfigureAwait(false);
+
+            usage = answered.Match(ok => ok.Usage, _ => default);
+            outcome = answered.Match(_ => "ok", error => error.Code);
+
+            return answered.Match(
+                ok => Result<TAnswer>.Success(ok.Answer),
+                error => Result<TAnswer>.Failure(Leaving(error)));
+        }
+        finally
+        {
+            await SettleAsync(ready, usage, outcome).ConfigureAwait(false);
+        }
     }
 
     // Settles in a finally: a closed page abandons the stream, which is an ordinary ending.
