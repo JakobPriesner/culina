@@ -104,6 +104,29 @@
     font-weight: var(--weight-semibold);
   }
 
+  /* A phone: one row, each part grown from its label as SegmentedControl draws it, instead of the last
+     option wrapping on its own into a lopsided second row. A long label breaks between its words. */
+  @media (width < 40rem) {
+    .track:not(.compact) {
+      flex-wrap: nowrap;
+      width: 100%;
+      border-radius: var(--radius-lg);
+    }
+
+    .track:not(.compact) .segment {
+      flex: 1 1 auto;
+      min-height: var(--control-md);
+      padding-inline: var(--space-2);
+      border-radius: var(--radius-md);
+      line-height: var(--leading-tight);
+      text-align: center;
+      white-space: normal;
+      text-wrap: balance;
+      /* Between words only: the page lets long words break anywhere, which here split "Hell" in two. */
+      overflow-wrap: normal;
+    }
+  }
+
   .segment:has(input:focus-visible) {
     outline: 2px solid var(--border-focus);
     outline-offset: 2px;
