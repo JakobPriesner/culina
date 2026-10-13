@@ -98,10 +98,10 @@ services:
       # this volume every photo in the instance is gone on the next deploy, and
       # nothing will have said so.
       - culina-images:/data/images
-      # The data-protection key ring. Culina's session cookie carries an opaque
-      # reference rather than an encrypted payload, so a lost key ring does not
-      # sign anyone out — but anything the framework protects later would
-      # change key on every restart.
+      # The data-protection key ring. It encrypts the assistant's API key, the
+      # push-notification key and connected recipe libraries' tokens; without
+      # it those are unreadable. It signs nobody out: the session cookie is an
+      # opaque reference, not an encrypted payload.
       - culina-keys:/data/keys
       # What an administrator changed under Settings → Server, as culina.json.
       # Without it the settings screen can show those settings but not save
