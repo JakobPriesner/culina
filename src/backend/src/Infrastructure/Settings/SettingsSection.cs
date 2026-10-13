@@ -50,9 +50,12 @@ internal sealed class SettingsSection(IConfiguration configuration, string secti
 
     private string Path(string key) => $"{sectionName}:{key}";
 
+    /// <summary>The environment variable, so a nested section such as <c>Storage:S3</c> reads <c>Storage__S3__Bucket</c>.</summary>
+    private string Variable(string key) => Path(key).Replace(":", "__", StringComparison.Ordinal);
+
     private InvalidOperationException Missing(string key) =>
-        new($"Configuration {sectionName}__{key} is required but was not set.");
+        new($"Configuration {Variable(key)} is required but was not set.");
 
     private InvalidOperationException NotA(string key, string raw, string expected) =>
-        new($"Configuration {sectionName}__{key} must be a {expected}, but was '{raw}'.");
+        new($"Configuration {Variable(key)} must be a {expected}, but was '{raw}'.");
 }

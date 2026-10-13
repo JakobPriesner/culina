@@ -63,7 +63,7 @@ public static class DependencyInjection
             .AddSingleton<PushTransport>()
             .AddScoped<IIntakeNotifications, IntakeNotifications>()
             .AddHostedService<RecipeIntakeWorker>()
-            .AddSingleton<IImageStore, FileSystemImageStore>()
+            .AddImageStorage()
             .AddSingleton<IFoodTable>(BlsFoodTable.Load())
             .AddSingleton(TimeProvider.System);
     }
@@ -88,6 +88,15 @@ public static class DependencyInjection
             .AddSingleton<AssistanceSettings>()
             .AddScoped<ISettingsStore<AssistanceSettings>, PostgresSettingsStore<AssistanceSettings>>()
             .AddHostedService<InstanceSettingsLoader>();
+
+    // A bucket when one is configured, the image directory otherwise; the same store either way.
+    private static IServiceCollection AddImageStorage(this IServiceCollection services) =>
+        services
+            .AddSingleton<IImageFiles>(provider =>
+                provider.GetRequiredService<StorageSettings>().S3 is { } bucket
+                    ? new S3ImageFiles(S3ImageFiles.Connect(bucket), bucket)
+                    : new FileSystemImageFiles(provider.GetRequiredService<StorageSettings>()))
+            .AddSingleton<IImageStore, ImageStore>();
 
     // Adapters are singletons (stateless, key and model read per call, shared HTTP pool); the ledger is scoped to write through the request's connection.
     private static IServiceCollection AddAssistance(this IServiceCollection services) =>

@@ -113,7 +113,7 @@ static void LogStarting(WebApplication app)
         database.Host,
         database.Port,
         database.Name,
-        storage.ImagePath,
+        storage.S3 is { } bucket ? $"bucket {bucket.Bucket} at {bucket.Endpoint}" : storage.ImagePath,
         telemetry.Endpoint?.Host ?? "nowhere");
 
     if (!app.Services.GetRequiredService<CookieSettings>().Secure)

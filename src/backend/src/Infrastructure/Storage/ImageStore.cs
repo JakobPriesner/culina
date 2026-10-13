@@ -15,9 +15,10 @@ using SixLabors.ImageSharp.Processing;
 
 namespace Infrastructure.Storage;
 
-/// <summary>Stores recipe images on a volume, content-addressed, so duplicates cost nothing and renditions cache forever.</summary>
-/// <param name="settings">Where images live and how big one may be.</param>
-internal sealed class FileSystemImageStore(StorageSettings settings) : IImageStore
+/// <summary>Stores recipe images content-addressed, so duplicates cost nothing and renditions cache forever.</summary>
+/// <param name="settings">How big an image may be.</param>
+/// <param name="files">Where the renditions live: a volume or a bucket.</param>
+internal sealed class ImageStore(StorageSettings settings, IImageFiles files) : IImageStore
 {
     /// <summary>A ceiling on decoded pixels, checked before resizing: the decompression-bomb guard.</summary>
     private const int MaxPixels = 8000 * 8000;
@@ -95,38 +96,19 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
             return ImageErrors.UnknownWidth;
         }
 
-        var path = PathFor(contentHash, width);
-
-        if (!File.Exists(path))
-        {
-            return ImageErrors.NotFound;
-        }
-
-        var file = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-        await using (file.ConfigureAwait(false))
-        {
-            await file.CopyToAsync(destination, cancellationToken).ConfigureAwait(false);
-        }
-
-        return Result.Success();
+        return await files.CopyToAsync(KeyFor(contentHash, width), destination, cancellationToken).ConfigureAwait(false)
+            ? Result.Success()
+            : ImageErrors.NotFound;
     }
 
-    public Task<Result> DeleteAsync(string contentHash, CancellationToken cancellationToken)
+    public async Task<Result> DeleteAsync(string contentHash, CancellationToken cancellationToken)
     {
         foreach (var width in ImageWidths.All)
         {
-            var path = PathFor(contentHash, width);
-
-            if (File.Exists(path))
-            {
-                File.Delete(path);
-            }
+            await files.DeleteAsync(KeyFor(contentHash, width), cancellationToken).ConfigureAwait(false);
         }
 
-        _ = cancellationToken;
-
-        return Task.FromResult(Result.Success());
+        return Result.Success();
     }
 
     /// <summary>Copies at most one byte over the limit, so an oversized upload is refused without being held in full.</summary>
@@ -171,7 +153,8 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
 
         foreach (var rendition in renditions)
         {
-            await WriteAsync(hash, rendition).ConfigureAwait(false);
+            // The request's token is deliberately not passed: a client hanging up is no reason to discard the renditions.
+            await files.WriteAsync(KeyFor(hash, rendition.Width), rendition.Bytes).ConfigureAwait(false);
         }
 
         return new StoredImage(hash, image.Width, image.Height, renditions[^1].Bytes.Length);
@@ -329,40 +312,8 @@ internal sealed class FileSystemImageStore(StorageSettings settings) : IImageSto
         return renditions;
     }
 
-    /// <summary>
-    /// Writes beside the final path and moves into it, so the address only ever holds a whole file.
-    /// The request's token is deliberately not passed: a client hanging up is no reason to discard the renditions.
-    /// </summary>
-    private async Task WriteAsync(string hash, Rendition rendition)
-    {
-        var path = PathFor(hash, rendition.Width);
-
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-
-        if (File.Exists(path))
-        {
-            // Content-addressed, so identical bytes are already there.
-            return;
-        }
-
-        var temporary = $"{path}.{Guid.NewGuid():n}.tmp";
-
-        await File.WriteAllBytesAsync(temporary, rendition.Bytes, CancellationToken.None).ConfigureAwait(false);
-
-        try
-        {
-            File.Move(temporary, path, overwrite: false);
-        }
-        catch (IOException) when (File.Exists(path))
-        {
-            // A concurrent store of the same photo moved in first.
-            File.Delete(temporary);
-        }
-    }
-
-    /// <summary>Two levels of hash-prefix directories, so no folder grows huge.</summary>
-    private string PathFor(string hash, int width) =>
-        Path.Combine(settings.ImagePath, hash[..2], hash[2..4], $"{hash}-{width}.webp");
+    /// <summary>Two levels of hash prefixes, so no folder grows huge; the same key on disk and in a bucket, so one can be copied into the other.</summary>
+    private static string KeyFor(string hash, int width) => $"{hash[..2]}/{hash[2..4]}/{hash}-{width}.webp";
 
     private sealed record Rendition(int Width, byte[] Bytes);
 }

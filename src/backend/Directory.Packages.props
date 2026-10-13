@@ -7,7 +7,7 @@
 
     <ItemGroup Label="Audit">
         <!-- SixLabors.ImageSharp 3.1.12. The real fix is 4.1.2+, which needs a paid licence key for Release builds, so it stays on 3.1.x.
-             FileSystemImageStore decodes with only JPEG, PNG, WebP and GIF registered, and drops the ICC profile.
+             ImageStore decodes with only JPEG, PNG, WebP and GIF registered, and drops the ICC profile.
              Revisit if ImageSharp is replaced or licensed. -->
         <!-- ICC CLUT parsing allocation: the ICC profile is dropped right after load and nothing reads it. -->
         <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-gwg2-r3hj-4w44" />

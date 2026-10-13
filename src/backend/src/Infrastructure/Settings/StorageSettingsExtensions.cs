@@ -23,11 +23,35 @@ public static class StorageSettingsExtensions
                 nameof(StorageSettings.DataProtectionKeyPath),
                 "/data/keys"),
             ConfigPath = section.String(nameof(StorageSettings.ConfigPath), StorageSettings.DefaultConfigPath),
-            MaxImageBytes = section.Int(nameof(StorageSettings.MaxImageBytes), 10 * 1024 * 1024)
+            MaxImageBytes = section.Int(nameof(StorageSettings.MaxImageBytes), 10 * 1024 * 1024),
+            S3 = Bucket(configuration)
         };
 
         settings.Validate();
 
         return services.AddSingleton(settings);
+    }
+
+    /// <summary>Null when no S3 key is set; any key set, even a mistyped one, means a bucket was meant, so validation then demands the rest.</summary>
+    private static S3StorageSettings? Bucket(IConfiguration configuration)
+    {
+        var path = $"{StorageSettings.SectionName}:S3";
+
+        if (configuration.GetSection(path).GetChildren().All(key => string.IsNullOrEmpty(key.Value)))
+        {
+            return null;
+        }
+
+        var section = new SettingsSection(configuration, path);
+
+        return new S3StorageSettings
+        {
+            Endpoint = section.String(nameof(S3StorageSettings.Endpoint), ""),
+            Bucket = section.String(nameof(S3StorageSettings.Bucket), ""),
+            AccessKey = section.String(nameof(S3StorageSettings.AccessKey), ""),
+            SecretKey = section.String(nameof(S3StorageSettings.SecretKey), ""),
+            Region = section.String(nameof(S3StorageSettings.Region), S3StorageSettings.DefaultRegion),
+            ForcePathStyle = section.Bool(nameof(S3StorageSettings.ForcePathStyle), false)
+        };
     }
 }
