@@ -104,7 +104,9 @@ export function offlineReads({ base, locate, signedOut }: OfflineReadsOptions): 
 
     const response = cached ? await Promise.race([fresh, deadline()]) : await fresh;
 
-    if (response) {
+    // A gateway error is the server being away behind its proxy, which for reading is the same as no network: the
+    // kept copy beats "Culina is not answering" (an app started on a train, a kitchen server rebooting).
+    if (response && !(cached && unreachable(response))) {
       return response;
     }
 
@@ -114,6 +116,11 @@ export function offlineReads({ base, locate, signedOut }: OfflineReadsOptions): 
 
     // Nothing cached and no network: re-throw the ordinary fetch failure.
     return fetch(request.url, { credentials: request.credentials, headers: request.headers });
+  }
+
+  /** Whether an answer came from a proxy whose server is down, not from Culina. */
+  function unreachable(response: Response): boolean {
+    return response.status === 502 || response.status === 503 || response.status === 504;
   }
 
   /** Fetches, stores what is worth storing for `owner`, and never rejects. */
