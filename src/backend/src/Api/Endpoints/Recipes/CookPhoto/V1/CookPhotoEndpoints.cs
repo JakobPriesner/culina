@@ -17,6 +17,7 @@ internal sealed class SetCookPhotoEndpoint : IEndpoint
         ArgumentNullException.ThrowIfNull(app);
 
         app.MapPut($"{ApiPaths.V1}/recipes/{{recipeId:guid}}/cook-log/{{entryId:guid}}/photo", async (
+                Guid recipeId,
                 Guid entryId,
                 IFormFile file,
                 HttpContext context,
@@ -29,7 +30,7 @@ internal sealed class SetCookPhotoEndpoint : IEndpoint
                 {
                     var result = await handler
                         .Handle(
-                            new SetCookPhotoCommand(entryId, context.CurrentUser().UserId, content),
+                            new SetCookPhotoCommand(recipeId, entryId, context.CurrentUser().UserId, content),
                             cancellationToken)
                         .ConfigureAwait(false);
 
@@ -61,6 +62,7 @@ internal sealed class RemoveCookPhotoEndpoint : IEndpoint
         ArgumentNullException.ThrowIfNull(app);
 
         app.MapDelete($"{ApiPaths.V1}/recipes/{{recipeId:guid}}/cook-log/{{entryId:guid}}/photo", async (
+                Guid recipeId,
                 Guid entryId,
                 HttpContext context,
                 ICommandHandler<RemoveCookPhotoCommand, Response> handler,
@@ -68,7 +70,7 @@ internal sealed class RemoveCookPhotoEndpoint : IEndpoint
             {
                 var result = await handler
                     .Handle(
-                        new RemoveCookPhotoCommand(entryId, context.CurrentUser().UserId),
+                        new RemoveCookPhotoCommand(recipeId, entryId, context.CurrentUser().UserId),
                         cancellationToken)
                     .ConfigureAwait(false);
 
@@ -96,6 +98,7 @@ internal sealed class GetCookPhotoEndpoint : IEndpoint
         ArgumentNullException.ThrowIfNull(app);
 
         app.MapGet($"{ApiPaths.V1}/recipes/{{recipeId:guid}}/cook-log/{{entryId:guid}}/photo", async (
+                Guid recipeId,
                 Guid entryId,
                 HttpContext context,
                 IQueryHandler<GetCookPhotoQuery, ImageDelivery> handler,
@@ -108,7 +111,7 @@ internal sealed class GetCookPhotoEndpoint : IEndpoint
 
                 var result = await handler
                     .Handle(
-                        new GetCookPhotoQuery(entryId, context.CurrentUser().UserId, width),
+                        new GetCookPhotoQuery(recipeId, entryId, context.CurrentUser().UserId, width),
                         cancellationToken)
                     .ConfigureAwait(false);
 

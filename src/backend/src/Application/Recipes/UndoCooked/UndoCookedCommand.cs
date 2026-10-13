@@ -6,10 +6,11 @@ using Domain.Shared;
 namespace Application.Recipes.UndoCooked;
 
 /// <summary>Takes back a "made it".</summary>
+/// <param name="RecipeId">The recipe the entry must be of.</param>
 /// <param name="EntryId">Which entry.</param>
 /// <param name="UserId">Whose it must be.</param>
 /// <remarks>The undo behind the confirmation toast, in place of an "are you sure?" prompt.</remarks>
-public sealed record UndoCookedCommand(Guid EntryId, Guid UserId);
+public sealed record UndoCookedCommand(Guid RecipeId, Guid EntryId, Guid UserId);
 
 internal sealed class UndoCookedCommandHandler(ICookLogRepository entries)
     : ICommandHandler<UndoCookedCommand>
@@ -23,7 +24,7 @@ internal sealed class UndoCookedCommandHandler(ICookLogRepository entries)
         using var tracked = UseCaseActivity.Start("Recipes.UndoCooked");
 
         var removed = await entries
-            .RemoveAsync(command.EntryId, command.UserId, cancellationToken)
+            .RemoveAsync(command.RecipeId, command.EntryId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         return tracked.Record(removed);
