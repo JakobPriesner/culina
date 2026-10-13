@@ -22,7 +22,8 @@ public sealed class Cookbook
         Guid createdBy,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
-        long version)
+        long version,
+        Guid? coverRecipeId = null)
     {
         Id = id;
         HouseholdId = householdId;
@@ -34,6 +35,7 @@ public sealed class Cookbook
         CreatedAt = createdAt;
         UpdatedAt = updatedAt;
         Version = version;
+        CoverRecipeId = coverRecipeId;
     }
 
     /// <summary>The cookbook's id.</summary>
@@ -65,6 +67,12 @@ public sealed class Cookbook
 
     /// <summary>Bumped by every write. Drives the ETag.</summary>
     public long Version { get; private set; }
+
+    /// <summary>
+    /// The recipe whose photograph is the whole cover, or null for the first photographs on the shelf.
+    /// Shown only while that recipe is on the shelf with a photograph, so it never needs clearing.
+    /// </summary>
+    public Guid? CoverRecipeId { get; private set; }
 
     /// <summary>Starts a cookbook.</summary>
     public static Result<Cookbook> Create(
@@ -141,13 +149,14 @@ public sealed class Cookbook
         Guid createdBy,
         DateTimeOffset createdAt,
         DateTimeOffset updatedAt,
-        long version)
+        long version,
+        Guid? coverRecipeId = null)
     {
         ArgumentNullException.ThrowIfNull(name);
         ArgumentNullException.ThrowIfNull(rules);
 
         return new Cookbook(
-            id, householdId, name, description, kind, rules, createdBy, createdAt, updatedAt, version);
+            id, householdId, name, description, kind, rules, createdBy, createdAt, updatedAt, version, coverRecipeId);
     }
 
     /// <summary>Renames it, and rewrites what it is for.</summary>
@@ -185,6 +194,19 @@ public sealed class Cookbook
         }
 
         return Result.Success();
+    }
+
+    /// <summary>Makes one recipe's photograph the cover, or null for the first photographs on the shelf.</summary>
+    /// <remarks>Whether the recipe is on the shelf with a photograph is the caller's check: it needs the shelf.</remarks>
+    public void UseAsCover(Guid? recipeId, DateTimeOffset now)
+    {
+        if (CoverRecipeId == recipeId)
+        {
+            return;
+        }
+
+        CoverRecipeId = recipeId;
+        UpdatedAt = now;
     }
 
     /// <summary>Takes the version the database assigned.</summary>

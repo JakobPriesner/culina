@@ -32,10 +32,15 @@ export function useCookbookActions(page: Page) {
     deleteFailure: null as AppError | null
   });
 
-  async function rename(name: string, description: string | null, rules: CookbookRules | null) {
+  async function rename(
+    name: string,
+    description: string | null,
+    rules: CookbookRules | null,
+    cover?: string | null
+  ) {
     ui.saving = true;
 
-    const done = await cookbooks.rename(page.cookbookId(), name, description, rules);
+    const done = await cookbooks.rename(page.cookbookId(), name, description, rules, cover);
 
     ui.saving = false;
 

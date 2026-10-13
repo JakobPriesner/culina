@@ -58,6 +58,9 @@ public sealed record ArchivedCookbook
 
     /// <summary>A smart cookbook's rules; null on a chosen shelf.</summary>
     public ArchivedRules? Rules { get; init; }
+
+    /// <summary>The position of the recipe chosen for the cover, or null for the first photographs.</summary>
+    public int? Cover { get; init; }
 }
 
 /// <summary>What a smart cookbook asks for.</summary>

@@ -65,6 +65,12 @@ public static class CookbookErrors
         "That order does not list exactly the recipes on this cookbook, each once.",
         ErrorType.Validation);
 
+    /// <summary>A cover that is not a photographed recipe on this cookbook.</summary>
+    public static readonly Error InvalidCover = new(
+        "cookbooks.invalid_cover",
+        "The cover has to be a recipe on this cookbook that has a photo.",
+        ErrorType.Validation);
+
     /// <summary>The description is longer than a shelf label should be.</summary>
     public static readonly Error InvalidDescription = new(
         "cookbooks.invalid_description",

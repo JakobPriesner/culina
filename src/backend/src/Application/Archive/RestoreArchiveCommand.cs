@@ -160,8 +160,14 @@ internal sealed class RestoreArchiveCommandHandler(
                 .ToList()
             : [];
 
+        var cover = entry.Cover is { } position && position >= 0 && position < written.Count ? written[position] : null;
+
         await built.Match(
-            cookbook => unitOfWork.InTransactionAsync(
+            cookbook =>
+            {
+                cookbook.UseAsCover(cover, now);
+
+                return unitOfWork.InTransactionAsync(
                 async token =>
                 {
                     var added = await cookbooks.AddAsync(cookbook, token).ConfigureAwait(false);
@@ -181,7 +187,8 @@ internal sealed class RestoreArchiveCommandHandler(
                         },
                         error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
                 },
-                cancellationToken),
+                cancellationToken);
+            },
             _ => Task.FromResult(Result.Success())).ConfigureAwait(false);
     }
 

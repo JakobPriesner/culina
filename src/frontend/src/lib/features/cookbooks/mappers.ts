@@ -31,6 +31,7 @@ export const toCookbook = (wire: WireSummary): Cookbook => ({
   rules: toRules(wire.rules),
   recipeCount: wire.recipeCount,
   cover: wire.coverPictures,
+  coverRecipeId: wire.coverRecipeId ?? null,
   updatedAt: wire.updatedAt
 });
 
@@ -43,6 +44,7 @@ export const toDetail = (wire: WireDetail): CookbookDetail => ({
   rules: toRules(wire.rules),
   recipeCount: wire.recipeCount,
   cover: wire.coverPictures,
+  coverRecipeId: wire.coverRecipeId ?? null,
   updatedAt: wire.updatedAt,
   version: wire.version
 });

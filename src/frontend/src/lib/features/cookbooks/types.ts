@@ -19,8 +19,10 @@ export interface Cookbook {
   /** What it asks for, or null when somebody fills it by hand. */
   readonly rules: CookbookRules | null;
   readonly recipeCount: number;
-  /** Up to four photographed recipes for the cover, oldest first. */
+  /** The chosen recipe's picture, or up to four photographed recipes in shelf order. */
   readonly cover: readonly CoverPicture[];
+  /** The recipe chosen for the cover, or null for the first photographs on the shelf. */
+  readonly coverRecipeId: string | null;
   readonly updatedAt: string;
 }
 

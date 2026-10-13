@@ -37,6 +37,8 @@ internal sealed record CookbookRow
 
     public Guid[] CoverImageIds { get; init; } = [];
 
+    public Guid? CoverRecipeId { get; init; }
+
     public int TotalCount { get; init; }
 }
 
@@ -68,7 +70,7 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
     private const string ShelfColumns = """
         c.id, c.household_id, c.name, c.description, c.created_by,
         c.created_at, c.updated_at, c.version,
-        c.kind, c.rule_tags, c.rule_ingredients, c.rule_max_minutes
+        c.kind, c.rule_tags, c.rule_ingredients, c.rule_max_minutes, c.cover_recipe_id
         """;
 
     /// <summary>The count and cover, read with the shelf.</summary>
@@ -81,10 +83,12 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
         cross join lateral (
             select count(*) as recipe_count,
                    coalesce(
+                       array_agg(on_shelf.id) filter (where on_shelf.id = c.cover_recipe_id and on_shelf.image_id is not null),
                        (array_agg(on_shelf.id order by on_shelf.sort_order nulls last, on_shelf.id)
                             filter (where on_shelf.image_id is not null))[1:@coverPictures],
                        '{}') as cover_recipe_ids,
                    coalesce(
+                       array_agg(on_shelf.image_id) filter (where on_shelf.id = c.cover_recipe_id and on_shelf.image_id is not null),
                        (array_agg(on_shelf.image_id order by on_shelf.sort_order nulls last, on_shelf.id)
                             filter (where on_shelf.image_id is not null))[1:@coverPictures],
                        '{}') as cover_image_ids
@@ -103,7 +107,7 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
         var row = await executor.QuerySingleOrDefaultAsync<CookbookRow>(
             """
             select id, household_id, name, description, created_by, created_at, updated_at, version,
-                   kind, rule_tags, rule_ingredients, rule_max_minutes
+                   kind, rule_tags, rule_ingredients, rule_max_minutes, cover_recipe_id
             from cookbooks
             where id = @cookbookId;
             """,
@@ -178,10 +182,10 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
             """
             insert into cookbooks
                 (id, household_id, name, description, kind,
-                 rule_tags, rule_ingredients, rule_max_minutes,
+                 rule_tags, rule_ingredients, rule_max_minutes, cover_recipe_id,
                  created_by, created_at, updated_at, version)
             values (@id, @householdId, @name, @description, @kind,
-                    @ruleTags, @ruleIngredients, @ruleMaxMinutes,
+                    @ruleTags, @ruleIngredients, @ruleMaxMinutes, @coverRecipeId,
                     @createdBy, @createdAt, @updatedAt, 1);
             """,
             new
@@ -194,6 +198,7 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
                 ruleTags = cookbook.Rules.Tags.ToArray(),
                 ruleIngredients = cookbook.Rules.Ingredients.ToArray(),
                 ruleMaxMinutes = cookbook.Rules.MaxMinutes,
+                coverRecipeId = cookbook.CoverRecipeId,
                 createdBy = cookbook.CreatedBy,
                 createdAt = cookbook.CreatedAt,
                 updatedAt = cookbook.UpdatedAt
@@ -216,7 +221,7 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
             update cookbooks
             set name = @name, description = @description, updated_at = @updatedAt,
                 rule_tags = @ruleTags, rule_ingredients = @ruleIngredients,
-                rule_max_minutes = @ruleMaxMinutes,
+                rule_max_minutes = @ruleMaxMinutes, cover_recipe_id = @coverRecipeId,
                 version = version + 1
             where id = @id and version = @expectedVersion
             returning version;
@@ -230,6 +235,7 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
                 ruleTags = cookbook.Rules.Tags.ToArray(),
                 ruleIngredients = cookbook.Rules.Ingredients.ToArray(),
                 ruleMaxMinutes = cookbook.Rules.MaxMinutes,
+                coverRecipeId = cookbook.CoverRecipeId,
                 expectedVersion
             },
             cancellationToken).ConfigureAwait(false);
@@ -372,7 +378,8 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
             row.CreatedBy,
             row.CreatedAt,
             row.UpdatedAt,
-            row.Version);
+            row.Version,
+            row.CoverRecipeId);
 
     // A stored name that the value object now rejects is a corrupt row: a defect, not a bad request.
     private static CookbookName Unwrap(Result<CookbookName> result) =>
