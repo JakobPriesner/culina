@@ -169,6 +169,7 @@ public static class DependencyInjection
             .AddScoped<SuggestionReader>()
             .AddScoped<ISuggestionRanker, SuggestionRanker>()
             .AddScoped<ISuggestionFeedback, SuggestionFeedbackRepository>()
+            .AddScoped<ISuggestionImpressions, SuggestionImpressionRepository>()
             .AddScoped<MigrationRunner>()
             // Hosted, so the schema is current before the first request and a failed migration stops the process.
             .AddHostedService<MigrationHostedService>()
@@ -179,4 +180,3 @@ public static class DependencyInjection
             // After the migrations: it reads tables they renamed.
             .AddHostedService<TrashPurger>();
 }
-            .AddScoped<ISuggestionImpressions, SuggestionImpressionRepository>()
