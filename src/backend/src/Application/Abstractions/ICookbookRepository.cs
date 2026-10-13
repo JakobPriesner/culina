@@ -52,6 +52,9 @@ public interface ICookbookRepository
         DateTimeOffset now,
         CancellationToken cancellationToken);
 
+    /// <summary>Puts a chosen shelf's recipes in this order; the list holds every recipe on it, once.</summary>
+    Task ReorderAsync(Guid cookbookId, IReadOnlyList<Guid> recipeIds, CancellationToken cancellationToken);
+
     /// <summary>Takes a recipe off a shelf; returns whether a row was removed.</summary>
     Task<bool> RemoveRecipeAsync(Guid cookbookId, Guid recipeId, CancellationToken cancellationToken);
 

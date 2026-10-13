@@ -53,7 +53,7 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
     // as recipe search, only over the household's own and inherited recipes, so a recipe that stops being
     // inherited drops off and returns with the inheritance.
     private static readonly string OnTheShelf = $"""
-        select r.id, r.image_id, cr.added_at
+        select r.id, r.image_id, cr.sort_order
         from recipes r
         left join cookbook_recipes cr
                on cr.cookbook_id = c.id and cr.recipe_id = r.id
@@ -74,17 +74,18 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
     /// <summary>The count and cover, read with the shelf.</summary>
     /// <remarks>
     /// Lateral so the shelf's set is computed once (a smart shelf scans the library) and an empty shelf still comes back.
-    /// Oldest first so the cover stops moving once full; smart shelves have no added_at, so they fall back to the time-ordered id.
+    /// In shelf order, so the cover is the first pictures somebody arranged and stops moving once full (new recipes go last);
+    /// smart shelves have no order, so they fall back to the time-ordered id.
     /// </remarks>
     private static readonly string ShelfContents = $$"""
         cross join lateral (
             select count(*) as recipe_count,
                    coalesce(
-                       (array_agg(on_shelf.id order by on_shelf.added_at nulls last, on_shelf.id)
+                       (array_agg(on_shelf.id order by on_shelf.sort_order nulls last, on_shelf.id)
                             filter (where on_shelf.image_id is not null))[1:@coverPictures],
                        '{}') as cover_recipe_ids,
                    coalesce(
-                       (array_agg(on_shelf.image_id order by on_shelf.added_at nulls last, on_shelf.id)
+                       (array_agg(on_shelf.image_id order by on_shelf.sort_order nulls last, on_shelf.id)
                             filter (where on_shelf.image_id is not null))[1:@coverPictures],
                        '{}') as cover_image_ids
             from ({{OnTheShelf}}) as on_shelf
@@ -263,11 +264,12 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        // do nothing, not do update: a recipe already on the shelf keeps when it went on.
+        // do nothing, not do update: a recipe already on the shelf keeps when it went on, and its place. A new one goes last.
         var written = await executor.ExecuteAsync(
             """
-            insert into cookbook_recipes (cookbook_id, recipe_id, added_at, added_by)
-            values (@cookbookId, @recipeId, @now, @addedBy)
+            insert into cookbook_recipes (cookbook_id, recipe_id, added_at, added_by, sort_order)
+            values (@cookbookId, @recipeId, @now, @addedBy,
+                    (select coalesce(max(sort_order), 0) + 1 from cookbook_recipes where cookbook_id = @cookbookId))
             on conflict (cookbook_id, recipe_id) do nothing;
             """,
             new { cookbookId, recipeId, now, addedBy },
@@ -275,6 +277,17 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
 
         return written > 0;
     }
+
+    public Task ReorderAsync(Guid cookbookId, IReadOnlyList<Guid> recipeIds, CancellationToken cancellationToken) =>
+        executor.ExecuteAsync(
+            """
+            update cookbook_recipes cr
+            set sort_order = ordered.n
+            from unnest(@recipeIds::uuid[]) with ordinality as ordered(recipe_id, n)
+            where cr.cookbook_id = @cookbookId and cr.recipe_id = ordered.recipe_id;
+            """,
+            new { cookbookId, recipeIds = recipeIds.ToArray() },
+            cancellationToken);
 
     public async Task<bool> RemoveRecipeAsync(
         Guid cookbookId,
@@ -309,7 +322,7 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
             from cookbooks c
             cross join lateral ({OnTheShelf}) as on_shelf
             where c.id = @cookbookId
-            order by on_shelf.added_at nulls last, on_shelf.id;
+            order by on_shelf.sort_order nulls last, on_shelf.id;
             """,
             new { cookbookId },
             cancellationToken).ConfigureAwait(false);

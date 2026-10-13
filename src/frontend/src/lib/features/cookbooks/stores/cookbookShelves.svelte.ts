@@ -222,6 +222,40 @@ export class Shelves {
     return true;
   }
 
+  /**
+   * Puts the open cookbook's recipes in this order, at the version it was opened at: an order read
+   * before somebody added a recipe no longer covers the shelf, and the server says so with a 412.
+   */
+  async arrange(cookbookId: string, recipeIds: readonly string[]): Promise<AppError | null> {
+    const current = this.#open;
+
+    if (!current || current.id !== cookbookId) {
+      return null;
+    }
+
+    const result = await request(() =>
+      http.PUT('/api/v1/cookbooks/{cookbookId}/recipes', {
+        params: { path: { cookbookId } },
+        body: { recipeIds: [...recipeIds] },
+        headers: { 'If-Match': `"v${current.version}"` }
+      })
+    );
+
+    if (!result.ok) {
+      return result.error;
+    }
+
+    const arranged = toDetail(result.value);
+
+    // The cover follows the order, so the card on the cookbooks page changes too.
+    this.#open = arranged;
+    this.#items = this.#items.map((shelf) =>
+      shelf.id === cookbookId ? { ...shelf, cover: arranged.cover } : shelf
+    );
+
+    return null;
+  }
+
   /** Deletes the open cookbook at the version it was opened at, so a concurrent edit gets a 412. */
   async remove(cookbookId: string): Promise<boolean> {
     const current = this.#open;

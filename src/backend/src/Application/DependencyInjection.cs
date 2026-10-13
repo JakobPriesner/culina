@@ -347,6 +347,8 @@ public static class DependencyInjection
                 AddRecipeToCookbookCommandHandler>()
             .AddScoped<ICommandHandler<RemoveRecipeFromCookbookCommand>,
                 RemoveRecipeFromCookbookCommandHandler>()
+            .AddScoped<ICommandHandler<ReorderCookbookRecipesCommand, Contracts.Cookbooks.CookbookDetail>,
+                ReorderCookbookRecipesCommandHandler>()
             .AddScoped<IQueryHandler<GetRecipeCookbooksQuery, Contracts.Cookbooks.RecipeCookbooksResponse>,
                 GetRecipeCookbooksQueryHandler>()
 

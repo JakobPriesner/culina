@@ -1826,5 +1826,19 @@
   "problem.nutrition.invalid_food": "A food needs a name and its kilocalories per 100 g, and every value must fit in 100 g.",
   "shopping.quickAdd.placeholder": "e.g. 200 g butter",
   "shopping.completed": "Done",
-  "shopping.itemActions": "Actions for {name}"
+  "shopping.itemActions": "Actions for {name}",
+  "problem.cookbooks.order_mismatch": "That order doesn't list exactly the recipes on this cookbook. Open it again and arrange what is there now.",
+  "cookbooks.arrange.action": "Arrange recipes",
+  "cookbooks.arrange.title": "Arrange recipes",
+  "cookbooks.arrange.intro": "This is the order the cookbook reads in. Recipes you add later go last.",
+  "cookbooks.arrange.up": "Move {title} up",
+  "cookbooks.arrange.down": "Move {title} down",
+  "cookbooks.arrange.moved": "{title}, now {position} of {count}",
+  "cookbooks.arrange.save": "Save order",
+  "cookbooks.arrange.cancel": "Cancel",
+  "cookbooks.arrange.close": "Close",
+  "cookbooks.arrange.failed": "The recipes on this cookbook couldn't be loaded.",
+  "cookbooks.arrange.retry": "Try again",
+  "cookbooks.arrange.changed": "Somebody changed this cookbook meanwhile. This is its order now; arrange it again.",
+  "cookbooks.arrange.saved": "The new order is saved."
 }

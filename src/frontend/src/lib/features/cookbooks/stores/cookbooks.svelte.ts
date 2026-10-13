@@ -90,6 +90,10 @@ class CookbookStore {
     return this.#shelves.rename(cookbookId, name, description, rules);
   }
 
+  arrange(cookbookId: string, recipeIds: readonly string[]): Promise<AppError | null> {
+    return this.#shelves.arrange(cookbookId, recipeIds);
+  }
+
   remove(cookbookId: string): Promise<boolean> {
     return this.#shelves.remove(cookbookId);
   }
