@@ -1,76 +1,38 @@
 <script lang="ts">
-  import { Button } from '$ds';
-
   import { m } from '$shell/i18n';
-
   interface Props {
     remaining: number;
-    onaddrecipe: () => void;
+    done: number;
+    total: number;
   }
-
-  let { remaining, onaddrecipe }: Props = $props();
+  let { remaining, done, total }: Props = $props();
 </script>
 
 <header class="head">
-  <div class="titles">
-    <h1 class="title">{m['shopping.title']()}</h1>
-    <p class="subtitle">
-      {#if remaining > 0}
-        {m['shopping.remaining']({ count: remaining })}
-      {:else}
-        {m['shopping.subtitle']()}
-      {/if}
+  <h1 class="title">{m['shopping.title']()}</h1>
+  <div class="status">
+    <p>
+      {remaining > 0 ? m['shopping.remaining']({ count: remaining }) : m['shopping.subtitle']()}
     </p>
+    {#if total > 0}<p>{m['shopping.progress']({ done, total })}</p>{/if}
   </div>
-
-  <Button onclick={onaddrecipe}>
-    {#snippet icon()}
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.8"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M6.5 3.5H17a1 1 0 0 1 1 1v7.2" />
-        <path d="M18 17.5v3" />
-        <path d="M4.5 6.5v11a2 2 0 0 0 2 2H14" />
-        <path d="M8 3.5v16" />
-        <path d="M16.5 19h3" />
-      </svg>
-    {/snippet}
-
-    {m['shopping.addRecipe']()}
-  </Button>
 </header>
 
 <style>
-  .head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: var(--space-4);
-    margin-bottom: var(--space-6);
-  }
-
-  .titles {
-    min-width: 0;
-  }
-
   .title {
     font-family: var(--font-editorial);
-    font-size: var(--text-display);
+    font-size: var(--text-3xl);
     font-weight: var(--weight-regular);
     letter-spacing: -0.03em;
   }
-
-  .subtitle {
+  .status {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+    margin-top: var(--space-3);
     color: var(--text-muted);
-    font-size: var(--text-sm);
-    margin-top: var(--space-2);
+    font-size: var(--text-xs);
     font-variant-numeric: tabular-nums;
   }
 </style>

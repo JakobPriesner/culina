@@ -19,6 +19,7 @@
     focused?: boolean;
     inputmode?: 'text' | 'decimal';
     placeholder?: string;
+    showLabel?: boolean;
   }
 
   let {
@@ -31,7 +32,8 @@
     onsubmit,
     focused = $bindable(false),
     inputmode = 'text',
-    placeholder
+    placeholder,
+    showLabel = true
   }: Props = $props();
 
   let element = $state<HTMLInputElement>();
@@ -95,7 +97,7 @@
 </script>
 
 <label class="field">
-  <span class="label">{label}</span>
+  <span class="label" class:visually-hidden={!showLabel}>{label}</span>
 
   <!-- The list is positioned against this, so it opens under its own field. -->
   <span class="anchor">
@@ -154,5 +156,15 @@
   .anchor {
     position: relative;
     display: block;
+  }
+
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 </style>

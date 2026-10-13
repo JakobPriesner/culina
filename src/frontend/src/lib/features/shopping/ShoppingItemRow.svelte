@@ -62,58 +62,53 @@
 </script>
 
 <li class="row" class:bought={item.isChecked}>
-  <Checkbox
-    checked={item.isChecked}
-    label={item.name}
-    onchange={(isChecked) => {
-      haptics.tick();
-      oncheck(isChecked);
-    }}
-  />
-
-  <!-- Beside the name, not at the far edge: ranged right across a wide column the amount sits an inch from its name; read as a phrase ("cherry tomatoes, 250 g") it is one glance. -->
-  {#if amount}
-    <span class="amount">{amount}</span>
-  {/if}
-
-  {#if sources.length > 0}
-    <button
-      class="source-toggle"
-      type="button"
-      aria-expanded={showingSources}
-      onclick={() => (showingSources = !showingSources)}
-    >
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="m9 6 6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
-      {showingSources
-        ? m['shopping.sources.hide']()
-        : m['shopping.sources.show']({ count: sources.length })}
-    </button>
-  {/if}
-
-  <span class="actions">
-    <!-- Only while still to find: a bought line is in no aisle. -->
-    {#if !item.isChecked}
-      <ActionMenu wrap>
-        {#snippet trigger({ popovertarget })}
-          <IconButton label={m['shopping.move']({ name: item.name })} size="sm" {popovertarget}>
-            <!-- Two arrows passing: this goes somewhere else, not away. -->
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <path d="M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4" />
-            </svg>
-          </IconButton>
-        {/snippet}
-
+  <div class="check">
+    <Checkbox
+      checked={item.isChecked}
+      label={item.name}
+      describedBy={amount ? `shopping-amount-${item.itemId}` : undefined}
+      onchange={(isChecked) => {
+        haptics.tick();
+        oncheck(isChecked);
+      }}
+    />
+  </div>
+  {#if amount}<span class="amount" id="shopping-amount-{item.itemId}">{amount}</span>{/if}
+  <div class="actions">
+    <ActionMenu wrap>
+      {#snippet trigger({ popovertarget })}
+        <IconButton
+          label={m['shopping.itemActions']({ name: item.name })}
+          size="sm"
+          {popovertarget}
+        >
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="5" cy="12" r="1.6" /><circle cx="12" cy="12" r="1.6" /><circle
+              cx="19"
+              cy="12"
+              r="1.6"
+            />
+          </svg>
+        </IconButton>
+      {/snippet}
+      {#if sources.length > 0}
+        <button
+          class="item"
+          type="button"
+          aria-expanded={showingSources}
+          onclick={() => (showingSources = !showingSources)}
+        >
+          {showingSources
+            ? m['shopping.sources.hide']()
+            : m['shopping.sources.show']({ count: sources.length })}
+        </button>
+      {/if}
+      <button type="button" class="item danger" onclick={onremove}
+        >{m['shopping.remove']({ name: item.name })}</button
+      >
+      {#if !item.isChecked}
+        <hr class="separator" />
         <p class="heading">{m['shopping.move.heading']()}</p>
-
         {#each sectionOrder as section (section)}
           {@const current = section === item.section}
           <button
@@ -130,40 +125,29 @@
                   stroke="currentColor"
                   stroke-width="2"
                   stroke-linecap="round"
-                  stroke-linejoin="round"
+                  stroke-linejoin="round"><path d="m5 12 5 5 9-10" /></svg
                 >
-                  <path d="m5 12 5 5 9-10" />
-                </svg>
               {/if}
             </span>
             {nameOf(section)}
           </button>
         {/each}
-      </ActionMenu>
-    {/if}
-
-    <IconButton label={m['shopping.remove']({ name: item.name })} size="sm" onclick={onremove}>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
-      </svg>
-    </IconButton>
-  </span>
-
+      {/if}
+    </ActionMenu>
+  </div>
   {#if showingSources}
     <ul class="sources">
       {#each sources as source, index (`${source.recipeId}-${source.plannedDate ?? 'direct'}-${index}`)}
         <li class="source">
-          <a href={resolve('/(app)/recipes/[recipeId]', { recipeId: source.recipeId })}>
-            {source.recipeTitle}
-          </a>
-
-          {#if amountOf(source.quantity, source.unit)}
-            <span class="source-amount">{amountOf(source.quantity, source.unit)}</span>
-          {/if}
-
-          {#if source.plannedDate}
-            <span class="source-plan">{plannedFor(source.plannedDate, source.plannedSlot)}</span>
-          {/if}
+          <a href={resolve('/(app)/recipes/[recipeId]', { recipeId: source.recipeId })}
+            >{source.recipeTitle}</a
+          >
+          {#if amountOf(source.quantity, source.unit)}<span class="source-amount"
+              >{amountOf(source.quantity, source.unit)}</span
+            >{/if}
+          {#if source.plannedDate}<span class="source-plan"
+              >{plannedFor(source.plannedDate, source.plannedSlot)}</span
+            >{/if}
         </li>
       {/each}
     </ul>
@@ -173,85 +157,48 @@
 <style>
   .row {
     display: grid;
-    grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto auto;
     align-items: center;
-    gap: var(--space-3);
-    /* Floor for a thumb target on a moving trolley; stops two short lines landing closer together. */
-    min-height: var(--control-sm);
-    /* Bled to the gutter and back so hover lands on the line, not the words. Fixed pixels, not a rem step: at 200% text a rem bleed pushes the row past a 320px screen. */
-    margin-inline: -12px;
-    padding-inline: 12px;
-    border-radius: var(--radius-md);
+    column-gap: var(--space-2);
+    min-height: var(--control-lg);
+    border-bottom: 1px solid var(--border);
     transition: background-color var(--duration-fast) var(--ease-out);
   }
-
   .row:hover {
     background: var(--surface-hover);
   }
-
-  /* Struck through and dimmed, not removed: seeing what is in the trolley shows nothing was missed. */
-  .bought {
+  .check {
+    min-width: 0;
+    padding-block: var(--space-1);
+    overflow-wrap: anywhere;
+  }
+  .check :global(label) {
+    width: 100%;
+  }
+  .bought .check,
+  .bought .amount {
     color: var(--text-subtle);
     text-decoration: line-through;
   }
-
-  /* Placed by column, not by order: a line without an amount would otherwise pull the recipe link next to its name. */
   .amount {
     grid-column: 2;
-    justify-self: start;
     color: var(--text-muted);
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
-
-  .bought .amount {
-    color: inherit;
-  }
-
-  .source-toggle {
+  .actions {
     grid-column: 3;
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-1);
-    min-height: var(--control-sm);
-    padding: 0 var(--space-2);
-    border: none;
-    border-radius: var(--radius-full);
-    background: none;
-    color: var(--text-muted);
-    font: inherit;
-    font-size: var(--text-xs);
-    cursor: pointer;
   }
-
-  .source-toggle:hover {
-    background: var(--surface-selected);
-    color: var(--text);
-  }
-
-  .source-toggle svg {
-    width: var(--space-4);
-    height: var(--space-4);
-    transition: transform var(--duration-fast) var(--ease-out);
-  }
-
-  .source-toggle[aria-expanded='true'] svg {
-    transform: rotate(90deg);
-  }
-
   .sources {
     display: flex;
     grid-column: 1 / -1;
     flex-direction: column;
     gap: var(--space-2);
     margin: 0;
-    padding: var(--space-2) var(--space-3) var(--space-3) calc(var(--control-sm) + var(--space-3));
-    border-top: 1px solid var(--border);
+    padding: var(--space-2) 0 var(--space-4) calc(var(--space-6) + var(--space-3));
     list-style: none;
-    text-decoration: none;
   }
-
   .source {
     display: flex;
     flex-wrap: wrap;
@@ -260,65 +207,14 @@
     color: var(--text-muted);
     font-size: var(--text-sm);
   }
-
   .source a {
     color: var(--text);
     font-weight: var(--weight-medium);
   }
-
   .source-amount {
     font-variant-numeric: tabular-nums;
   }
-
   .source-plan {
     color: var(--text-subtle);
-  }
-
-  /* Held back until the line is reached: a column of crosses reads as the thing to press, and removing cannot be undone; moving waits too. */
-  /* Room for both buttons even when a bought line has only one, so the recipe link above stays in one column. */
-  .actions {
-    grid-column: 4;
-    display: inline-flex;
-    align-items: center;
-    justify-content: flex-end;
-    min-width: calc(var(--control-sm) * 2);
-    opacity: 0;
-    transition: opacity var(--duration-fast) var(--ease-out);
-  }
-
-  .row:hover .actions,
-  .actions:focus-within,
-  .actions:has(:popover-open) {
-    opacity: 1;
-  }
-
-  /* A finger has no hover, so on touch there is nothing to reveal it with. */
-  @media (hover: none) {
-    .actions {
-      opacity: 1;
-    }
-  }
-
-  @media (width < 32rem) {
-    .row {
-      grid-template-columns: minmax(0, 1fr) auto auto;
-    }
-
-    .row > :global(:first-child) {
-      grid-column: 1 / -1;
-    }
-
-    .amount {
-      grid-column: 1;
-      padding-inline-start: calc(var(--control-sm) + var(--space-3));
-    }
-
-    .source-toggle {
-      grid-column: 2;
-    }
-
-    .actions {
-      grid-column: 3;
-    }
   }
 </style>
