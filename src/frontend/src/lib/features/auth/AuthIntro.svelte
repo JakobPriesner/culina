@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { SectionLabel } from '$ds';
+
   /** The heading of every signed-out form, so signing in, registering and resetting read as one place. */
   interface Props {
     title: string;
@@ -12,7 +14,7 @@
 </script>
 
 <header class="intro">
-  {#if eyebrow}<p class="eyebrow">{eyebrow}</p>{/if}
+  {#if eyebrow}<SectionLabel tone="accent" spacing="tight">{eyebrow}</SectionLabel>{/if}
   <h1 class="title" class:long>{title}</h1>
   {#if subtitle}<p class="subtitle">{subtitle}</p>{/if}
 </header>
@@ -20,13 +22,6 @@
 <style>
   .intro {
     margin-bottom: var(--space-6);
-  }
-
-  .eyebrow {
-    margin-bottom: var(--space-2);
-    color: var(--accent);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
   }
 
   .title {

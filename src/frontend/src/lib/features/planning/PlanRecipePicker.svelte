@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { SectionLabel } from '$ds';
+
   import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
   import RecipePicker from '$features/recipes/RecipePicker.svelte';
   import type { RecipeSummary } from '$features/recipes/types';
@@ -57,7 +59,7 @@
     {/if}
 
     <fieldset class="slots">
-      <legend>{m['plan.pick.slot']()}</legend>
+      <SectionLabel as="legend">{m['plan.pick.slot']()}</SectionLabel>
       {#each mealSlots as which (which)}
         <label>
           <input type="radio" name="slot" value={which} bind:group={slot} />
@@ -76,12 +78,6 @@
     gap: var(--space-4);
     padding: 0;
     border: 0;
-  }
-
-  .slots legend {
-    color: var(--text-subtle);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
   }
 
   .slots label {

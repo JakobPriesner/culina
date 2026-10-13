@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button, RadioGroup, Sheet } from '$ds';
+  import { Button, RadioGroup, SectionLabel, Sheet } from '$ds';
   import type { RadioOption } from '$ds';
 
   import { m } from '$shell/i18n';
@@ -68,12 +68,12 @@
 >
   <div class="answers">
     <fieldset>
-      <legend>{m['plan.move.day']()}</legend>
+      <SectionLabel as="legend" spacing="tight">{m['plan.move.day']()}</SectionLabel>
       <RadioGroup name="move-day" bind:value={date} options={dayOptions} />
     </fieldset>
 
     <fieldset>
-      <legend>{m['plan.pick.slot']()}</legend>
+      <SectionLabel as="legend" spacing="tight">{m['plan.pick.slot']()}</SectionLabel>
       <RadioGroup name="move-slot" bind:value={slot} options={slotOptions} />
     </fieldset>
   </div>
@@ -97,12 +97,5 @@
     min-width: 0;
     padding: 0;
     border: 0;
-  }
-
-  legend {
-    margin-bottom: var(--space-2);
-    color: var(--text-subtle);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
   }
 </style>

@@ -13,6 +13,7 @@ export { default as Badge } from './display/Badge.svelte';
 export { default as Chevron } from './display/Chevron.svelte';
 export { default as Icon } from './display/Icon.svelte';
 export { default as Image } from './display/Image.svelte';
+export { default as SectionLabel } from './display/SectionLabel.svelte';
 export { default as VisuallyHidden } from './display/VisuallyHidden.svelte';
 
 export { default as ActionMenu } from './overlay/ActionMenu.svelte';

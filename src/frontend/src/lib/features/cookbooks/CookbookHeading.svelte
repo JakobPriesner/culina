@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Skeleton } from '$ds';
+  import { SectionLabel, Skeleton } from '$ds';
   import { m } from '$shell/i18n';
   import type { CookbookDetail } from './types';
 
@@ -15,7 +15,7 @@
 </script>
 
 <div class="heading">
-  <p class="eyebrow">{m['cookbooks.title']()}</p>
+  <SectionLabel tone="muted">{m['cookbooks.title']()}</SectionLabel>
   {#if !cookbook && loading}
     <Skeleton width="16rem" height="2.25rem" />
     <Skeleton width="24rem" height="1.25rem" />
@@ -45,12 +45,6 @@
   .heading {
     flex: 1 1 24rem;
     min-width: 0;
-  }
-
-  .eyebrow {
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
   }
 
   .title {

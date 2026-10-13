@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FilePicker, Image, VisuallyHidden } from '$ds';
+  import { FilePicker, Image, SectionLabel, VisuallyHidden } from '$ds';
 
   import { formatDate, m } from '$shell/i18n';
   import { attemptSrcset, attemptUrl } from '$features/recipes/recipeImage';
@@ -60,7 +60,7 @@
 
 {#if cookLog.items.length > 0}
   <section class="attempts" aria-label={m['attempts.title']()}>
-    <h3 class="title">{m['attempts.title']()}</h3>
+    <SectionLabel as="h3">{m['attempts.title']()}</SectionLabel>
 
     {#if failure}<p class="failure" role="alert">{failure}</p>{/if}
 
@@ -131,12 +131,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-  }
-
-  .title {
-    color: var(--text-subtle);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
   }
 
   .failure {

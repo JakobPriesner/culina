@@ -25,7 +25,9 @@ own `--font-brand`, so it looks the same on every platform. Signed-out pages
 share `AuthIntro` for their heading.
 
 **Labels.** Section labels, legends and eyebrows are sentence case, semibold,
-15px. Uppercase is kept for one role only: the step number in a recipe
+15px, drawn by `SectionLabel` in one of three tones: `accent` for the eyebrow
+naming the page or form a title belongs to, `muted` for a section's heading,
+`subtle` for a legend or a row marker inside one. Uppercase is kept for one role only: the step number in a recipe
 ("Schritt 1" in the method). The illustrated 404 and the family-secret card are
 art, not labels.
 
@@ -288,7 +290,7 @@ If it knows what a recipe is, it is in the wrong folder.
 | Input | `TextInput`, `TextArea`, `Select`, `Checkbox`, `RadioGroup`, `Stepper`, `SearchField`, `Field` (label + hint + error + a11y wiring), `FilePicker` (the clipped file input, opened by a control beside it), `ImageField` (preview when set, template of the same size when not) |
 | Containment | `Card`, `Sheet` (mobile bottom sheet, desktop dialog), `Modal`, `Popover`, `Tabs`, `Disclosure` |
 | Feedback | `Toast` + `toaster`, `Skeleton`, `EmptyState`, `ErrorState`, `ProgressBar`, `Spinner` (first boot only) |
-| Display | `Badge`, `Avatar`, `Icon`, `Image` (aspect-ratio box, lazy, blur-up), `Divider`, `VisuallyHidden` |
+| Display | `Badge`, `Avatar`, `Icon`, `Image` (aspect-ratio box, lazy, blur-up), `Divider`, `SectionLabel`, `VisuallyHidden` |
 
 Every one of them: driven entirely by props, no store import, no `fetch`, real
 semantic elements, visible focus, `prefers-reduced-motion` respected.

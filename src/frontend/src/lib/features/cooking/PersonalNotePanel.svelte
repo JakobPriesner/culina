@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
 
-  import { Button, TextArea } from '$ds';
+  import { Button, SectionLabel, TextArea } from '$ds';
 
   import { createAutosave } from '$features/recipes/editor/autosave.svelte';
   import { m } from '$shell/i18n';
@@ -44,7 +44,7 @@
 <section class="notes" class:compact={variant === 'cook'} aria-label={m['notes.title']()}>
   {#if variant === 'detail'}
     <header class="head">
-      <h2 class="title">{m['notes.title']()}</h2>
+      <SectionLabel tone="muted" as="h2">{m['notes.title']()}</SectionLabel>
       <p class="status" role="status">{autosave.state === 'saved' ? m['notes.saved']() : ''}</p>
     </header>
   {:else}
@@ -118,12 +118,6 @@
     align-items: baseline;
     justify-content: space-between;
     gap: var(--space-4);
-  }
-
-  .title {
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
-    color: var(--text-muted);
   }
 
   .unread {

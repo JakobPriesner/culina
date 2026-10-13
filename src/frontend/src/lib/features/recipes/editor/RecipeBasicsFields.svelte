@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Field, Select, TextArea, TextInput } from '$ds';
+  import { Field, SectionLabel, Select, TextArea, TextInput } from '$ds';
   import {
     minutesShown,
     minutesWrong,
@@ -78,7 +78,7 @@
 
   <div class="meta">
     <fieldset class="group">
-      <legend class="legend">{m['editor.yieldGroup']()}</legend>
+      <SectionLabel as="legend">{m['editor.yieldGroup']()}</SectionLabel>
 
       <div class="pair yield">
         <Field
@@ -117,7 +117,7 @@
     </fieldset>
 
     <fieldset class="group">
-      <legend class="legend">{m['editor.timeGroup']()}</legend>
+      <SectionLabel as="legend">{m['editor.timeGroup']()}</SectionLabel>
 
       <div class="pair">
         <Field
@@ -187,12 +187,6 @@
   }
 
   /* Caption for a pair of fields; the size between section heading and field label. */
-  .legend {
-    padding: 0;
-    color: var(--text-subtle);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
-  }
 
   .pair {
     display: grid;

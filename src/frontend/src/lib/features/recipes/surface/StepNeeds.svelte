@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { SectionLabel } from '$ds';
+
   import { m } from '$shell/i18n';
   import type { Scaling } from './scaled.svelte';
   import type { Ingredient } from '../types';
@@ -16,7 +18,7 @@
 </script>
 
 <p class="needs">
-  <span class="label">{m['recipe.stepNeeds']()}</span>
+  <SectionLabel as="span">{m['recipe.stepNeeds']()}</SectionLabel>
 
   {#each ingredients as ingredient (ingredient.id)}
     {@const amount = scaling.amountFor(ingredient).text}
@@ -37,12 +39,6 @@
     color: var(--text-muted);
     font-size: var(--text-sm);
     line-height: var(--leading-normal);
-  }
-
-  .label {
-    color: var(--text-subtle);
-    font-size: var(--text-sm);
-    font-weight: var(--weight-semibold);
   }
 
   /* Separator between items only, never stranded at a wrapped line end. */
