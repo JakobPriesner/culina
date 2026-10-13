@@ -35,7 +35,33 @@ public sealed record Archive
 
     /// <summary>Every recipe in it.</summary>
     public required IReadOnlyList<ArchivedRecipe> Recipes { get; init; }
+
+    /// <summary>Its cookbooks. Optional, so archives written before cookbooks travelled still restore.</summary>
+    public IReadOnlyList<ArchivedCookbook>? Cookbooks { get; init; }
 }
+
+/// <summary>A cookbook: a chosen shelf by the positions of its recipes, or a smart one by its rules.</summary>
+/// <remarks>
+/// Positions into <see cref="Archive.Recipes"/>, for the reason <see cref="ArchivedSegment"/> gives. A recipe on a
+/// shelf that is not in the archive (one another kitchen lent) has no position and is left off.
+/// </remarks>
+public sealed record ArchivedCookbook
+{
+    /// <summary>What it is called.</summary>
+    public required string Name { get; init; }
+
+    /// <summary>What it is for.</summary>
+    public string? Description { get; init; }
+
+    /// <summary>A chosen shelf's recipes, in shelf order; null on a smart cookbook.</summary>
+    public IReadOnlyList<int>? Recipes { get; init; }
+
+    /// <summary>A smart cookbook's rules; null on a chosen shelf.</summary>
+    public ArchivedRules? Rules { get; init; }
+}
+
+/// <summary>What a smart cookbook asks for.</summary>
+public sealed record ArchivedRules(IReadOnlyList<string> Tags, IReadOnlyList<string> Ingredients, int? MaxMinutes);
 
 /// <summary>One recipe, with everything needed to write it out again.</summary>
 public sealed record ArchivedRecipe

@@ -168,6 +168,86 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
         Assert.Equal("archive.not_an_archive", response.Json!.Value.GetProperty("code").GetString());
     }
 
+    /// <summary>A chosen shelf travels as positions in its own order and comes back holding the copies; a smart one travels as its rules.</summary>
+    [Fact]
+    public async Task AnArchive_ShouldCarryItsCookbooks_AndRestoreThemOntoTheCopies()
+    {
+        var kitchen = await Kitchen.OpenAsync(postgres);
+        var apple = await kitchen.SaveAsync("Apfelkuchen", "de", 20, 40, [("Äpfel", "g")], ["backen"], "Backen.");
+        await kitchen.SaveAsync("Brot", "de", 20, 60, [("Mehl", "g")], [], "Kneten.");
+        var lemon = await kitchen.SaveAsync("Zitronenkuchen", "de", 20, 40, [("Zitronen", null)], ["backen"], "Backen.");
+
+        var sunday = await CreateCookbookAsync(kitchen, new { householdId = kitchen.HouseholdId, name = "Sonntag", description = "Für Besuch" });
+        await kitchen.Client.PutAsync($"/api/v1/cookbooks/{sunday}/recipes/{lemon}", new { }, Token);
+        await kitchen.Client.PutAsync($"/api/v1/cookbooks/{sunday}/recipes/{apple}", new { }, Token);
+        string[] baking = ["backen"];
+        await CreateCookbookAsync(kitchen, new { householdId = kitchen.HouseholdId, name = "Backen", rules = new { tags = baking } });
+
+        var exported = await kitchen.Client.GetAsync($"/api/v1/households/{kitchen.HouseholdId}/archive", Token);
+        using var archive = JsonDocument.Parse(exported.Body);
+        var titles = archive.RootElement.GetProperty("recipes").EnumerateArray()
+            .Select(one => one.GetProperty("title").GetString())
+            .ToList();
+        var shelves = archive.RootElement.GetProperty("cookbooks").EnumerateArray().ToList();
+        var chosen = shelves.Single(one => one.GetProperty("name").GetString() == "Sonntag");
+        var smart = shelves.Single(one => one.GetProperty("name").GetString() == "Backen");
+
+        Assert.Equal(
+            ["Zitronenkuchen", "Apfelkuchen"],
+            chosen.GetProperty("recipes").EnumerateArray().Select(at => titles[at.GetInt32()]));
+        Assert.Equal("Für Besuch", chosen.GetProperty("description").GetString());
+        Assert.False(chosen.TryGetProperty("rules", out _));
+        Assert.Equal("backen", Assert.Single(smart.GetProperty("rules").GetProperty("tags").EnumerateArray()).GetString());
+        Assert.False(smart.TryGetProperty("recipes", out _));
+
+        var restored = await UploadAsync(kitchen.Client, kitchen.HouseholdId, exported.Body);
+        Assert.Equal(3, restored.Json!.Value.GetProperty("restored").GetInt32());
+
+        var all = await kitchen.Client.GetAsync($"/api/v1/cookbooks?householdId={kitchen.HouseholdId}", Token);
+        var copies = all.Json!.Value.GetProperty("items").EnumerateArray()
+            .Where(one => one.GetProperty("cookbookId").GetGuid() != sunday)
+            .ToList();
+        var sundayCopy = copies.Single(one => one.GetProperty("name").GetString() == "Sonntag").GetProperty("cookbookId").GetGuid();
+        var smartCopies = copies.Where(one => one.GetProperty("name").GetString() == "Backen").ToList();
+
+        // A restore adds: the originals stay where they are, and the copy holds the copies, in the shelf's order.
+        Assert.Equal(2, smartCopies.Count);
+        Assert.All(smartCopies, one => Assert.Equal("smart", one.GetProperty("kind").GetString()));
+        var onCopy = (await kitchen.Client.GetAsync(
+                $"/api/v1/recipes?householdId={kitchen.HouseholdId}&cookbookId={sundayCopy}&sort=cookbookOrder",
+                Token))
+            .Json!.Value.GetProperty("items").EnumerateArray().ToList();
+        Assert.Equal(["Zitronenkuchen", "Apfelkuchen"], onCopy.Select(one => one.GetProperty("title").GetString()));
+        Assert.DoesNotContain(onCopy, one => one.GetProperty("recipeId").GetGuid() == lemon || one.GetProperty("recipeId").GetGuid() == apple);
+    }
+
+    [Fact]
+    public async Task Restore_ShouldPassOverACookbookThatDoesNotHoldTogether_AndKeepTheRest()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await FirstHouseholdIdAsync(client);
+
+        var response = await UploadAsync(
+            client,
+            householdId,
+            """
+            { "culina": 1, "exportedAt": "2026-09-13T10:00:00+00:00",
+              "recipes": [{ "title": "Lemon orzo", "language": "en", "yieldAmount": 2, "yieldKind": "servings", "tags": [], "groups": [], "steps": [], "cooked": [] }],
+              "cookbooks": [
+                { "name": "", "recipes": [0] },
+                { "name": "Smart with no rules", "rules": { "tags": [], "ingredients": [] } },
+                { "name": "Weeknights", "recipes": [0, 7, -1, 0] }
+              ] }
+            """);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var shelves = (await client.GetAsync($"/api/v1/cookbooks?householdId={householdId}", Token))
+            .Json!.Value.GetProperty("items").EnumerateArray().ToList();
+        var weeknights = Assert.Single(shelves);
+        Assert.Equal("Weeknights", weeknights.GetProperty("name").GetString());
+        Assert.Equal(1, weeknights.GetProperty("recipeCount").GetInt32());
+    }
+
     [Fact]
     public async Task Export_ShouldBeRefused_ForAKitchenTheCallerIsNotIn()
     {
@@ -181,6 +261,15 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.DoesNotContain("Lemon orzo", response.Body, StringComparison.Ordinal);
+    }
+
+    private static async Task<Guid> CreateCookbookAsync(Kitchen kitchen, object body)
+    {
+        var created = await kitchen.Client.PostAsync("/api/v1/cookbooks", body, Token);
+
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+
+        return created.Json!.Value.GetProperty("cookbookId").GetGuid();
     }
 
     private static async Task WriteLemonOrzoAsync(ApiClient client, Guid householdId)

@@ -4,6 +4,7 @@ using Application.Abstractions.Messaging;
 using Application.Households;
 using Application.Recipes;
 using Application.Telemetry;
+using Domain.Cookbooks;
 using Domain.Cooking;
 using Domain.Recipes;
 using Domain.Shared;
@@ -18,6 +19,7 @@ public sealed record ArchiveWritten(int Recipes);
 
 internal sealed class ExportArchiveQueryHandler(
     IRecipeRepository recipes,
+    ICookbookRepository cookbooks,
     IHouseholdRepository households,
     IPersonalNoteRepository notes,
     ICookLogRepository log,
@@ -71,6 +73,9 @@ internal sealed class ExportArchiveQueryHandler(
             var written = 0;
             string? cursor = null;
 
+            // Where each recipe landed in the array, for the cookbooks written after it.
+            var positions = new Dictionary<Guid, int>();
+
             do
             {
                 var page = await recipes
@@ -121,6 +126,7 @@ internal sealed class ExportArchiveQueryHandler(
                         JsonSerializer.SerializeToUtf8Bytes(archived, RecipeArchive.Format),
                         skipInputValidation: true);
 
+                    positions[summary.RecipeId] = written;
                     written += 1;
 
                     await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
@@ -131,12 +137,60 @@ internal sealed class ExportArchiveQueryHandler(
             while (cursor is not null);
 
             writer.WriteEndArray();
+
+            writer.WritePropertyName("cookbooks");
+            writer.WriteStartArray();
+            await WriteCookbooksAsync(writer, query.HouseholdId, positions, cancellationToken).ConfigureAwait(false);
+            writer.WriteEndArray();
+
             writer.WriteEndObject();
 
             await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
 
             return new ArchiveWritten(written);
         }
+    }
+
+    private async Task WriteCookbooksAsync(
+        Utf8JsonWriter writer,
+        Guid householdId,
+        Dictionary<Guid, int> positions,
+        CancellationToken cancellationToken)
+    {
+        string? cursor = null;
+
+        do
+        {
+            var page = await cookbooks.ListAsync(householdId, cursor, Page, cancellationToken).ConfigureAwait(false);
+
+            foreach (var cookbook in page.Items.Select(shelf => shelf.Cookbook))
+            {
+                var archived = new ArchivedCookbook
+                {
+                    Name = cookbook.Name.Value,
+                    Description = cookbook.Description,
+                    Recipes = cookbook.Kind == CookbookKind.Manual
+                        ? [
+                            .. (await cookbooks.RecipeIdsAsync(cookbook.Id, cancellationToken).ConfigureAwait(false))
+                                .Where(positions.ContainsKey)
+                                .Select(id => positions[id])
+                        ]
+                        : null,
+                    Rules = cookbook.Kind == CookbookKind.Smart
+                        ? new ArchivedRules(cookbook.Rules.Tags, cookbook.Rules.Ingredients, cookbook.Rules.MaxMinutes)
+                        : null
+                };
+
+                writer.WriteRawValue(
+                    JsonSerializer.SerializeToUtf8Bytes(archived, RecipeArchive.Format),
+                    skipInputValidation: true);
+            }
+
+            await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
+
+            cursor = page.NextCursor;
+        }
+        while (cursor is not null);
     }
 
     private async Task<ArchivedRecipe?> ToArchivedAsync(
