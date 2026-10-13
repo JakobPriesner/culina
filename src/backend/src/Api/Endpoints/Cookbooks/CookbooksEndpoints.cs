@@ -5,6 +5,7 @@ using Api.Endpoints.Cookbooks.GetAll.V1;
 using Api.Endpoints.Cookbooks.GetById.V1;
 using Api.Endpoints.Cookbooks.GetRecipes.V1;
 using Api.Endpoints.Cookbooks.RemoveRecipe.V1;
+using Api.Endpoints.Cookbooks.Reorder.V1;
 using Api.Endpoints.Cookbooks.Restore.V1;
 using Api.Endpoints.Cookbooks.Update.V1;
 using Api.Endpoints.Recipes.GetCookbooks.V1;
@@ -25,6 +26,7 @@ internal static class CookbooksEndpoints
             .AddSingleton<IEndpoint, RestoreCookbookEndpoint>()
             .AddSingleton<IEndpoint, AddRecipeToCookbookEndpoint>()
             .AddSingleton<IEndpoint, RemoveRecipeFromCookbookEndpoint>()
+            .AddSingleton<IEndpoint, ReorderCookbookRecipesEndpoint>()
             // Hangs off a recipe rather than a cookbook, because that is the
             // question the recipe's own page asks.
             .AddSingleton<IEndpoint, GetRecipeCookbooksEndpoint>();

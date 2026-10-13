@@ -138,8 +138,8 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
                 join ingredient_groups g on g.id = ri.group_id
                 where g.recipe_id = r.id)) as ingredient_count,
             coalesce(wanted.matched, 0) as matched_ingredients,
-            (select cr.added_at from cookbook_recipes cr
-             where cr.cookbook_id = @cookbookId and cr.recipe_id = r.id) as added_to_cookbook_at,
+            (select cr.sort_order from cookbook_recipes cr
+             where cr.cookbook_id = @cookbookId and cr.recipe_id = r.id) as cookbook_position,
             q.has_text,
             {{RecipeSearchLanes.Evidence}}
         {{Sources(scored)}}

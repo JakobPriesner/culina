@@ -93,7 +93,7 @@ public class ShortlistQualityTests
                 UpdatedAt: DateTimeOffset.UnixEpoch,
                 MatchedIngredients: 0,
                 IngredientCount: 0,
-                AddedToCookbookAt: null),
+                CookbookPosition: null),
             Score: 1,
             Terms: [],
             Features: []);

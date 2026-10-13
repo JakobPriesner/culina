@@ -3,6 +3,7 @@
   import { page } from '$app/state';
   import { Button, ErrorState } from '$ds';
   import { session } from '$features/auth/session.svelte';
+  import ArrangeCookbookSheet from '$features/cookbooks/ArrangeCookbookSheet.svelte';
   import CookbookActions from '$features/cookbooks/CookbookActions.svelte';
   import CookbookHeading from '$features/cookbooks/CookbookHeading.svelte';
   import CookbookSheet from '$features/cookbooks/CookbookSheet.svelte';
@@ -24,6 +25,8 @@
   const cookbook = $derived(cookbooks.open?.id === cookbookId ? cookbooks.open : null);
 
   const automatic = $derived(cookbook?.kind === 'smart');
+
+  let arranging = $state(false);
 
   /** Every member, loaded when the picker opens; the shelf on screen is only its first page. */
   const taken = $derived(cookbooks.membersOf(cookbookId));
@@ -69,9 +72,11 @@
 
       <CookbookActions
         {automatic}
+        arrangeable={!automatic && (cookbook?.recipeCount ?? 0) > 1}
         addingToList={actions.ui.addingToList}
         onedit={() => (actions.ui.renaming = true)}
         onpick={() => (actions.ui.picking = true)}
+        onarrange={() => (arranging = true)}
         onaddtolist={() => void actions.addToShoppingList()}
         ondelete={actions.askToDelete}
       />
@@ -148,6 +153,14 @@
 />
 
 {#if householdId && !automatic}
+  <ArrangeCookbookSheet
+    open={arranging}
+    {householdId}
+    {cookbookId}
+    onclose={() => (arranging = false)}
+    onarranged={list.reload}
+  />
+
   <RecipePicker
     open={actions.ui.picking}
     {householdId}

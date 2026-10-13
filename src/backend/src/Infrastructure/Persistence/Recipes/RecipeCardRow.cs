@@ -34,8 +34,8 @@ internal record RecipeCardRow
 
     public int IngredientCount { get; init; }
 
-    /// <summary>Set only by a search inside a cookbook.</summary>
-    public DateTimeOffset? AddedToCookbookAt { get; init; }
+    /// <summary>Set only by a search inside a cookbook: where the recipe stands on that shelf.</summary>
+    public int? CookbookPosition { get; init; }
 
     internal RecipeSearchRow ToSearchRow() => new(
         RecipeId,
@@ -52,5 +52,5 @@ internal record RecipeCardRow
         UpdatedAt,
         MatchedIngredients,
         IngredientCount,
-        AddedToCookbookAt);
+        CookbookPosition);
 }

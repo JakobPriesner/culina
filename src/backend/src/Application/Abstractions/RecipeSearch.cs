@@ -123,7 +123,7 @@ public sealed record RecipePage(
 /// <param name="UpdatedAt">When it last changed.</param>
 /// <param name="MatchedIngredients">How many named ingredients it uses.</param>
 /// <param name="IngredientCount">How many ingredients it has in total.</param>
-/// <param name="AddedToCookbookAt">When it went on the cookbook being read, or null.</param>
+/// <param name="CookbookPosition">Where it stands on the cookbook being read, or null.</param>
 public sealed record RecipeSearchRow(
     Guid RecipeId,
     Guid HouseholdId,
@@ -139,7 +139,7 @@ public sealed record RecipeSearchRow(
     DateTimeOffset UpdatedAt,
     int MatchedIngredients,
     int IngredientCount,
-    DateTimeOffset? AddedToCookbookAt)
+    int? CookbookPosition)
 {
     /// <summary>Why the row is here when not its title; null for title matches and wordless searches.</summary>
     public MatchReason? Reason { get; init; }

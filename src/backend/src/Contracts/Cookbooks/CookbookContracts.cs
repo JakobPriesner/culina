@@ -148,6 +148,13 @@ public sealed record CookbookRecipesResponse
     public required IReadOnlyList<Guid> RecipeIds { get; init; }
 }
 
+/// <summary>A chosen cookbook's recipes in the order they should stand.</summary>
+public sealed record ReorderCookbookRecipesRequest
+{
+    /// <summary>Every recipe on the cookbook, each once, first first.</summary>
+    public required IReadOnlyList<Guid> RecipeIds { get; init; }
+}
+
 /// <summary>Which cookbooks a recipe is on. Not paged: a recipe is on a handful of shelves.</summary>
 public sealed record RecipeCookbooksResponse
 {

@@ -1805,7 +1805,11 @@ export interface paths {
          * @description Every recipe on it, by id, for either kind of cookbook — so a picker can mark what is already on before anybody taps it. The members of `PUT` and `DELETE /cookbooks/{cookbookId}/recipes/{recipeId}`. To read the recipes themselves, use `GET /recipes?cookbookId=…`.
          */
         get: operations["getCookbookRecipesV1"];
-        put?: never;
+        /**
+         * Arrange a cookbook's recipes
+         * @description Replaces the order of a cookbook filled by hand: `recipeIds` lists every recipe on it, each once, first first. Anything else is 400 `cookbooks.order_mismatch`, never a guess at where a missing recipe should go. A recipe added later goes last. A smart cookbook has no order to choose (409 `cookbooks.rules_decide_membership`). The order is part of the cookbook, so `If-Match` is required — missing is 428, stale is 412 — and the answer is the cookbook with its new version and cover.
+         */
+        put: operations["reorderCookbookRecipesV1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2608,6 +2612,11 @@ export interface components {
         CookbooksRecipeCookbooksResponse: {
             /** @description The cookbooks containing it, by name. */
             items: components["schemas"]["CookbooksRecipeCookbook"][];
+        };
+        /** @description A chosen cookbook's recipes in the order they should stand. */
+        CookbooksReorderCookbookRecipesRequest: {
+            /** @description Every recipe on the cookbook, each once, first first. */
+            recipeIds: string[];
         };
         /** @description Renames a cookbook, and rewrites what it is for. Both fields together: they are one form. */
         CookbooksUpdateCookbookRequest: {
@@ -11898,6 +11907,86 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    reorderCookbookRecipesV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                cookbookId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CookbooksReorderCookbookRecipesRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookbooksCookbookDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };

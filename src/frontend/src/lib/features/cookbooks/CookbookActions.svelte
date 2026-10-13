@@ -6,14 +6,26 @@
   interface Props {
     /** A shelf that fills itself is edited by its rules, not by hand. */
     automatic: boolean;
+    /** A chosen shelf with something to put in order. */
+    arrangeable?: boolean;
     addingToList: boolean;
     onedit: () => void;
     onpick: () => void;
+    onarrange?: () => void;
     onaddtolist: () => void;
     ondelete: () => void;
   }
 
-  let { automatic, addingToList, onedit, onpick, onaddtolist, ondelete }: Props = $props();
+  let {
+    automatic,
+    arrangeable = false,
+    addingToList,
+    onedit,
+    onpick,
+    onarrange,
+    onaddtolist,
+    ondelete
+  }: Props = $props();
 </script>
 
 <div class="actions">
@@ -109,6 +121,24 @@
 
         {m['cookbooks.edit.title']()}
       </button>
+
+      {#if arrangeable}
+        <button class="item" type="button" onclick={onarrange}>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M8 4v16M4 8l4-4 4 4M16 20V4M12 16l4 4 4-4" />
+          </svg>
+
+          {m['cookbooks.arrange.action']()}
+        </button>
+      {/if}
 
       <hr class="separator" />
     {/if}

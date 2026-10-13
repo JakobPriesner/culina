@@ -49,6 +49,8 @@ internal sealed record RecipeCursor(RecipeSort Sort, IReadOnlyList<string> Keys,
         RecipeSort.MostCooked => [Count],
         RecipeSort.Relevance => [Count, Score, Time],
         RecipeSort.Suggested => [SuggestionScore],
+        // A place on the shelf; a cursor from when this was a time reads as page one.
+        RecipeSort.CookbookOrder => [Count],
         _ => [Time]
     };
 
