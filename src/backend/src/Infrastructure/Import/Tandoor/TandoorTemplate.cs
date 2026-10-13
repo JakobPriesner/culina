@@ -117,8 +117,13 @@ internal static partial class TandoorTemplate
             return (index + 2, "}}");
         }
 
-        // A statement never produces text, but it must be recognised to be removed.
-        return rest.StartsWith("{%", StringComparison.Ordinal) ? (index + 2, "%}") : null;
+        // A statement or a comment never produces text, but it must be recognised to be removed.
+        if (rest.StartsWith("{%", StringComparison.Ordinal))
+        {
+            return (index + 2, "%}");
+        }
+
+        return rest.StartsWith("{#", StringComparison.Ordinal) ? (index + 2, "#}") : null;
     }
 
     /// <summary>
