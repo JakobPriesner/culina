@@ -59,6 +59,7 @@ internal sealed class WeightCalibration(
         new(nameof(RankingWeights.Affinity), weights => weights.Affinity, (weights, value) => weights with { Affinity = value }),
         new(nameof(RankingWeights.Content), weights => weights.Content, (weights, value) => weights with { Content = value }),
         new(nameof(RankingWeights.Repetition), weights => weights.Repetition, (weights, value) => weights with { Repetition = value }),
+        new(nameof(RankingWeights.Shown), weights => weights.Shown, (weights, value) => weights with { Shown = value }),
         new(nameof(RankingWeights.Rediscovery), weights => weights.Rediscovery, (weights, value) => weights with { Rediscovery = value }),
         new(nameof(RankingWeights.Effort), weights => weights.Effort, (weights, value) => weights with { Effort = value }),
         new(nameof(RankingWeights.Household), weights => weights.Household, (weights, value) => weights with { Household = value }),

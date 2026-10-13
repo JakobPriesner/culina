@@ -81,6 +81,7 @@ using Application.Setup.Get;
 using Application.Shopping;
 using Application.Suggestions.Dismiss;
 using Application.Suggestions.GetAll;
+using Application.Suggestions.RecordImpressions;
 using Application.Trash.Purge;
 using Application.Users;
 using Application.Users.ChangePassword;
@@ -353,6 +354,7 @@ public static class DependencyInjection
             .AddScoped<IQueryHandler<GetSuggestionsQuery, Contracts.Suggestions.GetAll.Response>,
                 GetSuggestionsQueryHandler>()
             .AddScoped<ICommandHandler<DismissSuggestionCommand>, DismissSuggestionCommandHandler>()
+            .AddScoped<ICommandHandler<RecordImpressionsCommand>, RecordImpressionsCommandHandler>()
 
             // Saved searches
             .AddScoped<IQueryHandler<GetSavedSearchesQuery, Contracts.Searches.SavedSearchesResponse>,

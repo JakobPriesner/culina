@@ -9053,6 +9053,61 @@
         }
       }
     },
+    "/api/v1/suggestions/impressions": {
+      "post": {
+        "tags": [
+          "Suggestions"
+        ],
+        "summary": "Say which suggestions you were shown",
+        "description": "Sent once the set has actually been drawn, never as a side effect of `GET /suggestions`, which stays a read: a response that never painted was never shown.\n\nPerson-owned. What was shown on earlier days is pushed down in the next shortlists, so the same five recipes are not offered all week. The day is the server's, and today's own impressions never change today's list. Recording the same recipe again is harmless, so a refresh or a second device writes nothing new. Recipes outside the household's library are ignored.",
+        "operationId": "recordSuggestionImpressionsV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionsRecordImpressionsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/recipes/{recipeId}/suggestion-dismissal": {
       "put": {
         "tags": [
@@ -16221,6 +16276,29 @@
           }
         },
         "description": "Why a recipe was suggested."
+      },
+      "SuggestionsRecordImpressionsRequest": {
+        "required": [
+          "householdId",
+          "recipeIds"
+        ],
+        "type": "object",
+        "properties": {
+          "householdId": {
+            "type": "string",
+            "description": "Whose kitchen the set was for.",
+            "format": "uuid"
+          },
+          "recipeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The recipes that were on screen, at most as many as one set can hold."
+          }
+        },
+        "description": "The recipes a suggestion set actually showed."
       },
       "UsersChangePasswordRequest": {
         "required": [

@@ -193,6 +193,56 @@ describe('dismissing', () => {
   });
 });
 
+describe('reporting what was shown', () => {
+  const bodyOf = async (fetched: ReturnType<typeof serverAnswers>) =>
+    (await (fetched.mock.calls[0]![0] as Request).json()) as unknown;
+
+  it('tells the server which recipes the shortlist drew', async () => {
+    serverAnswers(() => answer([suggestion('a'), suggestion('b')]));
+    await suggestions.ask(household, { limit: 5 });
+
+    const fetched = serverAnswers(() => new Response(null, { status: 204 }));
+    await suggestions.reportShown(household, { limit: 5 });
+
+    expect((fetched.mock.calls[0]![0] as Request).url).toContain('/api/v1/suggestions/impressions');
+    expect(await bodyOf(fetched)).toEqual({ householdId: household, recipeIds: ['a', 'b'] });
+  });
+
+  it('says it once a day per question, however often the page redraws', async () => {
+    serverAnswers(() => answer([suggestion('a')]));
+    await suggestions.ask(household, { limit: 5 });
+
+    const fetched = serverAnswers(() => new Response(null, { status: 204 }));
+
+    await suggestions.reportShown(household, { limit: 5 });
+    await suggestions.reportShown(household, { limit: 5 });
+
+    expect(fetched).toHaveBeenCalledTimes(1);
+  });
+
+  it('says nothing when nothing was shown', async () => {
+    serverAnswers(() => answer([]));
+    await suggestions.ask(household, { limit: 5 });
+
+    const fetched = serverAnswers(() => new Response(null, { status: 204 }));
+    await suggestions.reportShown(household, { limit: 5 });
+
+    expect(fetched).not.toHaveBeenCalled();
+  });
+
+  it('tries again later when the report did not get through', async () => {
+    serverAnswers(() => answer([suggestion('a')]));
+    await suggestions.ask(household, { limit: 5 });
+
+    const fetched = serverAnswers(() => new Response('{}', { status: 500 }));
+
+    await suggestions.reportShown(household, { limit: 5 });
+    await suggestions.reportShown(household, { limit: 5 });
+
+    expect(fetched).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe('mapping', () => {
   it('carries a reason through, and its subject', async () => {
     serverAnswers(() => answer([suggestion('a', { code: 'ingredient', subject: 'Aubergine' })]));

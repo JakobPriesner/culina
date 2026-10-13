@@ -1065,6 +1065,7 @@
   "problem.suggestions.invalid_limit": "Diese Anfrage konnte Culina nicht verarbeiten. Lade die Seite neu und versuch es noch einmal.",
   "problem.suggestions.missing_like_recipe": "Diese Anfrage konnte Culina nicht verarbeiten. Lade die Seite neu und versuch es noch einmal.",
   "problem.suggestions.unknown_purpose": "Diese Anfrage konnte Culina nicht verarbeiten. Lade die Seite neu und versuch es noch einmal.",
+  "problem.suggestions.too_many_impressions": "Culina konnte nicht so viele Rezepte auf einmal verarbeiten. Lade die Seite neu und versuch es noch einmal.",
   "problem.suggestions.unknown_slot": "Diese Mahlzeit des Tages kennt Culina nicht.",
   "problem.users.email_already_used": "Diese E-Mail-Adresse ist schon registriert.",
   "problem.users.invalid_display_name": "Ein Name ist nötig und darf höchstens 80 Zeichen haben.",

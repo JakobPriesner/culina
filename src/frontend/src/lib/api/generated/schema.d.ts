@@ -2244,6 +2244,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/suggestions/impressions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say which suggestions you were shown
+         * @description Sent once the set has actually been drawn, never as a side effect of `GET /suggestions`, which stays a read: a response that never painted was never shown.
+         *
+         *     Person-owned. What was shown on earlier days is pushed down in the next shortlists, so the same five recipes are not offered all week. The day is the server's, and today's own impressions never change today's list. Recording the same recipe again is harmless, so a refresh or a second device writes nothing new. Recipes outside the household's library are ignored.
+         */
+        post: operations["recordSuggestionImpressionsV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recipes/{recipeId}/suggestion-dismissal": {
         parameters: {
             query?: never;
@@ -5834,6 +5856,16 @@ export interface components {
             code: string;
             /** @description What the reason is about (a tag, ingredient or member name), when nameable. */
             subject?: string | null;
+        };
+        /** @description The recipes a suggestion set actually showed. */
+        SuggestionsRecordImpressionsRequest: {
+            /**
+             * Format: uuid
+             * @description Whose kitchen the set was for.
+             */
+            householdId: string;
+            /** @description The recipes that were on screen, at most as many as one set can hold. */
+            recipeIds: string[];
         };
         /** @description A new password, and the current one to prove it is you. */
         UsersChangePasswordRequest: {
@@ -12831,6 +12863,55 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SuggestionsGetAllResponse"];
                 };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    recordSuggestionImpressionsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SuggestionsRecordImpressionsRequest"];
+            };
+        };
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Bad Request */
             400: {

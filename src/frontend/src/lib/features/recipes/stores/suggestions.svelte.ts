@@ -33,6 +33,9 @@ class SuggestionStore {
 
   #fetchingMore = new Set<string>();
 
+  /** Which questions were reported as shown on which day; not `$state`, as it only guards a request. */
+  #reported = new Set<string>();
+
   get error(): AppError | null {
     return this.#error;
   }
@@ -111,6 +114,33 @@ class SuggestionStore {
     await this.#fetch(householdId, query, keyOf(householdId, query));
   }
 
+  /**
+   * Says which recipes the shortlist drew, once a day per question: what was shown is what the next
+   * days' lists lean away from. Called only once the set is on screen, so a response that never
+   * painted is never counted; a failure is not worth anybody's attention and is tried again later.
+   */
+  async reportShown(householdId: string, query: SuggestionQuery = {}): Promise<void> {
+    const key = keyOf(householdId, query);
+    const items = (this.#answers.peek(key)?.items ?? []).slice(0, query.limit ?? DefaultLimit);
+    const mark = `${key}:${new Date().toISOString().slice(0, 10)}`;
+
+    if (items.length === 0 || this.#reported.has(mark)) {
+      return;
+    }
+
+    this.#reported.add(mark);
+
+    const result = await request(() =>
+      http.POST('/api/v1/suggestions/impressions', {
+        body: { householdId, recipeIds: items.map((item) => item.id) }
+      })
+    );
+
+    if (!result.ok) {
+      this.#reported.delete(mark);
+    }
+  }
+
   /** Stops suggesting a recipe everywhere, optimistically; every cached answer is filtered. */
   async dismiss(recipeId: string): Promise<AppError | null> {
     const before = this.#answers.snapshot();
@@ -165,6 +195,7 @@ class SuggestionStore {
     this.#error = null;
     this.#asked.clear();
     this.#fetchingMore.clear();
+    this.#reported.clear();
   }
 
   async #fetch(householdId: string, query: SuggestionQuery, key: string): Promise<void> {

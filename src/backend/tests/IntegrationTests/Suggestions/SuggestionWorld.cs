@@ -148,6 +148,12 @@ internal sealed record SuggestionWorld(ApiClient Client, Guid HouseholdId, Culin
     internal Task<ApiResponse> SuggestAsync(string query = "") =>
         Client.GetAsync($"/api/v1/suggestions?householdId={HouseholdId}{query}", Token);
 
+    internal Task<ApiResponse> ShownAsync(IEnumerable<Guid> recipeIds) =>
+        Client.PostAsync(
+            "/api/v1/suggestions/impressions",
+            new { householdId = HouseholdId, recipeIds = recipeIds.ToArray() },
+            Token);
+
     internal static List<string> Titles(ApiResponse response) =>
         [.. response.Json!.Value.GetProperty("items").EnumerateArray()
             .Select(item => item.GetProperty("title").GetString()!)];
