@@ -192,6 +192,10 @@ docker run --rm -v culina_culina-config:/data alpine tar czf - -C /data . \
 
 Then send 1 and 2 to wherever your backups go, and 3 and 4 somewhere else.
 
+With photos in an S3-compatible bucket (`Storage__S3__*`), step 2 has nothing
+to archive. Back up the bucket instead, with the provider's versioning or
+replication or with `aws s3 sync` / `mc mirror` to somewhere else.
+
 Volume names are prefixed with your compose project name — `docker volume ls`
 shows the real ones.
 

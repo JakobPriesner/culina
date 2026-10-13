@@ -97,7 +97,8 @@ and what the app can edit, is in `configuration.md`.
 | --- | --- | --- |
 | `Database__Host` / `__Port` / `__Name` / `__Username` / `__Password` | — | required, parts not a connection string |
 | `Database__RequireSsl` | `true` | |
-| `Storage__ImagePath` | `/data/images` | |
+| `Storage__ImagePath` | `/data/images` | unused when `Storage__S3__*` is set |
+| `Storage__S3__Endpoint` / `__Bucket` / `__AccessKey` / `__SecretKey` / `__Region` / `__ForcePathStyle` | — | optional; photos in an S3-compatible bucket |
 | `Storage__DataProtectionKeyPath` | `/data/keys` | |
 | `Storage__ConfigPath` | `/data/config` | where `culina.json` lives |
 | `Cookies__Secure` | `true` | `false` is refused outside Development, unless… |

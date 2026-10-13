@@ -35,12 +35,19 @@ internal sealed class MachineMetrics : IDisposable
             return;
         }
 
-        (string Name, string Path)[] volumes =
-        [
-            ("images", storage.ImagePath),
-            ("keys", storage.DataProtectionKeyPath),
-            ("config", storage.ConfigPath)
-        ];
+        // Images in a bucket take no room on a volume here.
+        (string Name, string Path)[] volumes = storage.S3 is null
+            ?
+            [
+                ("images", storage.ImagePath),
+                ("keys", storage.DataProtectionKeyPath),
+                ("config", storage.ConfigPath)
+            ]
+            :
+            [
+                ("keys", storage.DataProtectionKeyPath),
+                ("config", storage.ConfigPath)
+            ];
 
         meter.CreateObservableUpDownCounter(
             "culina.storage.usage",
