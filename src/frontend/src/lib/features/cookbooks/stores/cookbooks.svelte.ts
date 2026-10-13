@@ -22,10 +22,20 @@ class CookbookStore {
     return this.#shelves.open;
   }
 
+  get openStatus(): LoadStatus {
+    return this.#shelves.openStatus;
+  }
+
+  get openError(): AppError | null {
+    return this.#shelves.openError;
+  }
+
+  /** The list's status; the open cookbook has its own. */
   get status(): LoadStatus {
     return this.#shelves.status;
   }
 
+  /** The list's failure, or the last write's. */
   get error(): AppError | null {
     return this.#shelves.error;
   }
