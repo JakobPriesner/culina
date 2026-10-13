@@ -1,6 +1,9 @@
 /** Readable on purpose: echoing it in a header is what an attacker's page cannot do. */
 const csrfCookie = 'culina.csrf';
 
+/** Where every unsafe request echoes the CSRF cookie. */
+export const csrfHeader = 'X-Culina-CSRF';
+
 /** The CSRF token as the browser holds it right now, which another tab can change. */
 export function csrfToken(): string | null {
   return readCookie(csrfCookie);

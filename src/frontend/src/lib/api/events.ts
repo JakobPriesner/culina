@@ -1,5 +1,6 @@
 import { drain, type Stream, type StreamHandlers } from './eventStream';
 import { clientError, ErrorCodes, offline, toAppError, type AppError } from './problem';
+import { sessionExpired } from './session';
 
 /**
  * Reads streams from the backend by hand: OpenAPI can't describe them, and `EventSource` reports every
@@ -96,6 +97,11 @@ async function open(
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      // Mirrors the typed client's 401 handling, whose middleware this plain `fetch` bypasses.
+      sessionExpired();
+    }
+
     const body = await response.json().catch(() => undefined);
 
     return { error: toAppError(response, body) };
