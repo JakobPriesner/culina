@@ -49,10 +49,10 @@
 <!-- The app talks to one self-hosted server; the website is that server. -->
 {#if native}
   <SettingsSection description={m['me.server.switchBody']()}>
-    <SettingsRow label={m['me.server']()}>
-      <span class="value">{instanceOrigin()}</span>
+    <!-- One row like every other setting: the button outside it sat on the enclosure's edge with no padding. -->
+    <SettingsRow label={m['me.server']()} description={instanceOrigin() ?? undefined}>
+      <Button onclick={switchServer}>{m['me.server.switch']()}</Button>
     </SettingsRow>
-    <Button onclick={switchServer}>{m['me.server.switch']()}</Button>
   </SettingsSection>
 {/if}
 
