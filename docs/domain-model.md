@@ -334,8 +334,8 @@ Putting a recipe on a smart cookbook by hand returns `cookbooks.rules_decide_mem
 A smart cookbook has no order somebody chose, so it reads newest-first rather
 than by a column that is null for every row on it.
 
-**Cookbooks are not in the archive yet**, so an export currently omits them —
-rules included.
+Cookbooks travel in the household archive (see *The archive*): a chosen shelf
+as the positions of its recipes, a smart one as its rules.
 
 ### Tag
 
@@ -677,6 +677,15 @@ is the order they are written back in. Ids are assigned by whichever database
 the archive lands in, so a format that carried them would restore into steps
 pointing at nothing — and a step whose amounts have come loose is precisely the
 failure this app exists to prevent.
+
+**Cookbooks travel the same way**, after the recipes: a chosen shelf as the
+positions of its recipes in shelf order, a smart one as its rules, which find
+their recipes again wherever they land. A recipe on a shelf that is not in the
+archive (one an inherited kitchen lent) has no position and is left off. On
+restore a shelf holds the copies the same restore just wrote, never the
+household's originals, and a shelf that does not hold together (no name, a
+smart one with no rules) is passed over like an odd recipe. The field is
+optional, so archives from before it still restore at version 1.
 
 **Notes are the asking person's, and nobody else's.** The recipes belong to the
 household; notes and the cook log are personal, and an archive carrying every
