@@ -790,7 +790,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a recipe
-         * @description Idempotent: deleting a recipe that is already gone also answers 204. `If-Match` is required — missing is 428, stale is 412 — so a recipe somebody else just changed is not deleted on the strength of the version you saw before.
+         * @description Idempotent: deleting a recipe that is already gone also answers 204. A recipe the caller can read through an inheriting household but not change answers 404. `If-Match` is required — missing is 428, stale is 412 — so a recipe somebody else just changed is not deleted on the strength of the version you saw before.
          */
         delete: operations["deleteRecipeV1"];
         options?: never;
@@ -8604,6 +8604,15 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
