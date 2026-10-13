@@ -112,12 +112,28 @@ internal static class HostingExtensions
         ArgumentNullException.ThrowIfNull(app);
 
         var shell = Infrastructure.AppShell.Load(app.Environment.WebRootPath);
+        var allowed = new Infrastructure.AllowedMethods(
+            ((IEndpointRouteBuilder)app).DataSources,
+            app.Services.GetRequiredService<ParameterPolicyFactory>());
 
         app.MapFallback(async context =>
         {
             if (Infrastructure.ApiPaths.IsApi(context.Request.Path))
             {
-                context.Response.StatusCode = StatusCodes.Status404NotFound;
+                // This fallback takes every request routing turned away: an unknown path, but also a
+                // wrong method or a body type the endpoint does not read. Tell them apart.
+                var methods = allowed.At(context);
+
+                if (methods.Count > 0)
+                {
+                    context.Response.Headers.Allow = string.Join(", ", methods);
+                }
+
+                context.Response.StatusCode = methods.Count == 0
+                    ? StatusCodes.Status404NotFound
+                    : methods.Contains(context.Request.Method, StringComparer.OrdinalIgnoreCase)
+                        ? StatusCodes.Status415UnsupportedMediaType
+                        : StatusCodes.Status405MethodNotAllowed;
                 await Infrastructure.StatusCodeProblems.WriteAsync(context).ConfigureAwait(false);
 
                 return;
