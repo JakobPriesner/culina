@@ -109,9 +109,24 @@
     onclose?.();
   }
 
-  /** A backdrop click lands on the dialog element itself, as the backdrop is not a node. */
+  /** Where the press that ends in the next click began; not state, nothing renders from it. */
+  let pressedOnBackdrop = false;
+
+  function pressBackdrop(event: PointerEvent) {
+    pressedOnBackdrop = event.target === element;
+  }
+
+  /**
+   * A backdrop click lands on the dialog element itself, as the backdrop is not a node.
+   * Only a press that began there counts: selecting text in a field and letting go over the backdrop
+   * also clicks the dialog (the common ancestor), and must not throw the form away.
+   */
   function dismissOnBackdrop(event: MouseEvent) {
-    if (event.target === element) {
+    const pressed = pressedOnBackdrop;
+
+    pressedOnBackdrop = false;
+
+    if (pressed && event.target === element) {
       dismiss();
     }
   }
@@ -124,6 +139,7 @@
   class="dialog {placement}"
   aria-labelledby={titleId}
   onclose={synchronise}
+  onpointerdown={pressBackdrop}
   onclick={dismissOnBackdrop}
 >
   <div class="panel">
