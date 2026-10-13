@@ -38,7 +38,8 @@ internal static class UpdateServerSettingsRequestExtensions
                 RequestsPerSessionPerMinute = request.RateLimits.RequestsPerSessionPerMinute
             },
             request.Telemetry.OtlpEndpoint,
-            request.Telemetry.OtlpProtocol);
+            request.Telemetry.OtlpProtocol,
+            request.Push.RelayUrl);
     }
 
     /// <summary>Trimmed, blanks dropped, as the startup reads a comma-separated list.</summary>

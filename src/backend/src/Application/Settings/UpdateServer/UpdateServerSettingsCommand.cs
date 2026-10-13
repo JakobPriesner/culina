@@ -12,19 +12,22 @@ namespace Application.Settings.UpdateServer;
 /// <param name="RateLimits">The ceilings on what one client may ask for.</param>
 /// <param name="OtlpEndpoint">The collector's address, or null to export nothing.</param>
 /// <param name="OtlpProtocol"><c>grpc</c> or <c>http_protobuf</c>.</param>
+/// <param name="PushRelayUrl">The push relay's address, or null for none.</param>
 /// <remarks>The groups arrive as the settings records, being what the next start would run with; only the endpoint is text, so a bad address is reported rather than becoming "none".</remarks>
 public sealed record UpdateServerSettingsCommand(
     CookieSettings Cookies,
     ForwardedHeadersSettings ForwardedHeaders,
     RateLimitSettings RateLimits,
     string? OtlpEndpoint,
-    string OtlpProtocol);
+    string OtlpProtocol,
+    string? PushRelayUrl);
 
 internal sealed class UpdateServerSettingsCommandHandler(
     CookieSettings cookies,
     ForwardedHeadersSettings proxies,
     RateLimitSettings limits,
     TelemetrySettings telemetry,
+    PushSettings push,
     IServerConfiguration configuration,
     IHostRestart host)
     : ICommandHandler<UpdateServerSettingsCommand, ServerChange>
@@ -62,6 +65,11 @@ internal sealed class UpdateServerSettingsCommandHandler(
             Protocol = OtlpProtocols.FromWire(command.OtlpProtocol)
         };
 
+        var rawRelay = command.PushRelayUrl?.Trim();
+        Uri? relayUrl = null;
+        var relayReadable = string.IsNullOrEmpty(rawRelay) || Uri.TryCreate(rawRelay, UriKind.Absolute, out relayUrl);
+        var relay = new PushSettings { RelayUrl = relayUrl };
+
         return Result.Combine(
                 readable
                     ? Result.Success()
@@ -73,8 +81,11 @@ internal sealed class UpdateServerSettingsCommandHandler(
                     DangerouslyTrustWideNetworks = proxies.DangerouslyTrustWideNetworks
                 }),
                 ServerSettingsFile.Check(command.RateLimits.Validate),
-                ServerSettingsFile.Check(exporter.Validate))
-            .Map(() => Values(command.Cookies, command.ForwardedHeaders, command.RateLimits, exporter));
+                ServerSettingsFile.Check(exporter.Validate),
+                relayReadable
+                    ? ServerSettingsFile.Check(relay.Validate)
+                    : SettingsErrors.Invalid($"The push relay must be an https:// address, and '{rawRelay}' is not one."))
+            .Map(() => Values(command.Cookies, command.ForwardedHeaders, command.RateLimits, exporter, relay));
     }
 
     // Validated as at startup, with the deployment's wide-network override (the screen never offers it); a too-wide network is reported as such.
@@ -87,7 +98,7 @@ internal sealed class UpdateServerSettingsCommandHandler(
         Dictionary<string, string> proposed,
         CancellationToken cancellationToken)
     {
-        var changes = ServerSettingsFile.Changes(proposed, Values(cookies, proxies, limits, telemetry), configuration);
+        var changes = ServerSettingsFile.Changes(proposed, Values(cookies, proxies, limits, telemetry, push), configuration);
 
         return changes.Count == 0
             ? ServerChange.None
@@ -99,12 +110,14 @@ internal sealed class UpdateServerSettingsCommandHandler(
         CookieSettings cookies,
         ForwardedHeadersSettings proxies,
         RateLimitSettings limits,
-        TelemetrySettings telemetry) =>
+        TelemetrySettings telemetry,
+        PushSettings push) =>
         new(
         [
             .. cookies.ToConfigurationValues(),
             .. proxies.ToConfigurationValues(),
             .. limits.ToConfigurationValues(),
-            .. telemetry.ToConfigurationValues()
+            .. telemetry.ToConfigurationValues(),
+            .. push.ToConfigurationValues()
         ]);
 }

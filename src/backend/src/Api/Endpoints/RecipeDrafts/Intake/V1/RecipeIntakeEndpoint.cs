@@ -121,5 +121,32 @@ internal sealed class RecipeIntakeEndpoint : IEndpoint
             await push.RemoveAsync(context.CurrentUser().UserId, endpoint, token).ConfigureAwait(false);
             return Results.NoContent();
         }).WithQueryParameters("endpoint").WithName("removePushV1").WithTags(Tags.Recipes).RequireAuthorization();
+        app.MapGet($"{ApiPaths.V1}/push/relay", (Application.Abstractions.Settings.PushSettings settings) =>
+            Results.Ok(new PushRelay(settings.RelayOn)))
+            .WithName("getPushRelayV1").WithTags(Tags.Recipes)
+            .WithSummary("Whether the installed apps can be notified")
+            .WithDescription("True when an administrator named a push relay (Push:RelayUrl). An app asks for notification permission only when it is.")
+            .Produces<PushRelay>().RequireAuthorization();
+        app.MapPut($"{ApiPaths.V1}/push/devices/{{deviceId:guid}}", async (Guid deviceId, PushDeviceRegistration device, HttpContext context, IIntakeNotifications push, CancellationToken token) =>
+        {
+            var result = await push.RegisterDeviceAsync(context.CurrentUser().UserId, deviceId, device.RelayToken, device.Language, token).ConfigureAwait(false);
+            return result.Match(Results.NoContent, CustomResults.Problem);
+        }).WithName("registerPushDeviceV1").WithTags(Tags.Recipes)
+            .WithSummary("Register an installed app's device for import notifications")
+            .WithDescription(
+                "The app picks the device id and sends the relay token it got from the push relay; the same device signing "
+                + "in again, as anyone, replaces its row. Ten per person (409 Push.TooManyDevices). 409 push.relay_off "
+                + "when this server names no relay.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .RequireAuthorization();
+        app.MapDelete($"{ApiPaths.V1}/push/devices/{{deviceId:guid}}", async (Guid deviceId, HttpContext context, IIntakeNotifications push, CancellationToken token) =>
+        {
+            await push.RemoveDeviceAsync(context.CurrentUser().UserId, deviceId, token).ConfigureAwait(false);
+            return Results.NoContent();
+        }).WithName("removePushDeviceV1").WithTags(Tags.Recipes)
+            .WithSummary("Forget an installed app's device")
+            .WithDescription("On sign-out. 204, also when it was never registered.")
+            .RequireAuthorization();
     }
 }

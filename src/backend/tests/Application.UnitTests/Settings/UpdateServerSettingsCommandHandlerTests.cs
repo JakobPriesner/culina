@@ -50,6 +50,19 @@ public class UpdateServerSettingsCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_ShouldSaveAPushRelay_AndRefuseOneThatIsNotHttps()
+    {
+        var world = new World();
+
+        var saved = (await world.Handle(Command(relay: " https://relay.culina.app/ "))).ShouldBeSuccess();
+        var refused = await new World().Handle(Command(relay: "http://relay.culina.app/"));
+
+        Assert.Equal(ServerChange.Restarting, saved);
+        Assert.Equal(new Dictionary<string, string> { ["Push:RelayUrl"] = "https://relay.culina.app/" }, world.Configuration.Saved);
+        Assert.Equal(ErrorType.Validation, refused.ShouldBeFailure().Type);
+    }
+
+    [Fact]
     public async Task Handle_ShouldNotRestart_WhenTheSettingsCannotBeSaved()
     {
         var world = new World();
@@ -141,13 +154,15 @@ public class UpdateServerSettingsCommandHandlerTests
         CookieSettings? cookies = null,
         RateLimitSettings? limits = null,
         string? endpoint = null,
-        ForwardedHeadersSettings? proxies = null) =>
+        ForwardedHeadersSettings? proxies = null,
+        string? relay = null) =>
         new(
             cookies ?? new CookieSettings(),
             proxies ?? new ForwardedHeadersSettings(),
             limits ?? new RateLimitSettings(),
             endpoint,
-            "grpc");
+            "grpc",
+            relay);
 
     private sealed class World(
         TelemetrySettings? telemetry = null,
@@ -164,6 +179,7 @@ public class UpdateServerSettingsCommandHandlerTests
                     proxies ?? new ForwardedHeadersSettings(),
                     new RateLimitSettings(),
                     telemetry ?? new TelemetrySettings(),
+                    new PushSettings(),
                     Configuration,
                     Restart)
                 .Handle(command, Token);

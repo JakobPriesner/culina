@@ -236,7 +236,8 @@ public class ServerSettingsEndpointTests(PostgresFixture postgres)
             ["cookies"] = read["cookies"]!.DeepClone(),
             ["forwardedHeaders"] = read["forwardedHeaders"]!.DeepClone(),
             ["rateLimits"] = read["rateLimits"]!.DeepClone(),
-            ["telemetry"] = read["telemetry"]!.DeepClone()
+            ["telemetry"] = read["telemetry"]!.DeepClone(),
+            ["push"] = read["push"]!.DeepClone()
         };
     }
 

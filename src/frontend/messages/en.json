@@ -1862,5 +1862,11 @@
   "me.server.switchBody": "Signs you out here and asks for another address.",
   "kitchen.native.paused": "Paused",
   "kitchen.native.more": "+{count} more",
-  "error.backgrounded": "This stopped while Culina was in the background. What arrived is kept; try again to finish it."
+  "error.backgrounded": "This stopped while Culina was in the background. What arrived is kept; try again to finish it.",
+  "server.push": "App notifications",
+  "server.push.hint": "The Culina apps for iPhone and Android can say when an import is ready, but only through a relay run by whoever publishes the apps: Apple and Google take notifications from nobody else. Naming one sends the words of each notification (\"Your recipe is ready\") to that service, never a recipe, a name or this server's address. Leave it empty and the apps get no notifications; browsers are not affected.",
+  "server.push.relay": "Relay address",
+  "server.push.relay.hint": "An https:// address, like https://relay.example.com.",
+  "problem.push.relay_off": "This server doesn't send notifications to the apps. An administrator can name a relay under Server.",
+  "problem.push.invalid_device": "That device couldn't be registered for notifications."
 }
