@@ -27,6 +27,20 @@ public class RecipeShareTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Share_ShouldHandEveryCallerTheSameLink_WhenAskedAtOnce()
+    {
+        using var client = await SignedInAsync();
+        var recipeId = await CreateRecipeAsync(client);
+
+        var answers = await Task.WhenAll(Enumerable.Range(0, 10).Select(_ =>
+            client.PutAsync($"/api/v1/recipes/{recipeId}/share", new { }, Token)));
+
+        // Two taps on Share from two devices: the loser of the insert must still get the winner's link.
+        Assert.All(answers, answer => Assert.Equal(HttpStatusCode.OK, answer.StatusCode));
+        Assert.Single(answers.Select(answer => answer.Json!.Value.GetProperty("token").GetString()).Distinct());
+    }
+
+    [Fact]
     public async Task Share_ShouldNotBeReadable_ByAnotherHousehold()
     {
         using var owner = await SignedInAsync();
