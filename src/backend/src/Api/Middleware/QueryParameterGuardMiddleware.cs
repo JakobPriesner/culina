@@ -1,4 +1,5 @@
 using Api.Infrastructure;
+using Application.Telemetry;
 using Domain.Shared;
 
 namespace Api.Middleware;
@@ -21,15 +22,17 @@ internal sealed class QueryParameterGuardMiddleware(RequestDelegate next)
             return next(context);
         }
 
-        var endpoint = context.GetEndpoint();
-
-        if (endpoint is null)
+        // Only an endpoint mapped for a method has parameters to check. Nothing matched, the SPA
+        // fallback (an unknown API path), the framework's 405 endpoint (a wrong method) and the
+        // setup host's catch-all carry none: they answer 404, 405 or 503 themselves, which beats
+        // blaming a parameter on an address or method that does not exist.
+        if (context.GetEndpoint()?.Metadata is not { } metadata
+            || metadata.GetMetadata<IHttpMethodMetadata>() is null)
         {
-            // Nothing matched; let routing answer with its own 404.
             return next(context);
         }
 
-        var allowed = endpoint.Metadata.GetMetadata<AllowedQueryParameters>();
+        var allowed = metadata.GetMetadata<AllowedQueryParameters>();
 
         foreach (var (name, values) in context.Request.Query)
         {
@@ -50,6 +53,7 @@ internal sealed class QueryParameterGuardMiddleware(RequestDelegate next)
     private static Task Reject(HttpContext context, ILogger logger, Error error)
     {
         logger.Rejected(context.Request, error.Code);
+        CulinaTelemetry.QueryRejections.Add(1);
 
         return CustomResults.WriteProblemAsync(context, error);
     }

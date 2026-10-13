@@ -44,6 +44,11 @@ public static class CulinaTelemetry
         "culina.ratelimit.rejections",
         description: "Requests rejected by a rate limit policy.");
 
+    /// <summary>API requests rejected for a query parameter the endpoint does not declare, or repeats.</summary>
+    public static readonly Counter<long> QueryRejections = Meter.CreateCounter<long>(
+        "culina.query.rejections",
+        description: "API requests rejected for an undeclared or repeated query parameter.");
+
     /// <summary>Unsafe requests rejected for coming from a foreign origin.</summary>
     public static readonly Counter<long> ForeignOriginRejections = Meter.CreateCounter<long>(
         "culina.origin.rejections",
