@@ -136,7 +136,7 @@ Three kinds, defined once on the shared `Meter`:
   got slow" without a trace search.
 - **Counters for things worth alerting on**: `culina.auth.login_failures`,
   `culina.csrf.rejections`, `culina.ratelimit.rejections`,
-  `culina.settings.updates`.
+  `culina.query.rejections`, `culina.settings.updates`.
 - Everything else comes free from the ASP.NET Core, HttpClient, Npgsql and
   runtime instrumentation — request rate, status distribution, GC, thread pool,
   connection pool. Do not re-implement any of these by hand.

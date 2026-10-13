@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using System.Text.Json;
 using Api.Infrastructure;
 using Api.Middleware;
@@ -67,6 +68,40 @@ public class QueryParameterGuardTests
     }
 
     [Fact]
+    public async Task Request_ShouldPassThrough_WhenTheEndpointIsNotMappedForAMethod()
+    {
+        // The SPA fallback and the framework's 405 endpoint match an API path without being one
+        // of its endpoints; they answer 404 and 405 themselves.
+        var context = Request("?anything=1", single: [], repeatable: [], mappedForAMethod: false);
+
+        var reached = await InvokeAsync(context);
+
+        Assert.True(reached);
+    }
+
+    [Fact]
+    public async Task Rejection_ShouldBeCounted()
+    {
+        var counted = 0L;
+
+        using var listener = new MeterListener();
+
+        listener.InstrumentPublished = (instrument, meterListener) =>
+        {
+            if (instrument.Name == "culina.query.rejections")
+            {
+                meterListener.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>((_, value, _, _) => Interlocked.Add(ref counted, value));
+        listener.Start();
+
+        await InvokeAsync(Request("?unexpected=1", single: [], repeatable: []));
+
+        Assert.True(Interlocked.Read(ref counted) >= 1);
+    }
+
+    [Fact]
     public async Task Request_ShouldPassThrough_WhenThePathIsNotAnApiPath()
     {
         var context = Request("?anything=1", single: [], repeatable: [], path: "/recipes");
@@ -82,7 +117,8 @@ public class QueryParameterGuardTests
         IReadOnlyCollection<string> single,
         IReadOnlyCollection<string> repeatable,
         bool withEndpoint = true,
-        string path = "/api/v1/recipes")
+        string path = "/api/v1/recipes",
+        bool mappedForAMethod = true)
     {
         var context = new DefaultHttpContext { Response = { Body = new MemoryStream() } };
 
@@ -91,9 +127,16 @@ public class QueryParameterGuardTests
 
         if (withEndpoint)
         {
+            List<object> metadata = [new AllowedQueryParameters(single, repeatable)];
+
+            if (mappedForAMethod)
+            {
+                metadata.Add(new HttpMethodMetadata(["GET"]));
+            }
+
             context.Features.Set<IEndpointFeature>(new TestEndpointFeature(new Endpoint(
                 _ => Task.CompletedTask,
-                new EndpointMetadataCollection(new AllowedQueryParameters(single, repeatable)),
+                new EndpointMetadataCollection(metadata),
                 "test")));
         }
 
