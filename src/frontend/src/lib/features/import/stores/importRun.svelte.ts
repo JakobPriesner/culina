@@ -64,13 +64,16 @@ export class ImportRunner {
       return;
     }
 
+    // A follow-up for held recipes adds to the run before it, so its tally and failures stay on screen.
+    const before = anyway ? this.#run : null;
+
     this.#run = {
       total: result.value.total,
       done: 0,
-      imported: 0,
-      skipped: 0,
-      failures: [],
-      held: [],
+      imported: before?.imported ?? 0,
+      skipped: before?.skipped ?? 0,
+      failures: before?.failures ?? [],
+      held: before?.held.filter((one) => !externalIds.includes(one.externalId)) ?? [],
       cookbookId: result.value.cookbookId,
       cookbookName: result.value.cookbookName,
       finished: false,

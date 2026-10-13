@@ -2,6 +2,7 @@
   import { resolve } from '$app/paths';
   import { Button, Checkbox, ProgressBar } from '$ds';
 
+  import type { AppError } from '$api';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
 
@@ -17,12 +18,19 @@
     onlook: () => void;
     /** Brings over the held-back recipes somebody chose, after all. */
     onanyway: (externalIds: string[]) => void;
+    /** Why bringing the held-back recipes over could not start. */
+    anywayError?: AppError | null;
   }
 
-  let { run, ondone, onlook, onanyway }: Props = $props();
+  let { run, ondone, onlook, onanyway, anywayError = null }: Props = $props();
 
   /** Held-back recipes to bring over after all; none to begin with, since only someone who has looked at both can want two Bolognese. */
   let chosen = $state<string[]>([]);
+
+  /** Only what is still held: the ones already brought over leave the list. */
+  const picked = $derived(
+    chosen.filter((externalId) => run.held.some((one) => one.externalId === externalId))
+  );
 </script>
 
 <section class="run" aria-labelledby="run-heading">
@@ -143,9 +151,14 @@
           {/each}
         </ul>
 
+        {#if anywayError}
+          <!-- Beside the button, or pressing it looks like it did nothing. -->
+          <p class="refused" role="alert">{explain(anywayError)}</p>
+        {/if}
+
         <div>
-          <Button disabled={chosen.length === 0} onclick={() => onanyway(chosen)}>
-            {m['import.held.anyway']({ count: chosen.length })}
+          <Button disabled={picked.length === 0} onclick={() => onanyway(picked)}>
+            {m['import.held.anyway']({ count: picked.length })}
           </Button>
         </div>
       </section>
@@ -283,6 +296,11 @@
 
   .compare {
     margin-left: var(--space-2);
+  }
+
+  .refused {
+    color: var(--text-danger);
+    font-size: var(--text-sm);
   }
 
   .failures {

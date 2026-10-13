@@ -194,4 +194,18 @@ describe('recipes held back because one like them is already here', () => {
 
     expect(onanyway).toHaveBeenCalledWith(['9']);
   });
+
+  it('says why bringing them over could not start, beside the button', () => {
+    renderWithProviders(ImportProgress, {
+      props: {
+        run: held,
+        ondone: () => {},
+        onlook: () => {},
+        onanyway: () => {},
+        anywayError: lost('import.could_not_fetch', 'The app did not answer.')
+      }
+    });
+
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
 });

@@ -1,4 +1,5 @@
 import { screen } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ImportPage from './+page.svelte';
@@ -36,6 +37,47 @@ beforeEach(() => {
   sources.reset();
 
   vi.spyOn(session, 'activeHouseholdId', 'get').mockReturnValue(household);
+});
+
+describe('disconnecting an app', () => {
+  it('says so when the server would not, rather than just putting the app back', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) =>
+        Promise.resolve(
+          input.method === 'DELETE'
+            ? new Response(JSON.stringify({ code: 'server.unavailable', detail: 'Nope' }), {
+                status: 503,
+                headers: { 'Content-Type': 'application/json' }
+              })
+            : new Response(
+                JSON.stringify({
+                  items: [
+                    {
+                      sourceId: 's1',
+                      kind: 'tandoor',
+                      label: 'recipes.example.com',
+                      address: 'https://recipes.example.com',
+                      createdAt: '2026-09-17T00:00:00Z',
+                      lastUsedAt: null
+                    }
+                  ]
+                }),
+                { status: 200, headers: { 'Content-Type': 'application/json' } }
+              )
+        )
+      )
+    );
+
+    renderWithProviders(ImportPage);
+    await settle();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Disconnect' }));
+    await settle();
+
+    expect(screen.getByText('recipes.example.com')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
 });
 
 describe('opening the import page', () => {
