@@ -6,7 +6,7 @@ public sealed record ConnectSourceRequest
     /// <summary>Which kitchen is connecting it.</summary>
     public required Guid HouseholdId { get; init; }
 
-    /// <summary>Which app. Currently only <c>tandoor</c>.</summary>
+    /// <summary>Which app: <c>tandoor</c> or <c>mealie</c>.</summary>
     public required string Kind { get; init; }
 
     /// <summary>Where it is, such as <c>https://recipes.example.com</c>. Anything after the host is dropped.</summary>

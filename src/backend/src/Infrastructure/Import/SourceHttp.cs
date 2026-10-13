@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Text.Json;
 using Application.Abstractions.Settings;
 using Domain.Import;
@@ -76,7 +77,24 @@ internal sealed class SourceHttp : IDisposable
         IReadOnlyDictionary<string, string> form,
         CancellationToken cancellationToken)
         where TBody : notnull =>
-        VagueAsync(url, deadline, token => PostAsync<TBody>(url, form, token), cancellationToken);
+        VagueAsync(
+            url,
+            deadline,
+            token => PostAsync<TBody>(url, new FormUrlEncodedContent(form), authorization: null, token),
+            cancellationToken);
+
+    // A write on the other server, for the one source that makes its long-lived token by API call. Never logged.
+    internal Task<Result<TBody>> PostJsonAsync<TBody>(
+        Uri url,
+        object body,
+        AuthenticationHeaderValue authorization,
+        CancellationToken cancellationToken)
+        where TBody : notnull =>
+        VagueAsync(
+            url,
+            deadline,
+            token => PostAsync<TBody>(url, JsonContent.Create(body, options: Json), authorization, token),
+            cancellationToken);
 
     // Bytes, not a decoded image: IImageStore decodes and re-encodes. The content type is checked only to
     // avoid downloading large non-images; the read is capped while reading, since Content-Length is a claim.
@@ -221,14 +239,17 @@ internal sealed class SourceHttp : IDisposable
 
     private async Task<Result<TBody>> PostAsync<TBody>(
         Uri url,
-        IReadOnlyDictionary<string, string> form,
+        HttpContent content,
+        AuthenticationHeaderValue? authorization,
         CancellationToken cancellationToken)
         where TBody : notnull
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, url)
         {
-            Content = new FormUrlEncodedContent(form)
+            Content = content
         };
+
+        request.Headers.Authorization = authorization;
 
         using var response = await client
             .SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)

@@ -5,7 +5,7 @@ import type { AppError } from '$api';
  * never becomes a second kind of recipe.
  */
 
-export type SourceKind = 'tandoor';
+export type SourceKind = 'tandoor' | 'mealie';
 
 export interface ConnectedSource {
   readonly sourceId: string;

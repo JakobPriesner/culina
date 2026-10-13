@@ -51,6 +51,24 @@ public class RecipeSourceEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Connect_ShouldTryToReachAMealie_RatherThanRefuseTheApp()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+
+        var response = await client.PostAsync(
+            "/api/v1/recipe-sources",
+            new { householdId, kind = "mealie", address = "https://mealie.invalid", token = "secret" },
+            Token);
+
+        // Known, so refused only because nothing answers there.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.NotEqual(
+            "import.unknown_source_kind",
+            response.Json!.Value.GetProperty("code").GetString());
+    }
+
+    [Fact]
     public async Task Connect_ShouldRefuse_AnAppItCannotRead()
     {
         using var client = await SignedInAsync();

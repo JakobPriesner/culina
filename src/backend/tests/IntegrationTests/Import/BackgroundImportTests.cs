@@ -1,7 +1,5 @@
 using System.Globalization;
 using System.Net;
-using System.Net.Sockets;
-using System.Text;
 using System.Text.Json;
 using Application.Abstractions.Settings;
 using Infrastructure.Import;
@@ -168,6 +166,47 @@ public class BackgroundImportTests(PostgresFixture postgres)
             .ToList();
 
         Assert.Equal(["already_here", "already_here"], outcomes.Order());
+    }
+
+    /// <summary>The second app, through the same import: the seam is real if nothing above it noticed.</summary>
+    [Fact]
+    public async Task Import_ShouldBringOverAMealiesRecipes_AfterConnectingWithASignIn()
+    {
+        using var mealie = FakeMealie.Start(recipes: 2);
+        using var factory = Factory();
+        using var client = await SignedInAsync(factory);
+        var householdId = await HouseholdIdAsync(client);
+
+        var connected = await client.PostAsync(
+            "/api/v1/recipe-sources",
+            new { householdId, kind = "mealie", address = mealie.Address, username = "ada", password = "secret" },
+            Token);
+
+        Assert.Equal(HttpStatusCode.Created, connected.StatusCode);
+
+        var sourceId = connected.Json!.Value.GetProperty("sourceId").GetGuid();
+        string[] both = [FakeMealie.IdOf(1), FakeMealie.IdOf(2)];
+
+        var started = await client.PostAsync(
+            $"/api/v1/recipe-sources/{sourceId}/imports",
+            new { externalIds = both },
+            Token);
+        var events = await WatchAsync(client, sourceId, started.Json!.Value.GetProperty("importId").GetGuid());
+
+        var imported = events
+            .Where(one => one.TryGetProperty("recipe", out var recipe) && recipe.ValueKind != JsonValueKind.Null)
+            .Select(one => one.GetProperty("recipe"))
+            .ToList();
+
+        Assert.Equal(2, imported.Count);
+        Assert.All(imported, recipe => Assert.Equal("imported", recipe.GetProperty("outcome").GetString()));
+
+        var recipeId = imported[0].GetProperty("recipeId").GetGuid();
+        var read = await client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
+        var origin = read.Json!.Value.GetProperty("origin");
+
+        Assert.Equal("mealie", origin.GetProperty("kind").GetString());
+        Assert.Contains(origin.GetProperty("externalId").GetString(), both);
     }
 
     /// <summary>
@@ -343,16 +382,11 @@ public class BackgroundImportTests(PostgresFixture postgres)
 }
 
 /// <summary>Enough of Tandoor to be read: a list, a detail, and a way to be slow.</summary>
-/// <remarks>
-/// A real socket, not a stubbed handler: what is proved includes the server opening several
-/// connections at once, which a fake at the wrong layer would answer by construction.
-/// </remarks>
 internal sealed class FakeTandoor : IDisposable
 {
-    private readonly HttpListener listener = new();
-    private readonly CancellationTokenSource stopping = new();
     private readonly Lock gate = new();
 
+    private FakeSourceServer server = null!;
     private int recipes;
     private int? broken;
     private TimeSpan dwell;
@@ -361,69 +395,18 @@ internal sealed class FakeTandoor : IDisposable
     /// <summary>The most recipe fetches that were in flight at the same time.</summary>
     public int MostAtOnce { get; private set; }
 
-    public string Address { get; private set; } = string.Empty;
+    public string Address => server.Address;
 
     public static FakeTandoor Start(int recipes, int? broken, TimeSpan dwell = default)
     {
-        var port = FreePort();
-        var fake = new FakeTandoor
-        {
-            recipes = recipes,
-            broken = broken,
-            dwell = dwell,
-            Address = $"http://127.0.0.1:{port.ToString(CultureInfo.InvariantCulture)}"
-        };
+        var fake = new FakeTandoor { recipes = recipes, broken = broken, dwell = dwell };
 
-        fake.listener.Prefixes.Add($"{fake.Address}/");
-        fake.listener.Start();
-
-        _ = Task.Run(fake.ServeAsync);
+        fake.server = FakeSourceServer.Start((context, _) => fake.AnswerAsync(context));
 
         return fake;
     }
 
-    public void Dispose()
-    {
-        stopping.Cancel();
-        listener.Close();
-        stopping.Dispose();
-    }
-
-    private static int FreePort()
-    {
-        using var probe = new TcpListener(IPAddress.Loopback, 0);
-
-        probe.Start();
-
-        var port = ((IPEndPoint)probe.LocalEndpoint).Port;
-
-        probe.Stop();
-
-        return port;
-    }
-
-    private async Task ServeAsync()
-    {
-        while (!stopping.IsCancellationRequested)
-        {
-            HttpListenerContext context;
-
-            try
-            {
-                context = await listener.GetContextAsync().ConfigureAwait(false);
-            }
-            catch (HttpListenerException)
-            {
-                return;
-            }
-            catch (ObjectDisposedException)
-            {
-                return;
-            }
-
-            _ = Task.Run(() => AnswerAsync(context));
-        }
-    }
+    public void Dispose() => server.Dispose();
 
     private async Task AnswerAsync(HttpListenerContext context)
     {
@@ -431,7 +414,7 @@ internal sealed class FakeTandoor : IDisposable
 
         if (path == "/api/recipe/")
         {
-            await WriteAsync(context, 200, Page()).ConfigureAwait(false);
+            await FakeSourceServer.WriteAsync(context, 200, Page()).ConfigureAwait(false);
 
             return;
         }
@@ -440,7 +423,7 @@ internal sealed class FakeTandoor : IDisposable
 
         if (id is null)
         {
-            await WriteAsync(context, 404, "{}").ConfigureAwait(false);
+            await FakeSourceServer.WriteAsync(context, 404, "{}").ConfigureAwait(false);
 
             return;
         }
@@ -455,8 +438,8 @@ internal sealed class FakeTandoor : IDisposable
         Free();
 
         await (id == broken
-            ? WriteAsync(context, 500, "{}")
-            : WriteAsync(context, 200, Recipe(id.Value))).ConfigureAwait(false);
+            ? FakeSourceServer.WriteAsync(context, 500, "{}")
+            : FakeSourceServer.WriteAsync(context, 200, Recipe(id.Value))).ConfigureAwait(false);
     }
 
     private async Task BusyAsync()
@@ -518,17 +501,4 @@ internal sealed class FakeTandoor : IDisposable
           ]
         }
         """;
-
-    private static async Task WriteAsync(HttpListenerContext context, int status, string body)
-    {
-        var bytes = Encoding.UTF8.GetBytes(body);
-
-        context.Response.StatusCode = status;
-        context.Response.ContentType = "application/json";
-        context.Response.ContentLength64 = bytes.Length;
-
-        await context.Response.OutputStream.WriteAsync(bytes).ConfigureAwait(false);
-
-        context.Response.Close();
-    }
 }

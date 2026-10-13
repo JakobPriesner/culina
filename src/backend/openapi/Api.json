@@ -13735,7 +13735,7 @@
         "properties": {
           "kind": {
             "type": "string",
-            "description": "Which sort of place: `tandoor` or `web`."
+            "description": "Which sort of place: `tandoor`, `mealie`, `web` or `ai`."
           },
           "sourceId": {
             "type": "string",
@@ -13870,7 +13870,7 @@
           },
           "kind": {
             "type": "string",
-            "description": "Which app. Currently only `tandoor`."
+            "description": "Which app: `tandoor` or `mealie`."
           },
           "address": {
             "type": "string",

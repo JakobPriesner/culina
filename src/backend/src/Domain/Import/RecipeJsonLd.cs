@@ -233,9 +233,10 @@ public static class RecipeJsonLd
 }
 
 /// <summary>Reads the <c>PT30M</c> durations schema.org uses.</summary>
-internal static class XmlDuration
+public static class XmlDuration
 {
-    internal static int? ToMinutes(string value)
+    /// <summary>The whole minutes in a duration under a day, or null.</summary>
+    public static int? ToMinutes(string value)
     {
         try
         {

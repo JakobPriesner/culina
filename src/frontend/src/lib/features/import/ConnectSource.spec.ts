@@ -125,6 +125,43 @@ describe('connecting another app', () => {
     );
   });
 
+  it('connects Tandoor unless another app is chosen', async () => {
+    render();
+
+    expect(screen.getByRole('radio', { name: 'Tandoor' })).toBeChecked();
+
+    await userEvent.type(address(), 'recipes.example.com');
+    await userEvent.type(screen.getByLabelText('Username in the app'), 'ada');
+    await userEvent.type(screen.getByLabelText('Password in the app'), 'hunter2');
+    await userEvent.click(screen.getByRole('button', { name: 'Connect' }));
+
+    expect(sent[0]).toMatchObject({ kind: 'tandoor' });
+  });
+
+  it('sends the app that was chosen', async () => {
+    render();
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Mealie' }));
+    await userEvent.type(address(), 'mealie.example.com');
+    await userEvent.type(screen.getByLabelText('Username in the app'), 'ada');
+    await userEvent.type(screen.getByLabelText('Password in the app'), 'hunter2');
+    await userEvent.click(screen.getByRole('button', { name: 'Connect' }));
+
+    expect(sent[0]).toMatchObject({ kind: 'mealie', address: 'mealie.example.com' });
+  });
+
+  it('points at the chosen app’s own token page', async () => {
+    render();
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Mealie' }));
+    await userEvent.type(address(), 'mealie.example.com');
+    await userEvent.click(screen.getByRole('radio', { name: /Use an API token/ }));
+
+    expect(
+      screen.getByRole('link', { name: /Open https:\/\/mealie\.example\.com/ })
+    ).toHaveAttribute('href', 'https://mealie.example.com/user/profile/api-tokens');
+  });
+
   it('does not leave the password sitting in the form afterwards', async () => {
     render();
 

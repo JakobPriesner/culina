@@ -104,7 +104,7 @@ internal sealed class TandoorLibrary(SourceHttp http) : IRecipeLibrary
     {
         ArgumentNullException.ThrowIfNull(source);
 
-        if (OnTheSameServer(source, pictureUrl) is not { } url)
+        if (SourceOrigin.Resolve(source.Address, pictureUrl) is not { } url)
         {
             return ImportErrors.UnreachableAddress;
         }
@@ -113,24 +113,6 @@ internal sealed class TandoorLibrary(SourceHttp http) : IRecipeLibrary
         return await http
             .GetPictureAsync(url, new AuthenticationHeaderValue("Bearer", source.Secret), cancellationToken)
             .ConfigureAwait(false);
-    }
-
-    /// <summary>The picture's address, only if on the connection's own server. Internal so the security rule is tested by name.</summary>
-    internal static Uri? OnTheSameServer(RecipeSource source, string pictureUrl)
-    {
-        var written = pictureUrl?.Trim();
-
-        if (string.IsNullOrEmpty(written))
-        {
-            return null;
-        }
-
-        if (!Uri.TryCreate(source.Address.Origin, written, out var url))
-        {
-            return null;
-        }
-
-        return url.GetLeftPart(UriPartial.Authority) == source.Address.Value ? url : null;
     }
 
     private static Uri First(RecipeSource source, string? query)
@@ -148,12 +130,12 @@ internal sealed class TandoorLibrary(SourceHttp http) : IRecipeLibrary
     private static Uri? Next(RecipeSource source, string? page)
     {
         if (string.IsNullOrWhiteSpace(page)
-            || !Uri.TryCreate(page.Trim(), UriKind.Absolute, out var url))
+            || !Uri.TryCreate(page.Trim(), UriKind.Absolute, out _))
         {
             return null;
         }
 
-        return url.GetLeftPart(UriPartial.Authority) == source.Address.Value ? url : null;
+        return SourceOrigin.Resolve(source.Address, page);
     }
 
     // Tries the current token scheme, then the older one, only on a refusal and only once.

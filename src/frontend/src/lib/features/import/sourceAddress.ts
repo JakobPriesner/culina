@@ -1,3 +1,5 @@
+import type { SourceKind } from './types';
+
 /**
  * What a typed address means, worked out client-side too (the server stays the authority): when there is enough to ask how to sign in, and the link to that server's token page.
  * Looser than a URL parser, stricter than the server: a wrong answer costs a missing link, never a connection that should have worked.
@@ -34,9 +36,15 @@ export function originOf(typed: string): string | null {
   return named ? url.origin : null;
 }
 
-/** Where that server keeps its API tokens (Tandoor's settings page), so pasting a token starts at the right page. */
-export function tokenPageOf(typed: string): string | null {
+/** Where each app keeps its API tokens. */
+const tokenPaths: Record<SourceKind, string> = {
+  tandoor: '/settings',
+  mealie: '/user/profile/api-tokens'
+};
+
+/** Where that server keeps its API tokens, so pasting a token starts at the right page. */
+export function tokenPageOf(kind: SourceKind, typed: string): string | null {
   const origin = originOf(typed);
 
-  return origin === null ? null : `${origin}/settings`;
+  return origin === null ? null : `${origin}${tokenPaths[kind]}`;
 }
