@@ -61,6 +61,25 @@ test.describe('trusted types @offline', () => {
       });
     });
 
+    // No backend: nobody is signed in, the one answer the app needs to reach sign-in. Unanswered, the
+    // proxy's 502 shows "Culina is not answering" instead, and the test measured the server, not the app.
+    await page.route('**/api/v1/**', (route) => {
+      const path = new URL(route.request().url()).pathname.replace('/api/v1', '');
+
+      if (path === '/setup')
+        return route.fulfill({ json: { stage: 'complete', startedAt: '2026-01-01T00:00:00Z' } });
+      if (path === '/registration/policy')
+        return route.fulfill({
+          json: { openRegistration: true, requireInvitation: false, hasAccounts: true }
+        });
+
+      return route.fulfill({
+        status: 401,
+        contentType: 'application/problem+json',
+        json: { type: 'x', title: 'x', status: 401, code: 'auth.unauthenticated' }
+      });
+    });
+
     await page.goto('/');
     await expect(
       page.getByRole('heading', { level: 1, name: /anmelden|sign in|familie|family/i })
