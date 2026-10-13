@@ -46,4 +46,23 @@ describe('Field', () => {
 
     expect(screen.getByLabelText('Title')).not.toHaveAttribute('aria-invalid');
   });
+
+  it('describes a group, not its first radio, with the hint', () => {
+    renderWithProviders(FieldHarness, {
+      props: { label: 'Kind', hint: 'Pick the closest one.', group: true }
+    });
+
+    // The description sits on the fieldset: a screen reader reads it with the group's name.
+    expect(screen.getByRole('group', { name: 'Kind' })).toHaveAccessibleDescription(
+      'Pick the closest one.'
+    );
+  });
+
+  it('describes a group with the error when there is one', () => {
+    renderWithProviders(FieldHarness, {
+      props: { label: 'Kind', hint: 'Pick the closest one.', error: 'Choose one.', group: true }
+    });
+
+    expect(screen.getByRole('group', { name: 'Kind' })).toHaveAccessibleDescription('Choose one.');
+  });
 });
