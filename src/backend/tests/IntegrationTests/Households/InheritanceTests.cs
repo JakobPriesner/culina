@@ -73,9 +73,8 @@ public class InheritanceTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.OK, read.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, rename.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, share.StatusCode);
-
-        // Delete deletes nothing, whatever status it answers with.
-        Assert.NotEqual(HttpStatusCode.InternalServerError, delete.StatusCode);
+        // Not 204: the recipe is still there, so the client must not drop it from its list.
+        Assert.Equal(HttpStatusCode.NotFound, delete.StatusCode);
         var stillThere = await ada.Client.GetAsync($"/api/v1/recipes/{bolognese}", Token);
         Assert.Equal(HttpStatusCode.OK, stillThere.StatusCode);
         Assert.Equal("Bolognese", stillThere.Json!.Value.GetProperty("title").GetString());

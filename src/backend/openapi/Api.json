@@ -3089,7 +3089,7 @@
           "Recipes"
         ],
         "summary": "Delete a recipe",
-        "description": "Idempotent: deleting a recipe that is already gone also answers 204. `If-Match` is required — missing is 428, stale is 412 — so a recipe somebody else just changed is not deleted on the strength of the version you saw before.",
+        "description": "Idempotent: deleting a recipe that is already gone also answers 204. A recipe the caller can read through an inheriting household but not change answers 404. `If-Match` is required — missing is 428, stale is 412 — so a recipe somebody else just changed is not deleted on the strength of the version you saw before.",
         "operationId": "deleteRecipeV1",
         "parameters": [
           {
@@ -3118,6 +3118,16 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/problem+json": {
                 "schema": {
