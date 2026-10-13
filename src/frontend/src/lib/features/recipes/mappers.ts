@@ -70,6 +70,7 @@ export const toSuggestion = (wire: WireSuggestion): Suggestion => ({
 });
 
 export const toRelated = (wire: WireRelated): RelatedRecipe => ({
+  calories: wire.calories ?? null,
   id: wire.recipeId,
   householdId: wire.householdId,
   title: wire.title,

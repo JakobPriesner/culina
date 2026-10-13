@@ -5,6 +5,8 @@ import { toRelated } from '../mappers';
 import type { RelatedRecipe } from '../types';
 
 interface Answer {
+  /** Whose shelf, since one recipe has one per reading household. */
+  readonly recipeId: string;
   readonly items: readonly RelatedRecipe[];
   readonly status: LoadStatus;
   /** Next-page cursor; null once nothing else is alike enough. */
@@ -12,6 +14,10 @@ interface Answer {
   /** Whether asking for the next page failed; from then on it is not asked for by itself. */
   readonly moreFailed: boolean;
 }
+
+/** One shelf per recipe and reading household: the calories on its cards are read with that household's nutrition choices. */
+const keyOf = (recipeId: string, householdId: string | null) =>
+  householdId ? `${recipeId}@${householdId}` : recipeId;
 
 /** Related recipes per recipe, so going to one and back does not ask again and draw the shelf twice. */
 class RelatedStore {
@@ -23,62 +29,66 @@ class RelatedStore {
   /** Shelves with a next page in flight; plain like {@link #asked}. */
   #fetchingMore = new Set<string>();
 
-  of(recipeId: string): readonly RelatedRecipe[] {
-    return this.#answers[recipeId]?.items ?? [];
+  of(recipeId: string, householdId: string | null = null): readonly RelatedRecipe[] {
+    return this.#answers[keyOf(recipeId, householdId)]?.items ?? [];
   }
 
-  statusOf(recipeId: string): LoadStatus {
-    return this.#answers[recipeId]?.status ?? 'idle';
+  statusOf(recipeId: string, householdId: string | null = null): LoadStatus {
+    return this.#answers[keyOf(recipeId, householdId)]?.status ?? 'idle';
   }
 
-  hasMore(recipeId: string): boolean {
-    const answer = this.#answers[recipeId];
+  hasMore(recipeId: string, householdId: string | null = null): boolean {
+    const answer = this.#answers[keyOf(recipeId, householdId)];
 
     return answer?.cursor != null && !answer.moreFailed;
   }
 
-  /** Idempotent per recipe. */
-  async load(recipeId: string): Promise<void> {
-    if (this.#asked.has(recipeId)) {
+  /** Idempotent per recipe and household. */
+  async load(recipeId: string, householdId: string | null = null): Promise<void> {
+    const key = keyOf(recipeId, householdId);
+
+    if (this.#asked.has(key)) {
       return;
     }
 
-    this.#asked.add(recipeId);
+    this.#asked.add(key);
     this.#answers = {
       ...this.#answers,
-      [recipeId]: { items: [], status: 'loading', cursor: null, moreFailed: false }
+      [key]: { recipeId, items: [], status: 'loading', cursor: null, moreFailed: false }
     };
 
-    const result = await this.#fetch(recipeId, null);
+    const result = await this.#fetch(recipeId, householdId, null);
 
     this.#answers = {
       ...this.#answers,
-      [recipeId]: result.ok
+      [key]: result.ok
         ? {
+            recipeId,
             items: result.value.items.map(toRelated),
             status: 'ready',
             cursor: result.value.nextCursor ?? null,
             moreFailed: false
           }
-        : { items: [], status: 'failed', cursor: null, moreFailed: false }
+        : { recipeId, items: [], status: 'failed', cursor: null, moreFailed: false }
     };
   }
 
   /** Appends the next page; safe to call repeatedly while one is in flight. */
-  async more(recipeId: string): Promise<void> {
-    const cursor = this.#answers[recipeId]?.cursor;
+  async more(recipeId: string, householdId: string | null = null): Promise<void> {
+    const key = keyOf(recipeId, householdId);
+    const cursor = this.#answers[key]?.cursor;
 
-    if (!cursor || this.#fetchingMore.has(recipeId)) {
+    if (!cursor || this.#fetchingMore.has(key)) {
       return;
     }
 
-    this.#fetchingMore.add(recipeId);
+    this.#fetchingMore.add(key);
 
-    const result = await this.#fetch(recipeId, cursor);
+    const result = await this.#fetch(recipeId, householdId, cursor);
 
-    this.#fetchingMore.delete(recipeId);
+    this.#fetchingMore.delete(key);
 
-    const answer = this.#answers[recipeId];
+    const answer = this.#answers[key];
 
     // Forgotten or reset meanwhile: nothing to add it to.
     if (!answer) {
@@ -87,7 +97,7 @@ class RelatedStore {
 
     this.#answers = {
       ...this.#answers,
-      [recipeId]: result.ok
+      [key]: result.ok
         ? {
             ...answer,
             // A recipe changed under the shelf can come round twice; keep the one already showing.
@@ -103,10 +113,13 @@ class RelatedStore {
     };
   }
 
-  #fetch(recipeId: string, cursor: string | null) {
+  #fetch(recipeId: string, householdId: string | null, cursor: string | null) {
     return request(() =>
       http.GET('/api/v1/recipes/{recipeId}/related', {
-        params: { path: { recipeId }, query: { cursor: cursor ?? undefined } }
+        params: {
+          path: { recipeId },
+          query: { cursor: cursor ?? undefined, householdId: householdId ?? undefined }
+        }
       })
     );
   }
@@ -115,7 +128,7 @@ class RelatedStore {
   forget(recipeId: string): void {
     this.#answers = Object.fromEntries(
       Object.entries(this.#answers)
-        .filter(([key]) => key !== recipeId)
+        .filter(([, answer]) => answer.recipeId !== recipeId)
         .map(([key, answer]) => [
           key,
           { ...answer, items: answer.items.filter((item) => item.id !== recipeId) }
