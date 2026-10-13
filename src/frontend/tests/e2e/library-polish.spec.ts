@@ -169,8 +169,10 @@ test.describe('library refinement @offline', () => {
       await expect(navigation.locator('[aria-current="page"]')).toHaveCount(1);
       await expect(page.getByRole('dialog')).not.toBeVisible();
     }
+    // Back from the last destination, Shopping, is the one before it.
     await page.goBack();
-    await expect(navigation.getByRole('link', { name: 'Shopping', exact: true })).toHaveAttribute(
+    await expect(page).toHaveURL(/\/plan$/);
+    await expect(navigation.getByRole('link', { name: 'Week', exact: true })).toHaveAttribute(
       'aria-current',
       'page'
     );

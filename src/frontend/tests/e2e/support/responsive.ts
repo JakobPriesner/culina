@@ -621,9 +621,14 @@ export async function responsiveData(
     if (
       path.endsWith('/ingredient-names') ||
       path.endsWith('/ingredient-merges') ||
-      path.endsWith('/ingredient-merge-suggestions')
+      path.endsWith('/ingredient-merge-suggestions') ||
+      // No words or foods of the household's own: Culina's lists and the food table answer alone.
+      path.endsWith('/ingredient-nouns') ||
+      path === `/households/${householdId}/foods`
     )
       return reply({ items: [] });
+    // Fire and forget from the front page; nothing reads the answer.
+    if (path === '/suggestions/impressions') return route.fulfill({ status: 204 });
     if (path === `/recipes/${recipeId}`) return reply(detail);
     if (path === `/recipes/${recipeId}/nutrition`)
       return reply(
