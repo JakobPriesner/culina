@@ -188,6 +188,32 @@ public class QueryParameterEndpointTests(PostgresFixture postgres)
             .Replace("{recipe}", recipe.ToString(), StringComparison.Ordinal)
         + (template.Contains('?', StringComparison.Ordinal) ? "&" : "?") + $"limit={limit}";
 
+    [Fact]
+    public async Task UnknownApiPath_ShouldBeNotFound_EvenWithAQuery()
+    {
+        var kitchen = await Kitchen.OpenAsync(postgres);
+
+        var response = await kitchen.Client.GetAsync("/api/v1/nope?x=1", Token);
+
+        // Not request.unknown_parameter: the address is what does not exist.
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task WrongMethod_ShouldNotBlameTheQuery()
+    {
+        var kitchen = await Kitchen.OpenAsync(postgres);
+
+        var response = await kitchen.Client.PutAsync(
+            $"/api/v1/tags?householdId={kitchen.HouseholdId}",
+            new { },
+            Token);
+
+        // The SPA fallback matches every method, so routing picks it (404) over its own 405.
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.NotEqual("request.unknown_parameter", response.ProblemCode);
+    }
+
     private static async Task<Guid> RecipeAsync(Kitchen kitchen)
     {
         var created = await kitchen.Client.PostAsync(
