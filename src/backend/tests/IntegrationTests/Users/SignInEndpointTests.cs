@@ -148,9 +148,8 @@ public class SignInEndpointTests(PostgresFixture postgres)
 
         // This, not the same-origin guard, stops login CSRF: that guard only sees requests with a
         // session cookie, and a cross-site login carries none. A form can send only three content
-        // types and the endpoint reads only application/json, so routing never reaches it (the app
-        // shell's catch-all answers 404, not 415).
-        Assert.True(response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.UnsupportedMediaType, $"Expected a refusal, got {response.StatusCode}.");
+        // types and the endpoint reads only application/json, so routing never reaches it.
+        Assert.Equal(HttpStatusCode.UnsupportedMediaType, response.StatusCode);
         Assert.False(response.Headers.Contains("Set-Cookie"));
         Assert.Equal(0L, await postgres.QuerySingleAsync<long>("select count(*) from sessions;", Token));
     }

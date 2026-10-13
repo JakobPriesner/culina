@@ -200,7 +200,7 @@ public class QueryParameterEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
-    public async Task WrongMethod_ShouldNotBlameTheQuery()
+    public async Task WrongMethod_ShouldBeMethodNotAllowed_EvenWithAQuery()
     {
         var kitchen = await Kitchen.OpenAsync(postgres);
 
@@ -209,9 +209,33 @@ public class QueryParameterEndpointTests(PostgresFixture postgres)
             new { },
             Token);
 
-        // The SPA fallback matches every method, so routing picks it (404) over its own 405.
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
+        Assert.Equal("request.method_not_allowed", response.ProblemCode);
+        Assert.Equal(["GET"], response.ContentHeaders.Allow);
+    }
+
+    [Fact]
+    public async Task WrongMethod_ShouldListEveryMethodThePathTakes()
+    {
+        var kitchen = await Kitchen.OpenAsync(postgres);
+        var recipe = await RecipeAsync(kitchen);
+
+        var response = await kitchen.Client.PostAsync($"/api/v1/recipes/{recipe}", new { }, Token);
+
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, response.StatusCode);
+        Assert.Contains("GET", response.ContentHeaders.Allow);
+        Assert.Contains("DELETE", response.ContentHeaders.Allow);
+    }
+
+    [Fact]
+    public async Task APathThatBreaksARouteConstraint_ShouldStayNotFound()
+    {
+        var kitchen = await Kitchen.OpenAsync(postgres);
+
+        // {recipeId:guid}: "abc" is no recipe address, whatever the method.
+        var response = await kitchen.Client.PostAsync("/api/v1/recipes/abc", new { }, Token);
+
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.NotEqual("request.unknown_parameter", response.ProblemCode);
     }
 
     private static async Task<Guid> RecipeAsync(Kitchen kitchen)
