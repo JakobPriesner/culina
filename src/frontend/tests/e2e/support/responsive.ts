@@ -597,7 +597,7 @@ export async function responsiveData(
     }
     if (path === '/cook-sessions/current') {
       if (!activeCooking) {
-        return route.fulfill({ status: 404, json: { type: 'not-found' } });
+        return route.fulfill({ status: 204 });
       }
       return reply(cooking);
     }

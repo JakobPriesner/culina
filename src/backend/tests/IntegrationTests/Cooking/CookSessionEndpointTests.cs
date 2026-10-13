@@ -18,8 +18,8 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
 
         var response = await client.GetAsync("/api/v1/cook-sessions/current", Token);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("cooking.session_not_found", response.ProblemCode);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Empty(response.Body);
     }
 
     [Fact]
@@ -156,7 +156,7 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
 
         var current = await client.GetAsync("/api/v1/cook-sessions/current", Token);
 
-        Assert.Equal(HttpStatusCode.NotFound, current.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, current.StatusCode);
     }
 
     [Fact]

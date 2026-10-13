@@ -32,7 +32,8 @@ class CookingStore {
 
     const previous = this.#session;
 
-    this.#session = result.ok ? result.value : null;
+    // 204, no body, when nothing is being cooked.
+    this.#session = result.ok ? (result.value ?? null) : null;
 
     // Ended on another device since it was last seen.
     if (previous && previous.sessionId !== this.#session?.sessionId) {

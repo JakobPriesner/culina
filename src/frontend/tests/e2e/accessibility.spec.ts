@@ -291,7 +291,7 @@ test.describe('reaching everything with a keyboard', () => {
   async function endAnyCooking(who: Page) {
     const current = await who.request.get('/api/v1/cook-sessions/current');
 
-    if (!current.ok()) {
+    if (current.status() !== 200) {
       return;
     }
 

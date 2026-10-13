@@ -4930,7 +4930,7 @@
           "CookSessions"
         ],
         "summary": "What you are cooking",
-        "description": "404 when nothing is being cooked. Drives the bar that lets you pick a recipe back up where you left it, so the answer carries the recipe's title and needs no second request.",
+        "description": "204 when nothing is being cooked. Drives the bar that lets you pick a recipe back up where you left it, so the answer carries the recipe's title and needs no second request.",
         "operationId": "getCurrentCookSessionV1",
         "responses": {
           "200": {
@@ -4943,18 +4943,11 @@
               }
             }
           },
+          "204": {
+            "description": "No Content"
+          },
           "401": {
             "description": "Unauthorized",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
             "content": {
               "application/problem+json": {
                 "schema": {
