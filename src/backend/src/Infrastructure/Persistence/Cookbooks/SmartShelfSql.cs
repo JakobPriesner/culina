@@ -13,21 +13,35 @@ internal static class SmartShelfSql
     /// <param name="ingredients">The SQL expression holding the required ingredients.</param>
     /// <param name="maxMinutes">The SQL expression holding the time ceiling.</param>
     /// <param name="held">How many of <paramref name="ingredients"/> this recipe has, if already aggregated; else asked per recipe.</param>
+    /// <param name="tagged">How many of <paramref name="tags"/> this recipe carries, if already aggregated; else asked per recipe.</param>
     internal static string Matches(
         string tags,
         string ingredients,
         string maxMinutes,
-        string? held = null) => $"""
-            (cardinality({tags}) = 0 or (
-                select count(distinct t.slug) from recipe_tags rt
-                join tags t on t.id = rt.tag_id
-                where rt.recipe_id = r.id and t.slug = any ({tags}))
-                = cardinality({tags}))
+        string? held = null,
+        string? tagged = null) => $"""
+            (cardinality({tags}) = 0 or {tagged ?? Tagged(tags)} = cardinality({tags}))
             -- Excludes, unlike the search's ingredient ranking: a recipe without chicken is not on a chicken shelf.
             and (cardinality({ingredients}) = 0
                  or {held ?? Held(ingredients)} = cardinality({ingredients}))
             -- No stated time is excluded by the ceiling, not treated as zero minutes.
             and ({maxMinutes} is null or {RecipeSql.FitsWithin(maxMinutes)})
+        """;
+
+    // Per-recipe tag count.
+    private static string Tagged(string tags) => $"""
+        (select count(distinct t.slug) from recipe_tags rt
+         join tags t on t.id = rt.tag_id
+         where rt.recipe_id = r.id and t.slug = any ({tags}))
+        """;
+
+    /// <summary>A query of <c>(recipe_id, matched)</c>: how many of <paramref name="tags"/> each recipe carries, set-based.</summary>
+    internal static string Carriers(string tags) => $"""
+        select rt.recipe_id, count(distinct t.slug) as matched
+        from tags t
+        join recipe_tags rt on rt.tag_id = t.id
+        where t.slug = any ({tags})
+        group by rt.recipe_id
         """;
 
     // Per-recipe ingredient count; the card needs it because each shelf has its own rules.
