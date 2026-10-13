@@ -184,19 +184,21 @@ internal sealed class CookLogRepository(DbExecutor executor) : ICookLogRepositor
             : null);
 
     public async Task<Result<CookLogEntry>> FindAsync(
+        Guid recipeId,
         Guid entryId,
         Guid userId,
         CancellationToken cancellationToken)
     {
-        // Scoped to the caller in SQL: another's attempt is not found rather than forbidden.
+        // Scoped to the caller in SQL: another's attempt is not found rather than forbidden, and so
+        // is an entry asked for under a recipe it is not of.
         var row = await executor.QuerySingleOrDefaultAsync<CookLogRow>(
             """
             select id, recipe_id, user_id, household_id, made_at, servings, note,
                    image_hash, image_width, image_height
             from cook_log_entries
-            where id = @entryId and user_id = @userId;
+            where id = @entryId and recipe_id = @recipeId and user_id = @userId;
             """,
-            new { entryId, userId },
+            new { recipeId, entryId, userId },
             cancellationToken).ConfigureAwait(false);
 
         return row is null ? CookingErrors.EntryNotFound : ToEntry(row);
@@ -252,13 +254,14 @@ internal sealed class CookLogRepository(DbExecutor executor) : ICookLogRepositor
     }
 
     public async Task<Result> RemoveAsync(
+        Guid recipeId,
         Guid entryId,
         Guid userId,
         CancellationToken cancellationToken)
     {
         var affected = await executor.ExecuteAsync(
-            "delete from cook_log_entries where id = @entryId and user_id = @userId;",
-            new { entryId, userId },
+            "delete from cook_log_entries where id = @entryId and recipe_id = @recipeId and user_id = @userId;",
+            new { recipeId, entryId, userId },
             cancellationToken).ConfigureAwait(false);
 
         return affected == 0 ? CookingErrors.EntryNotFound : Result.Success();

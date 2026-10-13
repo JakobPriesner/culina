@@ -14,6 +14,7 @@ internal sealed class UndoCookedEndpoint : IEndpoint
         app.MapDelete(
                 $"{ApiPaths.V1}/recipes/{{recipeId:guid}}/cook-log/{{entryId:guid}}",
                 async (
+                    Guid recipeId,
                     Guid entryId,
                     HttpContext context,
                     ICommandHandler<UndoCookedCommand> handler,
@@ -21,7 +22,7 @@ internal sealed class UndoCookedEndpoint : IEndpoint
                 {
                     var result = await handler
                         .Handle(
-                            new UndoCookedCommand(entryId, context.CurrentUser().UserId),
+                            new UndoCookedCommand(recipeId, entryId, context.CurrentUser().UserId),
                             cancellationToken)
                         .ConfigureAwait(false);
 
