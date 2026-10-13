@@ -6,11 +6,11 @@
 
   import { originOf, tokenPageOf } from './sourceAddress';
   import { sources } from './stores/sources.svelte';
-  import type { ConnectedSource } from './types';
+  import type { ConnectedSource, SourceKind } from './types';
 
   /**
-   * Connects another app. The address comes first and alone: the token-page link and the sign-in
-   * both need it. Signing in is the default (a token is a task people give up on), but the token
+   * Connects another app. Which app and its address come first and alone: the token-page link and
+   * the sign-in both need them. Signing in is the default (a token is a task people give up on), but the token
    * stays for SSO-only instances and anyone who won't hand over a password.
    */
   interface Props {
@@ -22,6 +22,7 @@
 
   type Way = 'signIn' | 'token';
 
+  let kind = $state<SourceKind>('tandoor');
   let address = $state('');
   let way = $state<Way>('signIn');
   let username = $state('');
@@ -29,7 +30,7 @@
   let token = $state('');
 
   /** Where the person would go to make a token, once we know which server. */
-  const tokenPage = $derived(tokenPageOf(address));
+  const tokenPage = $derived(tokenPageOf(kind, address));
 
   const ready = $derived(
     originOf(address) !== null &&
@@ -37,6 +38,12 @@
         ? token.trim().length > 0
         : username.trim().length > 0 && password.length > 0)
   );
+
+  // Product names, the same in every language.
+  const kinds: readonly RadioOption[] = [
+    { value: 'tandoor', label: 'Tandoor' },
+    { value: 'mealie', label: 'Mealie' }
+  ];
 
   const ways: readonly RadioOption[] = $derived([
     {
@@ -60,7 +67,7 @@
 
     const connected = await sources.connect({
       householdId,
-      kind: 'tandoor',
+      kind,
       address: address.trim(),
       ...(way === 'token' ? { token: token.trim() } : { username: username.trim(), password })
     });
@@ -78,6 +85,18 @@
 
 <form class="connect" onsubmit={submit} novalidate>
   <FormFailure failure={sources.connectError} />
+
+  <Field label={m['import.source.kindLabel']()} group>
+    {#snippet children({ id, describedBy })}
+      <RadioGroup
+        name={id}
+        {describedBy}
+        options={kinds}
+        value={kind}
+        onchange={(chosen) => (kind = chosen === 'mealie' ? 'mealie' : 'tandoor')}
+      />
+    {/snippet}
+  </Field>
 
   <Field label={m['import.source.address']()} hint={m['import.source.addressHint']()}>
     {#snippet children({ id, describedBy, invalid })}

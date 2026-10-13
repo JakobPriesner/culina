@@ -4500,7 +4500,7 @@ export interface components {
         };
         /** @description Where an imported recipe came from. Quiet on purpose: an imported recipe is an ordinary recipe. */
         RecipesRecipeProvenance: {
-            /** @description Which sort of place: `tandoor` or `web`. */
+            /** @description Which sort of place: `tandoor`, `mealie`, `web` or `ai`. */
             kind: string;
             /**
              * Format: uuid
@@ -4580,7 +4580,7 @@ export interface components {
              * @description Which kitchen is connecting it.
              */
             householdId: string;
-            /** @description Which app. Currently only `tandoor`. */
+            /** @description Which app: `tandoor` or `mealie`. */
             kind: string;
             /** @description Where it is, such as `https://recipes.example.com`. Anything after the host is dropped. */
             address: string;
