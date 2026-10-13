@@ -312,6 +312,12 @@ internal static class AssistantPrompts
                    original is vague — "cook until done", "a good pinch" — keep it
                    vague rather than deciding for them. Where it leaves a field empty,
                    answer null for that field rather than filling it in.
+
+                   A step may name an ingredient as @ followed by its name, like
+                   @butter: that marks the line of the ingredient list the step uses.
+                   Keep every such mention in the step that does that work, written as
+                   @ and then the ingredient's name exactly as it appears in your
+                   ingredient list. Do not add @ anywhere else.
                    """;
         }
 

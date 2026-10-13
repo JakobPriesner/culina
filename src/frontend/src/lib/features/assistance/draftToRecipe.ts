@@ -99,6 +99,8 @@ function toIngredients(draft: Draft): Ingredient[] {
 /**
  * Steps as plain words, not linked to the ingredients they name: a wrong link shows a scaled
  * amount in an unrelated sentence, and an `@` costs one keystroke. Same trade as paste-import.
+ * The `@name` mentions an improved recipe kept stay in the words, and the editor's save links
+ * them again (`adoptSaved`), as it does a typed one.
  */
 function toSteps(draft: Draft): Step[] {
   return draft.steps.map((step) => ({

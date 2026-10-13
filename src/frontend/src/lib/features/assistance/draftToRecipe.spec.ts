@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { acceptNothing, toPatch, type Accepted, type Draft } from './draftToRecipe';
 
+import { adoptSaved } from '$features/recipes/editor/adoptSaved';
+
 import type { Ingredient, Recipe } from '$features/recipes/types';
 
 /** The first item, or a failed test — so an index is never merely assumed. */
@@ -105,6 +107,32 @@ describe('accepting parts of a draft', () => {
       kind: 'text',
       text: 'Heat the olive oil and add the onion.'
     });
+  });
+
+  it('lets the save link again the @ mentions an improved step kept', () => {
+    const improved = draft({ steps: [{ text: 'Heat the @olive oil and add the onion.' }] });
+    const current = recipe();
+    const accepted = {
+      ...current,
+      ...toPatch(improved, accepting({ ingredients: true, steps: true }), current)
+    };
+    // The server gives the new line its id and keeps the step's words as they were sent.
+    const saved = {
+      ...accepted,
+      version: 2,
+      groups: [{ ...first(accepted.groups), ingredients: [ingredient('olive oil', 'i-oil')] }],
+      steps: [{ ...first(accepted.steps), id: 's1' }]
+    };
+
+    const { recipe: adopted, linked } = adoptSaved(accepted, saved, 1);
+
+    // Linked once the line has an id, and saved again, as a typed @ mention is.
+    expect(linked).toBe(true);
+    expect(first(adopted.steps).segments).toEqual([
+      { kind: 'text', text: 'Heat the ' },
+      { kind: 'ingredient', ingredientId: 'i-oil', name: 'olive oil', quantity: expect.anything() },
+      { kind: 'text', text: ' and add the onion.' }
+    ]);
   });
 
   it('replaces only the steps when the ingredients were left alone', () => {
