@@ -76,19 +76,15 @@ describe('LruCache', () => {
     expect(cache.peek('b')).toBe(20);
   });
 
-  it('puts a snapshot back exactly', () => {
+  it('tells the change which entry it is rewriting', () => {
     const cache = new LruCache<number>(3);
 
     cache.set('a', 1);
-
-    const before = cache.snapshot();
-
     cache.set('b', 2);
-    cache.update((value) => value + 1);
-    cache.restore(before);
+    cache.update((value, key) => (key === 'b' ? value * 10 : value));
 
     expect(cache.peek('a')).toBe(1);
-    expect(cache.peek('b')).toBeUndefined();
+    expect(cache.peek('b')).toBe(20);
   });
 
   it('tells a reader that read through get when anything is written', () => {

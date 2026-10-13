@@ -333,6 +333,35 @@ describe('deleting', () => {
     expect(recipes.items.map((item) => item.title)).toEqual(['Orzo', 'Soup']);
     expect(recipes.total).toBe(2);
   });
+
+  it('puts back only that row, keeping a page that arrived while it was asked', async () => {
+    serverAnswers(() => page([summary('r1', 'Orzo'), summary('r2', 'Soup')], 3, 'cursor-1'));
+    await recipes.list(household);
+
+    const deleted = Promise.withResolvers<Response>();
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) =>
+        input.method === 'DELETE'
+          ? deleted.promise
+          : Promise.resolve(page([summary('r3', 'Stew')], 3, null))
+      )
+    );
+
+    const removing = recipes.remove('r1', 3);
+
+    await recipes.loadMore(household);
+    deleted.resolve(
+      new Response(JSON.stringify({ code: 'recipes.unavailable', detail: 'No.' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/problem+json' }
+      })
+    );
+    await removing;
+
+    expect(recipes.items.map((item) => item.title)).toEqual(['Orzo', 'Soup', 'Stew']);
+  });
 });
 
 describe('switching households', () => {

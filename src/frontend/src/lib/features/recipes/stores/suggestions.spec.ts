@@ -178,6 +178,33 @@ describe('dismissing', () => {
     expect(suggestions.for(household, { limit: 2 }).map((item) => item.id)).toEqual(['a', 'b']);
   });
 
+  it('puts back only the card, keeping an answer that arrived while it was asked', async () => {
+    serverAnswers(() => answer([suggestion('a'), suggestion('b')]));
+    await suggestions.ask(household, { limit: 2 });
+
+    const dismissed = Promise.withResolvers<Response>();
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) =>
+        input.method === 'PUT'
+          ? dismissed.promise
+          : Promise.resolve(answer([suggestion('a'), suggestion('c')]))
+      )
+    );
+
+    const dismissing = suggestions.dismiss('a');
+
+    await suggestions.ask(household, { limit: 2, slot: 'dinner' });
+    dismissed.resolve(new Response('{}', { status: 500 }));
+    await dismissing;
+
+    expect(suggestions.for(household, { limit: 2 }).map((item) => item.id)).toEqual(['a', 'b']);
+    expect(suggestions.for(household, { limit: 2, slot: 'dinner' }).map((item) => item.id)).toEqual(
+      ['a', 'c']
+    );
+  });
+
   it('lets the next question be asked again after an undo', async () => {
     serverAnswers(() => answer([suggestion('a')]));
     await suggestions.ask(household, { limit: 1 });
