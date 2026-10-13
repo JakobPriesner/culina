@@ -27,6 +27,9 @@ export class RecipeList {
 
   #reading: AbortController | null = null;
 
+  /** Bumped whenever the list is replaced rather than appended to, so an undo knows it is stale. */
+  #listing = 0;
+
   get items(): readonly RecipeSummary[] {
     return this.#items;
   }
@@ -68,6 +71,7 @@ export class RecipeList {
     // Don't show another household's rows under this one's name while loading.
     if (this.#householdId !== householdId) {
       this.#householdId = householdId;
+      this.#listing += 1;
       this.#items = [];
       this.#total = 0;
       this.#cursor = null;
@@ -93,6 +97,7 @@ export class RecipeList {
 
     const page = result.value;
 
+    this.#listing += 1;
     this.#items = page.items;
     this.#cursor = page.nextCursor;
     this.#total = page.total;
@@ -133,14 +138,25 @@ export class RecipeList {
     this.#total = result.value.total;
   }
 
-  /** Removes a row and returns the undo. */
+  /**
+   * Removes a row and returns the undo, which puts back only that row: a page appended meanwhile
+   * stays, and a list read meanwhile already says whether the row belongs.
+   */
   withdraw(recipeId: string): () => void {
-    const before = this.#items;
+    const index = this.#items.findIndex((item) => item.id === recipeId);
+    const row = this.#items[index];
+    const listing = this.#listing;
 
-    this.#items = before.filter((item) => item.id !== recipeId);
+    if (!row) {
+      return () => {};
+    }
+
+    this.#items = this.#items.filter((item) => item.id !== recipeId);
 
     return () => {
-      this.#items = before;
+      if (listing === this.#listing && !this.#items.some((item) => item.id === recipeId)) {
+        this.#items = [...this.#items.slice(0, index), row, ...this.#items.slice(index)];
+      }
     };
   }
 
@@ -174,6 +190,7 @@ export class RecipeList {
   }
 
   reset(): void {
+    this.#listing += 1;
     this.#householdId = null;
     this.#items = [];
     this.#status = 'idle';
