@@ -96,9 +96,9 @@ function unitTextFor(quantity: ScaledQuantity, count: number, labels: QuantityLa
   return shortOf(quantity.unit) || labels.unitName(quantity.unit, count);
 }
 
-/** A piece of one countable thing (`½ onion`); `2½ onions` is a range, which scaling produces. */
+/** A piece of one countable thing (`½ onion`, with or without a unit word); `2½ onions` is a range, which scaling produces. */
 const isPartOfOne = (whole: number, unit: Unit | null): boolean =>
-  whole === 0 && familyOf(unit) === 'count';
+  whole === 0 && (familyOf(unit) === 'count' || familyOf(unit) === 'none');
 
 function number(value: number, locale: string, unit: Unit | null): string {
   const whole = Math.floor(value);

@@ -115,6 +115,14 @@ describe('part of one countable thing', () => {
     expect(amount(1 / 3)).toBe('⅓');
   });
 
+  it('reads the same with no unit word, as in “1 Zwiebel”', () => {
+    const amount = (factor: number) =>
+      formatQuantity(scaleQuantity({ value: 1, unit: null }, factor), 'en', labels).amount;
+
+    expect(amount(0.5)).toBe('½');
+    expect(amount(1 / 3)).toBe('⅓');
+  });
+
   it('leaves grams alone, because a scale shows 0.5 g', () => {
     expect(show(1, 'g', 0.5)).toBe('0.5' + nbsp + 'g');
   });
