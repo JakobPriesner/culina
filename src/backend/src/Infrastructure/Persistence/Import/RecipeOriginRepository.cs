@@ -21,6 +21,8 @@ internal sealed record RecipeOriginRow
     public string? SourceUrl { get; init; }
 
     public DateTimeOffset ImportedAt { get; init; }
+
+    public bool InBin { get; init; }
 }
 
 /// <summary>Stores where imported recipes came from.</summary>
@@ -85,7 +87,7 @@ internal sealed class RecipeOriginRepository(DbExecutor executor) : IRecipeOrigi
             : row.ToDomain();
     }
 
-    public async Task<IReadOnlyDictionary<string, Guid>> AlreadyHereAsync(
+    public async Task<IReadOnlyDictionary<string, ImportedCopy>> AlreadyHereAsync(
         Guid householdId,
         SourceKind kind,
         IReadOnlyList<string> externalIds,
@@ -96,22 +98,27 @@ internal sealed class RecipeOriginRepository(DbExecutor executor) : IRecipeOrigi
 
         if (externalIds.Count == 0)
         {
-            return new Dictionary<string, Guid>(StringComparer.Ordinal);
+            return new Dictionary<string, ImportedCopy>(StringComparer.Ordinal);
         }
 
         var rows = await executor.QueryAsync<RecipeOriginRow>(
                 """
-                select recipe_id, external_id from recipe_origins
-                where household_id = @householdId
-                  and kind = @kind
-                  and external_id = any(@externalIds);
+                select o.recipe_id, o.external_id,
+                       not exists (select 1 from recipes r where r.id = o.recipe_id) as in_bin
+                from recipe_origins o
+                where o.household_id = @householdId
+                  and o.kind = @kind
+                  and o.external_id = any(@externalIds);
                 """,
                 new { householdId, kind = kind.Code, externalIds = externalIds.ToArray() },
                 cancellationToken)
             .ConfigureAwait(false);
 
         // Last one wins on a duplicate, which cannot happen: the unique index covers this triple.
-        return rows.ToDictionary(row => row.ExternalId, row => row.RecipeId, StringComparer.Ordinal);
+        return rows.ToDictionary(
+            row => row.ExternalId,
+            row => new ImportedCopy(row.RecipeId, row.InBin),
+            StringComparer.Ordinal);
     }
 }
 
