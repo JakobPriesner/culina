@@ -256,6 +256,36 @@ describe('reading more of a library', () => {
   });
 });
 
+describe('loading everything for select-all', () => {
+  it('waits for a page already being read instead of stopping at it', async () => {
+    const waiting: ((response: Response) => void)[] = [];
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>((resolve) => waiting.push(resolve)))
+    );
+
+    const first = sources.browse(library);
+    await vi.waitFor(() => expect(waiting).toHaveLength(1));
+    waiting[0]!(json({ items: [theirs('1')], nextPage: 'p1', total: 3 }));
+    await first;
+
+    // The scroll-triggered page starts first; select-all lands on top of it.
+    const scrolled = sources.more();
+    const everything = sources.loadEverything();
+
+    await vi.waitFor(() => expect(waiting).toHaveLength(2));
+    waiting[1]!(json({ items: [theirs('2')], nextPage: 'p2', total: 3 }));
+    await vi.waitFor(() => expect(waiting).toHaveLength(3));
+    waiting[2]!(json({ items: [theirs('3')], nextPage: null, total: 3 }));
+    await Promise.all([scrolled, everything]);
+
+    expect(sources.recipes.map((recipe) => recipe.externalId)).toEqual(['1', '2', '3']);
+    expect(sources.hasMore).toBe(false);
+    expect(sources.loadingAll).toBe(false);
+  });
+});
+
 describe('searching a library', () => {
   function slowServer() {
     const waiting = new Map<string, (response: Response) => void>();
