@@ -89,6 +89,33 @@ public class AssistantRunTests
     }
 
     [Fact]
+    public async Task ComposeAsync_ShouldStillSettle_WhenTheAdapterThrows()
+    {
+        var world = new World();
+        world.Assistant.Throws = new HttpRequestException("connection reset");
+
+        await Assert.ThrowsAsync<HttpRequestException>(world.ComposeAsync);
+
+        // A defect stays a defect, but the estimate must not hold the budget until the month turns.
+        var settlement = Assert.Single(world.Ledger.Settled);
+        Assert.Equal("failed", settlement.Outcome);
+        Assert.Null(settlement.Cost);
+    }
+
+    [Fact]
+    public async Task ReservedDrawing_ShouldStillSettle_WhenTheAdapterThrows()
+    {
+        var world = new World();
+        world.Assistant.Throws = new HttpRequestException("connection reset");
+        var reserved = (await world.ReserveDrawingAsync()).ShouldBeSuccess();
+
+        await Assert.ThrowsAsync<HttpRequestException>(
+            () => reserved.AskAsync(new Drawing { Subject = "a bowl of soup" }, Token));
+
+        Assert.Equal("failed", Assert.Single(world.Ledger.Settled).Outcome);
+    }
+
+    [Fact]
     public async Task ComposeAsync_ShouldSettleWithNoCost_WhenItFailedWithoutSayingWhatItUsed()
     {
         var world = new World();
@@ -422,6 +449,9 @@ public class AssistantRunTests
 
             return parts;
         }
+
+        internal Task<Result<AssistantRun.ReservedDrawing>> ReserveDrawingAsync() =>
+            Run.ReserveDrawingAsync(new Asker(Guid.CreateVersion7(), Guid.CreateVersion7()), Token);
 
         internal Task<Result<Drawn>> DrawAsync() =>
             Run.DrawAsync(
