@@ -359,6 +359,99 @@ public class FoodCorrectionTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.Unauthorized, signedOut.StatusCode);
     }
 
+    [Fact]
+    public async Task HouseholdFood_ShouldCountAKindTheTableDoesNotHave_CitedFromThePackage()
+    {
+        // Arrange
+        var kitchen = await Kitchen.OpenAsync(postgres);
+        var recipe = await RecipeAsync(kitchen, "Curry", [("Kokosmilch light", 200m)]);
+        var before = await kitchen.Client.GetAsync(NutritionPath(recipe), Token);
+
+        // Act
+        var created = await kitchen.Client.PostAsync(
+            FoodsPath(kitchen.HouseholdId),
+            new { name = "Kokosmilch light", energyKcal = 75m, fat = 7m, saturatedFat = 6.5m, protein = 0.6m },
+            Token);
+        var code = created.Json!.Value.GetProperty("code").GetString()!;
+        var chosen = await PutAsync(kitchen.Client, kitchen.HouseholdId, "Kokosmilch light", code);
+        var after = await kitchen.Client.GetAsync(NutritionPath(recipe), Token);
+        var listed = await kitchen.Client.GetAsync(FoodsPath(kitchen.HouseholdId), Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal(314m, created.Json!.Value.GetProperty("energyKj").GetDecimal());
+        Assert.Equal(HttpStatusCode.NoContent, chosen.StatusCode);
+        Assert.Equal("unknownKind", Lines(before)[0].GetProperty("status").GetString());
+
+        var line = Lines(after)[0];
+        Assert.Equal("counted", line.GetProperty("status").GetString());
+        Assert.Equal("package", line.GetProperty("food").GetProperty("source").GetString());
+        Assert.Equal(200m * 0.75m / 4m, line.GetProperty("energyKcal").GetDecimal());
+        Assert.NotEqual(before.ETag, after.ETag);
+        Assert.Equal([code], Codes(listed));
+    }
+
+    [Fact]
+    public async Task HouseholdFood_ShouldRefuseALabelNoFoodCouldHave()
+    {
+        // Arrange
+        var kitchen = await Kitchen.OpenAsync(postgres);
+
+        // Act
+        var created = await kitchen.Client.PostAsync(
+            FoodsPath(kitchen.HouseholdId),
+            new { name = "Skyr light", energyKcal = 60m, carbohydrate = 4m, sugars = 5m },
+            Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, created.StatusCode);
+        Assert.Equal("nutrition.invalid_food", created.ProblemCode);
+    }
+
+    [Fact]
+    public async Task HouseholdFood_ShouldTakeItsChoicesWithIt_WhenRemoved()
+    {
+        // Arrange
+        var kitchen = await Kitchen.OpenAsync(postgres);
+        var recipe = await RecipeAsync(kitchen, "Curry", [("Kokosmilch light", 200m)]);
+        var created = await kitchen.Client.PostAsync(
+            FoodsPath(kitchen.HouseholdId), new { name = "Kokosmilch light", energyKcal = 75m }, Token);
+        var id = created.Json!.Value.GetProperty("id").GetGuid();
+        await PutAsync(kitchen.Client, kitchen.HouseholdId, "Kokosmilch light", created.Json!.Value.GetProperty("code").GetString());
+
+        // Act
+        var removed = await kitchen.Client.DeleteAsync($"{FoodsPath(kitchen.HouseholdId)}/{id}", Token);
+        var after = await kitchen.Client.GetAsync(NutritionPath(recipe), Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, removed.StatusCode);
+        var line = Lines(after)[0];
+        Assert.Equal("unknownKind", line.GetProperty("status").GetString());
+        Assert.False(line.GetProperty("corrected").GetBoolean());
+    }
+
+    [Fact]
+    public async Task HouseholdFood_ShouldNotBeChosen_ByAnotherHousehold()
+    {
+        // Arrange
+        var kitchen = await Kitchen.OpenAsync(postgres);
+        var other = await Kitchen.OpenAsync(postgres);
+        var created = await kitchen.Client.PostAsync(
+            FoodsPath(kitchen.HouseholdId), new { name = "Kokosmilch light", energyKcal = 75m }, Token);
+
+        // Act
+        var chosen = await PutAsync(
+            other.Client, other.HouseholdId, "Kokosmilch light", created.Json!.Value.GetProperty("code").GetString());
+        var listed = await other.Client.GetAsync(FoodsPath(kitchen.HouseholdId), Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, chosen.StatusCode);
+        Assert.Equal("nutrition.unknown_food", chosen.ProblemCode);
+        Assert.Equal(HttpStatusCode.NotFound, listed.StatusCode);
+    }
+
+    private static string FoodsPath(Guid householdId) => $"/api/v1/households/{householdId}/foods";
+
     private static string NutritionPath(Guid recipeId) => $"/api/v1/recipes/{recipeId}/nutrition";
 
     private static string IngredientPath(Guid householdId, string name) =>

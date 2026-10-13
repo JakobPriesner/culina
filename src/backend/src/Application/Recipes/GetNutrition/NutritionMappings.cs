@@ -98,6 +98,7 @@ internal static class NutritionMappings
         new()
         {
             Code = food.Code,
+            Source = HouseholdFoods.IsOwn(food.Code) ? "package" : "bls",
             NameDe = food.NameDe,
             NameEn = food.NameEn,
             LabelDe = labelDe ?? food.NameDe,

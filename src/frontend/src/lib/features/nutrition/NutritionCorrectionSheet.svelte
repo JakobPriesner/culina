@@ -7,8 +7,10 @@
   import { createLoadingState } from '$shell/loadingState.svelte';
   import { preferences } from '$shell/preferences.svelte';
 
+  import PackageFoodForm from './PackageFoodForm.svelte';
   import { roundForLabel } from './rounding';
   import { searchFoods } from './stores/foods';
+  import { householdFoods, hitOf, type Label } from './stores/householdFoods.svelte';
   import type { FoodHit, NutritionFood, NutritionLine } from './types';
   import UnitWeightForm from './UnitWeightForm.svelte';
   import { gramsWords } from './weights';
@@ -119,9 +121,13 @@
   const foodLabel = (food: NutritionFood) =>
     preferences.locale === 'de' ? food.labelDe : food.labelEn;
 
-  /** The table's name under the friendlier one; nothing when they are the same words. */
+  /** The table's name under the friendlier one, or that a household typed it from a package; nothing when the same words. */
   const bls = (food: NutritionFood) =>
-    foodName(food) === foodLabel(food) ? null : m['nutrition.bls']({ name: foodName(food) });
+    food.source === 'package'
+      ? m['nutrition.fromPackage']()
+      : foodName(food) === foodLabel(food)
+        ? null
+        : m['nutrition.bls']({ name: foodName(food) });
 
   const per100 = (kcal: number) =>
     m['nutrition.correct.per100']({
@@ -184,7 +190,8 @@
       code: variant.code,
       nameDe: variant.labelDe,
       nameEn: variant.labelEn,
-      energyKcal: variant.energyKcal
+      energyKcal: variant.energyKcal,
+      source: 'bls'
     });
 
   /** The weight section: only for a line counted in units, with a way to say it. */
@@ -204,6 +211,46 @@
 
   /** The food on show above is not offered a second time. */
   const others = $derived(foods.filter((food) => food.code !== current?.code));
+
+  $effect(() => {
+    if (householdId) {
+      void householdFoods.load(householdId);
+    }
+  });
+
+  /** The household's foods from a package that have every word searched for: "kokos light" finds "Kokosmilch light". */
+  const packaged = $derived.by(() => {
+    const words = (searched ?? '').toLowerCase().split(/\s+/).filter(Boolean);
+
+    return words.length === 0
+      ? []
+      : householdFoods.foods.filter(
+          (food) =>
+            food.code !== current?.code &&
+            words.every((word) => food.name.toLowerCase().includes(word))
+        );
+  });
+
+  let adding = $state(false);
+
+  // A sheet opened on another name starts without the form.
+  $effect(() => {
+    void name;
+    adding = false;
+  });
+
+  async function addFood(label: Label) {
+    const added = await householdFoods.add(householdId!, label);
+
+    if (!added.ok) {
+      return added.error;
+    }
+
+    adding = false;
+    onchoose(hitOf(added.value));
+
+    return null;
+  }
 </script>
 
 {#snippet mark(here: boolean)}
@@ -344,6 +391,43 @@
         </ul>
       {/if}
     </div>
+
+    {#if packaged.length > 0}
+      <h3 class="sectionTitle">{m['nutrition.package.title']()}</h3>
+      <ul class="foods" aria-label={m['nutrition.package.title']()}>
+        {#each packaged as food (food.code)}
+          <li>
+            <button type="button" class="food" onclick={() => onchoose(hitOf(food))}>
+              {@render mark(false)}
+              <span class="words">
+                <span class="name">{food.name}</span>
+                <span class="quiet">
+                  {per100(food.energyKcal)} · {m['nutrition.fromPackage']()}
+                </span>
+              </span>
+            </button>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+
+    {#if householdId && name !== null}
+      {#if adding}
+        <section class="package" aria-labelledby="nutrition-package-title">
+          <h3 id="nutrition-package-title" class="sectionTitle">
+            {m['nutrition.package.add']()}
+          </h3>
+          <PackageFoodForm {name} onsave={addFood} oncancel={() => (adding = false)} />
+        </section>
+      {:else}
+        <p class="addPackage">
+          <span class="quiet">{m['nutrition.package.missing']()}</span>
+          <Button size="sm" variant="ghost" onclick={() => (adding = true)}>
+            {m['nutrition.package.add']()}
+          </Button>
+        </p>
+      {/if}
+    {/if}
   </div>
 
   {#snippet footer()}
@@ -377,6 +461,20 @@
     padding: var(--space-3) var(--space-4);
     background: var(--surface-sunken);
     border-radius: var(--radius-md);
+  }
+
+  .package {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .addPackage {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-2);
+    margin: 0;
   }
 
   .sectionTitle {

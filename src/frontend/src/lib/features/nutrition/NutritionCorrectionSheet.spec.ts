@@ -493,3 +493,120 @@ describe('the weight of one unit', () => {
     ).toBeInTheDocument();
   });
 });
+
+describe('foods from the package', () => {
+  const light = {
+    id: 'f1',
+    code: 'h:f1',
+    name: 'Kokosmilch light',
+    energyKj: 314,
+    energyKcal: 75,
+    fat: 7,
+    own: true
+  };
+
+  let posted: unknown[];
+
+  /** The table finds nothing; the household has its own foods, and takes a new one. */
+  function serve(own: unknown[]) {
+    posted = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) => {
+        const json = (body: unknown, status = 200) =>
+          new Response(JSON.stringify(body), {
+            status,
+            headers: { 'Content-Type': 'application/json' }
+          });
+
+        if (input.url.includes('/households/h1/foods') && input.method === 'POST') {
+          const body = (await input.json()) as { name: string; energyKcal: number };
+          posted.push(body);
+
+          return json({ ...light, id: 'f2', code: 'h:f2', ...body, energyKj: 0 }, 201);
+        }
+
+        return json({ items: input.url.includes('/households/h1/foods') ? own : [] });
+      })
+    );
+  }
+
+  const unknownKind: NutritionLine = { ...counted, status: 'unknownKind', food: null };
+
+  afterEach(() => resetAllStores());
+
+  it('offers the household’s own food for what was searched, cited from the package', async () => {
+    serve([light]);
+    const { onchoose } = show(unknownKind, { name: 'Kokosmilch light', householdId: 'h1' });
+
+    const list = await screen.findByRole('list', { name: 'Your foods from the package' });
+    expect(list).toHaveTextContent('Kokosmilch light');
+    expect(list).toHaveTextContent('75 kcal per 100 g · From the package');
+
+    await userEvent.click(within(list).getByRole('button'));
+
+    expect(onchoose).toHaveBeenCalledWith({
+      code: 'h:f1',
+      nameDe: 'Kokosmilch light',
+      nameEn: 'Kokosmilch light',
+      energyKcal: 75,
+      source: 'package'
+    });
+  });
+
+  it('adds a food from the label, starting from the ingredient’s name, and chooses it', async () => {
+    serve([]);
+    const { onchoose } = show(unknownKind, { name: 'Kokosmilch light', householdId: 'h1' });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Add from the package' }));
+
+    expect(screen.getByLabelText('Name')).toHaveValue('Kokosmilch light');
+
+    await userEvent.type(screen.getByLabelText('Energy (kcal)'), '75');
+    await userEvent.type(screen.getByLabelText('Fat (g)'), '7,5');
+    await userEvent.click(screen.getByRole('button', { name: 'Save and use' }));
+
+    await waitFor(() =>
+      expect(onchoose).toHaveBeenCalledWith(
+        expect.objectContaining({ code: 'h:f2', source: 'package' })
+      )
+    );
+    expect(posted).toEqual([
+      expect.objectContaining({ name: 'Kokosmilch light', energyKcal: 75, fat: 7.5, protein: null })
+    ]);
+  });
+
+  it('asks for the kilocalories before sending anything', async () => {
+    serve([]);
+    show(unknownKind, { name: 'Kokosmilch light', householdId: 'h1' });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Add from the package' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save and use' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('A name and the kilocalories are needed.');
+    expect(posted).toEqual([]);
+  });
+
+  it('cites the package for a chosen food of the household', async () => {
+    serve([]);
+    show(
+      {
+        ...counted,
+        corrected: true,
+        food: {
+          code: 'h:f1',
+          source: 'package',
+          nameDe: 'Kokosmilch light',
+          nameEn: 'Kokosmilch light',
+          labelDe: 'Kokosmilch light',
+          labelEn: 'Kokosmilch light'
+        }
+      },
+      { name: 'Kokosmilch light', householdId: 'h1' }
+    );
+
+    const now = await screen.findByRole('list', { name: 'Counts as' });
+
+    expect(now).toHaveTextContent('From the package');
+  });
+});
