@@ -9244,6 +9244,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                recipeId: string;
                 entryId: string;
             };
             cookie?: never;
@@ -9503,6 +9504,7 @@ export interface operations {
             };
             header?: never;
             path: {
+                recipeId: string;
                 entryId: string;
             };
             cookie?: never;
@@ -9559,6 +9561,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                recipeId: string;
                 entryId: string;
             };
             cookie?: never;
@@ -9614,6 +9617,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                recipeId: string;
                 entryId: string;
             };
             cookie?: never;

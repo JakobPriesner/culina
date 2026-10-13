@@ -21,8 +21,9 @@ public interface ICookLogRepository
     /// <summary>Appends an entry.</summary>
     Task<Result> AddAsync(CookLogEntry entry, CancellationToken cancellationToken);
 
-    /// <summary>One of this person's entries, or not found.</summary>
+    /// <summary>One of this person's entries for that recipe, or not found.</summary>
     Task<Result<CookLogEntry>> FindAsync(
+        Guid recipeId,
         Guid entryId,
         Guid userId,
         CancellationToken cancellationToken);
@@ -34,6 +35,6 @@ public interface ICookLogRepository
         CookPhoto? photo,
         CancellationToken cancellationToken);
 
-    /// <summary>Removes an entry, for the undo behind the "made it" toast.</summary>
-    Task<Result> RemoveAsync(Guid entryId, Guid userId, CancellationToken cancellationToken);
+    /// <summary>Removes an entry of that recipe, for the undo behind the "made it" toast.</summary>
+    Task<Result> RemoveAsync(Guid recipeId, Guid entryId, Guid userId, CancellationToken cancellationToken);
 }

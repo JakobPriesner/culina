@@ -106,6 +106,35 @@ public class CookPhotoTests(PostgresFixture postgres)
         Assert.Equal("recipes.image_unknown_width", response.ProblemCode);
     }
 
+    [Fact]
+    public async Task EntryRoutes_ShouldNotFindAnEntry_UnderARecipeItIsNotOf()
+    {
+        // Arrange
+        var (client, recipeId, entryId) = await SeedAsync();
+        await UploadAsync(client, recipeId, entryId, TestImages.Png(600, 400));
+        var householdId = (await client.GetAsync("/api/v1/households", Token))
+            .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
+        var other = (await client.PostAsync("/api/v1/recipes", new { householdId, title = "Risotto" }, Token))
+            .Json!.Value.GetProperty("recipeId").GetGuid();
+
+        // Act
+        var photo = await client.GetAsync(Photo(other, entryId), Token);
+        var removePhoto = await client.DeleteAsync(Photo(other, entryId), Token);
+        var replacePhoto = await UploadAsync(client, other, entryId, TestImages.Png(320, 240));
+        var undo = await client.DeleteAsync($"/api/v1/recipes/{other}/cook-log/{entryId}", Token);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, photo.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, removePhoto.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, replacePhoto.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, undo.StatusCode);
+
+        var log = (await client.GetAsync($"/api/v1/recipes/{recipeId}/cook-log", Token)).Json!.Value;
+        var entry = Assert.Single(log.GetProperty("items").EnumerateArray());
+        Assert.Equal(entryId, entry.GetProperty("entryId").GetGuid());
+        Assert.True(entry.GetProperty("hasPhoto").GetBoolean());
+    }
+
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     private static string Photo(Guid recipeId, Guid entryId) =>

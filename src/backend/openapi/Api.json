@@ -4006,6 +4006,15 @@
         "operationId": "undoRecipeCookedV1",
         "parameters": [
           {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "entryId",
             "in": "path",
             "required": true,
@@ -4338,6 +4347,15 @@
         "operationId": "setCookPhotoV1",
         "parameters": [
           {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "entryId",
             "in": "path",
             "required": true,
@@ -4417,6 +4435,15 @@
         "operationId": "removeCookPhotoV1",
         "parameters": [
           {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
             "name": "entryId",
             "in": "path",
             "required": true,
@@ -4467,6 +4494,15 @@
         "description": "Widths 400, 800 and 1600. Private and revalidated, because a photograph is replaced under the address it was served from; its ETag is the content hash, so a picture that was replaced is fetched and one that was not answers 304.",
         "operationId": "getCookPhotoV1",
         "parameters": [
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
           {
             "name": "entryId",
             "in": "path",

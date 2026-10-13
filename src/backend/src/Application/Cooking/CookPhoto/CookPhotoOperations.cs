@@ -14,13 +14,13 @@ namespace Application.Cooking.CookPhoto;
 /// A picture of one attempt: hung on it, taken off it, and served.
 /// </summary>
 /// <remarks>Personal like the note and the log: scoped to the caller's own entries in SQL, so another's attempt is not found rather than forbidden.</remarks>
-public sealed record SetCookPhotoCommand(Guid EntryId, Guid UserId, Stream Content);
+public sealed record SetCookPhotoCommand(Guid RecipeId, Guid EntryId, Guid UserId, Stream Content);
 
 /// <summary>Takes the picture off an attempt.</summary>
-public sealed record RemoveCookPhotoCommand(Guid EntryId, Guid UserId);
+public sealed record RemoveCookPhotoCommand(Guid RecipeId, Guid EntryId, Guid UserId);
 
 /// <summary>Finds an attempt's picture.</summary>
-public sealed record GetCookPhotoQuery(Guid EntryId, Guid UserId, int Width);
+public sealed record GetCookPhotoQuery(Guid RecipeId, Guid EntryId, Guid UserId, int Width);
 
 internal sealed class SetCookPhotoCommandHandler(
     ICookLogRepository log,
@@ -37,7 +37,7 @@ internal sealed class SetCookPhotoCommandHandler(
         using var tracked = UseCaseActivity.Start("Cooking.SetCookPhoto");
 
         var found = await log
-            .FindAsync(command.EntryId, command.UserId, cancellationToken)
+            .FindAsync(command.RecipeId, command.EntryId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var result = await found.Match(
@@ -96,7 +96,7 @@ internal sealed class RemoveCookPhotoCommandHandler(ICookLogRepository log, IUni
         using var tracked = UseCaseActivity.Start("Cooking.RemoveCookPhoto");
 
         var found = await log
-            .FindAsync(command.EntryId, command.UserId, cancellationToken)
+            .FindAsync(command.RecipeId, command.EntryId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var result = await found.Match(
@@ -131,7 +131,7 @@ internal sealed class GetCookPhotoQueryHandler(ICookLogRepository log, IImageSto
         using var tracked = UseCaseActivity.Start("Cooking.GetCookPhoto");
 
         var found = await log
-            .FindAsync(query.EntryId, query.UserId, cancellationToken)
+            .FindAsync(query.RecipeId, query.EntryId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 
         var result = found.Match(
