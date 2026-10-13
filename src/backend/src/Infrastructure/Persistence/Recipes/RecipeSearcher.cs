@@ -42,25 +42,7 @@ internal sealed partial class RecipeSearcher(DbExecutor executor, TimeProvider t
     // cannot use the trigram index and was ~12x slower; counted by position, as that subquery was.
     // Word by word, so each LIKE stays an index scan: a name holds a wanted ingredient when it
     // matches all of its words (IngredientSql says what holding means).
-    private static string Holders(string ingredients) => $"""
-        select g.recipe_id, count(distinct hit.position) as matched
-        from (
-            select ri.group_id, word.position
-            from (
-                select one.position, w.ae, w.a, count(*) over (partition by one.position) as words
-                from unnest({ingredients}) with ordinality as one(name, position)
-                cross join lateral culina_wanted_words(one.name) w
-            ) word
-            join recipe_ingredients ri on ri.name_ae like '%' || word.ae || '%'
-                                       or ri.name_a like '%' || word.a || '%'
-            group by ri.id, ri.group_id, word.position, word.words
-            having count(*) = word.words
-        ) hit
-        join ingredient_groups g on g.id = hit.group_id
-        join recipes owner on owner.id = g.recipe_id
-                          and owner.household_id = any(@library)
-        group by g.recipe_id
-        """;
+    private static string Holders(string ingredients) => IngredientSql.Holders(ingredients, "@library");
 
     // The tables a search reads; apart from Rules so the count skips the cook log.
     private static string Sources(bool scored) => $"""

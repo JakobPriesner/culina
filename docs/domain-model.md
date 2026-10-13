@@ -344,6 +344,18 @@ Putting a recipe on a smart cookbook by hand returns `cookbooks.rules_decide_mem
 A smart cookbook has no order somebody chose, so it reads newest-first rather
 than by a column that is null for every row on it.
 
+**Measured at the reference workload** (10,000 recipes in one household, ten
+smart and ten chosen shelves; `SmartCookbookLoadTests`, explicit, 2026-10-14 on
+arm64 Docker Desktop). A card's count and cover evaluate the shelf's rules over
+the whole library, once per card. Asked per recipe, that was 5.5 s for a page of
+twenty cookbooks and up to 2.5 s for one smart cookbook. Counting ingredient and
+tag matches once per shelf, set-based (`IngredientSql.Holders`,
+`SmartShelfSql.Carriers`), and reading a chosen shelf from its own rows, brought
+it to p95 113 ms for the page and 15 ms for one cookbook. The recipes on a smart
+shelf (`GET /recipes?cookbookId=`) were already set-based: p95 330 ms for page
+one, 218 ms with words. Budgets, p95: 250 ms for `GET /cookbooks`, 60 ms for one
+cookbook, 500 ms for its recipes.
+
 Cookbooks travel in the household archive (see *The archive*): a chosen shelf
 as the positions of its recipes, a smart one as its rules.
 
