@@ -40,7 +40,13 @@
   const describedBy = $derived(error ? errorId : hint ? hintId : undefined);
 </script>
 
-<svelte:element this={group ? 'fieldset' : 'div'} class="field" role={group ? 'group' : undefined}>
+<!-- A group's hint and error belong to the fieldset: the radios inside are not what they describe, and a role-less wrapper's description is never announced. -->
+<svelte:element
+  this={group ? 'fieldset' : 'div'}
+  class="field"
+  role={group ? 'group' : undefined}
+  aria-describedby={group ? describedBy : undefined}
+>
   <svelte:element this={group ? 'legend' : 'label'} class="label" for={group ? undefined : id}>
     {label}
     {#if !required && optionalText}
@@ -51,7 +57,7 @@
   {@render children({ id, describedBy, invalid: Boolean(error) })}
 
   {#if error}
-    <!-- Assertive would interrupt mid-typing; a form error can wait for a pause. -->
+    <!-- Assertive on purpose: an error answers something just submitted or left, so it is said at once; the hint is never announced on its own. -->
     <p class="message error" id={errorId} role="alert">{error}</p>
   {:else if hint}
     <p class="message hint" id={hintId}>{hint}</p>
