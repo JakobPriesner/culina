@@ -1826,5 +1826,19 @@
   "problem.nutrition.invalid_food": "Ein Lebensmittel braucht einen Namen und seine Kilokalorien pro 100 g, und jeder Wert muss in 100 g passen.",
   "shopping.quickAdd.placeholder": "z. B. 200 g Butter",
   "shopping.completed": "Erledigt",
-  "shopping.itemActions": "Aktionen für {name}"
+  "shopping.itemActions": "Aktionen für {name}",
+  "problem.cookbooks.order_mismatch": "Diese Reihenfolge enthält nicht genau die Rezepte dieses Kochbuchs. Öffne es neu und ordne, was jetzt darin steht.",
+  "cookbooks.arrange.action": "Rezepte anordnen",
+  "cookbooks.arrange.title": "Rezepte anordnen",
+  "cookbooks.arrange.intro": "In dieser Reihenfolge liest sich das Kochbuch. Was du später hinzufügst, kommt ans Ende.",
+  "cookbooks.arrange.up": "{title} nach oben",
+  "cookbooks.arrange.down": "{title} nach unten",
+  "cookbooks.arrange.moved": "{title}, jetzt {position} von {count}",
+  "cookbooks.arrange.save": "Reihenfolge speichern",
+  "cookbooks.arrange.cancel": "Abbrechen",
+  "cookbooks.arrange.close": "Schließen",
+  "cookbooks.arrange.failed": "Die Rezepte dieses Kochbuchs konnten nicht geladen werden.",
+  "cookbooks.arrange.retry": "Erneut versuchen",
+  "cookbooks.arrange.changed": "Jemand hat das Kochbuch inzwischen geändert. So sieht es jetzt aus; ordne es noch einmal.",
+  "cookbooks.arrange.saved": "Die neue Reihenfolge ist gespeichert."
 }

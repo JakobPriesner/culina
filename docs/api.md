@@ -426,6 +426,7 @@ whole library has, with no second implementation of any of them.
 | `POST` | `/cookbooks/{cookbookId}/restorations` | Any member of its household, until it is purged; back with the recipes it held. `204`. |
 | `PUT` | `/cookbooks/{cookbookId}/recipes/{recipeId}` | Put a recipe on. `204`. `409` on a cookbook that fills itself. |
 | `DELETE` | `/cookbooks/{cookbookId}/recipes/{recipeId}` | Take it off. `204`, and `204` when it was never on. `409` on a cookbook that fills itself. |
+| `PUT` | `/cookbooks/{cookbookId}/recipes` | Arrange it: `{ recipeIds }`, every recipe on it once, first first. `200` with the cookbook and its new ETag. `If-Match` required; anything but exactly the shelf is `400 cookbooks.order_mismatch`; `409` on a cookbook that fills itself. A recipe put on later goes last. |
 | `GET` | `/recipes/{recipeId}/cookbooks` | Which cookbooks contain it. Not paged — a recipe is on a handful of shelves or none. |
 
 `PUT` on the membership rather than `POST` to a collection, because being on a

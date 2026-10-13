@@ -292,9 +292,15 @@ ordinary. It keeps the moment it first went on, and the cookbook's `Version` is
 **not** bumped: churning it to report that nothing happened would throw away
 every cached copy.
 
-Order inside a cookbook is `AddedAt` ascending, which reads like a table of
-contents. Manual ordering is not implemented; when it is, it adds a
-`SortOrder` column backfilled from `AddedAt`.
+Order inside a cookbook is `SortOrder`, which reads like a table of contents
+and starts as the order recipes were put on (migration 0043 numbered every
+existing shelf by `AddedAt`). A new recipe goes last. Rearranging replaces the
+whole order at once (`PUT /cookbooks/{id}/recipes`, every recipe on the shelf
+once, `If-Match` required), so a list that no longer covers the shelf is refused
+rather than guessed at. `AddedAt` keeps meaning "when it went on", which the
+suggestion ranker reads. The cover is the first photographed recipes in that
+order, so arranging a shelf is also how its cover is chosen until an explicit
+one exists.
 
 `CookbookRecipe.RecipeId` cascades, as `MealPlanEntry.RecipeId` does: a deleted
 recipe drops off every shelf it was on — hidden while it is in the bin, and gone

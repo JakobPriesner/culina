@@ -58,6 +58,13 @@ public static class CookbookErrors
         "This cookbook is filled by hand, so it has no rules. Make a cookbook that fills itself instead.",
         ErrorType.Conflict);
 
+    /// <summary>A new order that is not exactly the shelf's recipes, each once.</summary>
+    /// <remarks>Never a guess at what was meant: a recipe left out of an order would otherwise fall off the shelf or float to an arbitrary place.</remarks>
+    public static readonly Error OrderMismatch = new(
+        "cookbooks.order_mismatch",
+        "That order does not list exactly the recipes on this cookbook, each once.",
+        ErrorType.Validation);
+
     /// <summary>The description is longer than a shelf label should be.</summary>
     public static readonly Error InvalidDescription = new(
         "cookbooks.invalid_description",

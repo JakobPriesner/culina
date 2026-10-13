@@ -7574,6 +7574,107 @@
             }
           }
         }
+      },
+      "put": {
+        "tags": [
+          "Cookbooks"
+        ],
+        "summary": "Arrange a cookbook's recipes",
+        "description": "Replaces the order of a cookbook filled by hand: `recipeIds` lists every recipe on it, each once, first first. Anything else is 400 `cookbooks.order_mismatch`, never a guess at where a missing recipe should go. A recipe added later goes last. A smart cookbook has no order to choose (409 `cookbooks.rules_decide_membership`). The order is part of the cookbook, so `If-Match` is required — missing is 428, stale is 412 — and the answer is the cookbook with its new version and cover.",
+        "operationId": "reorderCookbookRecipesV1",
+        "parameters": [
+          {
+            "name": "cookbookId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CookbooksReorderCookbookRecipesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookbooksCookbookDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/cookbooks/{cookbookId}/restorations": {
@@ -10001,6 +10102,23 @@
           }
         },
         "description": "Which cookbooks a recipe is on. Not paged: a recipe is on a handful of shelves."
+      },
+      "CookbooksReorderCookbookRecipesRequest": {
+        "required": [
+          "recipeIds"
+        ],
+        "type": "object",
+        "properties": {
+          "recipeIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Every recipe on the cookbook, each once, first first."
+          }
+        },
+        "description": "A chosen cookbook's recipes in the order they should stand."
       },
       "CookbooksUpdateCookbookRequest": {
         "required": [

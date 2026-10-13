@@ -15,6 +15,13 @@ public sealed record AddRecipeToCookbookCommand(Guid CookbookId, Guid RecipeId, 
 /// <summary>Takes a recipe off a shelf.</summary>
 public sealed record RemoveRecipeFromCookbookCommand(Guid CookbookId, Guid RecipeId, Guid UserId);
 
+/// <summary>Arranges a chosen shelf: every recipe on it, in the order it should stand.</summary>
+public sealed record ReorderCookbookRecipesCommand(
+    Guid CookbookId,
+    Guid UserId,
+    long ExpectedVersion,
+    IReadOnlyList<Guid> RecipeIds);
+
 /// <summary>Which cookbooks a recipe is on.</summary>
 public sealed record GetRecipeCookbooksQuery(Guid RecipeId, Guid UserId, Guid? HouseholdId);
 
@@ -129,6 +136,72 @@ internal sealed class RemoveRecipeFromCookbookCommandHandler(
             error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
 
         return tracked.Record(result);
+    }
+}
+
+internal sealed class ReorderCookbookRecipesCommandHandler(
+    ICookbookRepository cookbooks,
+    IHouseholdRepository households,
+    IUnitOfWork unitOfWork,
+    TimeProvider time)
+    : ICommandHandler<ReorderCookbookRecipesCommand, CookbookDetail>
+{
+    public async Task<Result<CookbookDetail>> Handle(
+        ReorderCookbookRecipesCommand command,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+
+        using var tracked = UseCaseActivity.Start("Cookbooks.Reorder");
+
+        var shelf = await CookbookAccess
+            .VisibleAsync(cookbooks, households, command.CookbookId, command.UserId, cancellationToken)
+            .ConfigureAwait(false);
+
+        var result = await shelf.Match(
+            found => found.Cookbook.Kind == CookbookKind.Smart
+                // Its rules decide what is on it, and it reads newest first: there is no order to choose.
+                ? Task.FromResult(Result<CookbookDetail>.Failure(CookbookErrors.RulesDecideMembership))
+                : unitOfWork.InTransactionAsync(
+                    token => ReorderAsync(command, found.Cookbook, token),
+                    cancellationToken),
+            error => Task.FromResult(Result<CookbookDetail>.Failure(error))).ConfigureAwait(false);
+
+        return tracked.Record(result);
+    }
+
+    private async Task<Result<CookbookDetail>> ReorderAsync(
+        ReorderCookbookRecipesCommand command,
+        Cookbook cookbook,
+        CancellationToken cancellationToken)
+    {
+        cookbook.Touch(time.GetUtcNow());
+
+        // The version first: a shelf changed since it was read is 412, so the client reads it again, rather than
+        // 400 for an order that was right when it was made. A failure below rolls the bump back.
+        var saved = await cookbooks
+            .SaveAsync(cookbook, command.ExpectedVersion, cancellationToken)
+            .ConfigureAwait(false);
+
+        return await saved.Match(
+            async _ =>
+            {
+                var onShelf = await cookbooks.RecipeIdsAsync(cookbook.Id, cancellationToken).ConfigureAwait(false);
+
+                // The same recipes, each once: a client that read the shelf right and sent something else.
+                if (command.RecipeIds.Count != onShelf.Count || !command.RecipeIds.ToHashSet().SetEquals(onShelf))
+                {
+                    return CookbookErrors.OrderMismatch;
+                }
+
+                await cookbooks.ReorderAsync(cookbook.Id, command.RecipeIds, cancellationToken).ConfigureAwait(false);
+
+                // Read again: the cover follows the shelf's order.
+                var arranged = await cookbooks.DescribeAsync(cookbook.Id, cancellationToken).ConfigureAwait(false);
+
+                return arranged.Map(one => one.ToDetail());
+            },
+            error => Task.FromResult(Result<CookbookDetail>.Failure(error))).ConfigureAwait(false);
     }
 }
 
