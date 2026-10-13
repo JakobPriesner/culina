@@ -15,8 +15,12 @@ public static class StepText
     private const string Open = "[[ingredient:";
     private const string Close = "]]";
 
-    /// <summary>Escapes a literal <c>[[</c> so it cannot be read back as a reference.</summary>
-    private const string EscapedOpen = "[\\[";
+    /// <summary>
+    /// Written after a literal <c>[</c> that comes before another <c>[</c> or a backslash, so
+    /// <c>[[</c> cannot be read back as a reference and a literal <c>[\</c> cannot be read back as
+    /// an escape. Rows stored before the backslash was escaped too only ever hold it before <c>[</c>.
+    /// </summary>
+    private const char Escape = '\\';
 
     /// <summary>Splits stored text into its segments.</summary>
     public static Result<IReadOnlyList<StepSegment>> Parse(string? stored)
@@ -32,10 +36,10 @@ public static class StepText
 
         while (index < stored.Length)
         {
-            if (stored.AsSpan(index).StartsWith(EscapedOpen, StringComparison.Ordinal))
+            if (IsEscaped(stored, index))
             {
-                text.Append("[[");
-                index += EscapedOpen.Length;
+                text.Append('[');
+                index += 2;
 
                 continue;
             }
@@ -84,7 +88,7 @@ public static class StepText
             switch (segment)
             {
                 case TextSegment text:
-                    stored.Append(text.Value.Replace("[[", EscapedOpen, StringComparison.Ordinal));
+                    AppendEscaped(stored, text.Value);
                     break;
 
                 case IngredientSegment ingredient:
@@ -121,6 +125,25 @@ public static class StepText
         ArgumentNullException.ThrowIfNull(segments);
 
         return string.Concat(segments.OfType<TextSegment>().Select(segment => segment.Value));
+    }
+
+    private static bool IsEscaped(string stored, int index) =>
+        index + 2 < stored.Length
+        && stored[index] == '['
+        && stored[index + 1] == Escape
+        && stored[index + 2] is '[' or Escape;
+
+    private static void AppendEscaped(StringBuilder stored, string text)
+    {
+        for (var index = 0; index < text.Length; index++)
+        {
+            stored.Append(text[index]);
+
+            if (text[index] == '[' && index + 1 < text.Length && text[index + 1] is '[' or Escape)
+            {
+                stored.Append(Escape);
+            }
+        }
     }
 
     private static void Flush(List<StepSegment> segments, StringBuilder text)
