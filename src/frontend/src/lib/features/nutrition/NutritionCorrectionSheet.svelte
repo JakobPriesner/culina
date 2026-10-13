@@ -42,9 +42,9 @@
   }
 
   let {
-    name,
+    name: opening,
     householdId = null,
-    line,
+    line: lineNow,
     unit = null,
     perUnit = null,
     onchoose,
@@ -55,6 +55,19 @@
   }: Props = $props();
 
   const delayMs = 250;
+
+  // The caller empties name and line the moment an answer is given, while the sheet is still fading out; what it
+  // showed is kept until it is opened again, so it does not read "Was ist „“?" and shrink on the way out.
+  let held = $state<{ name: string; line: NutritionLine | null } | null>(null);
+
+  $effect.pre(() => {
+    if (opening !== null) {
+      held = { name: opening, line: lineNow };
+    }
+  });
+
+  const name = $derived(opening ?? held?.name ?? null);
+  const line = $derived(opening === null ? (held?.line ?? null) : lineNow);
 
   let typed = $state('');
   let foods = $state<readonly FoodHit[]>([]);
@@ -101,10 +114,14 @@
   $effect(() => {
     clearTimeout(timer);
 
-    const opening = name;
+    // Closing leaves the last search on show while the sheet fades; the next opening starts afresh.
+    if (opening === null) {
+      return;
+    }
+
     const offered = untrack(() => (line?.variants ?? []).length > 0);
 
-    const query = opening === null || offered ? '' : opening;
+    const query = offered ? '' : opening;
 
     typed = query;
     void search(query);
@@ -235,8 +252,9 @@
 
   // A sheet opened on another name starts without the form.
   $effect(() => {
-    void name;
-    adding = false;
+    if (opening !== null) {
+      adding = false;
+    }
   });
 
   async function addFood(label: Label) {
@@ -271,7 +289,7 @@
 {/snippet}
 
 <Sheet
-  open={name !== null}
+  open={opening !== null}
   title={m['nutrition.correct.title']({ name: name ?? '' })}
   closeLabel={m['nutrition.correct.close']()}
   {onclose}
