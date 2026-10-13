@@ -26,9 +26,21 @@ function memoryStore(): SecretStore {
 
 let store: SecretStore = memoryStore();
 
-/** Called once by the native shell before anything reads the instance. */
+let registered: () => void = () => {};
+
+/**
+ * Settles once the native shell has registered the Keychain/Keystore store. Reading the session token before that
+ * found nothing, kept nothing for the whole launch, and the 401 that followed deleted the real token: every cold start
+ * signed the person out. Telemetry (`hooks.client.ts`) asks the API before the first route registers the store.
+ */
+export const secretsRegistered = new Promise<void>((resolve) => {
+  registered = resolve;
+});
+
+/** Called once by the native shell; anything that read the instance before waits for it. */
 export function useSecretStore(next: SecretStore): void {
   store = next;
+  registered();
 }
 
 export const secrets: SecretStore = {

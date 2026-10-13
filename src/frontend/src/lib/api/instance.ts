@@ -1,5 +1,5 @@
 import { native } from './platform';
-import { secrets } from './secrets';
+import { secrets, secretsRegistered } from './secrets';
 
 /**
  * The self-hosted server the installed app talks to (docs/native-app-design.md, 3.2). The website is served by its server,
@@ -22,6 +22,9 @@ export function loadInstance(): Promise<void> {
 }
 
 async function remembered(): Promise<void> {
+  // The token is in the Keychain, which the shell registers before the first route; a read before that finds nothing.
+  await secretsRegistered;
+
   origin = readOrigin();
   token = origin ? await secrets.read(tokenKey) : null;
 }

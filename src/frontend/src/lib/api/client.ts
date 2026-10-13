@@ -2,7 +2,7 @@ import createClient from 'openapi-fetch';
 
 import type { paths } from './generated/schema';
 import { csrfToken } from './cookies';
-import { credentialsMode } from './credentials';
+import { authorization, credentialsMode } from './credentials';
 import { apiUrl, instanceOrigin, loadInstance } from './instance';
 import { conditionalRequests, csrf, expiredSessions } from './middleware';
 import { ErrorCodes, offline, timedOut, toAppError } from './problem';
@@ -119,9 +119,20 @@ async function toInstance(request: Request, signal: AbortSignal): Promise<Reques
   const { pathname, search } = new URL(request.url);
   const hasBody = request.method !== 'GET' && request.method !== 'HEAD';
 
+  // The bearer token, once more, now that it has been read: the middleware runs first, and on a cold start the
+  // session load runs beside the root layout's, before the token is out of the Keychain. Without it that first
+  // /users/me went out bare, answered 401, and the 401 deleted the token: every launch signed the person out.
+  const headers = new Headers(request.headers);
+
+  for (const [name, value] of Object.entries(authorization(true))) {
+    if (!headers.has(name)) {
+      headers.set(name, value);
+    }
+  }
+
   return new Request(apiUrl(`${pathname}${search}`), {
     method: request.method,
-    headers: request.headers,
+    headers,
     body: hasBody ? await request.blob() : null,
     credentials: request.credentials,
     signal
