@@ -7,7 +7,11 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../src/backend"
 
-dotnet restore --locked-mode >/dev/null
+# Quiet unless it fails: NuGetAudit fails restore itself on a new advisory, and the reason is in its output.
+if ! restore=$(dotnet restore --locked-mode 2>&1); then
+  echo "$restore"
+  exit 1
+fi
 
 found=$(dotnet list package --vulnerable --include-transitive --format json |
   jq -r '[.projects[]?.frameworks[]? | (.topLevelPackages[]?, .transitivePackages[]?)]
