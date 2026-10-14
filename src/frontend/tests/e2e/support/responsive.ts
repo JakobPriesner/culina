@@ -708,6 +708,15 @@ export async function responsiveData(
             section: 'bakery',
             isChecked: false,
             isManual: true
+          },
+          {
+            itemId: 'item-2',
+            name: 'Vanillezuckerpäckchen',
+            quantity: 1.67,
+            unit: 'pack',
+            section: 'spices_baking',
+            isChecked: false,
+            isManual: true
           }
         ]
       });
