@@ -2,14 +2,11 @@
   import { resolve } from '$app/paths';
   import { ActionMenu, Checkbox, IconButton } from '$ds';
 
-  import { formatQuantity } from '$features/recipes/formatQuantity';
-  import { quantityLabels } from '$features/recipes/quantityLabels';
   import type { MealSlot } from '$features/planning/mealPlan.svelte';
   import { slotLabel } from '$features/planning/slots';
   import { haptics } from '$shell/haptics';
   import { formatDate, m } from '$shell/i18n';
-  import { preferences } from '$shell/preferences.svelte';
-  import { amountToBuy } from './amountToBuy';
+  import { amountOf } from './shoppingAmount';
   import { nameOf, sectionOrder, type Section } from './sections';
   import type { ShoppingItem } from './stores/shopping.svelte';
 
@@ -27,13 +24,6 @@
   let { item, oncheck, onremove, onmove }: Props = $props();
 
   let showingSources = $state(false);
-
-  const amountOf = (quantity: number | null | undefined, unit: string | null | undefined) =>
-    formatQuantity(
-      amountToBuy({ value: quantity ?? null, unit: unit ?? null }, preferences.measurementSystem),
-      preferences.locale,
-      quantityLabels
-    ).text;
 
   const amount = $derived(amountOf(item.quantity, item.unit));
   const sources = $derived(item.sources ?? []);
