@@ -85,7 +85,7 @@
       <Button size="sm" onclick={() => void store.load(householdId)}>{m['error.retry']()}</Button>
     </div>
   {:else if status !== 'ready'}
-    <div class="skeletons" aria-label={m['ingredients.loading']()}>
+    <div class="skeletons" role="status" aria-busy="true" aria-label={m['ingredients.loading']()}>
       {#each [0, 1, 2, 3] as row (row)}
         <Skeleton width={row % 2 ? '50%' : '70%'} height="1.25rem" />
       {/each}

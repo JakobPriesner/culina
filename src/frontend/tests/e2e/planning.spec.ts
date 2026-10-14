@@ -197,15 +197,22 @@ test.describe('planning a week', () => {
     const which = await indexOfDay(page, onto);
 
     await page
-      .getByRole('button', { name: new RegExp(`${title}.*(another day|anderen Tag)`, 'i') })
+      .getByRole('button', {
+        name: new RegExp(`(edit or move ${title}|${title} bearbeiten oder verschieben)`, 'i')
+      })
       .click();
 
     const sheet = page.getByRole('dialog');
 
     await expect(sheet).toBeVisible();
 
-    await sheet.getByRole('radio').nth(which).check();
-    await sheet.getByRole('button', { name: /^(move|verschieben)$/i }).click();
+    // The sheet also edits servings and the meal; the day is its own group.
+    await sheet
+      .getByRole('group', { name: /^(day|tag)$/i })
+      .getByRole('radio')
+      .nth(which)
+      .check();
+    await sheet.getByRole('button', { name: /^(save|speichern)$/i }).click();
 
     await expect(sheet).toBeHidden();
     await expect.poll(() => dayHolding(page, title)).toBe(onto);

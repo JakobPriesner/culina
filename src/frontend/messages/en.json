@@ -1789,7 +1789,7 @@
   "ingredients.names.rename": "Rename",
   "ingredients.names.mergeInto": "Merge into “{name}”",
   "ingredients.names.cancel": "Cancel",
-  "ingredients.loading": "Loading ingredients",
+  "ingredients.loading": "Loading your ingredients",
   "ingredients.failed": "Your ingredients could not be loaded.",
   "ingredients.merges.title": "Merge rules",
   "ingredients.merges.body": "Names that are always saved as another, in recipes you write, import or copy.",
