@@ -30,8 +30,8 @@ env:
 jobs:
   # The gates the `edge` image waits for, reused rather than repeated: CI's run
   # for this exact commit on main. A tag on a commit that is red, still running,
-  # or never merged publishes nothing. Re-run this workflow once CI is green —
-  # the tag does not have to be pushed again.
+  # never merged, or never tested on its own publishes nothing. Re-run this
+  # workflow once CI is green — the tag does not have to be pushed again.
   gate:
     name: On main, and CI passed
     runs-on: ubuntu-latest
@@ -55,11 +55,22 @@ jobs:
             echo "::error::${GITHUB_REF_NAME} points at ${commit}, which is not on main. Merge it, then tag the merged commit."
             exit 1
           fi
-          passed=$(gh api --method GET "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" \
+          runs="repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs"
+          passed=$(gh api --method GET "$runs" \
             -f head_sha="$commit" -f branch=main -f event=push -f status=success \
             --jq '.total_count')
           if [ "$passed" -eq 0 ]; then
-            echo "::error::CI has not passed on ${commit}. Once it has, re-run this workflow."
+            # CI runs on the newest commit of a push only, so a commit that
+            # reached main together with later ones never gets a run, and
+            # waiting for one is waiting forever.
+            ran=$(gh api --method GET "$runs" \
+              -f head_sha="$commit" -f branch=main -f event=push \
+              --jq '.total_count')
+            if [ "$ran" -eq 0 ]; then
+              echo "::error::CI never ran on ${commit}: it reached main in a push of several commits, and CI tests only the newest. Tag a commit CI ran on."
+            else
+              echo "::error::CI has not passed on ${commit}. Once it has, re-run this workflow."
+            fi
             exit 1
           fi
 

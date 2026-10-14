@@ -7,6 +7,9 @@
 #   ANDROID_UPLOAD_KEY_PASSWORD, PLAY_SERVICE_ACCOUNT_JSON,
 #   APP_STORE_CONNECT_KEY_ID, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY (base64 .p8), APPLE_TEAM_ID.
 #
+# Off until the repository variable STORE_RELEASES is 'true', set once that environment and its secrets exist.
+# Without it every release would end in a red run here, and the first one would create `app-stores` with no reviewer.
+#
 # Actions are pinned to a commit, as everywhere.
 
 name: Native release
@@ -31,7 +34,7 @@ env:
 jobs:
   android:
     name: Android to the internal track
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: vars.STORE_RELEASES == 'true' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: app-stores
@@ -100,7 +103,7 @@ jobs:
 
   ios:
     name: iOS to TestFlight
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: vars.STORE_RELEASES == 'true' && (github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success')
     runs-on: macos-26
     timeout-minutes: 60
     environment: app-stores
