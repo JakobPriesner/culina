@@ -7,12 +7,14 @@
   interface Props {
     recipes: readonly RecipeSummary[];
     taken: ReadonlySet<string>;
+    /** What to say of a taken recipe in place of "Added", by id: when a pick is not the receipt of what was just done. */
+    notes?: ReadonlyMap<string, string>;
     onpick: (recipe: RecipeSummary) => void;
     /** With it, every row is a toggle. */
     onremove?: (recipe: RecipeSummary) => void;
   }
 
-  let { recipes, taken, onpick, onremove }: Props = $props();
+  let { recipes, taken, notes, onpick, onremove }: Props = $props();
 </script>
 
 <ul class="results">
@@ -35,7 +37,9 @@
           </span>
         {/if}
         <span class="title">{recipe.title}</span>
-        {#if isTaken}
+        {#if isTaken && notes?.has(recipe.id)}
+          <span class="meta note">{notes.get(recipe.id)}</span>
+        {:else if isTaken}
           <span class="meta taken">{m['picker.taken']()}</span>
         {:else}
           <span class="meta">{metaLineFor(recipe)}</span>
@@ -87,6 +91,11 @@
     color: var(--text-muted);
     font-size: var(--text-sm);
     white-space: nowrap;
+  }
+
+  .note {
+    font-weight: var(--weight-medium);
+    white-space: normal;
   }
 
   .taken {
