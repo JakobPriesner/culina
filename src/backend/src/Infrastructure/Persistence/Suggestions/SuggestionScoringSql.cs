@@ -213,6 +213,25 @@ internal static class SuggestionScoringSql
             group by m.recipe_id
         ),
 
+        -- The same question for a recipe the plan has never held, from what its words say it is: a cake is no dinner, a pancake
+        -- is breakfast. An imported library has no plan history, so without it every recipe is equally "a good fit" and a
+        -- breakfast list opens with Bolognese. The lexicon's meal concepts are derived (title, tags, ingredients), so
+        -- this stays a prior that history replaces, never an opinion over it.
+        sc_meal_kind as (
+            select d.recipe_id,
+                   case
+                       when @scSlot::text is null then 0
+                       when d.concepts @> array[@scSlot::text] then 0.6
+                       -- Not a main meal: the plan's three slots are meals, and these are what come after or beside them.
+                       when d.concepts && array['dessert', 'snack', 'drink', 'side'] then -1.0
+                       -- The narrowest occasion: a recipe with no sign of being breakfast is probably not.
+                       when @scSlot::text = 'breakfast' then -0.4
+                       else 0
+                   end as value
+            from recipe_search_documents d
+            where d.household_id = any(@library::uuid[])
+        ),
+
         -- A proxy for how much of a project it is: used to rank, never shown.
         sc_effort as (
             select r.id as recipe_id,
@@ -303,7 +322,9 @@ internal static class SuggestionScoringSql
 
                 case
                     when @scSlot::text is null then 0
-                    else @wSlot::numeric * (coalesce(sl.p, 0.5) - 0.5) * 2
+                    -- The plan's own history when there is any; otherwise what the words say.
+                    when sl.p is null then @wSlot::numeric * coalesce(mk.value, 0)
+                    else @wSlot::numeric * (sl.p - 0.5) * 2
                 end as slot,
 
                 -- A Saturday tolerates a project; a Wednesday does not.
@@ -343,6 +364,7 @@ internal static class SuggestionScoringSql
             left join sc_shown sh on sh.recipe_id = r.id
             left join sc_season se on se.recipe_id = r.id
             left join sc_slot sl on sl.recipe_id = r.id
+            left join sc_meal_kind mk on mk.recipe_id = r.id
             left join sc_effort ef on ef.recipe_id = r.id
             left join sc_similarity sim on sim.recipe_id = r.id
             left join recipe_origins o on o.recipe_id = r.id
