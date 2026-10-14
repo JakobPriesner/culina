@@ -1,8 +1,8 @@
 using Amazon.S3;
 using Application.Abstractions;
 using Application.Abstractions.Settings;
-using IntegrationTests.Fixtures;
 using Infrastructure.Storage;
+using IntegrationTests.Fixtures;
 using TestSupport;
 
 namespace IntegrationTests.Storage;
