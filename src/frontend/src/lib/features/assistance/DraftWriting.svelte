@@ -1,6 +1,10 @@
 <script lang="ts">
   import { GenerationAura, SectionLabel, Skeleton } from '$ds';
+  import { formatQuantity } from '$features/recipes/formatQuantity';
+  import { quantityLabels } from '$features/recipes/quantityLabels';
+  import { scaleQuantity } from '$features/recipes/scaling';
   import { m } from '$shell/i18n';
+  import { preferences } from '$shell/preferences.svelte';
 
   import DraftProgress from './DraftProgress.svelte';
   import type { Draft } from './draftToRecipe';
@@ -18,6 +22,35 @@
 
   const lines = $derived(draft?.groups.flatMap((group) => group.ingredients) ?? []);
   const steps = $derived(draft?.steps ?? []);
+
+  /** The unit in the reader's language ("EL", not the stored `tbsp`), the same as the recipe will show it. */
+  const amountOf = (line: (typeof lines)[number]): string =>
+    formatQuantity(
+      scaleQuantity({ value: line.quantity ?? null, unit: line.unit ?? null }, 1),
+      preferences.locale,
+      quantityLabels
+    ).text;
+
+  /** What the draft says about the yield and the time, so a figure read off the source is seen rather than lost. */
+  const facts = $derived.by(() => {
+    if (!draft) {
+      return [];
+    }
+
+    const yielded =
+      draft.yieldAmount == null
+        ? null
+        : draft.yieldKind === 'pieces'
+          ? `${draft.yieldAmount} ${draft.yieldLabel ?? ''}`.trim()
+          : m['recipes.meta.servings']({ count: draft.yieldAmount });
+
+    return [
+      yielded,
+      ...[draft.prepMinutes, draft.cookMinutes].map((minutes) =>
+        minutes == null ? null : m['assist.minutes']({ count: minutes })
+      )
+    ].filter((fact): fact is string => fact !== null);
+  });
 </script>
 
 <!-- One polite live region for the lot: it announces the draft, not each of twenty lines. -->
@@ -38,13 +71,17 @@
     <p class="description arrival">{draft.description}</p>
   {/if}
 
+  {#if facts.length > 0}
+    <p class="facts arrival">{facts.join(m['recipes.meta.separator']())}</p>
+  {/if}
+
   {#if lines.length > 0}
     <div class="part arrival">
       <SectionLabel as="h4">{m['assist.part.ingredients']()}</SectionLabel>
       <ul class="lines">
         {#each lines as line, index (index)}
           <li class="arrival">
-            {[line.quantity, line.unit, line.name].filter(Boolean).join(' ')}
+            {[amountOf(line), line.name].filter(Boolean).join(' ')}
             {#if line.note}<span class="note">, {line.note}</span>{/if}
           </li>
         {/each}
@@ -85,6 +122,11 @@
     font-family: var(--font-editorial);
     font-size: var(--text-xl);
     line-height: var(--leading-tight);
+  }
+
+  .facts {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
 
   .description {
