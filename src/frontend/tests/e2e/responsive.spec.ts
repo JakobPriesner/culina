@@ -657,6 +657,42 @@ test.describe('responsive production layouts @offline', () => {
     });
   }
 
+  for (const [width, height] of [
+    [320, 568],
+    [320, 740]
+  ] as const) {
+    test(`the step counter stays clear of the cooking tools at ${width}x${height}`, async ({
+      page
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport matrix.');
+      await page.setViewportSize({ width, height });
+      // Step 12 of 12: the widest digits the counter will usually show.
+      await responsiveData(page, 'de', { stepCount: 12 });
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(`/recipes/${recipeId}/cook`);
+      const controls = page.locator('.controls:has(.moves)');
+      const progress = controls.getByText('Schritt 12 von 12', { exact: true });
+      await expect(progress).toBeVisible();
+      const counter = (await progress.boundingBox())!;
+      const panel = (await controls.boundingBox())!;
+      expect(counter.x).toBeGreaterThanOrEqual(panel.x);
+      expect(counter.x + counter.width).toBeLessThanOrEqual(panel.x + panel.width);
+      // The counter may take two lines, never a split word, and no tool sits on it; the bar stays a small part of the screen.
+      await expectWholeWords(progress);
+      expect(panel.height).toBeLessThanOrEqual(height * 0.33);
+      for (const tool of await controls.locator('.tools button').all()) {
+        const box = (await tool.boundingBox())!;
+        const apart =
+          box.x >= counter.x + counter.width ||
+          box.x + box.width <= counter.x ||
+          box.y >= counter.y + counter.height ||
+          box.y + box.height <= counter.y;
+        expect(apart, await tool.getAttribute('aria-label')).toBe(true);
+      }
+      await expectReflow(page);
+    });
+  }
+
   test('short landscape keeps forms, dialogs and cooking reachable', async ({ page }) => {
     await page.setViewportSize({ width: 844, height: 390 });
     await responsiveData(page);

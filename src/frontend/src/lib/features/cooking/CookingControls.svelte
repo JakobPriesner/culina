@@ -233,5 +233,10 @@
     .tools {
       gap: var(--space-1);
     }
+
+    /* The tools keep their 56px, so the counter takes what is left, over two lines if "Schritt 12 von 12" does not fit one. */
+    .progress {
+      white-space: normal;
+    }
   }
 </style>
