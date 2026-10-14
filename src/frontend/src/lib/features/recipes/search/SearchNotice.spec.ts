@@ -92,6 +92,29 @@ describe('the search notices', () => {
     expect(screen.getByRole('link', { name: 'Import' })).toBeInTheDocument();
   });
 
+  it('says when its links leave, but not when they open another tab', async () => {
+    const onnavigate = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(SearchNotice, {
+      props: {
+        interpretation: reading({ freeText: 'Schnitzel' }),
+        total: 0,
+        query: 'Schnitzel',
+        onnavigate,
+        ...handlers()
+      }
+    });
+    document.addEventListener('click', (event) => event.preventDefault());
+
+    await user.click(screen.getByRole('link', { name: 'Import' }));
+    expect(onnavigate).toHaveBeenCalledOnce();
+
+    await user.keyboard('{Control>}');
+    await user.click(screen.getByRole('link', { name: 'New recipe' }));
+    await user.keyboard('{/Control}');
+    expect(onnavigate).toHaveBeenCalledOnce();
+  });
+
   it('keeps the reading Olli, just still, when motion is turned off', () => {
     olliSetting.animate(false);
     const { container } = renderWithProviders(SearchNotice, {

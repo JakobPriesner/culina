@@ -219,6 +219,7 @@
         query={session.applied}
         onastyped={session.searchAsTyped}
         onremove={session.remove}
+        onnavigate={onclose}
       />
     {/if}
 

@@ -70,6 +70,7 @@
     aria-disabled={inert ? 'true' : undefined}
     aria-label={label}
     aria-busy={loading ? 'true' : undefined}
+    {onclick}
   >
     {@render body()}
   </a>
