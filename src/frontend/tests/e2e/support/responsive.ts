@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url';
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 // API fixtures deliberately model the wire response, not a rendered component.
 // eslint-disable-next-line no-restricted-imports
 import type { components } from '../../../src/lib/api/generated/schema';
@@ -790,4 +790,26 @@ export async function openShoppingFromCooking(page: Page) {
     await page.getByRole('link', { name: 'Back to recipe', exact: true }).click();
   }
   await nav.getByRole('link', { name: /shopping/i }).click();
+}
+
+/** No word of any element's text is split across lines. */
+export async function expectWholeWords(elements: Locator) {
+  const split = await elements.evaluateAll((all) => {
+    const broken: string[] = [];
+    for (const el of all) {
+      const texts = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      for (let node = texts.nextNode(); node; node = texts.nextNode()) {
+        for (const word of node.textContent!.matchAll(/\S+/g)) {
+          const range = document.createRange();
+          range.setStart(node, word.index);
+          range.setEnd(node, word.index + word[0].length);
+          // A word on one line has rectangles at one height.
+          const lines = new Set([...range.getClientRects()].map((rect) => Math.round(rect.top)));
+          if (lines.size > 1) broken.push(word[0]);
+        }
+      }
+    }
+    return broken;
+  });
+  expect(split).toEqual([]);
 }
