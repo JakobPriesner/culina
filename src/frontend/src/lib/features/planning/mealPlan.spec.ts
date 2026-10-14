@@ -44,6 +44,16 @@ describe('moving a meal to another day', () => {
     expect(landed?.slot).toBe('lunch');
   });
 
+  it('changes for how many it is when asked, without moving it', () => {
+    const planned = { ...meal('Curry'), servings: 8 };
+    const start = week({ [monday]: [planned] });
+
+    const edited = withMealMoved(start, 'entry-Curry', { date: monday, position: 0, servings: 3 });
+
+    expect(edited.days[0]?.meals[0]?.servings).toBe(3);
+    expect(titles(edited, monday)).toEqual(['Curry']);
+  });
+
   it('puts it last when no gap was aimed at, which is what the sheet sends', () => {
     const start = week({ [monday]: [meal('Curry')], [tuesday]: [meal('Soup')] });
 

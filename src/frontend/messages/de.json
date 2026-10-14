@@ -374,16 +374,43 @@
   "plan.empty.title": "Noch nichts geplant",
   "plan.empty.description": "Plane Rezepte für die Woche und setze dann die ganze Woche auf einmal auf deine Einkaufsliste.",
   "plan.empty.action": "Rezept auswählen",
-  "plan.move.handle": "{title} auf einen anderen Tag verschieben",
-  "plan.move.title": "{title} verschieben",
+  "plan.move.handle": "{title} bearbeiten oder verschieben",
+  "plan.edit.title": "{title} bearbeiten",
   "plan.move.day": "Tag",
   "plan.move.freeDay": "Nichts geplant",
-  "plan.move.confirm": "Verschieben",
+  "plan.edit.confirm": "Speichern",
   "plan.move.cancel": "Abbrechen",
   "plan.move.close": "Schließen",
   "plan.move.done": "Auf {day} verschoben.",
   "plan.move.undo": "Rückgängig",
   "plan.move.failed": "Das Verschieben hat nicht geklappt. Das Gericht bleibt am bisherigen Tag.",
+  "plan.edit.action": "{title} bearbeiten",
+  "plan.edit.servingsHint": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Nur diese Mahlzeit ändert sich; das Rezept bleibt für {count} Portion geschrieben.",
+        "countPlural=*": "Nur diese Mahlzeit ändert sich; das Rezept bleibt für {count} Portionen geschrieben."
+      }
+    }
+  ],
+  "plan.edit.onList": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Die Zutaten stehen für {count} Portion auf deiner Einkaufsliste.",
+        "countPlural=*": "Die Zutaten stehen für {count} Portionen auf deiner Einkaufsliste."
+      }
+    }
+  ],
+  "plan.edit.updateList": "Einkaufsliste ebenfalls anpassen",
+  "plan.edit.updateListHint": "Nur der Anteil dieser Mahlzeit ändert sich. Von Hand ergänzte und abgehakte Mengen bleiben.",
+  "plan.edit.done": "{title} gespeichert.",
+  "plan.edit.doneList": "{title} gespeichert und die Einkaufsliste angepasst.",
+  "plan.edit.listFailed": "{title} gespeichert, aber die Einkaufsliste ließ sich nicht anpassen.",
+  "plan.edit.failed": "Die Änderung hat nicht geklappt. Die Mahlzeit bleibt, wie sie war.",
   "import.url.label": "Link zum Rezept",
   "import.url.read": "Rezept abrufen",
   "import.url.pasteClipboard": "Kopierten Link einfügen",
@@ -1249,6 +1276,8 @@
   ],
   "shopping.sources.hide": "Rezepte ausblenden",
   "shopping.source.planned": "{date} · {slot}",
+  "shopping.source.other": "Von Hand oder anderweitig ergänzt",
+  "shopping.separate": "Steht noch einmal mit anderer Einheit auf der Liste; die Mengen lassen sich nicht zusammenrechnen. Behalte die passende Zeile und entferne die andere.",
   "editor.stepDuration": "Timer für Schritt {number}",
   "editor.stepDuration.hint": "Im Kochmodus kannst du diesen Timer starten.",
   "editor.stepDuration.unit": "Minuten",
@@ -1279,8 +1308,6 @@
   "household.inherit.title": "Geerbte Rezepte",
   "household.inherit.body": "Ein Haushalt, der von einem anderen erbt, sieht jedes Rezept, das dieser sieht. Seine Mitglieder können diese Rezepte kochen, planen und einkaufen, ändern aber nur in dem Haushalt, dem sie gehören.",
   "household.inherit.field": "Erbt Rezepte von",
-  "shopping.source.other": "Von Hand oder anderweitig ergänzt",
-  "shopping.separate": "Steht noch einmal mit anderer Einheit auf der Liste; die Mengen lassen sich nicht zusammenrechnen. Behalte die passende Zeile und entferne die andere.",
   "household.inherit.none": "Keinem",
   "household.inherit.current": "Sieht die Rezepte von {name}.",
   "household.inherit.nothing": "Sieht nur die eigenen Rezepte.",
@@ -1553,6 +1580,7 @@
   "nutrition.title": "Nährwerte",
   "nutrition.perServing": "pro Portion",
   "nutrition.short.perPerson": "p. P.",
+  "nutrition.short.whole": "ganzes Rezept",
   "nutrition.perPiece": "pro Stück",
   "nutrition.atLeast": "mind.",
   "nutrition.nothing": "Für dieses Rezept lässt sich nichts zählen",

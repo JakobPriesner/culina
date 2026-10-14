@@ -43,6 +43,65 @@ public class MealPlanEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Move_ShouldChangeForHowManyTheMealIsWhenAsked_AndOnlyThen()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeAsync(client, householdId, "Curry");
+
+        var planned = await client.PostAsync(
+            $"/api/v1/households/{householdId}/meal-plan",
+            new { date = Monday, recipeId, servings = 8 },
+            Token);
+
+        var entryId = MealsOn(planned, Monday)[0].GetProperty("entryId").GetGuid();
+        var recipeServings = MealsOn(planned, Monday)[0].GetProperty("recipeServings").GetDecimal();
+
+        var changed = await client.PatchAsync(
+            $"/api/v1/households/{householdId}/meal-plan/{entryId}",
+            new { date = Monday, servings = 3 },
+            Token);
+
+        var meal = Assert.Single(MealsOn(changed, Monday));
+
+        Assert.Equal(HttpStatusCode.OK, changed.StatusCode);
+        Assert.Equal(3m, meal.GetProperty("servings").GetDecimal());
+        // The recipe is not the meal: its own servings stay as written.
+        Assert.Equal(recipeServings, meal.GetProperty("recipeServings").GetDecimal());
+
+        var moved = await client.PatchAsync(
+            $"/api/v1/households/{householdId}/meal-plan/{entryId}",
+            new { date = Monday.AddDays(1) },
+            Token);
+
+        Assert.Equal(3m, Assert.Single(MealsOn(moved, Monday.AddDays(1))).GetProperty("servings").GetDecimal());
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1001)]
+    public async Task Move_ShouldRefuseServingsNobodyCooks(int servings)
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeAsync(client, householdId, "Curry");
+
+        var planned = await client.PostAsync(
+            $"/api/v1/households/{householdId}/meal-plan",
+            new { date = Monday, recipeId, servings = 4 },
+            Token);
+
+        var entryId = MealsOn(planned, Monday)[0].GetProperty("entryId").GetGuid();
+
+        var response = await client.PatchAsync(
+            $"/api/v1/households/{householdId}/meal-plan/{entryId}",
+            new { date = Monday, servings },
+            Token);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Move_ShouldPlaceAMealWhereItWasDropped()
     {
         using var client = await SignedInAsync();

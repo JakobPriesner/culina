@@ -68,8 +68,8 @@ public sealed record PlanMealRequest
     public string? Slot { get; init; }
 }
 
-/// <summary>Moves a planned meal to another day.</summary>
-/// <remarks>A PATCH of the entry (its day is one of its fields), not a verb route.</remarks>
+/// <summary>Moves a planned meal to another day, and says for how many it is.</summary>
+/// <remarks>A PATCH of the entry (its day and its servings are fields of it), not a verb route.</remarks>
 public sealed record MoveMealRequest
 {
     /// <summary>Which day it moves to. The day it is already on is allowed.</summary>
@@ -77,6 +77,9 @@ public sealed record MoveMealRequest
 
     /// <summary><c>breakfast</c>, <c>lunch</c> or <c>dinner</c>. Omit to keep the current slot, as dragging does.</summary>
     public string? Slot { get; init; }
+
+    /// <summary>For how many this one meal is. Omit to keep what it has; the recipe's own servings are not touched.</summary>
+    public decimal? Servings { get; init; }
 
     /// <summary>
     /// Which gap in the day it was dropped into, counted from zero on the day as shown (the moved meal still in it); omit to

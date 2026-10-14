@@ -9,11 +9,11 @@
     drag: WeekDrag;
     ondrop: OnDrop;
     onadd: (date: string) => void;
-    onmove: (meal: PlannedMeal) => void;
+    onedit: (meal: PlannedMeal) => void;
     onremove: (meal: PlannedMeal) => void;
   }
 
-  let { days, householdId, drag, ondrop, onadd, onmove, onremove }: Props = $props();
+  let { days, householdId, drag, ondrop, onadd, onedit, onremove }: Props = $props();
 
   const today = asDate(new Date());
 
@@ -48,7 +48,7 @@
       {drag}
       {ondrop}
       onadd={() => onadd(day.date)}
-      {onmove}
+      {onedit}
       {onremove}
     />
   {/each}

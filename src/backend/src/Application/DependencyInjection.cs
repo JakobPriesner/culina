@@ -214,6 +214,8 @@ public static class DependencyInjection
                 Contracts.Shopping.Response>, AddPlannedMealsToListCommandHandler>()
             .AddScoped<ICommandHandler<WithdrawPlannedMealCommand,
                 Contracts.Shopping.Response>, WithdrawPlannedMealCommandHandler>()
+            .AddScoped<ICommandHandler<RefreshPlannedMealOnListCommand,
+                Contracts.Shopping.Response>, RefreshPlannedMealOnListCommandHandler>()
             .AddScoped<ICommandHandler<UpdateShoppingItemCommand,
                 Contracts.Shopping.Response>, UpdateShoppingItemCommandHandler>()
             .AddScoped<ICommandHandler<RemoveShoppingItemsCommand,

@@ -9,6 +9,7 @@ import {
   gapToRestore,
   mealPlan,
   placeOf,
+  servingsOf,
   type MealSlot,
   type PlannedMeal
 } from './mealPlan.svelte';
@@ -64,6 +65,62 @@ export function usePlanActions(page: Page) {
           }
         : undefined
     });
+  }
+
+  /**
+   * Saves what the edit sheet answered: the day, the meal, and for how many. Servings are for this one meal; when it is on the shopping list the
+   * person says whether its share there follows (the list is a sum, so only the server can swap one meal's part of it).
+   */
+  async function edit(
+    meal: PlannedMeal,
+    to: { date: string; slot: MealSlot; servings?: number; updateList: boolean }
+  ) {
+    const householdId = page.householdId();
+    const before = householdId && placeOf(mealPlan.days, meal.entryId);
+
+    if (!householdId || !before) {
+      return;
+    }
+
+    const servingsChanged = to.servings !== undefined && to.servings !== servingsOf(meal);
+
+    // Alone in its place unless asked elsewhere: a plain move puts a meal last in its day, and an edit of servings must not.
+    const stays = to.date === before.date && to.slot === before.slot;
+
+    if (!servingsChanged) {
+      return move(meal.entryId, {
+        date: to.date,
+        slot: to.slot,
+        ...(stays ? { position: before.index } : {})
+      });
+    }
+
+    const ok = await mealPlan.move(householdId, meal.entryId, {
+      date: to.date,
+      slot: to.slot,
+      servings: to.servings,
+      ...(stays ? { position: before.index } : {})
+    });
+
+    if (!ok) {
+      toaster.show({ message: () => m['plan.edit.failed'](), tone: 'danger' });
+
+      return;
+    }
+
+    if (!meal.isOnShoppingList || !to.updateList) {
+      toaster.show({ message: () => m['plan.edit.done']({ title: meal.title }), tone: 'success' });
+
+      return;
+    }
+
+    const failure = await shopping.refreshMeal(householdId, meal.entryId);
+
+    toaster.show(
+      failure
+        ? { message: () => m['plan.edit.listFailed']({ title: meal.title }), tone: 'danger' }
+        : { message: () => m['plan.edit.doneList']({ title: meal.title }), tone: 'success' }
+    );
   }
 
   /** The gaps either side of the card's own position are no move. */
@@ -149,5 +206,5 @@ export function usePlanActions(page: Page) {
     });
   }
 
-  return { ui, move, drop, shop, unplan };
+  return { ui, move, edit, drop, shop, unplan };
 }

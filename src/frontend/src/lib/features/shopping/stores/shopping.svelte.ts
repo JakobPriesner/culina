@@ -179,6 +179,19 @@ class ShoppingStore {
     return result.ok ? null : result.error;
   }
 
+  /** Writes one planned meal's share again at what the plan now says (its servings and day); a meal not on the list stays off it. */
+  async refreshMeal(householdId: string, entryId: string): Promise<AppError | null> {
+    const result = await request(() =>
+      http.PUT('/api/v1/households/{householdId}/shopping-list/meals/{entryId}', {
+        params: { path: { householdId, entryId } }
+      })
+    );
+
+    this.#take(householdId, result.ok ? result.value : null, result.ok ? null : result.error);
+
+    return result.ok ? null : result.error;
+  }
+
   /** Takes exactly what one planned meal put on the list back off it. */
   async withdrawMeal(householdId: string, entryId: string): Promise<AppError | null> {
     const result = await request(() =>

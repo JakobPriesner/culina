@@ -5552,6 +5552,66 @@
             }
           }
         }
+      },
+      "put": {
+        "tags": [
+          "Shopping"
+        ],
+        "summary": "Update a planned meal's ingredients on the list",
+        "description": "Replaces what that meal contributed with what it asks for now: its current servings and day. Another meal's share of a line stays, typed lines stay, and ticked lines stay because they have been bought. A meal that is not on the list is left off it. Repeating it changes nothing.",
+        "operationId": "refreshPlannedMealOnShoppingListV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/households/{householdId}/shopping-list/items/{itemId}": {
@@ -11844,6 +11904,12 @@
             "description": "`breakfast`, `lunch` or `dinner`. Omit to keep the current slot, as dragging does.",
             "nullable": true
           },
+          "servings": {
+            "type": "number",
+            "description": "For how many this one meal is. Omit to keep what it has; the recipe's own servings are not touched.",
+            "format": "double",
+            "nullable": true
+          },
           "position": {
             "type": "integer",
             "description": "Which gap in the day it was dropped into, counted from zero on the day as shown (the moved meal still in it); omit to\nput it last. Only a request: the day is read in slot order, and the whole week comes back.",
@@ -11851,7 +11917,7 @@
             "nullable": true
           }
         },
-        "description": "Moves a planned meal to another day."
+        "description": "Moves a planned meal to another day, and says for how many it is."
       },
       "PlanningPlanMealRequest": {
         "required": [
@@ -16518,6 +16584,16 @@
               "$ref": "#/components/schemas/ShoppingSourceContract"
             },
             "description": "Which recipes asked for it, and how much each contributed."
+          },
+          "otherQuantity": {
+            "type": "number",
+            "description": "The part of `quantity` (in the same unit) that no source accounts for: what somebody typed,\nor what a recipe left behind. Null when the sources make up the whole.",
+            "format": "double",
+            "nullable": true
+          },
+          "isListedSeparately": {
+            "type": "boolean",
+            "description": "Whether another line still to buy is this same thing in a unit (or with no amount) that cannot be added to this one,\nso the two stay apart instead of being summed wrongly."
           }
         },
         "description": "One line on the list."
@@ -16584,16 +16660,6 @@
             "nullable": true
           },
           "plannedSlot": {
-          },
-          "otherQuantity": {
-            "type": "number",
-            "description": "The part of `quantity` (in the same unit) that no source accounts for: what somebody typed,\nor what a recipe left behind. Null when the sources make up the whole.",
-            "format": "double",
-            "nullable": true
-          },
-          "isListedSeparately": {
-            "type": "boolean",
-            "description": "Whether another line still to buy is this same thing in a unit (or with no amount) that cannot be added to this one,\nso the two stay apart instead of being summed wrongly."
             "type": "string",
             "description": "Breakfast, lunch or dinner, or null when added directly.",
             "nullable": true

@@ -374,16 +374,43 @@
   "plan.empty.title": "Nothing planned yet.",
   "plan.empty.description": "Plan recipes for the week, then put the whole week on your shopping list at once.",
   "plan.empty.action": "Find something to cook",
-  "plan.move.handle": "Move {title} to another day",
-  "plan.move.title": "Move {title}",
+  "plan.move.handle": "Edit or move {title}",
+  "plan.edit.title": "Edit {title}",
   "plan.move.day": "Day",
   "plan.move.freeDay": "Nothing planned",
-  "plan.move.confirm": "Move",
+  "plan.edit.confirm": "Save",
   "plan.move.cancel": "Cancel",
   "plan.move.close": "Close",
   "plan.move.done": "Moved to {day}.",
   "plan.move.undo": "Undo",
   "plan.move.failed": "That move did not work. The meal is still on its original day.",
+  "plan.edit.action": "Edit {title}",
+  "plan.edit.servingsHint": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Only this meal changes; the recipe itself stays written for {count} serving.",
+        "countPlural=*": "Only this meal changes; the recipe itself stays written for {count} servings."
+      }
+    }
+  ],
+  "plan.edit.onList": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Its ingredients are on your shopping list for {count} serving.",
+        "countPlural=*": "Its ingredients are on your shopping list for {count} servings."
+      }
+    }
+  ],
+  "plan.edit.updateList": "Update the shopping list too",
+  "plan.edit.updateListHint": "Only this meal's share changes. Amounts you added by hand and anything you've ticked off stay.",
+  "plan.edit.done": "Saved {title}.",
+  "plan.edit.doneList": "Saved {title} and updated the shopping list.",
+  "plan.edit.listFailed": "Saved {title}, but the shopping list could not be updated.",
+  "plan.edit.failed": "That change did not work. The meal is as it was.",
   "import.url.label": "A link to a recipe",
   "import.url.read": "Import recipe",
   "import.url.pasteClipboard": "Paste copied link",
@@ -1249,6 +1276,8 @@
   ],
   "shopping.sources.hide": "Hide recipes",
   "shopping.source.planned": "{date} · {slot}",
+  "shopping.source.other": "Added by hand or from elsewhere",
+  "shopping.separate": "Also listed with another unit, which can't be added to this amount. Keep the line you need and remove the other.",
   "editor.stepDuration": "Timer for step {number}",
   "editor.stepDuration.hint": "Cook mode can start this timer for you.",
   "editor.stepDuration.unit": "minutes",
@@ -1279,8 +1308,6 @@
   "household.inherit.title": "Inherited recipes",
   "household.inherit.body": "A household that inherits another sees every recipe that one sees. Its members can cook, plan and shop for those recipes, but only change them in the household they belong to.",
   "household.inherit.field": "Inherits recipes from",
-  "shopping.source.other": "Added by hand or from elsewhere",
-  "shopping.separate": "Also listed with another unit, which can't be added to this amount. Keep the line you need and remove the other.",
   "household.inherit.none": "None",
   "household.inherit.current": "Sees the recipes of {name}.",
   "household.inherit.nothing": "Sees only its own recipes.",
@@ -1553,6 +1580,7 @@
   "nutrition.title": "Nutrition",
   "nutrition.perServing": "per serving",
   "nutrition.short.perPerson": "per person",
+  "nutrition.short.whole": "whole recipe",
   "nutrition.perPiece": "per piece",
   "nutrition.atLeast": "at least",
   "nutrition.nothing": "Nothing in this recipe can be counted",

@@ -139,7 +139,7 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
         await executor.ExecuteAsync(
             """
             update meal_plan_entries
-            set on_date = @date, slot = @slot, sort_order = @key
+            set on_date = @date, slot = @slot, servings = @servings, sort_order = @key
             where id = @id and household_id = @householdId;
             """,
             new
@@ -148,6 +148,7 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
                 householdId = moved.HouseholdId,
                 date = moved.Date,
                 slot = PlanningCodes.Of(moved.Slot),
+                servings = moved.Servings,
                 // Doubled so the moved entry lands between two neighbours without renumbering them first.
                 key = moved.SortOrder * 2
             },
