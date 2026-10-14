@@ -1901,5 +1901,9 @@
   "server.push.relay": "Relay address",
   "server.push.relay.hint": "An https:// address, like https://relay.example.com.",
   "problem.push.relay_off": "This server doesn't send notifications to the apps. An administrator can name a relay under Server.",
-  "problem.push.invalid_device": "That device couldn't be registered for notifications."
+  "problem.push.invalid_device": "That device couldn't be registered for notifications.",
+  "shopping.meals.title": "Planned meals on this list: {count}",
+  "shopping.meals.pastCount": "{count} already past",
+  "shopping.meals.past": "Already past",
+  "shopping.meals.pastNote": "This day has passed, but what it asked for stays on the list until you tick it off or remove it."
 }

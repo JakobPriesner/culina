@@ -1901,5 +1901,9 @@
   "server.push.relay": "Relay-Adresse",
   "server.push.relay.hint": "Eine https://-Adresse wie https://relay.example.com.",
   "problem.push.relay_off": "Dieser Server schickt den Apps keine Benachrichtigungen. Eine Administratorin oder ein Administrator kann unter Server ein Relay eintragen.",
-  "problem.push.invalid_device": "Dieses Gerät konnte nicht für Benachrichtigungen angemeldet werden."
+  "problem.push.invalid_device": "Dieses Gerät konnte nicht für Benachrichtigungen angemeldet werden.",
+  "shopping.meals.title": "Geplante Mahlzeiten auf dieser Liste: {count}",
+  "shopping.meals.pastCount": "{count} schon vergangen",
+  "shopping.meals.past": "Schon vergangen",
+  "shopping.meals.pastNote": "Dieser Tag ist vorbei, doch was er braucht, bleibt auf der Liste, bis du es abhakst oder entfernst."
 }

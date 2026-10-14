@@ -719,7 +719,18 @@ export async function responsiveData(
             unit: 'g',
             section: 'bakery',
             isChecked: false,
-            isManual: true
+            isManual: true,
+            // From a meal planned for a day long gone, the way a list kept across weeks has them.
+            sources: [
+              {
+                recipeId,
+                recipeTitle: longName,
+                quantity: 200,
+                unit: 'g',
+                plannedDate: '2026-09-23',
+                plannedSlot: 'dinner'
+              }
+            ]
           },
           {
             itemId: 'item-2',

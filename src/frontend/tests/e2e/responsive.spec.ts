@@ -206,6 +206,25 @@ test.describe('responsive production layouts @offline', () => {
     });
   }
 
+  for (const width of [320, 1280]) {
+    test(`the shopping list names the old planned meals behind it at ${width}px`, async ({
+      page
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport.');
+      await page.setViewportSize({ width, height: 740 });
+      await responsiveData(page);
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto('/shopping');
+      const meals = page.getByText(/Geplante Mahlzeiten auf dieser Liste: 1/);
+      await expect(meals).toBeVisible();
+      await expect(page.getByText(/1 schon vergangen/)).toBeVisible();
+      await meals.click();
+      await expect(page.getByText('Schon vergangen', { exact: true })).toBeVisible();
+      await expect(page.locator('.meals').getByRole('link')).toBeVisible();
+      await expectReflow(page);
+    });
+  }
+
   for (const width of [320, 360]) {
     test(`editor photo actions keep whole words at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 640 });
