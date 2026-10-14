@@ -4,7 +4,6 @@
   import { page } from '$app/state';
   import { Button } from '$ds';
   import AssistFailure from '$features/assistance/AssistFailure.svelte';
-  import { drafts } from '$features/assistance/stores/drafts.svelte';
   import { session } from '$features/auth/session.svelte';
   import { tags } from '$features/cookbooks/stores/tags.svelte';
   import EditorNutritionLine from '$features/nutrition/EditorNutritionLine.svelte';
@@ -88,16 +87,21 @@
     {#snippet action()}
       <!-- Absent, not disabled, when the instance has no assistant or the capability is off. -->
       {#if session.user?.assistance.improve}
-        <Button variant="secondary" size="sm" loading={drafts.asking} onclick={improvement.improve}>
+        <Button
+          variant="secondary"
+          size="sm"
+          loading={improvement.improving}
+          onclick={improvement.improve}
+        >
           {m['assist.improve']()}
         </Button>
       {/if}
     {/snippet}
 
     <!-- The review dialog opens only on an answer, so a failed ask must say so here or the button just goes quiet. -->
-    {#if drafts.error && !improvement.reviewing}
+    {#if improvement.error && !improvement.reviewing}
       <div class="assistFailure">
-        <AssistFailure error={drafts.error} />
+        <AssistFailure error={improvement.error} />
       </div>
     {/if}
 

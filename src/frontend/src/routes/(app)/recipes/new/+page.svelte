@@ -100,7 +100,9 @@
     const start = page.url.searchParams.get('start');
 
     pasting = shared.url !== '' || shared.text !== '' || start === 'paste';
-    describing = start === 'idea' && Boolean(session.user?.assistance.draft);
+    // Or an idea asked for here before the app was put away or closed, which the form picks up again.
+    describing =
+      (start === 'idea' || drafts.remembers('idea')) && Boolean(session.user?.assistance.draft);
   });
 
   function cancelPasting() {

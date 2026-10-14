@@ -11,28 +11,58 @@ vi.mock('$features/auth/session.svelte', () => ({ session: { user: { isAdmin: tr
 
 /* A failed idea must not leave the server's English sentence or an empty progress box that outlives the request. */
 
-/** The assistant's stream ending at once on a failure, with nothing written. */
-const stoppedWith = (code: string) =>
-  new Response(
-    `data: ${JSON.stringify({
-      finished: true,
-      draft: { draftId: 'd1', groups: [], steps: [], tags: [] },
-      problem: { code, detail: 'The assistant would not answer that.' }
-    })}\n\n`,
-    { status: 200, headers: { 'Content-Type': 'text/event-stream' } }
-  );
+const json = (body: unknown, status: number) =>
+  new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
 
-/** Turned away before the stream opened, which is how a spent budget arrives. */
+/** The job the server queued, as the intake stream reports it. */
+const job = (id: string, stage: string, errorCode: string | null = null) => ({
+  id,
+  stage,
+  errorCode,
+  householdId: 'h1',
+  createdAt: '2026-10-14T00:00:00Z',
+  purpose: 'draft',
+  draftKind: 'idea',
+  draft: { draftId: 'd1', groups: [], steps: [], tags: [] }
+});
+
+/** The job ending at once on a failure, with nothing written. */
+const stoppedWith =
+  (code: string) =>
+  (id: string): Response =>
+    new Response(
+      `data: ${JSON.stringify({ snapshot: true, jobs: [job(id, 'failed', code)] })}\n\n`,
+      {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' }
+      }
+    );
+
+/** Turned away before anything was queued, which is how an assistant switched off arrives. */
 const refusedWith = (code: string, status: number) =>
   new Response(JSON.stringify({ code, detail: 'This month’s budget is spent.' }), {
     status,
     headers: { 'Content-Type': 'application/problem+json' }
   });
 
-async function askFor(idea: string, reply: () => Response) {
+/** The server: the ask queues a job (or is refused), and the stream says how the job ended. */
+async function askFor(idea: string, ended: (id: string) => Response, refused?: Response) {
+  let id = '';
+
   vi.stubGlobal(
     'fetch',
-    vi.fn(() => Promise.resolve(reply()))
+    vi.fn((input: Request | string, init?: RequestInit) => {
+      const asked =
+        input instanceof Request ? input : new Request(new URL(input, location.href), init);
+
+      if (asked.method === 'PUT') {
+        id = asked.url.split('/').pop()!;
+
+        return Promise.resolve(refused ?? json(job(id, 'queued'), 202));
+      }
+
+      return Promise.resolve(ended(id));
+    })
   );
 
   const view = renderWithProviders(IdeaDraft, {
@@ -50,6 +80,7 @@ async function askFor(idea: string, reply: () => Response) {
 describe('an idea the assistant could not draft', () => {
   afterEach(() => {
     drafts.reset();
+    localStorage.clear();
     vi.unstubAllGlobals();
     applyLocale('en');
   });
@@ -57,9 +88,7 @@ describe('an idea the assistant could not draft', () => {
   it('leaves the reason in German, and no progress box behind it', async () => {
     applyLocale('de');
 
-    const { container } = await askFor('Etwas mit Kürbis', () =>
-      stoppedWith('assistance.model_missing')
-    );
+    const { container } = await askFor('Etwas mit Kürbis', stoppedWith('assistance.model_missing'));
 
     expect(screen.getByRole('alert')).toHaveTextContent(/KI-Modell ist nicht verfügbar/);
     expect(screen.getByRole('alert')).not.toHaveTextContent('would not answer');
@@ -73,14 +102,16 @@ describe('an idea the assistant could not draft', () => {
   it('keeps the idea so asking again is one press', async () => {
     applyLocale('de');
 
-    await askFor('Etwas mit Kürbis', () => stoppedWith('assistance.unusable_answer'));
+    await askFor('Etwas mit Kürbis', stoppedWith('assistance.unusable_answer'));
 
     expect(screen.getByRole('textbox')).toHaveValue('Etwas mit Kürbis');
     expect(screen.getByRole('button', { name: 'Rezept generieren' })).toBeEnabled();
   });
 
   it('says the same in English for a request turned away before it started', async () => {
-    const { container } = await askFor('Something with squash', () =>
+    const { container } = await askFor(
+      'Something with squash',
+      stoppedWith('never'),
       refusedWith('assistance.budget_exhausted', 429)
     );
 

@@ -2,12 +2,21 @@ import { base } from '$service-worker';
 import { applyTimerAction, type TimerNotice } from '../lib/features/cooking/timerState';
 import { shellDocument, worker } from './scope';
 
-/** A finished recipe import, as the server names it and as a notification keeps it. */
-const intakePath = /^\/recipes\/imports\/[0-9a-f-]{36}$/;
+/**
+ * What a "ready" notification may open, as the server names it: a finished import, or the page a draft was asked on,
+ * which picks it up again (docs/native-app-design.md, part 8).
+ */
+const readyPaths = [
+  /^\/recipes\/imports\/[0-9a-f-]{36}$/,
+  /^\/recipes\/new\?start=idea$/,
+  /^\/recipes\/[0-9a-f-]{36}\/edit$/
+];
+
+const opensReady = (path: string) => readyPaths.some((shape) => shape.test(path));
 
 type IntakeNotice = { type: 'culina:intake'; url: string };
 
-/** Shows a finished import, and only ever one that points at an import. */
+/** Shows a finished import or draft, and only ever one that points at one. */
 export function handlePush(event: PushEvent): void {
   if (!event.data) return;
   try {
@@ -17,7 +26,7 @@ export function handlePush(event: PushEvent): void {
       url?: string;
       tag?: string;
     };
-    if (typeof notice.url !== 'string' || !intakePath.test(notice.url)) return;
+    if (typeof notice.url !== 'string' || !opensReady(notice.url)) return;
     event.waitUntil(
       worker.registration.showNotification(notice.title ?? 'Culina', {
         body: notice.body,
@@ -78,7 +87,8 @@ function safeHref(notice: TimerNotice | IntakeNotice | undefined): string {
     target.origin === worker.location.origin &&
     target.pathname.startsWith(`${base}/recipes/`) &&
     (target.pathname.endsWith('/cook') ||
-      (notice?.type === 'culina:intake' && intakePath.test(target.pathname.slice(base.length))));
+      (notice?.type === 'culina:intake' &&
+        opensReady(target.pathname.slice(base.length) + target.search)));
 
   return safe ? target.href : new URL(shellDocument, worker.location.origin).href;
 }

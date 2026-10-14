@@ -45,6 +45,16 @@ describe('the intake stream', () => {
     expect(intakes.jobs.map((one) => one.id)).toEqual(['a', 'b']);
   });
 
+  it('leaves the composer drafts that share the stream out of the imports', () => {
+    intakes.follow();
+    const draft = { ...job('d', 'writing'), purpose: 'draft' } as IntakeJob;
+
+    latest().message({ snapshot: true, jobs: [job('a', 'reading'), draft] });
+    latest().message({ snapshot: false, jobs: [{ ...draft, stage: 'ready' }] });
+
+    expect(intakes.jobs.map((one) => one.id)).toEqual(['a']);
+  });
+
   it('applies a change, adds a new job first, and drops a reviewed one', () => {
     intakes.follow();
     latest().message({ snapshot: true, jobs: [job('a', 'reading'), job('b', 'ready')] });

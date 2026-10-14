@@ -10,7 +10,7 @@ namespace Infrastructure.Persistence.Import;
 internal sealed class RecipeIntakeJobs(DbExecutor db, IntakeChanges changes, Application.Abstractions.Settings.PushSettings push) : IRecipeIntakeJobs
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    private const string Columns = "id, household_id, stage, created_at, recipe_id, draft::text, material::text as material, (select count(*) from recipe_intake_photos p where p.job_id=recipe_intake_jobs.id)::int as photo_count, error_code";
+    private const string Columns = "id, household_id, stage, created_at, recipe_id, draft::text, material::text as material, (select count(*) from recipe_intake_photos p where p.job_id=recipe_intake_jobs.id)::int as photo_count, error_code, purpose";
 
     /// <summary>The material as stored; photographs live in their own table.</summary>
     private static string Stored(IntakeMaterial material) => JsonSerializer.Serialize(material with { Photos = [] }, Json);
@@ -34,9 +34,17 @@ internal sealed class RecipeIntakeJobs(DbExecutor db, IntakeChanges changes, App
             return new Error("RecipeIntake.QueueFull", "Three imports are already running.", ErrorType.Conflict);
         }
 
+        // One draft is looked at at a time: the ones before it, finished and never dismissed, are done with.
+        if (material.IsDraft)
+        {
+            await db.ExecuteAsync(
+                "update recipe_intake_jobs set stage='reviewed', updated_at=now() where user_id=@UserId and purpose='draft' and stage in ('ready','failed')",
+                new { UserId = userId }, token).ConfigureAwait(false);
+        }
+
         await db.ExecuteAsync(
-            "insert into recipe_intake_jobs(id,user_id,household_id,material) values(@Id,@UserId,@HouseholdId,@Material::jsonb) on conflict(id) do nothing",
-            new { Id = id, UserId = userId, HouseholdId = householdId, Material = Stored(material) }, token).ConfigureAwait(false);
+            "insert into recipe_intake_jobs(id,user_id,household_id,material,purpose) values(@Id,@UserId,@HouseholdId,@Material::jsonb,@Purpose) on conflict(id) do nothing",
+            new { Id = id, UserId = userId, HouseholdId = householdId, Material = Stored(material), Purpose = material.IsDraft ? "draft" : "import" }, token).ConfigureAwait(false);
 
         for (var position = 0; position < material.Photos.Count; position++)
         {
@@ -91,11 +99,12 @@ internal sealed class RecipeIntakeJobs(DbExecutor db, IntakeChanges changes, App
         "update recipe_intake_jobs set material=@Material::jsonb, updated_at=now() where id=@Id",
         new { Id = id, Material = Stored(material) }, token);
 
+    // A draft is dismissed while still being written too: the worker sees it at its next write and stops.
     public Task ReviewAsync(Guid id, Guid userId, CancellationToken token) => ChangeAsync(
         """
         with reviewed as (
             update recipe_intake_jobs set stage='reviewed', updated_at=now()
-            where id=@Id and user_id=@UserId and stage in ('ready','failed') returning id, user_id),
+            where id=@Id and user_id=@UserId and (stage in ('ready','failed') or (purpose='draft' and stage<>'reviewed')) returning id, user_id),
         released as (
             delete from recipe_intake_photos where job_id in (select id from reviewed))
         select id, user_id from reviewed
@@ -116,14 +125,33 @@ internal sealed class RecipeIntakeJobs(DbExecutor db, IntakeChanges changes, App
             row.Stage == "saving" && row.Draft is not null ? JsonSerializer.Deserialize<Draft>(row.Draft, Json) : null);
     }
 
-    public Task ProgressAsync(Guid id, string stage, Draft? draft, CancellationToken token) => ChangeAsync(
-        "update recipe_intake_jobs set stage=@Stage, draft=coalesce(@Draft::jsonb,draft), updated_at=now() where id=@Id returning id, user_id",
-        new { Id = id, Stage = stage, Draft = draft is null ? null : JsonSerializer.Serialize(draft, Json) }, token);
+    public async Task<bool> ProgressAsync(Guid id, string stage, Draft? draft, CancellationToken token) => await ChangeAsync(
+        "update recipe_intake_jobs set stage=@Stage, draft=coalesce(@Draft::jsonb,draft), updated_at=now() where id=@Id and stage not in ('ready','failed','reviewed') returning id, user_id",
+        new { Id = id, Stage = stage, Draft = draft is null ? null : JsonSerializer.Serialize(draft, Json) }, token).ConfigureAwait(false) > 0;
+
+    public async Task DraftedAsync(Guid id, CancellationToken token)
+    {
+        var drafted = await ChangeAsync(
+            "update recipe_intake_jobs set stage='ready', lease_until=null, updated_at=now() where id=@Id and purpose='draft' and stage='saving' returning id, user_id",
+            new { Id = id }, token).ConfigureAwait(false);
+
+        // A page showing the draft saw it finish; a notification is for somebody who left.
+        if (drafted > 0 && !changes.Attended(id))
+        {
+            await NotifyAsync(id, token).ConfigureAwait(false);
+        }
+    }
 
     public async Task CompleteAsync(Guid id, Guid recipeId, CancellationToken token)
     {
         await db.ExecuteAsync("update recipe_intake_jobs set stage='ready', recipe_id=@RecipeId, lease_until=null, updated_at=now() where id=@Id and stage='saving'",
             new { Id = id, RecipeId = recipeId }, token).ConfigureAwait(false);
+        await NotifyAsync(id, token).ConfigureAwait(false);
+    }
+
+    /// <summary>Queues "ready" for every browser and, while a relay is named, every installed app of the job's owner.</summary>
+    private async Task NotifyAsync(Guid id, CancellationToken token)
+    {
         await db.ExecuteAsync("""
             insert into recipe_intake_notifications(job_id,endpoint)
             select j.id,s.endpoint from recipe_intake_jobs j join web_push_subscriptions s on s.user_id=j.user_id
@@ -145,14 +173,18 @@ internal sealed class RecipeIntakeJobs(DbExecutor db, IntakeChanges changes, App
         "update recipe_intake_jobs set stage='failed',error_code=@ErrorCode,lease_until=null,updated_at=now() where id=@Id and stage not in ('ready','reviewed') returning id, user_id",
         new { Id = id, ErrorCode = errorCode }, token);
 
-    /// <summary>Runs a write that returns the jobs it changed, and tells whoever watches their owners.</summary>
+    /// <summary>Runs a write that returns the jobs it changed, tells whoever watches their owners, and says how many.</summary>
     /// <remarks>Not for writes inside a transaction: the caller announces those once they commit.</remarks>
-    private async Task ChangeAsync(string sql, object? parameters, CancellationToken token)
+    private async Task<int> ChangeAsync(string sql, object? parameters, CancellationToken token)
     {
-        foreach (var job in await db.QueryAsync<ChangedRow>(sql, parameters, token).ConfigureAwait(false))
+        var changed = await db.QueryAsync<ChangedRow>(sql, parameters, token).ConfigureAwait(false);
+
+        foreach (var job in changed)
         {
             changes.Changed(job.UserId, job.Id);
         }
+
+        return changed.Count;
     }
 
     private static IntakeJob Map(JobRow row)
@@ -171,11 +203,14 @@ internal sealed class RecipeIntakeJobs(DbExecutor db, IntakeChanges changes, App
             // Shown as a link on the intake page, so only an address one may be.
             SourceUrl = Domain.Import.SourceUrl.From(material.SourceUrl)?.Value,
             PhotoCount = row.PhotoCount,
-            ErrorCode = row.ErrorCode
+            ErrorCode = row.ErrorCode,
+            Purpose = row.Purpose,
+            DraftKind = material.DraftKind,
+            RevisedRecipeId = material.RecipeId
         };
     }
 
-    private sealed record JobRow(Guid Id, Guid HouseholdId, string Stage, DateTime CreatedAt, Guid? RecipeId, string? Draft, string Material, int PhotoCount, string? ErrorCode);
+    private sealed record JobRow(Guid Id, Guid HouseholdId, string Stage, DateTime CreatedAt, Guid? RecipeId, string? Draft, string Material, int PhotoCount, string? ErrorCode, string Purpose);
     private sealed record ChangedRow(Guid Id, Guid UserId);
     private sealed record PhotoRow(string MediaType, byte[] Bytes);
     private sealed record WorkRow(Guid Id, Guid UserId, Guid HouseholdId, string Material, string? Draft, string Stage);

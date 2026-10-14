@@ -12,14 +12,16 @@ public sealed class IntakeWatch(IRecipeIntakeJobs jobs, IntakeChanges changes)
     /// <summary>A snapshot of every import, then the ones that change; an event with none is a heartbeat.</summary>
     /// <param name="userId">Whose imports; nobody else's are ever read.</param>
     /// <param name="heartbeat">How long a silent stream waits before it says something.</param>
+    /// <param name="attending">The draft the page shows, which is then not announced by a notification.</param>
     /// <param name="token">Ends the watch, never an import.</param>
     public async IAsyncEnumerable<IntakeEvent> WatchAsync(
         Guid userId,
         TimeSpan heartbeat,
+        Guid? attending,
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken token)
     {
         // Subscribed first, so a change while the snapshot is read is not missed.
-        using var subscription = changes.Subscribe(userId);
+        using var subscription = changes.Subscribe(userId, attending);
 
         yield return new IntakeEvent
         {
