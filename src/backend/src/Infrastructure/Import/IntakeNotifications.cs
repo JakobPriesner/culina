@@ -77,10 +77,11 @@ internal sealed class IntakeNotifications(
         await DeliverToDevicesAsync(token).ConfigureAwait(false);
 
         var deliveries = await db.QueryAsync<Delivery>("""
-            select n.job_id,s.endpoint,s.p256dh,s.auth,s.language,j.recipe_id
+            select n.job_id,s.endpoint,s.p256dh,s.auth,s.language,j.purpose,j.material->>'draftKind' as draft_kind,(j.material->>'recipeId')::uuid as revised_recipe_id
             from recipe_intake_notifications n join web_push_subscriptions s on s.endpoint=n.endpoint
-            join recipe_intake_jobs j on j.id=n.job_id join recipes r on r.id=j.recipe_id
+            join recipe_intake_jobs j on j.id=n.job_id
             where n.delivered_at is null and n.retry_at<=now() and n.attempts<12 and j.stage='ready' and s.user_id=j.user_id
+                and (j.purpose='draft' or exists(select 1 from recipes r where r.id=j.recipe_id))
             order by n.retry_at limit 10
             """, null, token).ConfigureAwait(false);
         if (deliveries.Count == 0)
@@ -99,12 +100,12 @@ internal sealed class IntakeNotifications(
                 continue;
             }
 
-            var (title, body) = Words(delivery.Language);
+            var (title, body) = Words(delivery.Language, delivery.Purpose);
             var payload = JsonSerializer.Serialize(new
             {
                 title,
                 body,
-                url = $"/recipes/imports/{delivery.JobId}",
+                url = PathOf(delivery.JobId, delivery.Purpose, delivery.DraftKind, delivery.RevisedRecipeId),
                 tag = $"recipe-intake-{delivery.JobId}"
             });
             try
@@ -132,10 +133,11 @@ internal sealed class IntakeNotifications(
         }
 
         var deliveries = await db.QueryAsync<DeviceDelivery>("""
-            select n.job_id,d.device_id,d.relay_token,d.language
+            select n.job_id,d.device_id,d.relay_token,d.language,j.purpose,j.material->>'draftKind' as draft_kind,(j.material->>'recipeId')::uuid as revised_recipe_id
             from recipe_intake_device_notifications n join native_push_devices d on d.device_id=n.device_id
-            join recipe_intake_jobs j on j.id=n.job_id join recipes r on r.id=j.recipe_id
+            join recipe_intake_jobs j on j.id=n.job_id
             where n.delivered_at is null and n.retry_at<=now() and n.attempts<12 and j.stage='ready' and d.user_id=j.user_id
+                and (j.purpose='draft' or exists(select 1 from recipes r where r.id=j.recipe_id))
             order by n.retry_at limit 10
             """, null, token).ConfigureAwait(false);
 
@@ -147,10 +149,10 @@ internal sealed class IntakeNotifications(
                 continue;
             }
 
-            var (title, body) = Words(delivery.Language);
+            var (title, body) = Words(delivery.Language, delivery.Purpose);
             var outcome = await relay.SendAsync(
                 relayUrl,
-                new RelayNotification(delivery.RelayToken, title, body, $"/recipes/imports/{delivery.JobId}", $"recipe-intake-{delivery.JobId}"),
+                new RelayNotification(delivery.RelayToken, title, body, PathOf(delivery.JobId, delivery.Purpose, delivery.DraftKind, delivery.RevisedRecipeId), $"recipe-intake-{delivery.JobId}"),
                 token).ConfigureAwait(false);
 
             switch (outcome)
@@ -169,9 +171,24 @@ internal sealed class IntakeNotifications(
         }
     }
 
-    private static (string Title, string Body) Words(string language) => language == "de"
-        ? ("Dein Rezept ist bereit", "Olli hat es gespeichert. Schau es dir in Ruhe an.")
-        : ("Your recipe is ready", "Olli has saved it. It is ready for your review.");
+    private static (string Title, string Body) Words(string language, string purpose) => (language, purpose) switch
+    {
+        ("de", "draft") => ("Dein Entwurf ist fertig", "Olli hat ihn zu Ende geschrieben. Schau ihn dir in Ruhe an."),
+        (_, "draft") => ("Your draft is ready", "Olli has finished writing it. It is ready for your review."),
+        ("de", _) => ("Dein Rezept ist bereit", "Olli hat es gespeichert. Schau es dir in Ruhe an."),
+        _ => ("Your recipe is ready", "Olli has saved it. It is ready for your review.")
+    };
+
+    /// <summary>
+    /// Where a tap goes: an import's page, or the page a draft was asked on, which re-attaches to it
+    /// (docs/native-app-design.md, part 8). The service worker opens only these shapes.
+    /// </summary>
+    internal static string PathOf(Guid jobId, string purpose, string? draftKind, Guid? revisedRecipeId) => purpose switch
+    {
+        "draft" when draftKind == "revision" && revisedRecipeId is { } recipeId => $"/recipes/{recipeId}/edit",
+        "draft" => "/recipes/new?start=idea",
+        _ => $"/recipes/imports/{jobId}"
+    };
 
     private async Task<Identity> IdentityAsync(CancellationToken token)
     {
@@ -206,6 +223,6 @@ internal sealed class IntakeNotifications(
         catch (FormatException) { return false; }
     }
     private sealed record Identity(string PublicKey, string PrivateKey);
-    private sealed record Delivery(Guid JobId, string Endpoint, string P256dh, string Auth, string Language, Guid RecipeId);
-    private sealed record DeviceDelivery(Guid JobId, Guid DeviceId, string RelayToken, string Language);
+    private sealed record Delivery(Guid JobId, string Endpoint, string P256dh, string Auth, string Language, string Purpose, string? DraftKind, Guid? RevisedRecipeId);
+    private sealed record DeviceDelivery(Guid JobId, Guid DeviceId, string RelayToken, string Language, string Purpose, string? DraftKind, Guid? RevisedRecipeId);
 }

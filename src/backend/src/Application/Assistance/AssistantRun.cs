@@ -30,6 +30,11 @@ public sealed partial class AssistantRun(
 
     private const decimal DrawEstimate = 0.20m;
 
+    /// <summary>Whether this instance takes this kind of job at all, before one is queued; the budget is decided when it runs.</summary>
+    public Result Offers(Capability capability) =>
+        settings.Allows(capability) ? Result.Success()
+        : settings.IsConnected ? AssistanceErrors.Disabled : AssistanceErrors.NotConfigured;
+
     /// <summary>Asks for a recipe, if everything about doing so is in order.</summary>
     public Task<Result<DraftedRecipe>> ComposeAsync(
         Asker who,

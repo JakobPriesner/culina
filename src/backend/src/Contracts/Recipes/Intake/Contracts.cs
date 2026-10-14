@@ -25,6 +25,12 @@ public sealed record IntakeJob
     public int PhotoCount { get; init; }
     /// <summary>An ordinary failure code, without provider secrets.</summary>
     public string? ErrorCode { get; init; }
+    /// <summary><c>import</c>, saved as a recipe when ready, or <c>draft</c>, a composer draft that stops at the draft.</summary>
+    public string Purpose { get; init; } = "import";
+    /// <summary>For a draft, <c>idea</c> or <c>revision</c>.</summary>
+    public string? DraftKind { get; init; }
+    /// <summary>For a revision, the recipe being rewritten.</summary>
+    public Guid? RevisedRecipeId { get; init; }
 }
 
 /// <summary>One message on the stream of a person's imports.</summary>

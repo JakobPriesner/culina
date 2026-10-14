@@ -1237,3 +1237,42 @@ before (`client.backgrounded`,
 `features/assistance/stores/drafts.svelte.ts`). This helps phone browsers
 equally.
 
+**Status (14 October 2026, `tj23.17`): built.**
+
+- **What was measured.** The p50 and p90 asked for in 8.1 could not be read. No
+  metrics backend was running where this was built, so the tens of seconds
+  estimated there still stand.
+- **Which drafts.** Only two drafts were still streamed by the app: an idea on
+  the new-recipe page and the editor's "Improve". Shared posts, photographs and
+  screenshots already went through `POST /recipe-intakes`, which is durable.
+  `POST /recipe-drafts/photographs` and `/media` have no caller in the app; they
+  stay for the API, and their removal is `culina-v2-fj1p`.
+- **The job.**
+  - `PUT /api/v1/recipe-drafts/{id}` queues an idea or a revision in
+    `recipe_intake_jobs`, with `purpose = 'draft'` (migration 0047). The kind
+    and the revised recipe travel in `material`, and the caller picks the id,
+    so a repeat is the same job.
+  - Refusals are decided before anything is queued: no assistant for the job,
+    a recipe that is not this household's, nothing to work from, or too much.
+    The budget is decided when the job runs.
+  - The intake worker writes the draft as it does an import's. It stores the
+    growing draft every half second and stops at `ready` with no recipe.
+  - The worker runs three jobs at once and is woken when one is queued, so a
+    draft does not wait behind somebody's import. Delivery has a loop of its
+    own.
+- **The page.**
+  - `drafts.svelte.ts` follows its job on `GET /recipe-intakes/events`, so the
+    fields still appear in place.
+  - It keeps the job in `localStorage` and re-attaches on return:
+    `resume('idea')` in `IdeaDraft`, `resume('revision', id)` in the editor.
+    The new-recipe page opens its idea form while one is kept.
+  - Dismissing a draft marks it reviewed, and the worker stops at its next
+    write. Starting a draft dismisses the finished ones before it.
+- **Announcing it.**
+  - "Ready" is announced only when nobody is looking. The page names the draft
+    it shows (`?attending=`) and closes its stream while hidden. A draft that
+    finishes with such a stream open queues no notification.
+  - The tap opens `/recipes/new?start=idea` or `/recipes/{id}/edit`, which pick
+    the draft up again. The service worker and the app open only these shapes
+    and the import's.
+

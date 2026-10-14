@@ -2090,6 +2090,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/recipe-drafts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Ask the assistant for a recipe, as a job
+         * @description The same draft `POST /recipe-drafts` streams, written by the server's intake worker instead of the request, so a phone putting the app away does not cut it (docs/native-app-design.md, part 8). `kind` is `idea` or `revision`; nothing is created, and the draft is shown for correction as before.
+         *
+         *     The caller picks the id, so asking again after a lost answer is the same job, not a second bill. 202 with the job; its draft grows on `GET /recipe-intakes/events` (`purpose: draft`) and ends at `ready`, or `failed` with an error code. `POST /recipe-intakes/{id}/reviewed` dismisses it, and the worker stops writing at its next step. Starting a draft dismisses the person's finished earlier ones.
+         *
+         *     Refused before anything is queued: 404 when this instance has no assistant for the job, or the recipe to rewrite is not this household's; 400 with nothing to work from or too much. The month's budget is decided when the job runs, as the job's error code.
+         */
+        put: operations["startRecipeDraftV1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/recipe-intakes": {
         parameters: {
             query?: never;
@@ -2132,6 +2156,8 @@ export interface paths {
         /**
          * Follow the person's imports as they change
          * @description Server-sent events. The first one is a snapshot of every unreviewed import, and so is the first one after a reconnect: a reader replaces what it has. Each later one carries the imports that changed, a reviewed one meaning it is gone. A quiet stream sends one with no imports every fifteen seconds, so a proxy does not close it.
+         *
+         *     Composer drafts (`purpose: draft`) travel on the same stream. `attending` names the draft a page is showing: while a stream attends it, its being ready is not announced by a notification. A page closes its stream when it is hidden.
          */
         get: operations["watchRecipeIntakesV1"];
         put?: never;
@@ -4470,6 +4496,15 @@ export interface components {
             photoCount?: number;
             /** @description An ordinary failure code, without provider secrets. */
             errorCode?: string | null;
+            /** @description `import`, saved as a recipe when ready, or `draft`, a composer draft that stops at the draft. */
+            purpose?: string;
+            /** @description For a draft, `idea` or `revision`. */
+            draftKind?: string | null;
+            /**
+             * Format: uuid
+             * @description For a revision, the recipe being rewritten.
+             */
+            revisedRecipeId?: string | null;
         };
         /** @description An installed app's device, by the relay token the push relay gave it (docs/native-app-design.md, 7.1). */
         RecipesIntakePushDeviceRegistration: {
@@ -12814,6 +12849,68 @@ export interface operations {
             };
         };
     };
+    startRecipeDraftV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipesDraftsRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipesIntakeIntakeJob"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     listRecipeIntakesV1: {
         parameters: {
             query?: never;
@@ -12898,7 +12995,9 @@ export interface operations {
     };
     watchRecipeIntakesV1: {
         parameters: {
-            query?: never;
+            query?: {
+                attending?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

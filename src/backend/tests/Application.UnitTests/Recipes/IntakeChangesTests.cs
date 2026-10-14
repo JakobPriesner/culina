@@ -52,13 +52,46 @@ public class IntakeChangesTests
     }
 
     [Fact]
+    public void Attended_ShouldHoldOnlyWhileAStreamShowsThatDraft()
+    {
+        var changes = new IntakeChanges();
+        var draft = Guid.NewGuid();
+        using var elsewhere = changes.Subscribe(Guid.NewGuid());
+        var showing = changes.Subscribe(Guid.NewGuid(), attending: draft);
+
+        var whileShown = changes.Attended(draft);
+        showing.Dispose();
+
+        Assert.True(whileShown);
+        Assert.False(changes.Attended(draft));
+    }
+
+    [Fact]
+    public async Task WaitForWorkAsync_ShouldWakeAtOnce_WhenWorkIsQueued()
+    {
+        var changes = new IntakeChanges();
+        var started = System.Diagnostics.Stopwatch.StartNew();
+
+        changes.Queued();
+        await changes.WaitForWorkAsync(TimeSpan.FromSeconds(30), Token);
+
+        Assert.True(started.Elapsed < TimeSpan.FromSeconds(5), $"Waited {started.Elapsed}.");
+    }
+
+    [Fact]
+    public async Task WaitForWorkAsync_ShouldReturnAfterThePoll_WhenNothingIsQueued()
+    {
+        await new IntakeChanges().WaitForWorkAsync(Soon, Token);
+    }
+
+    [Fact]
     public async Task WatchAsync_ShouldSendASnapshot_ThenChangedJobs_ThenAHeartbeat()
     {
         var user = Guid.NewGuid();
         var changes = new IntakeChanges();
         var jobs = new FakeJobs(user);
         var watch = new IntakeWatch(jobs, changes);
-        await using var events = watch.WatchAsync(user, Soon, Token).GetAsyncEnumerator(Token);
+        await using var events = watch.WatchAsync(user, Soon, null, Token).GetAsyncEnumerator(Token);
 
         Assert.True(await events.MoveNextAsync());
         Assert.True(events.Current.Snapshot);
@@ -104,7 +137,8 @@ public class IntakeChangesTests
         public Task SourceAsync(Guid id, IntakeMaterial material, CancellationToken token) => throw new NotSupportedException();
         public Task ReviewAsync(Guid id, Guid userId, CancellationToken token) => throw new NotSupportedException();
         public Task<IntakeWork?> ClaimAsync(CancellationToken token) => throw new NotSupportedException();
-        public Task ProgressAsync(Guid id, string stage, Contracts.Recipes.Drafts.Response? draft, CancellationToken token) => throw new NotSupportedException();
+        public Task<bool> ProgressAsync(Guid id, string stage, Contracts.Recipes.Drafts.Response? draft, CancellationToken token) => throw new NotSupportedException();
+        public Task DraftedAsync(Guid id, CancellationToken token) => throw new NotSupportedException();
         public Task CompleteAsync(Guid id, Guid recipeId, CancellationToken token) => throw new NotSupportedException();
         public Task FailAsync(Guid id, string errorCode, CancellationToken token) => throw new NotSupportedException();
     }

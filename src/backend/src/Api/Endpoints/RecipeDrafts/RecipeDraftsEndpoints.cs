@@ -12,5 +12,6 @@ internal static class RecipeDraftsEndpoints
             .AddSingleton<IEndpoint, ComposeRecipeDraftEndpoint>()
             .AddSingleton<IEndpoint, ReadRecipeDraftEndpoint>()
             .AddSingleton<IEndpoint, ReadMediaRecipeDraftEndpoint>()
+            .AddSingleton<IEndpoint, Job.V1.StartRecipeDraftEndpoint>()
             .AddSingleton<IEndpoint, Intake.V1.RecipeIntakeEndpoint>();
 }
