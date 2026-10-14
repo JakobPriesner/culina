@@ -22,12 +22,28 @@
     offer?: boolean;
     onastyped: () => void;
     onremove: (chip: SearchChip) => void;
+    /** Called when the offer's links leave for another page, so a sheet over this one can get out of the way. */
+    onnavigate?: () => void;
   }
 
-  let { interpretation, total, query, offer = true, onastyped, onremove }: Props = $props();
+  let {
+    interpretation,
+    total,
+    query,
+    offer = true,
+    onastyped,
+    onremove,
+    onnavigate
+  }: Props = $props();
 
   const conflict = $derived(interpretation?.conflict ?? []);
   const relaxed = $derived(interpretation?.relaxed ?? []);
+
+  // A new tab keeps this page, so it keeps its sheet too.
+  const leave = (event: MouseEvent) => {
+    if (!event.metaKey && !event.ctrlKey) onnavigate?.();
+  };
+
   const empty = $derived(offer && total === 0 && query.trim().length > 0 && conflict.length === 0);
 </script>
 
@@ -73,10 +89,10 @@
       <p class="title">{m['search.empty.title']({ query: query.trim() })}</p>
       <p class="body">{m['search.empty.body']()}</p>
       <div class="actions">
-        <Button variant="primary" size="sm" href={resolve('/(app)/recipes/new')}>
+        <Button variant="primary" size="sm" href={resolve('/(app)/recipes/new')} onclick={leave}>
           {m['search.empty.create']()}
         </Button>
-        <Button size="sm" href={resolve('/(app)/recipes/import')}>
+        <Button size="sm" href={resolve('/(app)/recipes/import')} onclick={leave}>
           {m['search.empty.import']()}
         </Button>
       </div>
