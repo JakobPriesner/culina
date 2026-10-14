@@ -37,9 +37,10 @@ let asked: ReturnType<typeof vi.fn>;
 const respond = (items: unknown[] = butters) =>
   vi.stubGlobal(
     'fetch',
-    (asked = vi.fn(() =>
+    (asked = vi.fn((input: Request) =>
       Promise.resolve(
-        new Response(JSON.stringify({ items }), {
+        // The household's own foods are a different list from the table's: answering it with the table's rows leaves them nameless.
+        new Response(JSON.stringify({ items: input.url.includes('/households/') ? [] : items }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         })
