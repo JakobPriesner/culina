@@ -688,7 +688,7 @@ public class DraftStreamTests(PostgresFixture postgres)
     }
 
     /// <summary>A stub model provider. A stub rather than a mocked client so the adapter and SDK are exercised.</summary>
-    private sealed class StubProvider : IDisposable
+    internal sealed class StubProvider : IDisposable
     {
         private readonly HttpListener listener = new();
         private readonly CancellationTokenSource stopping = new();

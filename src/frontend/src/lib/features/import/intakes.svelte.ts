@@ -6,6 +6,8 @@ type WireEvent = components['schemas']['RecipesIntakeIntakeEvent'];
 export type IntakeJob = Omit<WireJob, 'photoCount'> & { photoCount: number };
 const normalized = (job: WireJob): IntakeJob => ({ ...job, photoCount: job.photoCount ?? 0 });
 export const running = (job: IntakeJob) => !['ready', 'failed', 'reviewed'].includes(job.stage);
+/** The composer's drafts share the stream (docs/native-app-design.md, part 8); they are not imports. */
+const anImport = (job: WireJob) => job.purpose !== 'draft';
 
 class Intakes {
   jobs = $state<IntakeJob[]>([]);
@@ -45,11 +47,11 @@ class Intakes {
   #apply(event: WireEvent): void {
     this.error = null;
     if (event.snapshot) {
-      this.jobs = event.jobs.map(normalized);
+      this.jobs = event.jobs.filter(anImport).map(normalized);
       return;
     }
     let jobs = this.jobs;
-    for (const wire of event.jobs) {
+    for (const wire of event.jobs.filter(anImport)) {
       const job = normalized(wire);
       const known = jobs.some((one) => one.id === job.id);
       if (job.stage === 'reviewed') jobs = jobs.filter((one) => one.id !== job.id);

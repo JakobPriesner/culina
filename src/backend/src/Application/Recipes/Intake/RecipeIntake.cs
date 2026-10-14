@@ -17,8 +17,75 @@ namespace Application.Recipes.Intake;
 public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository households,
     IRecipeRepository recipes, IRecipeOriginRepository origins, IUnitOfWork transactions,
     ICommandHandler<ComposeRecipeDraftCommand, DraftProgress> composer,
-    IQueryHandler<ImportRecipeQuery, Contracts.Recipes.Import.Response> reader, IntakeChanges changes, TimeProvider time)
+    IQueryHandler<ImportRecipeQuery, Contracts.Recipes.Import.Response> reader, IntakeChanges changes, TimeProvider time,
+    Assistance.AssistantRun assistant)
 {
+    /// <summary>The composer's drafts that run as jobs: a sentence about dinner, and a rewrite of a recipe.</summary>
+    private static readonly string[] DraftKinds = ["idea", "revision"];
+
+    /// <summary>
+    /// Queues a composer draft (docs/native-app-design.md, part 8): written by the worker whatever the page does, and
+    /// ending at the draft, never a recipe. Everything that refuses the ask cheaply is decided here, so it stays a status code.
+    /// </summary>
+    public async Task<Result<IntakeJob>> StartDraftAsync(Guid id, Guid userId, Guid householdId, string kind, string? material,
+        Guid? recipeId, string? language, CancellationToken token)
+    {
+        if (id == Guid.Empty || !DraftKinds.Contains(kind))
+        {
+            return Domain.Assistance.AssistanceErrors.NothingToWorkFrom;
+        }
+
+        var revision = kind == "revision";
+        var text = material?.Trim() ?? "";
+
+        if (!revision && text.Length == 0)
+        {
+            return Domain.Assistance.AssistanceErrors.NothingToWorkFrom;
+        }
+
+        if (text.Length > DraftLimits.MaxMaterialCharacters)
+        {
+            return Domain.Assistance.AssistanceErrors.TooMuchToWorkFrom;
+        }
+
+        var offered = assistant.Offers(revision ? Domain.Assistance.Capability.Improve : Domain.Assistance.Capability.Draft);
+        var access = await offered.Match(
+            () => HouseholdAccess.MemberOfAsync(households, householdId, userId, token),
+            error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
+        var permitted = revision
+            ? await access.Match(() => RevisableAsync(recipeId, userId, householdId, token), error => Task.FromResult(Result<string>.Failure(error))).ConfigureAwait(false)
+            : access.Bind(() => RecipeWords.ToLanguage(language ?? "en")).Map(RecipeWords.Of);
+
+        var started = await permitted.Match(
+            recipeLanguage => transactions.InTransactionAsync(t => jobs.EnqueueAsync(id, userId, householdId,
+                new IntakeMaterial(text, "", null, recipeLanguage, [], DraftKind: kind, RecipeId: revision ? recipeId : null), t), token),
+            error => Task.FromResult(Result<IntakeJob>.Failure(error))).ConfigureAwait(false);
+
+        started.Match(job =>
+        {
+            changes.Changed(userId, job.Id);
+            changes.Queued();
+        }, _ => { });
+
+        return started;
+    }
+
+    /// <summary>The language of a recipe this person may rewrite for this household, which a revision keeps.</summary>
+    private async Task<Result<string>> RevisableAsync(Guid? recipeId, Guid userId, Guid householdId, CancellationToken token)
+    {
+        if (recipeId is not { } id)
+        {
+            return Domain.Assistance.AssistanceErrors.NothingToWorkFrom;
+        }
+
+        var editable = await RecipeAccess.EditableAsync(recipes, households, id, userId, token).ConfigureAwait(false);
+
+        // Billed to the household asked for, so the recipe must be its own.
+        return editable.Bind(recipe => recipe.HouseholdId == householdId
+            ? Result<string>.Success(RecipeWords.Of(recipe.Language))
+            : RecipeErrors.NotFound(id));
+    }
+
     /// <summary>Checks access and input before retaining work.</summary>
     public async Task<Result<IntakeJob>> StartAsync(Guid id, Guid userId, Guid householdId, IntakeMaterial material, CancellationToken token)
     {
@@ -47,7 +114,11 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
             error => Task.FromResult(Result<IntakeJob>.Failure(error))).ConfigureAwait(false);
 
         // After the commit, so a watcher that re-reads finds it.
-        started.Match(job => changes.Changed(userId, job.Id), _ => { });
+        started.Match(job =>
+        {
+            changes.Changed(userId, job.Id);
+            changes.Queued();
+        }, _ => { });
 
         return started;
     }
@@ -80,6 +151,14 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
             {
                 return;
             }
+        }
+
+        // A composer draft stops here: the person corrects it and saves it themselves.
+        if (work.Material.IsDraft)
+        {
+            await jobs.DraftedAsync(work.Id, token).ConfigureAwait(false);
+
+            return;
         }
 
         await SaveAsync(work, draft, token).ConfigureAwait(false);
@@ -126,10 +205,12 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
     {
         await jobs.ProgressAsync(work.Id, "reading", null, token).ConfigureAwait(false);
 
-        var opened = await composer.Handle(new ComposeRecipeDraftCommand("social", work.HouseholdId, work.Material.Text, null, work.Material.Language, work.UserId)
+        var material = work.Material;
+        var opened = await composer.Handle(new ComposeRecipeDraftCommand(material.DraftKind ?? "social", work.HouseholdId,
+            material.Text, material.RecipeId, material.Language, work.UserId)
         {
-            Transcript = work.Material.Transcript,
-            Pictures = work.Material.Photos.Select(p => new RecipePicture(p.Bytes, p.MediaType)).ToArray()
+            Transcript = material.Transcript,
+            Pictures = material.Photos.Select(p => new RecipePicture(p.Bytes, p.MediaType)).ToArray()
         }, token).ConfigureAwait(false);
 
         DraftProgress? progress = null;
@@ -143,7 +224,11 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
             return null;
         }
 
-        await jobs.ProgressAsync(work.Id, "thinking", null, token).ConfigureAwait(false);
+        // Each write also asks whether it is still wanted: a draft dismissed meanwhile stops, and its stream with it.
+        if (!await jobs.ProgressAsync(work.Id, "thinking", null, token).ConfigureAwait(false))
+        {
+            return null;
+        }
 
         Draft? draft = null;
         var finished = false;
@@ -166,7 +251,11 @@ public sealed class RecipeIntake(IRecipeIntakeJobs jobs, IHouseholdRepository ho
             // The last part is always stored.
             if (finished || time.GetElapsedTime(lastStored) >= ProgressEvery)
             {
-                await jobs.ProgressAsync(work.Id, finished ? "saving" : "writing", draft, token).ConfigureAwait(false);
+                if (!await jobs.ProgressAsync(work.Id, finished ? "saving" : "writing", draft, token).ConfigureAwait(false))
+                {
+                    return null;
+                }
+
                 lastStored = time.GetTimestamp();
             }
         }

@@ -84,7 +84,8 @@ const problem = (code: string, status: number) =>
 
 const opened = () => vi.waitFor(() => expect(FakeStream.last).not.toBeNull());
 
-const anIdea = { kind: 'idea' as const, householdId: 'h1', material: 'aubergines', language: 'en' };
+/** A pasted recipe read by the assistant: still streamed, unlike an idea or a revision, which are jobs (drafts.job.spec.ts). */
+const aText = { kind: 'text' as const, householdId: 'h1', material: 'aubergines', language: 'en' };
 
 describe('the draft store', () => {
   beforeEach(() => {
@@ -100,7 +101,7 @@ describe('the draft store', () => {
     assistant();
 
     const drafts = createDraftStore();
-    const finished = drafts.ask(anIdea);
+    const finished = drafts.ask(aText);
 
     await opened();
 
@@ -136,7 +137,7 @@ describe('the draft store', () => {
     assistant();
 
     const drafts = createDraftStore();
-    const finished = drafts.ask(anIdea);
+    const finished = drafts.ask(aText);
 
     await opened();
 
@@ -160,7 +161,7 @@ describe('the draft store', () => {
     assistant();
 
     const drafts = createDraftStore();
-    const finished = drafts.ask(anIdea);
+    const finished = drafts.ask(aText);
 
     await opened();
 
@@ -178,7 +179,7 @@ describe('the draft store', () => {
     assistant();
 
     const drafts = createDraftStore();
-    const finished = drafts.ask(anIdea);
+    const finished = drafts.ask(aText);
 
     await opened();
 
@@ -201,7 +202,7 @@ describe('the draft store', () => {
 
     const drafts = createDraftStore();
 
-    const failure = await drafts.ask(anIdea);
+    const failure = await drafts.ask(aText);
 
     // Everything that can refuse the ask is decided before the stream opens, so the budget answers with a status code.
     expect(failure?.code).toBe('assistance.budget_exhausted');
@@ -213,11 +214,11 @@ describe('the draft store', () => {
     assistant();
 
     const drafts = createDraftStore();
-    const finished = drafts.ask(anIdea);
+    const finished = drafts.ask(aText);
 
     await opened();
 
-    await drafts.ask(anIdea);
+    await drafts.ask(aText);
 
     expect(asked).toHaveLength(1);
 
@@ -230,15 +231,15 @@ describe('the draft store', () => {
     assistant();
 
     const drafts = createDraftStore();
-    const finished = drafts.ask({ ...anIdea, kind: 'revision', recipeId: 'r1' });
+    const finished = drafts.ask({ ...aText, kind: 'social', transcript: 'Hallo' });
 
     await opened();
 
     // Without this `fetch` labels the body text/plain, the JSON binding stops matching the route, and the answer is a 404.
     expect(asked[0]?.type).toBe('application/json');
     expect(JSON.parse(String(asked[0]?.body))).toMatchObject({
-      kind: 'revision',
-      recipeId: 'r1'
+      kind: 'social',
+      transcript: 'Hallo'
     });
 
     FakeStream.last!.send({ draft: { title: 'Auberginen' }, finished: true });

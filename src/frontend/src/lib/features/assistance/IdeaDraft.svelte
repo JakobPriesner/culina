@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { onDestroy, onMount } from 'svelte';
+
+  import type { AppError } from '$api';
   import { Button, Field, TextArea } from '$ds';
   import { m } from '$shell/i18n';
 
@@ -24,21 +27,52 @@
 
   let idea = $state('');
 
+  /** Gone once the page is left: a draft finishing later must not start a recipe from a page nobody is on. */
+  let here = true;
+
   const ready = $derived(idea.trim().length > 0);
+
+  /** Only an idea's draft: the store is shared with the editor's rewrite. */
+  const mine = $derived(drafts.concerns('idea'));
+
+  onMount(() => {
+    // Back after the app was put away or closed: the idea asked for here is picked up again, words and all.
+    const resumed = drafts.resume('idea');
+
+    if (resumed) {
+      void written(resumed);
+    }
+  });
+
+  onDestroy(() => {
+    here = false;
+  });
+
+  $effect(() => {
+    if (mine && !idea && drafts.material) {
+      idea = drafts.material;
+    }
+  });
 
   async function ask(): Promise<void> {
     if (!ready) {
       return;
     }
 
-    const failure = await drafts.ask({
-      kind: 'idea',
-      householdId,
-      material: idea.trim(),
-      language
-    });
+    await written(
+      drafts.ask({
+        kind: 'idea',
+        householdId,
+        material: idea.trim(),
+        language
+      })
+    );
+  }
 
-    if (!failure && drafts.draft) {
+  async function written(asked: Promise<AppError | null>): Promise<void> {
+    const failure = await asked;
+
+    if (here && !failure && drafts.concerns('idea') && drafts.draft) {
       onwritten(drafts.draft);
     }
   }
@@ -59,16 +93,16 @@
   </Field>
 
   <!-- Only while being written or once something has arrived: a failure before a word leaves the reason, not an empty box. -->
-  {#if drafts.asking || saysAnything(drafts.draft)}
+  {#if mine && (drafts.asking || saysAnything(drafts.draft))}
     <DraftWriting draft={drafts.draft} writing={drafts.asking} />
   {/if}
 
-  {#if drafts.error}
+  {#if mine && drafts.error}
     <AssistFailure error={drafts.error} />
   {/if}
 
   <div class="actions">
-    <Button onclick={ask} loading={drafts.asking} disabled={!ready}>
+    <Button onclick={ask} loading={mine && drafts.asking} disabled={!ready}>
       {m['assist.idea.write']()}
     </Button>
     <Button variant="ghost" onclick={oncancel}>{m['assist.idea.cancel']()}</Button>

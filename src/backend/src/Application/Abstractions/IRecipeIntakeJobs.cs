@@ -4,8 +4,21 @@ using Domain.Shared;
 namespace Application.Abstractions;
 
 /// <summary>The material retained until an import has been reviewed.</summary>
+/// <param name="Text">What the person wrote or pasted.</param>
+/// <param name="Transcript">Speech captions from a shared video.</param>
+/// <param name="SourceUrl">The address it came from.</param>
+/// <param name="Language">The language to write in, <c>en</c> or <c>de</c>.</param>
+/// <param name="Photos">Screenshots, in order.</param>
+/// <param name="FetchSource">Whether the worker reads the address first.</param>
+/// <param name="DraftKind">For a composer draft (<c>idea</c> or <c>revision</c>), which; null for an import.</param>
+/// <param name="RecipeId">For a revision, the recipe being rewritten.</param>
 public sealed record IntakeMaterial(string Text, string Transcript, string? SourceUrl,
-    string Language, IReadOnlyList<IntakePhoto> Photos, bool FetchSource = false);
+    string Language, IReadOnlyList<IntakePhoto> Photos, bool FetchSource = false,
+    string? DraftKind = null, Guid? RecipeId = null)
+{
+    /// <summary>A composer draft, which ends at the draft rather than a saved recipe.</summary>
+    public bool IsDraft => DraftKind is not null;
+}
 
 /// <summary>An original screenshot, bounded and signature checked on intake.</summary>
 public sealed record IntakePhoto(ReadOnlyMemory<byte> Bytes, string MediaType);
@@ -33,8 +46,10 @@ public interface IRecipeIntakeJobs
     Task ReviewAsync(Guid id, Guid userId, CancellationToken token);
     /// <summary>Claims queued work or a lease abandoned by a stopped server.</summary>
     Task<IntakeWork?> ClaimAsync(CancellationToken token);
-    /// <summary>Persists progress and the latest draft.</summary>
-    Task ProgressAsync(Guid id, string stage, Contracts.Recipes.Drafts.Response? draft, CancellationToken token);
+    /// <summary>Persists progress and the latest draft; false once nobody wants it (reviewed meanwhile), so the work stops.</summary>
+    Task<bool> ProgressAsync(Guid id, string stage, Contracts.Recipes.Drafts.Response? draft, CancellationToken token);
+    /// <summary>Ends a composer draft at ready, with its draft and no recipe; notifies only when no page is attending it.</summary>
+    Task DraftedAsync(Guid id, CancellationToken token);
     /// <summary>Completes inside the recipe's database transaction.</summary>
     Task CompleteAsync(Guid id, Guid recipeId, CancellationToken token);
     /// <summary>Records an expected failure.</summary>
