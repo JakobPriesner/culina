@@ -368,6 +368,8 @@ export async function responsiveData(
     // A recipe of this many steps, cooked from its last one, so the step counter has its widest digits.
     stepCount = 0,
     suggestions = 0,
+    // A line with a long name and an amount beside it, for the narrowest rows.
+    longShoppingLine = false,
     // What a card says about the energy it has: a lower bound, resting partly on typical weights, or both.
     calories = { atLeast: true, estimated: false },
     draw = false,
@@ -732,15 +734,19 @@ export async function responsiveData(
               }
             ]
           },
-          {
-            itemId: 'item-2',
-            name: 'Vanillezuckerpäckchen',
-            quantity: 1.67,
-            unit: 'pack',
-            section: 'spices_baking',
-            isChecked: false,
-            isManual: true
-          }
+          ...(longShoppingLine
+            ? [
+                {
+                  itemId: 'item-2',
+                  name: 'Vanillezuckerpäckchen',
+                  quantity: 1.67,
+                  unit: 'pack',
+                  section: 'spices_baking' as const,
+                  isChecked: false,
+                  isManual: true
+                }
+              ]
+            : [])
         ]
       });
     if (path.endsWith('/meal-plan')) {

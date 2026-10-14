@@ -91,12 +91,9 @@ test.describe('what a machine can check, signed in', () => {
 
     await page.goto('/shopping');
 
-    await page.getByRole('textbox', { name: /^(amount|menge)$/i }).fill('500');
-    await page.getByRole('combobox', { name: /^(unit|einheit)$/i }).fill('g');
-
     const what = page.getByRole('combobox', { name: /what to buy|was du brauchst/i });
 
-    await what.fill('Mehl');
+    await what.fill('500 g Mehl');
     await what.press('Enter');
     await expect(what).toHaveValue('');
   });
