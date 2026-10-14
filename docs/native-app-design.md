@@ -1128,14 +1128,40 @@ and gets a new one on the next sign-in.
     committed. CI writes it from a secret, as signing material.
 - The token is asked for only when the person turns on "Tell me when an import
   is ready". This is the same moment the website asks for notification
-  permission (`features/import/push.svelte.ts`, which today reports
-  `supported: false` in the app).
+  permission (`features/import/push.svelte.ts`).
 - Tapping a notification opens its path through the plugin's
   `pushNotificationActionPerformed`.
 - It must coexist with the timers' notification delegate on iOS. Capacitor's
   router keeps push and local notifications apart
   (`pushNotificationHandler` / `localNotificationHandler`), and `CulinaTimers`
   holds only the local slot.
+
+**Status (14 October 2026, `tj23.16`): built.**
+
+- The relay's address is baked into the app's bundle at build time
+  (`CULINA_RELAY_URL`, a repository variable in `native-release.yml`;
+  `relayUrl` in `api/platform.ts`). A build without one offers no
+  notifications at all.
+- The switch is offered only when that address is set and the server answers
+  `GET /api/v1/push/relay` with `available: true`.
+- `features/import/nativePush.ts` wraps the plugin. Turning the switch on asks
+  for permission, registers, and waits up to 20 seconds for the store token.
+  It then does steps 1 to 3 of 7.1 (`api/relay.ts`, then the server).
+- The install keeps a random device id and its relay token in
+  `localStorage`. Each launch re-registers the device with the server, which
+  renews its language and notices at once if the server forgot it.
+- Turning it off, and signing out, deletes the device on the server first,
+  then revokes the token at the relay (best effort), then unregisters.
+- A tap opens the notification's path only when it is an in-app path (`/…`,
+  never `//…`).
+- iOS: `aps-environment` is `development` in `App.entitlements`; the archive's
+  signing sets production. `AppDelegate` forwards the APNs token callbacks to
+  Capacitor.
+- Android: CI writes `google-services.json` from the `GOOGLE_SERVICES_JSON`
+  secret. It is ignored in git, and `app/build.gradle` applies the plugin only
+  when the file is there.
+- Not yet seen on a phone: that needs a signed build and the publisher's
+  relay (`tj23.13`).
 
 ### 7.5 The relay itself
 
@@ -1160,8 +1186,8 @@ settings, `GET /api/v1/push/relay` (whether one is named), `PUT`/`DELETE
 migration 0046 (`native_push_devices` and its outbox,
 `recipe_intake_device_notifications`, filled only while a relay is named, so old
 imports never announce themselves the day one is), and `RelayTransport` in the
-intake worker's delivery loop beside Web Push. Tracked still:
-`culina-v2-tj23.16` (app registration).
+intake worker's delivery loop beside Web Push. The app's side is 7.4
+(`culina-v2-tj23.16`).
 
 ---
 

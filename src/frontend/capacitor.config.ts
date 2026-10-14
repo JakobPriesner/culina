@@ -24,7 +24,9 @@ const config: CapacitorConfig = {
   plugins: {
     // Off: the app's API calls stream (AI drafts, import progress), and the native HTTP layer buffers whole bodies.
     CapacitorHttp: { enabled: false },
-    CapacitorCookies: { enabled: false }
+    CapacitorCookies: { enabled: false },
+    // Shown even with the app open: the import may be on another screen. Push only: CulinaTimers owns local notifications.
+    PushNotifications: { presentationOptions: ['banner', 'sound', 'list'] }
   }
 };
 

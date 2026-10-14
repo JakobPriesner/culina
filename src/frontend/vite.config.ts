@@ -34,7 +34,9 @@ export default defineConfig({
   // A literal so the bundler can fold it: the gallery must vanish from release builds (see src/lib/app/gallery.ts).
   define: {
     __CULINA_GALLERY__: JSON.stringify(galleryWanted),
-    __CULINA_NATIVE__: JSON.stringify(nativeTarget)
+    __CULINA_NATIVE__: JSON.stringify(nativeTarget),
+    // The relay is the publisher's, fixed per build of the app like its bundle id; the website never has one.
+    __CULINA_RELAY__: JSON.stringify(nativeTarget ? (process.env['CULINA_RELAY_URL'] ?? '') : '')
   },
 
   plugins: [
