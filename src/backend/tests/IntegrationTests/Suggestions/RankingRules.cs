@@ -56,6 +56,8 @@ internal static class RankingRules
         new(nameof(Rule9_DiversityShouldBreakUpARunOfNearlyIdenticalRecipes), Rule9_DiversityShouldBreakUpARunOfNearlyIdenticalRecipes),
         new(nameof(Rule10_TheSameQuestionOnTheSameDay_ShouldGiveTheSameAnswer), Rule10_TheSameQuestionOnTheSameDay_ShouldGiveTheSameAnswer),
         new(nameof(Rule11_CloseToThisOne_ShouldMeanCloseToThisOne_NotWhatTheyCookMost), Rule11_CloseToThisOne_ShouldMeanCloseToThisOne_NotWhatTheyCookMost),
+        new(nameof(Rule12_ACakeNobodyPlanned_ShouldNotLeadADinnerList), Rule12_ACakeNobodyPlanned_ShouldNotLeadADinnerList),
+        new(nameof(Rule13_ABreakfastDishNobodyPlanned_ShouldLeadABreakfastList), Rule13_ABreakfastDishNobodyPlanned_ShouldLeadABreakfastList),
         new(nameof(IdfShouldSilenceAnIngredientEveryRecipeHas), IdfShouldSilenceAnIngredientEveryRecipeHas)
     ];
 
@@ -240,6 +242,33 @@ internal static class RankingRules
         return Verdict(
             Before(response, "Stew", "Porridge"),
             "A recipe this household only ever plans for breakfast must not lead a dinner list.");
+    }
+
+    private static async Task<string?> Rule12_ACakeNobodyPlanned_ShouldNotLeadADinnerList(SuggestionWorld world)
+    {
+        // An imported library has no plan history, so meal type can only come from what the words say. The cake is written last,
+        // which wins a tie: only the meal kind can put it below.
+        await world.WriteAsync("Lentil soup", ingredients: ["lentils", "carrot"]);
+        await world.WriteAsync("Lemon cake", ingredients: ["flour", "lemon"]);
+
+        var response = await world.SuggestAsync("&limit=5&slot=dinner");
+
+        return Verdict(
+            Before(response, "Lentil soup", "Lemon cake"),
+            "A cake nobody has planned must not lead a dinner list over a soup nobody has planned.");
+    }
+
+    private static async Task<string?> Rule13_ABreakfastDishNobodyPlanned_ShouldLeadABreakfastList(SuggestionWorld world)
+    {
+        // The reverse: with no history at all, the pancakes are the only recipe that says it is breakfast, and the soup is written last.
+        await world.WriteAsync("Pancakes", ingredients: ["flour", "milk"]);
+        await world.WriteAsync("Lentil soup", ingredients: ["lentils", "carrot"]);
+
+        var response = await world.SuggestAsync("&limit=5&slot=breakfast");
+
+        return Verdict(
+            Before(response, "Pancakes", "Lentil soup"),
+            "A breakfast dish must lead a breakfast list over a soup, when neither has been planned.");
     }
 
     private static async Task<string?> Rule6_AnotherMembersFavourite_ShouldAppearWithoutTakingOver(SuggestionWorld world)
