@@ -13,34 +13,22 @@ import {
 /** The shopping list as used one-handed: amounts merge across recipes and sections follow the shop's walking order. */
 test.describe.configure({ mode: 'serial' });
 
-/** Amount, unit and name are separate fields, as in the recipe editor. */
-const writing = (page: Page) => ({
-  amount: page.getByRole('textbox', { name: /^(amount|menge)$/i }),
-  unit: page.getByRole('combobox', { name: /^(unit|einheit)$/i }),
-  name: page.getByRole('combobox', { name: /what to buy|was du brauchst/i })
-});
+/** One field takes the whole line, the way it is said at the shelf: "2 Packung Feta". */
+const lineField = (page: Page) =>
+  page.getByRole('combobox', { name: /what to buy|was du brauchst/i });
 
 async function write(
   page: Page,
   line: { amount?: string; unit?: string; name: string }
 ): Promise<void> {
-  const fields = writing(page);
+  const field = lineField(page);
 
-  if (line.amount) {
-    await fields.amount.fill(line.amount);
-  }
-
-  if (line.unit) {
-    await fields.unit.fill(line.unit);
-  }
-
-  await fields.name.fill(line.name);
+  await field.fill([line.amount, line.unit, line.name].filter(Boolean).join(' '));
 
   // A real Enter key: a one-line add must send on Enter.
-  await fields.name.press('Enter');
+  await field.press('Enter');
 
-  await expect(fields.amount).toHaveValue('');
-  await expect(fields.name).toHaveValue('');
+  await expect(field).toHaveValue('');
 }
 
 test.describe('the shopping list', () => {
