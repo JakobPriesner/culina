@@ -232,6 +232,21 @@ describe('the search overlay', () => {
     });
   });
 
+  describe('the offer after finding nothing', () => {
+    it.each(['New recipe', 'Import'])('closes the search when "%s" is followed', async (name) => {
+      const user = userEvent.setup();
+      const { field, onclose } = renderOverlay();
+
+      await user.type(field, 'zzzxxyyqq');
+      const link = await screen.findByRole('link', { name });
+      // jsdom cannot navigate; the page's own router would, and this sheet has to be gone by then.
+      document.addEventListener('click', (event) => event.preventDefault(), { once: true });
+      await user.click(link);
+
+      expect(onclose).toHaveBeenCalledOnce();
+    });
+  });
+
   describe('Tab', () => {
     it('types out the first completion when none is highlighted, without opening the recipe', async () => {
       const { user, field } = await search('lent');
