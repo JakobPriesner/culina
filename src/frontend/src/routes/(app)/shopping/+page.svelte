@@ -6,11 +6,14 @@
   import ShoppingAddLine from '$features/shopping/ShoppingAddLine.svelte';
   import ShoppingFinishedNote from '$features/shopping/ShoppingFinishedNote.svelte';
   import ShoppingHeader from '$features/shopping/ShoppingHeader.svelte';
+  import ShoppingMeals from '$features/shopping/ShoppingMeals.svelte';
+  import { plannedMealsOf } from '$features/shopping/plannedMeals';
   import ShoppingListSkeleton from '$features/shopping/ShoppingListSkeleton.svelte';
   import ShoppingRecipePicker from '$features/shopping/ShoppingRecipePicker.svelte';
   import ShoppingSection from '$features/shopping/ShoppingSection.svelte';
   import { trackShopFinished } from '$features/shopping/shopFinished.svelte';
   import { shopping, type ShoppingItem } from '$features/shopping/stores/shopping.svelte';
+  import { asDate } from '$features/planning/mealPlan.svelte';
   import { explain } from '$shell/explain';
   import { toaster } from '$shell/toaster.svelte';
   import { m } from '$shell/i18n';
@@ -26,6 +29,9 @@
   const remaining = $derived(shopping.items.length - shopping.bought.length);
 
   const shop = trackShopFinished();
+
+  /** Which planned meals the lines still to buy come from, so an old one is seen for what it is rather than silently added up. */
+  const plannedMeals = $derived(plannedMealsOf(shopping.items, asDate(new Date())));
 
   /** A progress bar needs at least one line: over an empty list it would show nought per cent. */
   const started = $derived(shopping.status === 'ready' && shopping.items.length > 0);
@@ -86,6 +92,8 @@
       />
     </div>
   {/if}
+
+  <ShoppingMeals days={plannedMeals} />
 
   <ShoppingAddLine {householdId} onaddrecipe={() => (picking = true)} />
 
