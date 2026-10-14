@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 
 import {
   accountFor,
@@ -29,6 +29,12 @@ async function write(
   await field.press('Enter');
 
   await expect(field).toHaveValue('');
+}
+
+/** A row's own choices (its recipes, removing it, the section it belongs under) are in its menu. */
+async function choose(row: Locator, choice: RegExp): Promise<void> {
+  await row.getByRole('button', { name: /actions for|aktionen für/i }).click();
+  await row.getByRole('button', { name: choice }).click();
 }
 
 test.describe('the shopping list', () => {
@@ -73,7 +79,7 @@ test.describe('the shopping list', () => {
     await expect(row).toBeVisible();
     await expect(row).toContainText(/2\s*(Packungen|packs)/);
 
-    await row.getByRole('button', { name: /remove|entfernen/i }).click();
+    await choose(row, /remove|entfernen/i);
     await expect(row).toHaveCount(0);
   });
 
@@ -107,11 +113,11 @@ test.describe('the shopping list', () => {
     await expect(row).toHaveCount(1);
     await expect(row).toContainText(/250\s*g/);
 
-    await row.getByRole('button', { name: /2 recipes|2 Rezepte/i }).click();
+    await choose(row, /2 recipes|2 Rezepte/i);
     await expect(row.getByRole('link', { name: cakeTitle })).toBeVisible();
     await expect(row.getByRole('link', { name: biscuitsTitle })).toBeVisible();
 
-    await row.getByRole('button', { name: /remove|entfernen/i }).click();
+    await choose(row, /remove|entfernen/i);
     await expect(row).toHaveCount(0);
   });
 
@@ -133,7 +139,7 @@ test.describe('the shopping list', () => {
 
     await expect(row).toContainText(/600\s*g/);
 
-    await row.getByRole('button', { name: /remove|entfernen/i }).click();
+    await choose(row, /remove|entfernen/i);
   });
 
   test('takes whole recipes from the list itself, several in one opening', async () => {
@@ -188,7 +194,7 @@ test.describe('the shopping list', () => {
     await expect(basilRow).toContainText(/50\s*g/);
 
     for (const row of [riceRow, basilRow]) {
-      await row.getByRole('button', { name: /remove|entfernen/i }).click();
+      await choose(row, /remove|entfernen/i);
       await expect(row).toHaveCount(0);
     }
   });
@@ -204,7 +210,12 @@ test.describe('the shopping list', () => {
 
     await expect(row).toBeVisible();
 
-    await row.getByRole('checkbox').check();
+    // A ticked line moves to the done group at the end, which starts closed.
+    await row.getByRole('checkbox').click();
+    await page
+      .locator('summary')
+      .filter({ hasText: /done|erledigt/i })
+      .click();
 
     await expect(row).toBeVisible();
     await expect(row.getByRole('checkbox')).toBeChecked();
@@ -228,12 +239,11 @@ test.describe('the shopping list', () => {
     await expect(row).toBeVisible();
     await expect(frozen.getByRole('listitem').filter({ hasText: name })).toHaveCount(0);
 
-    await row.getByRole('button', { name: /another section|anderen bereich/i }).click();
-    await page.getByRole('button', { name: /^(frozen|tiefkühlprodukte)$/i }).click();
+    await choose(row, /^(frozen|tiefkühlprodukte)$/i);
 
     await expect(frozen.getByRole('listitem').filter({ hasText: name })).toBeVisible();
 
-    await row.getByRole('button', { name: /remove|entfernen/i }).click();
+    await choose(row, /remove|entfernen/i);
     await expect(row).toHaveCount(0);
 
     await write(page, { name: name.toLowerCase() });
@@ -242,7 +252,7 @@ test.describe('the shopping list', () => {
       frozen.getByRole('listitem').filter({ hasText: new RegExp(name, 'i') })
     ).toBeVisible();
 
-    await row.getByRole('button', { name: /remove|entfernen/i }).click();
+    await choose(row, /remove|entfernen/i);
   });
 
   test('keeps its rows clear of the bars pinned to the bottom', async () => {
@@ -273,6 +283,6 @@ test.describe('the shopping list', () => {
 
     expect(covered, 'the last row is behind a bar').toBe(false);
 
-    await row.getByRole('button', { name: /remove|entfernen/i }).click();
+    await choose(row, /remove|entfernen/i);
   });
 });

@@ -164,7 +164,7 @@ test.describe('what a machine can check, signed in', () => {
    * The loading state on purpose rather than by luck: the run above used to land on the ingredient skeleton now and then,
    * which named a plain element (aria-prohibited-attr). Held until axe has looked, then let through.
    */
-  test('settings at /me/household has no violations while its ingredients load', async ({
+  test('settings at /me/ingredients has no violations while its ingredients load', async ({
     browser
   }) => {
     // The same session without the service worker, which answers /api itself once it controls the page and so passes the route by.
@@ -179,7 +179,7 @@ test.describe('what a machine can check, signed in', () => {
     await held.route('**/api/v1/households/*/nutrition/ingredients', () => {});
 
     try {
-      await held.goto('/me/household');
+      await held.goto('/me/ingredients');
       await expect(
         held.getByRole('status', { name: /^(loading ingredients|zutaten werden geladen)$/i })
       ).toBeVisible();

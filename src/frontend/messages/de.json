@@ -1789,7 +1789,7 @@
   "ingredients.names.rename": "Umbenennen",
   "ingredients.names.mergeInto": "In „{name}“ zusammenführen",
   "ingredients.names.cancel": "Abbrechen",
-  "ingredients.loading": "Zutaten werden geladen",
+  "ingredients.loading": "Deine Zutaten werden geladen",
   "ingredients.failed": "Deine Zutaten konnten nicht geladen werden.",
   "ingredients.merges.title": "Zusammenführungsregeln",
   "ingredients.merges.body": "Namen, die immer als ein anderer gespeichert werden – in Rezepten, die du schreibst, importierst oder kopierst.",
