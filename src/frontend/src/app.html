@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#fdfbf7" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#141110" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#0d140d" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="Your recipes, the way you cook them." />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
@@ -104,8 +104,8 @@
       }
 
       :root[data-mode='dark'] #boot {
-        background: var(--surface, #181713);
-        color: var(--text, #f2f0ea);
+        background: var(--surface, #0d140d);
+        color: var(--text, #f0efe7);
       }
 
       /* Everything fades in together, and only after the delay the rest of the
@@ -162,8 +162,8 @@
       }
 
       :root[data-mode='dark'] .boot-brand svg {
-        background: var(--surface-accent-subtle, #303d28);
-        color: var(--accent, #7fa162);
+        background: var(--surface-accent-subtle, #223027);
+        color: var(--accent, #7fc08c);
       }
 
       .boot-dot {
@@ -203,14 +203,14 @@
       }
 
       :root[data-mode='dark'] .boot-block {
-        background: var(--skeleton-base, #2e2b25);
+        background: var(--skeleton-base, #223027);
       }
 
       :root[data-mode='dark'] .boot-block::after {
         background-image: linear-gradient(
           90deg,
           transparent 0%,
-          var(--skeleton-highlight, #443f36) 50%,
+          var(--skeleton-highlight, #2e372f) 50%,
           transparent 100%
         );
       }
