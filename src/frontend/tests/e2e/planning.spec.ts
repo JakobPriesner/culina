@@ -79,7 +79,8 @@ test.describe('planning a week', () => {
     await expect(page.getByRole('button', { name: weekToList })).toBeHidden();
 
     await page.goto('/shopping');
-    await expect(page.getByText(ingredient)).toBeVisible();
+    // Exact: the planned-meals list names the same line again, with its amount.
+    await expect(page.getByText(ingredient, { exact: true })).toBeVisible();
   });
 
   test('does not buy a recipe twice when it went on the list from its own page first', async () => {

@@ -192,7 +192,7 @@ test.describe('responsive production layouts @offline', () => {
     }, testInfo) => {
       test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport.');
       await page.setViewportSize({ width, height: 740 });
-      await responsiveData(page);
+      await responsiveData(page, 'de', { longShoppingLine: true });
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.goto('/shopping');
       const row = page.getByRole('listitem').filter({ hasText: 'Vanillezuckerpäckchen' });
