@@ -1,6 +1,6 @@
 /*
  * Layer 1: raw ramps. No component may name one (the build lint enforces it); themes assign them to layer-2 tokens.
- * Warm on purpose: food photographs look dead on cold neutrals, so dark mode is warm charcoal, never blue-black.
+ * Warm paper and forest greens keep food photography at home in either mode.
  */
 
 :root {
@@ -26,6 +26,22 @@
   --c-olive-700: #414f32;
   --c-olive-800: #303d28;
   --c-olive-900: #293323;
+
+  /* Forest neutrals and mint: the dark palette keeps a green cast even in its quiet surfaces. */
+  --c-forest-50: #f0efe7;
+  --c-forest-300: #9ea093;
+  --c-forest-400: #909789;
+  --c-forest-500: #738371;
+  --c-forest-600: #465548;
+  --c-forest-700: #2e372f;
+  --c-forest-800: #223027;
+  --c-forest-850: #1c2820;
+  --c-forest-900: #162019;
+  --c-forest-950: #0d140d;
+  --c-forest-975: #090f0a;
+  --c-mint-200: #a4d3ad;
+  --c-mint-400: #7fc08c;
+  --c-mint-500: #6caf7a;
 
   /* Saffron: brand punctuation only (a warning is amber's job); light mode takes 600 since the icon's 400 vanishes on paper, still 3:1. */
   --c-saffron-400: #e2b13c;
