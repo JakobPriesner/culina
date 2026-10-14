@@ -4,12 +4,12 @@
 
   import { formatQuantity } from '$features/recipes/formatQuantity';
   import { quantityLabels } from '$features/recipes/quantityLabels';
-  import { scaleQuantity } from '$features/recipes/scaling';
   import type { MealSlot } from '$features/planning/mealPlan.svelte';
   import { slotLabel } from '$features/planning/slots';
   import { haptics } from '$shell/haptics';
   import { formatDate, m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
+  import { amountToBuy } from './amountToBuy';
   import { nameOf, sectionOrder, type Section } from './sections';
   import type { ShoppingItem } from './stores/shopping.svelte';
 
@@ -30,17 +30,15 @@
 
   const amountOf = (quantity: number | null | undefined, unit: string | null | undefined) =>
     formatQuantity(
-      scaleQuantity(
-        { value: quantity ?? null, unit: unit ?? null },
-        1,
-        preferences.measurementSystem
-      ),
+      amountToBuy({ value: quantity ?? null, unit: unit ?? null }, preferences.measurementSystem),
       preferences.locale,
       quantityLabels
     ).text;
 
   const amount = $derived(amountOf(item.quantity, item.unit));
   const sources = $derived(item.sources ?? []);
+  /** What no recipe accounts for (typed by hand, or left from elsewhere), so the sources add up to the line. */
+  const other = $derived(item.otherQuantity ? amountOf(item.otherQuantity, item.unit) : '');
 
   const plannedFor = (date: string, slot: string | null | undefined) =>
     m['shopping.source.planned']({
@@ -135,6 +133,9 @@
       {/if}
     </ActionMenu>
   </div>
+  {#if item.isListedSeparately && !item.isChecked}
+    <p class="separate">{m['shopping.separate']()}</p>
+  {/if}
   {#if showingSources}
     <ul class="sources">
       {#each sources as source, index (`${source.recipeId}-${source.plannedDate ?? 'direct'}-${index}`)}
@@ -150,6 +151,12 @@
             >{/if}
         </li>
       {/each}
+      {#if other}
+        <li class="source">
+          <span class="source-name">{m['shopping.source.other']()}</span>
+          <span class="source-amount">{other}</span>
+        </li>
+      {/if}
     </ul>
   {/if}
 </li>
@@ -207,9 +214,17 @@
     color: var(--text-muted);
     font-size: var(--text-sm);
   }
-  .source a {
+  .source a,
+  .source-name {
     color: var(--text);
     font-weight: var(--weight-medium);
+  }
+  .separate {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 0 0 var(--space-2) calc(var(--space-6) + var(--space-3));
+    color: var(--text-muted);
+    font-size: var(--text-xs);
   }
   .source-amount {
     font-variant-numeric: tabular-nums;

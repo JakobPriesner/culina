@@ -1276,6 +1276,8 @@
   "household.inherit.title": "Geerbte Rezepte",
   "household.inherit.body": "Ein Haushalt, der von einem anderen erbt, sieht jedes Rezept, das dieser sieht. Seine Mitglieder können diese Rezepte kochen, planen und einkaufen, ändern aber nur in dem Haushalt, dem sie gehören.",
   "household.inherit.field": "Erbt Rezepte von",
+  "shopping.source.other": "Von Hand oder anderweitig ergänzt",
+  "shopping.separate": "Steht noch einmal mit anderer Einheit auf der Liste; die Mengen lassen sich nicht zusammenrechnen. Behalte die passende Zeile und entferne die andere.",
   "household.inherit.none": "Keinem",
   "household.inherit.current": "Sieht die Rezepte von {name}.",
   "household.inherit.nothing": "Sieht nur die eigenen Rezepte.",

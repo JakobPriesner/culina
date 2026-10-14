@@ -16,6 +16,16 @@ public class SectionKeywordsTests
     [InlineData("Olivenöl", ShoppingSection.SpicesBaking)]
     [InlineData("Rotwein", ShoppingSection.Drinks)]
     [InlineData("Spülmittel", ShoppingSection.Household)]
+    [InlineData("Speisestärke", ShoppingSection.SpicesBaking)]
+    [InlineData("Maisstärke", ShoppingSection.SpicesBaking)]
+    [InlineData("Kartoffelstärke", ShoppingSection.SpicesBaking)]
+    [InlineData("cornstarch", ShoppingSection.SpicesBaking)]
+    [InlineData("potato starch", ShoppingSection.SpicesBaking)]
+    [InlineData("Vanillezucker", ShoppingSection.SpicesBaking)]
+    [InlineData("Backpulver", ShoppingSection.SpicesBaking)]
+    [InlineData("Milch", ShoppingSection.DairyEggs)]
+    [InlineData("Eier", ShoppingSection.DairyEggs)]
+    [InlineData("Weizenmehl", ShoppingSection.DryGoods)]
     public void SectionFor_ShouldFindTheAisle(string name, ShoppingSection expected)
     {
         var item = ItemName.Create(name)

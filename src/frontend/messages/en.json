@@ -1276,6 +1276,8 @@
   "household.inherit.title": "Inherited recipes",
   "household.inherit.body": "A household that inherits another sees every recipe that one sees. Its members can cook, plan and shop for those recipes, but only change them in the household they belong to.",
   "household.inherit.field": "Inherits recipes from",
+  "shopping.source.other": "Added by hand or from elsewhere",
+  "shopping.separate": "Also listed with another unit, which can't be added to this amount. Keep the line you need and remove the other.",
   "household.inherit.none": "None",
   "household.inherit.current": "Sees the recipes of {name}.",
   "household.inherit.nothing": "Sees only its own recipes.",
