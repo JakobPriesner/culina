@@ -283,3 +283,15 @@ describe('switching households', () => {
     await reading;
   });
 });
+
+describe('opening a shelf', () => {
+  it('fails, rather than showing a page with nothing on it, when the answer is empty', async () => {
+    // A 200 with no body (a proxy, a cache that lost its copy): there is nothing to map, and the mapper throws.
+    serverAnswers(() => new Response(null, { status: 200 }));
+
+    await cookbooks.load('c1');
+
+    expect(cookbooks.openStatus).toBe('failed');
+    expect(cookbooks.openError?.code).toBe('client.unexpected');
+  });
+});

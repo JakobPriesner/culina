@@ -61,9 +61,10 @@
       requestId={cookbooks.openError?.requestId}
     >
       {#snippet action()}
-        <Button variant="primary" href={resolve('/(app)/cookbooks')}>
-          {m['cookbooks.title']()}
+        <Button variant="primary" onclick={() => void cookbooks.load(cookbookId)}>
+          {m['error.retry']()}
         </Button>
+        <Button href={resolve('/(app)/cookbooks')}>{m['cookbooks.title']()}</Button>
       {/snippet}
     </ErrorState>
   {:else}

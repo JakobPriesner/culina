@@ -1,4 +1,4 @@
-import { http, request, type AppError } from '$api';
+import { clientError, ErrorCodes, http, request, type AppError } from '$api';
 import type { LoadStatus } from '$shell/stores';
 
 import { toCookbook, toDetail } from '../mappers';
@@ -145,8 +145,14 @@ export class Shelves {
     );
 
     if (result.ok) {
-      this.#open = toDetail(result.value);
-      this.#openStatus = 'ready';
+      // An answer the client cannot read is a failure with a retry, not a page with no title and nothing in it.
+      try {
+        this.#open = toDetail(result.value);
+        this.#openStatus = 'ready';
+      } catch {
+        this.#openError = clientError(ErrorCodes.unexpected, 'The cookbook could not be read.');
+        this.#openStatus = 'failed';
+      }
 
       return;
     }

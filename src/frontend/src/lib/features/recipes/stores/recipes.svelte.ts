@@ -1,4 +1,4 @@
-import { ErrorCodes, http, request, type AppError } from '$api';
+import { clientError, ErrorCodes, http, request, type AppError } from '$api';
 import { registerStore, type LoadStatus } from '$shell/stores';
 
 import { toRecipe, toWireRecipe } from '../mappers';
@@ -107,7 +107,16 @@ class RecipeStore {
       return;
     }
 
-    this.#detail = toRecipe(result.value);
+    // An answer the client cannot read is a failure with a retry, not a skeleton that never ends.
+    try {
+      this.#detail = toRecipe(result.value);
+    } catch {
+      this.#detailError = clientError(ErrorCodes.unexpected, 'The recipe could not be read.');
+      this.#detailStatus = 'failed';
+
+      return;
+    }
+
     this.#detailStatus = 'ready';
   }
 
