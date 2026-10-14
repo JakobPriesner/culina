@@ -3,7 +3,7 @@ import type { Quantity, ScaledQuantity } from './quantityMath';
 import { counted } from './roundCounted';
 import { customary, measured } from './roundMeasured';
 import { spooned } from './roundSpoons';
-import { canCombine, familyOf, scales, toCanonical } from './units';
+import { canCombine, familyOf, scales, toCanonical, type Unit } from './units';
 
 export type { Quantity, ScaledQuantity };
 
@@ -63,20 +63,45 @@ export function scaleQuantity(
     return unchanged;
   }
 
-  const exact = base.value * factor;
+  return rounded(base.value * factor, base.unit, converts);
+}
+
+/**
+ * An amount the way a cook would write it, even when nothing scaled it: for a total that was summed from exact parts
+ * (a shopping line), where `scaleQuantity` at a factor of one leaves the exact amount alone.
+ */
+export function roundQuantity(
+  base: Quantity,
+  system: MeasurementSystem = 'metric'
+): ScaledQuantity {
+  if (base.value === null || !scales(base.unit)) {
+    return scaleQuantity(base, 1, system);
+  }
+
+  const family = familyOf(base.unit);
+
+  return rounded(
+    base.value,
+    base.unit,
+    system === 'imperial' && (family === 'mass' || family === 'volume')
+  );
+}
+
+function rounded(exact: number, unit: Unit | null, converts: boolean): ScaledQuantity {
+  const family = familyOf(unit);
 
   if (converts) {
-    return customary(exact, base.unit!, family === 'mass');
+    return customary(exact, unit!, family === 'mass');
   }
 
   switch (family) {
     case 'mass':
     case 'volume':
-      return measured(exact, base.unit!);
+      return measured(exact, unit!);
     case 'spoon':
-      return spooned(exact, base.unit!);
+      return spooned(exact, unit!);
     default:
-      return counted(exact, base.unit ?? null);
+      return counted(exact, unit);
   }
 }
 

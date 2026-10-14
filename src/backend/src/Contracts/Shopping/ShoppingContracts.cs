@@ -51,6 +51,18 @@ public sealed record ItemContract
 
     /// <summary>Which recipes asked for it, and how much each contributed.</summary>
     public required IReadOnlyList<SourceContract> Sources { get; init; }
+
+    /// <summary>
+    /// The part of <c>quantity</c> (in the same unit) that no source accounts for: what somebody typed,
+    /// or what a recipe left behind. Null when the sources make up the whole.
+    /// </summary>
+    public decimal? OtherQuantity { get; init; }
+
+    /// <summary>
+    /// Whether another line still to buy is this same thing in a unit (or with no amount) that cannot be added to this one,
+    /// so the two stay apart instead of being summed wrongly.
+    /// </summary>
+    public bool IsListedSeparately { get; init; }
 }
 
 /// <summary>A household's shopping list.</summary>

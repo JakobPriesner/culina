@@ -8,6 +8,8 @@ namespace Domain.Shopping;
 /// <summary>One line on the list.</summary>
 public sealed class ShoppingListItem
 {
+    private const decimal NegligibleRemainder = 0.01m;
+
     private readonly List<ShoppingItemSource> sources;
 
     private ShoppingListItem(
@@ -141,6 +143,41 @@ public sealed class ShoppingListItem
 
             return Result.Success();
         });
+    }
+
+    /// <summary>
+    /// What is on the line beyond what its sources asked for (typed by hand, or left behind when a recipe changed),
+    /// in the line's unit; null when the sources make up all of it, or the line has no amount.
+    /// </summary>
+    public Quantity? Unattributed()
+    {
+        var left = Quantity.IsMeasured ? Quantity : null;
+
+        foreach (var source in sources)
+        {
+            if (left is null)
+            {
+                return null;
+            }
+
+            left = left.Without(source.Quantity);
+        }
+
+        // Storing rounds to three places, so a sum of sources can miss its line by a hair.
+        return left is { Amount: >= NegligibleRemainder } ? left : null;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="other"/> is the same thing to buy that this line could not take in: its amount is in a unit that
+    /// does not add to this one, or one of them has no amount.
+    /// </summary>
+    public bool IsSeparateFrom(ShoppingListItem other)
+    {
+        ArgumentNullException.ThrowIfNull(other);
+
+        return other != this
+            && ItemMergePolicy.NamesMatch(Name, other.Name)
+            && !ItemMergePolicy.CanMerge(this, other.Name, other.Quantity);
     }
 
     /// <summary>Whether this planned meal asked for any of it.</summary>

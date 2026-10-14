@@ -16584,6 +16584,16 @@
             "nullable": true
           },
           "plannedSlot": {
+          },
+          "otherQuantity": {
+            "type": "number",
+            "description": "The part of `quantity` (in the same unit) that no source accounts for: what somebody typed,\nor what a recipe left behind. Null when the sources make up the whole.",
+            "format": "double",
+            "nullable": true
+          },
+          "isListedSeparately": {
+            "type": "boolean",
+            "description": "Whether another line still to buy is this same thing in a unit (or with no amount) that cannot be added to this one,\nso the two stay apart instead of being summed wrongly."
             "type": "string",
             "description": "Breakfast, lunch or dinner, or null when added directly.",
             "nullable": true

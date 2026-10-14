@@ -5890,6 +5890,17 @@ export interface components {
              */
             listId: string;
             /** @description What is on it, in shop order. */
+            /**
+             * Format: double
+             * @description The part of `quantity` (in the same unit) that no source accounts for: what somebody typed,
+             *     or what a recipe left behind. Null when the sources make up the whole.
+             */
+            otherQuantity?: number | null;
+            /**
+             * @description Whether another line still to buy is this same thing in a unit (or with no amount) that cannot be added to this one,
+             *     so the two stay apart instead of being summed wrongly.
+             */
+            isListedSeparately?: boolean;
             items: components["schemas"]["ShoppingItemContract"][];
             /**
              * Format: int64

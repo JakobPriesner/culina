@@ -75,6 +75,59 @@ describe('a line on the shopping list', () => {
     expect(screen.getByText(/^300\sml$/)).toBeInTheDocument();
   });
 
+  it('reads the sum as something to put in a basket, not as the exact total', () => {
+    preferences.adopt({ locale: 'en' }, { signedIn: false });
+
+    row({ ...milk, name: 'Butter', quantity: 1108.33, unit: 'g' });
+
+    expect(screen.getByText(/^1\.1\skg$/)).toBeInTheDocument();
+  });
+
+  it('accounts for the part of the total no recipe asked for, so the parts reach the whole', async () => {
+    preferences.adopt({ locale: 'en' }, { signedIn: false });
+
+    row({
+      ...milk,
+      name: 'Butter',
+      quantity: 700,
+      unit: 'g',
+      isManual: true,
+      otherQuantity: 500,
+      sources: [
+        {
+          recipeId: 'r1',
+          recipeTitle: 'Waffles',
+          quantity: 200,
+          unit: 'g',
+          plannedDate: null,
+          plannedSlot: null
+        }
+      ]
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: 'Actions for Butter' }));
+    await fireEvent.click(screen.getByRole('button', { name: '1 recipe', hidden: true }));
+
+    expect(screen.getByText('Added by hand or from elsewhere')).toBeInTheDocument();
+    expect(screen.getByText(/^500\sg$/)).toBeInTheDocument();
+  });
+
+  it('says why one thing is on the list twice, when its units cannot be added', () => {
+    preferences.adopt({ locale: 'en' }, { signedIn: false });
+
+    row({ ...milk, name: 'Salt', quantity: 1, unit: 'tsp', isListedSeparately: true });
+
+    expect(screen.getByText(/another unit, which can't be added/)).toBeInTheDocument();
+  });
+
+  it('says nothing of the kind once the line is in the trolley', () => {
+    preferences.adopt({ locale: 'en' }, { signedIn: false });
+
+    row({ ...milk, isChecked: true, isListedSeparately: true });
+
+    expect(screen.queryByText(/another unit/)).not.toBeInTheDocument();
+  });
+
   it('moves a line to the section it was chosen for, and only when it changes', async () => {
     preferences.adopt({ locale: 'en' }, { signedIn: false });
 
