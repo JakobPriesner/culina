@@ -13,6 +13,7 @@
     --surface-selected: var(--c-white);
     --surface-feature: var(--c-white);
     --text-on-feature: var(--c-black);
+    --text-muted-on-feature: var(--c-sand-700);
 
     /* Three greys and no more: a laser printer renders a fourth as the third. */
     --text: var(--c-black);

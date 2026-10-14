@@ -20,6 +20,7 @@
   --surface-hover: var(--c-sand-100);
   --surface-feature: var(--c-olive-900);
   --text-on-feature: var(--c-sand-50);
+  --text-muted-on-feature: var(--c-sand-300);
   --surface-selected: var(--c-sand-200);
 
   --text: var(--c-sand-900);
