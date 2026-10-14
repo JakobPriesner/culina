@@ -62,7 +62,8 @@ captures/
 .cxx/
 
 # Google Services (e.g. APIs or Firebase)
-# google-services.json
+# Firebase project file: CI writes it from a secret (native-release.yml), never committed.
+app/google-services.json
 
 # Freeline
 freeline.py

@@ -3,8 +3,11 @@ import { KeepAwake } from '@capacitor-community/keep-awake';
 import { App } from '@capacitor/app';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 
+import { goto } from '$app/navigation';
+
 import { useSecretStore } from '$api';
 import { drainNativeTimers, startNativeTimers } from '$features/cooking/nativeTimers';
+import { openTappedNotifications } from '$features/import/nativePush';
 import { useNativeWakeLock } from '$features/cooking/wakeLock.svelte';
 
 import { useNativeHaptics, type HapticMoment } from './haptics';
@@ -40,6 +43,10 @@ export async function startNativeShell(): Promise<void> {
   useNativeWakeLock({ hold: () => KeepAwake.keepAwake(), release: () => KeepAwake.allowSleep() });
 
   useNativeHaptics(feel);
+
+  // "Your recipe is ready": a tap opens the import it names, including the tap that launched the app.
+  // eslint-disable-next-line svelte/no-navigation-without-resolve -- a path the server built (`/recipes/imports/{id}`), checked same-origin by openTappedNotifications.
+  await openTappedNotifications((path) => void goto(path));
 
   // Before the first route: presses on the lock screen while the app was closed are applied first.
   await startNativeTimers();

@@ -5,5 +5,9 @@
 	<!-- A kitchen timer's notification breaks through a Focus (CulinaTimerEngine, below iOS 26 or without AlarmKit). -->
 	<key>com.apple.developer.usernotifications.time-sensitive</key>
 	<true/>
+	<!-- "Your recipe is ready" through the publisher's relay (docs/native-app-design.md, 7.4). The archive's signing
+	     sets production; development builds talk to the APNs sandbox. -->
+	<key>aps-environment</key>
+	<string>development</string>
 </dict>
 </plist>
