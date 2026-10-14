@@ -249,6 +249,17 @@ describe('opening a recipe', () => {
     expect(recipes.detailStatus).toBe('ready');
   });
 
+  it('fails, rather than loading for ever, when the answer cannot be read', async () => {
+    // An imported recipe with a part the client does not expect: the mapper throws, and nothing else would say so.
+    serverAnswers(() => json({ ...recipe('r1', 'Chili'), groups: null }));
+
+    await recipes.load('r1');
+
+    expect(recipes.detailStatus).toBe('failed');
+    expect(recipes.detailError?.code).toBe('client.unexpected');
+    expect(recipes.detail).toBeNull();
+  });
+
   it('is not marked failed by a library read that fails after it opened', async () => {
     const slow = Promise.withResolvers<Response>();
 
