@@ -181,6 +181,26 @@ test.describe('responsive production layouts @offline', () => {
   });
 
   for (const width of [320, 360]) {
+    test(`a shopping line keeps its name whole beside a long amount at ${width}px`, async ({
+      page
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport.');
+      await page.setViewportSize({ width, height: 740 });
+      await responsiveData(page);
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto('/shopping');
+      const row = page.getByRole('listitem').filter({ hasText: 'Vanillezuckerpäckchen' });
+      const name = row.getByText('Vanillezuckerpäckchen', { exact: true });
+      await expect(name).toBeVisible();
+      // One line is one unbroken word; a split word wraps to two.
+      expect((await name.boundingBox())!.height).toBeLessThan(32);
+      await expect(row.getByText(/Packung/)).toBeVisible();
+      await expect(row.getByRole('button', { name: /Vanillezuckerpäckchen/ })).toBeInViewport();
+      await expectReflow(page);
+    });
+  }
+
+  for (const width of [320, 360]) {
     test(`editor photo actions keep whole words at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 640 });
       await responsiveData(page, 'de', { draw: true });

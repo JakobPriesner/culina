@@ -197,6 +197,21 @@
   .actions {
     grid-column: 3;
   }
+  /* Too narrow to share a line: the amount drops under the name, so the name keeps its whole words. */
+  @media (width < 24rem) {
+    .row {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .amount {
+      grid-column: 1;
+      grid-row: 2;
+      padding: 0 0 var(--space-2) calc(var(--space-6) + var(--space-3));
+    }
+    .actions {
+      grid-column: 2;
+      grid-row: 1;
+    }
+  }
   .sources {
     display: flex;
     grid-column: 1 / -1;
