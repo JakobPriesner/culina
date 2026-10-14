@@ -368,6 +368,8 @@ export async function responsiveData(
     // A recipe of this many steps, cooked from its last one, so the step counter has its widest digits.
     stepCount = 0,
     suggestions = 0,
+    // What a card says about the energy it has: a lower bound, resting partly on typical weights, or both.
+    calories = { atLeast: true, estimated: false },
     draw = false,
     // A kitchen's worth of lines for the nutrition panel: spoons of oil, a count, and one with no amount.
     nutritionLines = false,
@@ -655,7 +657,7 @@ export async function responsiveData(
       return reply({
         items: Array.from({ length: 6 }, (_, i) => ({
           ...recipe,
-          calories: nutritionLines ? { value: 520.9, atLeast: true, estimated: false } : undefined,
+          calories: nutritionLines ? { value: 520.9, ...calories } : undefined,
           recipeId: i === 0 ? recipeId : `recipe-${i}`,
           imageId: i < 4 ? 'image-1' : null,
           cookCount: 0
@@ -669,7 +671,7 @@ export async function responsiveData(
       return reply({
         items: Array.from({ length: suggestions }, (_, i) => ({
           ...recipe,
-          calories: nutritionLines ? { value: 520.9, atLeast: true, estimated: false } : undefined,
+          calories: nutritionLines ? { value: 520.9, ...calories } : undefined,
           recipeId: i === 0 ? recipeId : `recipe-${i}`,
           cookCount: 0
         }))
