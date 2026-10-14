@@ -1,5 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
-import { cookbookId, expectReflow, recipeId, responsiveData } from './support/responsive';
+import {
+  cookbookId,
+  expectReflow,
+  expectWholeWords,
+  recipeId,
+  responsiveData
+} from './support/responsive';
 
 // Boundary pairs catch layouts that fit a phone and a laptop but break in between.
 const widths = [320, 390, 639, 640, 767, 768, 1023, 1024, 1279, 1280, 1536, 1920, 2560, 3440];
@@ -265,6 +271,7 @@ test.describe('responsive production layouts @offline', () => {
 
   for (const [width, height] of [
     [320, 568],
+    [320, 740],
     [844, 390]
   ] as const) {
     test(`filter dialog footer leaves the choices room at ${width}x${height}`, async ({
@@ -294,6 +301,7 @@ test.describe('responsive production layouts @offline', () => {
         expect(box.height).toBeGreaterThanOrEqual(44);
         expect(box.x + box.width).toBeLessThanOrEqual(footer.x + footer.width);
       }
+      await expectWholeWords(footerActions.getByRole('button'));
       await expectReflow(page);
     });
   }

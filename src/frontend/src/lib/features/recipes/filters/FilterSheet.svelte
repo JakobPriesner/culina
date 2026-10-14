@@ -137,7 +137,7 @@
 
   /*
    * One row at every width: stacking three buttons would leave the choices a sliver of a short screen.
-   * The secondary actions share what the primary one leaves and wrap their text if they must.
+   * The secondary actions share what the primary one leaves and wrap their text between words, never inside one.
    */
   .actions {
     display: flex;
@@ -148,6 +148,7 @@
 
   .actions > :global(button) {
     flex: 1 1 0;
+    min-width: min-content;
     padding-inline: var(--space-2);
   }
 
