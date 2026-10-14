@@ -142,3 +142,92 @@ describe('what it refuses to invent', () => {
     expect(read.steps).toEqual(['Ofen auf 200 °C vorheizen', 'Alles verrühren']);
   });
 });
+
+describe('a recipe that states its yield and time', () => {
+  const pasted = `
+Tomatenpasta
+Für 2 Portionen
+Zubereitung: 20 Minuten
+
+Zutaten
+200 g Spaghetti
+400 g Tomaten
+1 EL Olivenöl
+
+Zubereitung
+1. Spaghetti kochen.
+2. Tomaten in Olivenöl köcheln.
+3. Alles mischen und servieren.
+`;
+
+  it('keeps the yield and the time out of the title and the steps', () => {
+    const read = parseRecipeText(pasted);
+
+    expect(read.title).toBe('Tomatenpasta');
+    expect(read.steps).toEqual([
+      'Spaghetti kochen',
+      'Tomaten in Olivenöl köcheln',
+      'Alles mischen und servieren'
+    ]);
+    expect(read.ingredients.map((one) => one.name)).toEqual(['Spaghetti', 'Tomaten', 'Olivenöl']);
+  });
+
+  it("reports them as the recipe's own", () => {
+    expect(parseRecipeText(pasted)).toMatchObject({ servings: 2, totalMinutes: 20 });
+  });
+
+  it.each([
+    ['Für 4 Personen', 4],
+    ['Portionen: 6', 6],
+    ['4 Portionen', 4],
+    ['Serves 3', 3],
+    ['Makes 8 servings', 8],
+    ['- 2 servings', 2]
+  ])('reads "%s" as %i servings', (line, servings) => {
+    const read = parseRecipeText(`Suppe\n${line}\nZubereitung\nAlles kochen.`);
+
+    expect(read.servings).toBe(servings);
+    expect(read.title).toBe('Suppe');
+    expect(read.steps).toEqual(['Alles kochen']);
+  });
+
+  it('reads a count of things as pieces, in the word it was given in', () => {
+    expect(parseRecipeText('Muffins\nErgibt 12 Muffins')).toMatchObject({
+      servings: 12,
+      yieldKind: 'pieces',
+      yieldLabel: 'Muffins'
+    });
+  });
+
+  it.each([
+    ['Gesamtzeit: 1 Std. 15 Min.', 75],
+    ['Total time: 2 hours', 120],
+    ['Kochzeit ca. 45 Minuten', 45]
+  ])('reads "%s" as %i minutes', (line, minutes) => {
+    expect(parseRecipeText(`Eintopf\n${line}`).totalMinutes).toBe(minutes);
+  });
+
+  it('adds preparation and cooking, unless the page gave the total itself', () => {
+    expect(
+      parseRecipeText('Eintopf\nArbeitszeit: 15 Minuten\nKochzeit: 30 Minuten').totalMinutes
+    ).toBe(45);
+    expect(
+      parseRecipeText(
+        'Eintopf\nArbeitszeit: 15 Minuten\nKochzeit: 30 Minuten\nGesamtzeit: 60 Minuten'
+      ).totalMinutes
+    ).toBe(60);
+  });
+
+  it('states nothing when the page did not', () => {
+    const read = parseRecipeText('Pancakes\n125 g flour\nWhisk everything together.');
+
+    expect(read).not.toHaveProperty('servings');
+    expect(read).not.toHaveProperty('totalMinutes');
+  });
+
+  it('still reads a method that says how long something takes', () => {
+    const read = parseRecipeText('Zubereitung\n1. Zeit: 5 Minuten ruhen lassen.\nWarten.');
+
+    expect(read.steps).toEqual(['Zeit: 5 Minuten ruhen lassen', 'Warten']);
+  });
+});
