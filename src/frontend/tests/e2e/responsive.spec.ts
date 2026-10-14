@@ -453,6 +453,34 @@ test.describe('responsive production layouts @offline', () => {
     await page.screenshot({ path: testInfo.outputPath('recipe-reading-390.png') });
   });
 
+  for (const [width, height] of [
+    [844, 390],
+    [667, 375]
+  ] as const) {
+    test(`a recipe opens on its title with the photo kept at ${width}x${height}`, async ({
+      page
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport.');
+      await page.setViewportSize({ width, height });
+      await responsiveData(page, 'de', { activeCooking: false });
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.goto(`/recipes/${recipeId}`);
+
+      const title = page.getByRole('heading', { level: 1 });
+      await expect(title).toBeVisible();
+      const hero = (await page.locator('article.surface > .hero').boundingBox())!;
+      const titleBox = (await title.boundingBox())!;
+      const start = (await page.getByRole('button', { name: 'Kochen starten' }).boundingBox())!;
+      // The photograph stands beside the title, and still has a usable size.
+      expect(hero.x + hero.width).toBeLessThanOrEqual(titleBox.x);
+      expect(hero.height).toBeGreaterThanOrEqual(96);
+      // The title's first line is read above the floating start action.
+      expect(titleBox.y + 40).toBeLessThanOrEqual(start.y);
+      await expect(page.getByRole('button', { name: 'Kochen starten' })).toBeInViewport();
+      await expectReflow(page);
+    });
+  }
+
   for (const locale of ['de', 'en'] as const) {
     test(`${locale} cooking actions stay compact across phone and tablet widths`, async ({
       page
@@ -687,7 +715,7 @@ test.describe('responsive production layouts @offline', () => {
           box.x + box.width <= counter.x ||
           box.y >= counter.y + counter.height ||
           box.y + box.height <= counter.y;
-        expect(apart, await tool.getAttribute('aria-label')).toBe(true);
+        expect(apart, (await tool.getAttribute('aria-label')) ?? undefined).toBe(true);
       }
       await expectReflow(page);
     });

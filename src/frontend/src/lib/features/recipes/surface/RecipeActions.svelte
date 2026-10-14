@@ -230,8 +230,10 @@
     .actions {
       gap: var(--space-1);
     }
+  }
 
-    /* Overlay the photo so a long title keeps the whole line; the surface sets `.photographed` and the positioning context. */
+  /* Overlay the photo so a long title keeps the whole line; the surface sets `.photographed` and the positioning context. A photograph beside the title (a short screen) has no room to carry them. */
+  @media (width < 52rem) and (min-height: 32.0625rem) {
     :global(.photographed) .actions {
       position: absolute;
       inset-block-start: var(--space-2);
