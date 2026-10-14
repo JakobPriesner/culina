@@ -104,6 +104,14 @@
     }
   }
 
+  /* The photograph stands beside the title on a short screen, so the title has a column, not the width. */
+  @media screen and (max-height: 32rem) {
+    .title {
+      font-size: var(--text-2xl);
+      line-height: var(--leading-tight);
+    }
+  }
+
   @media print {
     .head {
       margin-bottom: 6mm;

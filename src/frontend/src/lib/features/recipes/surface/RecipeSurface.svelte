@@ -220,6 +220,31 @@
     }
   }
 
+  /* A landscape phone has width and no height: the photograph stands beside the title and servings instead of above them, so the title is on the first screen. */
+  @media screen and (max-height: 32rem) {
+    .photographed {
+      display: grid;
+      grid-template-columns: minmax(9rem, 2fr) minmax(0, 3fr);
+      column-gap: var(--space-6);
+      align-items: start;
+    }
+
+    .photographed > :global(*) {
+      grid-column: 1 / -1;
+    }
+
+    .photographed > :global(.hero) {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      align-self: stretch;
+    }
+
+    .photographed > :global(.head),
+    .photographed > :global(.servings) {
+      grid-column: 2;
+    }
+  }
+
   @media print {
     .surface {
       display: block;
