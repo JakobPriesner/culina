@@ -365,6 +365,8 @@ export async function responsiveData(
     extraIngredients = 0,
     activeCooking = true,
     longSteps = false,
+    // A recipe of this many steps, cooked from its last one, so the step counter has its widest digits.
+    stepCount = 0,
     suggestions = 0,
     draw = false,
     // A kitchen's worth of lines for the nutrition panel: spoons of oil, a count, and one with no amount.
@@ -386,20 +388,28 @@ export async function responsiveData(
   const detail = {
     ...recipe,
     yieldAmount: nutritionVariant === 'whole' ? 1 : recipe.yieldAmount,
-    steps: longSteps
-      ? recipe.steps.map((step) => ({
-          ...step,
-          segments: [
-            {
-              type: 'text' as const,
-              value: Array.from(
-                { length: 8 },
-                (_, i) => `Abschnitt ${i + 1}. ${step.segments[0]!.value}`
-              ).join('\n\n')
-            }
-          ]
+    steps: (stepCount > 0
+      ? Array.from({ length: stepCount }, (_, i) => ({
+          ...recipe.steps[i % recipe.steps.length]!,
+          stepId: `step-${i}`
         }))
-      : recipe.steps,
+      : recipe.steps
+    ).map((step) =>
+      longSteps
+        ? {
+            ...step,
+            segments: [
+              {
+                type: 'text' as const,
+                value: Array.from(
+                  { length: 8 },
+                  (_, i) => `Abschnitt ${i + 1}. ${step.segments[0]!.value}`
+                ).join('\n\n')
+              }
+            ]
+          }
+        : step
+    ),
     groups: [
       {
         ingredients: [
@@ -444,7 +454,7 @@ export async function responsiveData(
     recipeId,
     recipeTitle: longName,
     servings: 2,
-    currentStepIndex: 0,
+    currentStepIndex: Math.max(stepCount - 1, 0),
     startedAt: stamp,
     lastActiveAt: stamp,
     version: 1
