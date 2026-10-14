@@ -35,6 +35,8 @@ blob-report/
 src/backend/src/Api/appsettings.*.local.json
 # The repository root's only: unanchored, it would also hide an Android source package named `data`.
 /data/
+# The API's local images and signing keys when it runs from its own folder.
+src/backend/src/Api/data/
 
 # ── Deliberately NOT ignored ───────────────────────────────────────
 # src/backend/openapi/Api.json  — the API contract is committed on purpose;
