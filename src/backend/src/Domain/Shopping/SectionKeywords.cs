@@ -90,7 +90,9 @@ public static class SectionKeywords
             "chili", "muskat", "nutmeg", "backpulver", "baking powder", "natron",
             "baking soda", "hefe", "yeast", "kakao", "cocoa", "schokolade", "chocolate",
             "essig", "vinegar", "oel", "oil", "olivenoel", "sojasauce", "soy sauce",
-            "miso", "lorbeer", "bay leaf", "oregano", "kurkuma", "turmeric");
+            "miso", "lorbeer", "bay leaf", "oregano", "kurkuma", "turmeric",
+            // Starch sets pudding and thickens sauces, but its names hold a vegetable ("Kartoffelstärke") and an "ei" ("Speisestärke").
+            "staerke", "starch", "kartoffelstaerke", "potato starch", "gelatine", "puddingpulver");
 
         Add(ShoppingSection.Drinks,
             "wasser", "water", "saft", "juice", "wein", "wine", "bier", "beer",

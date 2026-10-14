@@ -10,6 +10,8 @@ internal static class ShoppingMappings
     {
         ArgumentNullException.ThrowIfNull(list);
 
+        var toBuy = list.Items.Where(item => !item.IsChecked).ToList();
+
         return new Response
         {
             ListId = list.Id,
@@ -26,6 +28,8 @@ internal static class ShoppingMappings
                     Section = ShoppingWords.Of(item.Section),
                     IsChecked = item.IsChecked,
                     IsManual = item.IsManual,
+                    OtherQuantity = item.Unattributed()?.Amount,
+                    IsListedSeparately = !item.IsChecked && toBuy.Exists(item.IsSeparateFrom),
                     Sources = [.. item.Sources.Select(source => new SourceContract
                     {
                         RecipeId = source.RecipeId,

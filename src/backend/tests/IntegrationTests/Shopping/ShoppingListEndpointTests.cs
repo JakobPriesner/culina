@@ -521,6 +521,27 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Get_ShouldNameTheAmountNoRecipeAccountsFor()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+
+        await PlanAsync(client, householdId, recipeId, Monday);
+        await AddWeekAsync(client, householdId);
+        await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/items",
+            new { name = "Butter", quantity = 500, unit = "g" },
+            Token);
+
+        var list = await client.GetAsync($"/api/v1/households/{householdId}/shopping-list", Token);
+        var butter = Butter(list);
+
+        Assert.Equal(700m, butter.GetProperty("quantity").GetDecimal());
+        Assert.Equal(500m, butter.GetProperty("otherQuantity").GetDecimal());
+    }
+
+    [Fact]
     public async Task WithdrawPlannedMeal_ShouldKeepWhatSomebodyTyped()
     {
         using var client = await SignedInAsync();

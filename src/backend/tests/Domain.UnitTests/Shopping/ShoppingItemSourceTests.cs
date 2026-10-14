@@ -189,6 +189,79 @@ public class ShoppingItemSourceTests
         Assert.Equal(4m, line.Quantity.Amount);
     }
 
+    [Fact]
+    public void Unattributed_ShouldBeWhatTheSourcesDoNotAccountFor()
+    {
+        // Arrange
+        var list = ShoppingList.Create(Guid.CreateVersion7());
+
+        list.Add(Name("Butter"), For(Waffles, Saturday, 250), ShoppingSection.DairyEggs);
+        list.Add(Name("Butter"), For(Pasta, Sunday, 208.333m), ShoppingSection.DairyEggs);
+        list.AddManual(Name("Butter"), Grams(500), ShoppingSection.DairyEggs);
+
+        // Act
+        var other = Assert.Single(list.Items).Unattributed();
+
+        // Assert
+        Assert.Equal(500m, other?.Amount);
+        Assert.Equal(Unit.Gram, other?.Unit);
+    }
+
+    [Fact]
+    public void Unattributed_ShouldBeNothing_WhenTheSourcesMakeUpTheLine()
+    {
+        // Arrange
+        var list = ShoppingList.Create(Guid.CreateVersion7());
+
+        list.Add(Name("Butter"), For(Waffles, Saturday, 250), ShoppingSection.DairyEggs);
+        list.Add(Name("Butter"), For(Pasta, Sunday, 0.1m, Unit.Kilogram), ShoppingSection.DairyEggs);
+
+        // Act
+        var other = Assert.Single(list.Items).Unattributed();
+
+        // Assert
+        Assert.Null(other);
+    }
+
+    [Fact]
+    public void Unattributed_ShouldBeNothing_ForALineWithNoAmount()
+    {
+        // Arrange
+        var list = ShoppingList.Create(Guid.CreateVersion7());
+
+        list.AddManual(Name("Salz"), Quantity.Unmeasured, ShoppingSection.SpicesBaking);
+
+        // Act
+        var other = Assert.Single(list.Items).Unattributed();
+
+        // Assert
+        Assert.Null(other);
+    }
+
+    [Fact]
+    public void IsSeparateFrom_ShouldKnowTwoLinesOfOneThingThatCannotBeAdded()
+    {
+        // Arrange
+        var list = ShoppingList.Create(Guid.CreateVersion7());
+
+        list.AddManual(Name("Salz"), Quantity.Unmeasured, ShoppingSection.SpicesBaking);
+        list.Add(Name("Salz"), For(Waffles, Saturday, 1, Unit.Teaspoon), ShoppingSection.SpicesBaking);
+        list.Add(Name("Mehl"), For(Waffles, Saturday, 250), ShoppingSection.DryGoods);
+
+        // Assert
+        var salt = list.Items.Where(item => item.Name.Value == "Salz").ToList();
+
+        Assert.Equal(2, salt.Count);
+        Assert.True(salt[0].IsSeparateFrom(salt[1]));
+        Assert.True(salt[1].IsSeparateFrom(salt[0]));
+        Assert.False(salt[0].IsSeparateFrom(salt[0]));
+        Assert.False(salt[0].IsSeparateFrom(list.Items.Single(item => item.Name.Value == "Mehl")));
+    }
+
+    private static Quantity Grams(decimal amount) =>
+        Quantity.Create(amount, Unit.Gram)
+            .Match(quantity => quantity, error => throw new InvalidOperationException(error.Code));
+
     private static ItemName Name(string value) =>
         ItemName.Create(value).Match(name => name, error => throw new InvalidOperationException(error.Code));
 
