@@ -115,3 +115,33 @@ describe('a page that says what it makes', () => {
     expect(imported[0]).toMatchObject({ servings: 12, yieldKind: 'pieces', yieldLabel: 'Muffins' });
   });
 });
+
+describe('a recipe pasted as text with its yield and time on lines of their own', () => {
+  it('previews them as what the recipe makes and takes, and only the method as steps', async () => {
+    serverAnswers();
+    renderWithProviders(PasteImport, {
+      props: {
+        householdId: 'h1',
+        onimport: () => {},
+        open: true,
+        initialText: [
+          'Tomatenpasta',
+          'Für 2 Portionen',
+          'Zubereitung: 20 Minuten',
+          'Zutaten',
+          '200 g Spaghetti',
+          '400 g Tomaten',
+          '1 EL Olivenöl',
+          'Zubereitung',
+          '1. Spaghetti kochen.',
+          '2. Tomaten in Olivenöl köcheln.',
+          '3. Alles mischen.'
+        ].join('\n')
+      }
+    });
+    await settle();
+
+    expect(screen.getByText('2 servings · 20 min')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem').filter((item) => item.closest('ol'))).toHaveLength(3);
+  });
+});
