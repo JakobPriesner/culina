@@ -15,6 +15,7 @@
     --surface-hover: #eeeeee;
     --surface-feature: var(--c-olive-900);
     --text-on-feature: var(--c-sand-50);
+    --text-muted-on-feature: var(--c-sand-300);
     --surface-selected: #dddddd;
 
     --text: #111111;
@@ -92,6 +93,7 @@
     --surface-hover: #171717;
     --surface-feature: var(--c-olive-900);
     --text-on-feature: var(--c-sand-50);
+    --text-muted-on-feature: var(--c-sand-300);
     --surface-selected: #242424;
 
     --text: #dddddd;
