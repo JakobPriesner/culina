@@ -82,41 +82,41 @@
   --mascot-steam: var(--c-sand-400);
 }
 
-/* Dark mode is warm charcoal, never blue-black: a cold ground makes food photography look grey. */
+/* Dark mode pairs forest greens with warm ivory text and soft mint accents. */
 [data-theme='warm-paper'][data-mode='dark'] {
-  --surface: var(--c-sand-950);
-  --surface-raised: var(--c-sand-900);
-  --surface-sunken: var(--c-black);
+  --surface: var(--c-forest-950);
+  --surface-raised: var(--c-forest-900);
+  --surface-sunken: var(--c-forest-975);
   --surface-glass: color-mix(in srgb, var(--surface) 94%, transparent);
   --surface-nav-glass: color-mix(in srgb, var(--surface-sunken) 90%, transparent);
-  --surface-overlay: var(--c-sand-800);
+  --surface-overlay: var(--c-forest-850);
   --surface-overlay-glass: color-mix(in srgb, var(--surface-overlay) 92%, transparent);
-  --surface-accent-subtle: var(--c-olive-800);
-  --surface-highlight: var(--c-olive-700);
+  --surface-accent-subtle: var(--c-forest-800);
+  --surface-highlight: var(--c-forest-800);
   --surface-highlight-band: color-mix(in srgb, var(--accent) 14%, transparent);
-  --surface-hover: var(--c-sand-800);
-  --surface-feature: var(--c-olive-900);
-  --text-on-feature: var(--c-sand-50);
-  --surface-selected: var(--c-sand-700);
+  --surface-hover: var(--c-forest-850);
+  --surface-feature: var(--c-forest-850);
+  --text-on-feature: var(--c-forest-50);
+  --surface-selected: var(--c-forest-800);
 
-  --text: var(--c-sand-100);
-  --text-muted: var(--c-sand-300);
-  --text-subtle: var(--c-sand-400);
-  --text-on-accent: var(--c-sand-950);
+  --text: var(--c-forest-50);
+  --text-muted: var(--c-forest-300);
+  --text-subtle: var(--c-forest-400);
+  --text-on-accent: var(--c-forest-950);
   --text-danger: #f7aba7;
   --text-success: #a9c9a1;
 
-  --border: var(--c-sand-800);
-  --border-strong: var(--c-sand-500);
-  --border-focus: var(--c-olive-300);
+  --border: var(--c-forest-700);
+  --border-strong: var(--c-forest-500);
+  --border-focus: var(--c-mint-400);
   /* Darker, not lighter: a pale hairline around a dark fill is a cut-out, not an edge. */
-  --border-accent: var(--c-olive-600);
+  --border-accent: var(--c-forest-600);
 
   /* Lighter than the light-mode accent: the same hue on a dark ground reads as muddy. */
-  --accent: var(--c-olive-300);
-  --accent-hover: var(--c-olive-100);
-  --accent-active: var(--c-olive-100);
-  --accent-contrast: var(--c-sand-950);
+  --accent: var(--c-mint-400);
+  --accent-hover: var(--c-mint-200);
+  --accent-active: var(--c-mint-500);
+  --accent-contrast: var(--c-forest-950);
   --brand-accent: var(--c-saffron-400);
 
   --danger: #f08a85;
@@ -127,12 +127,12 @@
   --warning: #e3bd6c;
   --warning-subtle: #4a3a18;
 
-  --generating-ground: var(--c-sand-900);
+  --generating-ground: var(--c-forest-900);
   --generating-1: rgb(255 153 82);
   --generating-2: rgb(255 92 138);
   --generating-3: rgb(176 112 255);
   --generating-4: rgb(84 150 255);
-  --generating-panel: rgb(20 17 14 / 52%);
+  --generating-panel: rgb(13 20 13 / 52%);
   --generating-panel-border: rgb(255 255 255 / 16%);
   --generating-panel-shadow: 0 0.5rem 2rem rgb(0 0 0 / 24%);
 
@@ -148,8 +148,8 @@
     0 1px 2px rgb(0 0 0 / 30%), 0 6px 20px rgb(0 0 0 / 35%);
   --scrim: rgb(0 0 0 / 65%);
 
-  --skeleton-base: var(--c-sand-800);
-  --skeleton-highlight: var(--c-sand-700);
+  --skeleton-base: var(--c-forest-800);
+  --skeleton-highlight: var(--c-forest-700);
 
   --mascot-line: var(--c-sand-900);
   --mascot-body: var(--c-olive-400);
@@ -161,5 +161,5 @@
   --mascot-mouth: var(--c-rust-600);
   --mascot-paper: var(--c-sand-50);
   --mascot-paper-line: var(--c-sand-300);
-  --mascot-steam: var(--c-sand-500);
+  --mascot-steam: var(--c-forest-500);
 }
