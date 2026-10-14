@@ -23,27 +23,27 @@
 
     <ItemGroup Label="Application">
         <!-- Abstractions only: Application declares ports and logs, and must not reach a concrete host or container. -->
-        <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
-        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
+        <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.13" />
+        <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.13" />
     </ItemGroup>
 
     <ItemGroup Label="Relay">
         <!-- The push relay's one table (relay token hash to device), in a file beside it: no database server to run for a map. -->
-        <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.12" />
+        <PackageVersion Include="Microsoft.Data.Sqlite" Version="10.0.13" />
     </ItemGroup>
 
     <ItemGroup Label="Infrastructure">
-        <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.12" />
-        <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.12" />
+        <PackageVersion Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.13" />
+        <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.13" />
         <!-- The admin's saved server settings are one more configuration source, read by the same provider as appsettings.json. -->
-        <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.12" />
+        <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.13" />
         <PackageVersion Include="Npgsql" Version="10.0.3" />
         <PackageVersion Include="Lib.Net.Http.WebPush" Version="3.3.1" />
         <PackageVersion Include="Dapper" Version="2.1.89" />
         <!-- Argon2id: memory-hard password hashing, per cookie-auth-and-security. -->
         <PackageVersion Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
         <!-- Encrypts the model provider's API key before it is stored; the standalone package, because Infrastructure is a plain library and DataProtectionProvider.Create(DirectoryInfo) needs no host. -->
-        <PackageVersion Include="Microsoft.AspNetCore.DataProtection.Extensions" Version="10.0.12" />
+        <PackageVersion Include="Microsoft.AspNetCore.DataProtection.Extensions" Version="10.0.13" />
         <!-- Uploads are re-encoded, stripping EXIF (GPS in food photos leaks). Pinned to 3.1.x: Apache-2.0, whereas 4.x needs a licence key at build time.
              3.1.12 has known advisories, suppressed below with the reason each is unreachable. -->
         <PackageVersion Include="SixLabors.ImageSharp" Version="3.1.12" />
@@ -59,10 +59,10 @@
     </ItemGroup>
 
     <ItemGroup Label="Api">
-        <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
+        <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
         <!-- Emits the OpenAPI document at build time, so the frontend client is
              generated from a committed file and never from a running server. -->
-        <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.12" />
+        <PackageVersion Include="Microsoft.Extensions.ApiDescription.Server" Version="10.0.13" />
         <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.19.1" />
         <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.19.1" />
         <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0" />
@@ -86,7 +86,7 @@
         <PackageVersion Include="xunit.v3.extensibility.core" Version="4.0.2" />
         <PackageVersion Include="xunit.v3.assert" Version="4.0.2" />
         <PackageVersion Include="NetArchTest.Rules" Version="1.3.2" />
-        <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.12" />
+        <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.13" />
         <PackageVersion Include="Testcontainers.PostgreSql" Version="4.16.0" />
     </ItemGroup>
 
