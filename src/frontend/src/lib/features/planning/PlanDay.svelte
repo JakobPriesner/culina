@@ -18,11 +18,11 @@
     drag: WeekDrag;
     ondrop: OnDrop;
     onadd: () => void;
-    onmove: (meal: PlannedMeal) => void;
+    onedit: (meal: PlannedMeal) => void;
     onremove: (meal: PlannedMeal) => void;
   }
 
-  let { day, today, past, householdId, drag, ondrop, onadd, onmove, onremove }: Props = $props();
+  let { day, today, past, householdId, drag, ondrop, onadd, onedit, onremove }: Props = $props();
 
   const landing = $derived(drag.landing?.date === day.date ? drag.landing : null);
 </script>
@@ -58,7 +58,7 @@
                 { entryId: meal.entryId, title: meal.title, from: day.date },
                 ondrop
               )}
-            onmove={() => onmove(meal)}
+            onedit={() => onedit(meal)}
             onremove={() => onremove(meal)}
           />
         </li>

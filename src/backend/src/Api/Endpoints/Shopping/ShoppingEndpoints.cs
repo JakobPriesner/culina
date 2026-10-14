@@ -2,6 +2,7 @@ using Api.Endpoints.Shopping.AddItem.V1;
 using Api.Endpoints.Shopping.AddPlannedMeals.V1;
 using Api.Endpoints.Shopping.AddRecipe.V1;
 using Api.Endpoints.Shopping.Get.V1;
+using Api.Endpoints.Shopping.RefreshPlannedMeal.V1;
 using Api.Endpoints.Shopping.RemoveItems.V1;
 using Api.Endpoints.Shopping.UpdateItem.V1;
 using Api.Endpoints.Shopping.WithdrawPlannedMeal.V1;
@@ -18,6 +19,7 @@ internal static class ShoppingEndpoints
             .AddSingleton<IEndpoint, AddRecipeToListEndpoint>()
             .AddSingleton<IEndpoint, AddPlannedMealsToListEndpoint>()
             .AddSingleton<IEndpoint, WithdrawPlannedMealEndpoint>()
+            .AddSingleton<IEndpoint, RefreshPlannedMealEndpoint>()
             .AddSingleton<IEndpoint, UpdateShoppingItemEndpoint>()
             .AddSingleton<IEndpoint, RemoveShoppingItemsEndpoint>();
 }

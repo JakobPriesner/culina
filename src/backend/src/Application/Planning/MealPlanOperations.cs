@@ -164,7 +164,7 @@ internal sealed class PlanMealCommandHandler(
     }
 }
 
-/// <summary>Moves a planned meal to another day and place, keeping its servings and slot.</summary>
+/// <summary>Moves a planned meal to another day and place, and changes for how many it is when asked; its slot is kept unless one is named.</summary>
 internal sealed class MoveMealCommandHandler(
     IMealPlanRepository plans,
     IHouseholdRepository households,
@@ -222,7 +222,21 @@ internal sealed class MoveMealCommandHandler(
             : PlanningWords.ToSlot(command.Draft.Slot);
 
         return await slot.Match(
-            which => SaveAsync(command, entry, which, cancellationToken),
+            which => ServeAsync(command, entry, which, cancellationToken),
+            error => Task.FromResult(Result<MealPlanResponse>.Failure(error))).ConfigureAwait(false);
+    }
+
+    private async Task<Result<MealPlanResponse>> ServeAsync(
+        MoveMealCommand command,
+        MealPlanEntry entry,
+        MealSlot slot,
+        CancellationToken cancellationToken)
+    {
+        // An omitted amount keeps the meal's own, as a drag does.
+        var served = command.Draft.Servings is { } servings ? entry.WithServings(servings) : entry;
+
+        return await served.Match(
+            changed => SaveAsync(command, changed, slot, cancellationToken),
             error => Task.FromResult(Result<MealPlanResponse>.Failure(error))).ConfigureAwait(false);
     }
 
