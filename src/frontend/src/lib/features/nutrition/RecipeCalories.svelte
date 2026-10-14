@@ -15,17 +15,25 @@
       yield: recipe.yieldAmount
     })
   );
-  /** Said after the figure, so a card that leaves the yield out still says what it counts. */
+  /**
+   * Said after the figure, so a card that leaves the yield out still says what it counts. A recipe that makes one serving is a whole
+   * cake or a whole pot, and its figure is for all of it: "per person" there would be a very wrong comparison.
+   */
   const per = $derived(
-    recipe.yieldKind === 'pieces' ? m['nutrition.perPiece']() : m['nutrition.short.perPerson']()
+    recipe.yieldKind === 'pieces'
+      ? m['nutrition.perPiece']()
+      : recipe.yieldAmount === 1
+        ? m['nutrition.short.whole']()
+        : m['nutrition.short.perPerson']()
   );
 </script>
 
 {#if recipe.calories}
-  <span class="calories">
+  <span class="calories" class:partial={recipe.calories.atLeast}>
     <span>
-      {#if recipe.calories.atLeast}<VisuallyHidden>{m['nutrition.atLeast']()}{nbsp}</VisuallyHidden
-        >{/if}
+      <!-- A lower bound is shown as one, not only said: a small number that is only part of the dish must not read as a light one. -->
+      {#if recipe.calories.atLeast}<span class="bound" aria-hidden="true">≥{nbsp}</span
+        ><VisuallyHidden>{m['nutrition.atLeast']()}{nbsp}</VisuallyHidden>{/if}
       <EstimateMark estimated={recipe.calories.estimated} />{labelNumber(
         'energy',
         recipe.calories
@@ -36,6 +44,14 @@
 {/if}
 
 <style>
+  .partial {
+    color: var(--text-muted);
+  }
+
+  .bound {
+    font-weight: var(--weight-regular);
+  }
+
   .calories {
     display: inline-flex;
     align-items: center;
