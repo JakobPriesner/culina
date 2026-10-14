@@ -46,6 +46,15 @@
     }
   }
 
+  /* A landscape phone: the surface puts the photograph beside the title, so it is as tall as that row and never taller than a band of the screen. */
+  @media screen and (max-height: 32rem) {
+    .hero {
+      aspect-ratio: auto;
+      min-height: 6rem;
+      max-height: 12rem;
+    }
+  }
+
   @media print {
     .hero {
       display: none !important;
