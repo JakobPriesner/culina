@@ -10,7 +10,7 @@ export interface ParsedRecipe {
   readonly title: string;
   readonly ingredients: readonly ParsedIngredient[];
   readonly steps: readonly string[];
-  /** Only structured-data sites know these; guessing would scale every amount wrongly. */
+  /** Only what the source states: a structured-data site, or a line like "Für 2 Portionen". Guessing would scale every amount wrongly. */
   readonly servings?: number;
   /** What `servings` counts, when the site said: people, or things ("12 Muffins"). Only beside `servings`. */
   readonly yieldKind?: YieldKind;
@@ -62,6 +62,59 @@ const headingKind = (line: string): 'ingredients' | 'steps' | null => {
   return headings.steps.includes(key as (typeof headings.steps)[number]) ? 'steps' : null;
 };
 
+const people = 'portionen|portion|personen|person|pers\\.?|servings?|people';
+
+/** "Für 2 Portionen", "Portionen: 4", "4 servings", "Serves 4": the yield, said on a line of its own. */
+const peopleYield = [
+  new RegExp(
+    `^(?:für|fuer|for|ergibt|macht|makes|serves)\\s*:?\\s*(\\d+)(?:\\s*(?:${people}))?$`,
+    'iu'
+  ),
+  new RegExp(`^(?:${people})\\s*:?\\s*(\\d+)$`, 'iu'),
+  new RegExp(`^(\\d+)\\s*(?:${people})$`, 'iu')
+];
+
+/** "Ergibt 12 Muffins": a count of things, with the word it was given in. */
+const piecesYield = /^(?:ergibt|macht|makes|yields?)\s*:?\s*(\d+)\s+(\p{L}[\p{L}-]*)$/iu;
+
+const timeLabel =
+  '(?:zubereitung(?:szeit)?|arbeitszeit|kochzeit|backzeit|gesamtzeit|dauer|zeit|prep(?:aration)? time|cook(?:ing)? time|total time|active time|ready in|time|duration)';
+
+/** "Zubereitung: 20 Minuten", "Gesamtzeit ca. 1 Std. 15 Min.": a label, then only hours and minutes. */
+const timeLine = new RegExp(
+  `^(${timeLabel})\\s*:?\\s*(?:ca\\.?|circa|etwa|about|approx\\.?)?\\s*(?:(\\d+)\\s*(?:h|std\\.?|stunden?|hours?|hrs?))?\\s*(?:(\\d+)\\s*(?:min\\.?|minuten?|minutes?|mins?))?$`,
+  'iu'
+);
+
+const totalLabel = /^(?:gesamt|total|ready)/iu;
+
+/** What a line says about the recipe rather than in it; null when it is a line of the recipe. */
+type Metadata =
+  | { kind: 'servings'; amount: number }
+  | { kind: 'pieces'; amount: number; label: string }
+  | { kind: 'time'; minutes: number; total: boolean };
+
+const readMetadata = (line: string): Metadata | null => {
+  const text = bare(line);
+
+  const counted = peopleYield.map((pattern) => pattern.exec(text)?.[1]).find(Boolean);
+
+  if (Number(counted) > 0) {
+    return { kind: 'servings', amount: Number(counted) };
+  }
+
+  const pieces = piecesYield.exec(text);
+
+  if (pieces && Number(pieces[1]) > 0) {
+    return { kind: 'pieces', amount: Number(pieces[1]), label: pieces[2]! };
+  }
+
+  const time = timeLine.exec(text);
+  const minutes = Number(time?.[2] ?? 0) * 60 + Number(time?.[3] ?? 0);
+
+  return time && minutes > 0 ? { kind: 'time', minutes, total: totalLabel.test(time[1]!) } : null;
+};
+
 const startsWithAmount = /^[-–—•*\s]*(?:\d|[½⅓⅔¼¾])/u;
 
 /** `1.` or `2)` at the start of a line: a numbered step, not two hundred grams. */
@@ -103,11 +156,31 @@ export function parseRecipeText(text: string, ownUnits: readonly string[] = []):
   const ingredients: ParsedIngredient[] = [];
   const steps: string[] = [];
   let title = '';
+  let yielded: Pick<ParsedRecipe, 'servings' | 'yieldKind' | 'yieldLabel'> = {};
+  let timed = 0;
+  let totalTime = 0;
   // Until a heading says otherwise, each line is judged on its own shape.
   let section: 'ingredients' | 'steps' | null = null;
 
   for (const line of lines) {
     if (!line) {
+      continue;
+    }
+
+    // Before anything judges its shape: "Für 2 Portionen" is no title and "Zubereitung: 20 Minuten" is no step.
+    const metadata = readMetadata(line);
+
+    if (metadata) {
+      if (metadata.kind === 'time') {
+        timed += metadata.minutes;
+        totalTime = metadata.total ? metadata.minutes : totalTime;
+      } else if (yielded.servings === undefined) {
+        yielded =
+          metadata.kind === 'servings'
+            ? { servings: metadata.amount }
+            : { servings: metadata.amount, yieldKind: 'pieces', yieldLabel: metadata.label };
+      }
+
       continue;
     }
 
@@ -148,5 +221,14 @@ export function parseRecipeText(text: string, ownUnits: readonly string[] = []):
     }
   }
 
-  return { title, ingredients, steps };
+  // Prep and cook add up unless the page gave the whole itself.
+  const minutes = totalTime || timed;
+
+  return {
+    title,
+    ingredients,
+    steps,
+    ...yielded,
+    ...(minutes > 0 ? { totalMinutes: minutes } : {})
+  };
 }

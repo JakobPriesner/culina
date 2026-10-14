@@ -15,11 +15,29 @@
 
   const shown = (quantity: Parameters<typeof scaleQuantity>[0]) =>
     formatQuantity(scaleQuantity(quantity, 1), preferences.locale, quantityLabels).text;
+
+  /** The yield and time the text stated, so it is seen that they were read as such and are not among the steps. */
+  const facts = $derived(
+    [
+      parsed.servings === undefined
+        ? null
+        : parsed.yieldKind === 'pieces'
+          ? `${parsed.servings} ${parsed.yieldLabel ?? ''}`.trim()
+          : m['recipes.meta.servings']({ count: parsed.servings }),
+      parsed.totalMinutes === undefined
+        ? null
+        : m['recipes.meta.minutes']({ count: parsed.totalMinutes })
+    ].filter((fact): fact is string => fact !== null)
+  );
 </script>
 
 <div class="preview">
   {#if parsed.title}
     <p class="title">{parsed.title}</p>
+  {/if}
+
+  {#if facts.length > 0}
+    <p class="facts">{facts.join(m['recipes.meta.separator']())}</p>
   {/if}
 
   {#if parsed.ingredients.length > 0}
@@ -58,6 +76,11 @@
     font-family: var(--font-editorial);
     font-size: var(--text-lg);
     margin-bottom: var(--space-3);
+  }
+
+  .facts {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
 
   .section {
