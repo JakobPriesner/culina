@@ -24,6 +24,8 @@
     footer?: Snippet;
     /** Recipes the caller already took, by id; for a sheet kept open across picks, where rows are the only place to see it. */
     taken?: readonly string[];
+    /** Said of a taken recipe in place of "Added", by id, for a caller whose picks are not receipts (a recipe can be planned again). */
+    notes?: ReadonlyMap<string, string>;
     /** Search only inside one cookbook, when the caller is looking in one. */
     cookbookId?: string;
     /** The meal being picked for, when known: turns the blank state into suggestions instead of "everything, newest first". */
@@ -44,6 +46,7 @@
     controls,
     footer,
     taken = [],
+    notes,
     cookbookId,
     suggestFor,
     onpick,
@@ -94,7 +97,7 @@
     {#if search.nothing}
       <p class="nothing">{m['picker.nothing']()}</p>
     {:else}
-      <PickerResults recipes={search.shown} taken={takenIds} {onpick} {onremove} />
+      <PickerResults recipes={search.shown} taken={takenIds} {notes} {onpick} {onremove} />
     {/if}
   </div>
 </Sheet>

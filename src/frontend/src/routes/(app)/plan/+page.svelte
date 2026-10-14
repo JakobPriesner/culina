@@ -171,7 +171,8 @@
   <PlanRecipePicker
     open={adding !== null}
     {householdId}
-    taken={plannedThisWeek}
+    date={adding}
+    days={mealPlan.days}
     bind:slot
     onpick={(recipe) => void pick(recipe)}
     onclose={() => (adding = null)}
