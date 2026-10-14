@@ -40,6 +40,56 @@ test.describe('calories in the overview @offline', () => {
     await page.screenshot({ path: testInfo.outputPath('calorie-overview.png'), fullPage: true });
   });
 
+  for (const [kind, calories] of [
+    ['estimated', { atLeast: false, estimated: true }],
+    ['lower bound', { atLeast: true, estimated: false }],
+    ['estimated lower bound', { atLeast: true, estimated: true }]
+  ] as const) {
+    test(`the ${kind} figure on the dark featured card is readable in light mode`, async ({
+      page
+    }) => {
+      await page.addInitScript(() =>
+        localStorage.setItem(
+          'culina.appearance',
+          JSON.stringify({ theme: 'warm-paper', mode: 'light' })
+        )
+      );
+      await responsiveData(page, 'en', { nutritionLines: true, suggestions: 1, calories });
+      await page.goto('/');
+      const figure = page.locator('.feature .calories').first();
+      await expect(figure).toBeVisible();
+
+      const contrasts = await figure.evaluate((calories) => {
+        // Canvas resolves any CSS color (color-mix included) to the pixel that is painted.
+        const context = document.createElement('canvas').getContext('2d', {
+          willReadFrequently: true
+        })!;
+        const luminance = (css: string) => {
+          context.clearRect(0, 0, 1, 1);
+          context.fillStyle = css;
+          context.fillRect(0, 0, 1, 1);
+          const [r, g, b] = [...context.getImageData(0, 0, 1, 1).data].map((channel) => {
+            const value = channel / 255;
+            return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+          });
+          return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+        };
+        const background = luminance(
+          getComputedStyle(calories.closest('.feature')!).backgroundColor
+        );
+        return [...calories.querySelectorAll('.mark, .bound')].map((marker) => {
+          const text = luminance(getComputedStyle(marker).color);
+          const [light, dark] = text > background ? [text, background] : [background, text];
+          return { marker: marker.textContent, ratio: (light + 0.05) / (dark + 0.05) };
+        });
+      });
+      expect(contrasts.length).toBeGreaterThan(0);
+      for (const { marker, ratio } of contrasts) {
+        expect(ratio, `${marker} on the featured card`).toBeGreaterThanOrEqual(4.5);
+      }
+    });
+  }
+
   test('applies the calorie filter to the request and removes it from its chip', async ({
     page
   }, testInfo) => {

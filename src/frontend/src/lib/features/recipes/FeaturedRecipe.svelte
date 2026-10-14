@@ -88,6 +88,8 @@
   }
   .feature {
     --border-focus: var(--text-on-feature);
+    /* Muted for this surface: the page's muted text is a tone for a light page and is unreadable on the dark card. */
+    --text-muted: color-mix(in srgb, var(--text-on-feature) 78%, var(--surface-feature));
     display: grid;
     grid-template-columns: minmax(18rem, 0.8fr) minmax(0, 1.2fr);
     min-height: 18rem;
