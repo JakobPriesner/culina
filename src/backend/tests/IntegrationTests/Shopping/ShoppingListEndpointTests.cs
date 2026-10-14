@@ -521,6 +521,78 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task RefreshPlannedMeal_ShouldWriteThatMealsShareAgainAtItsNewServings()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var cake = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+        var biscuits = await RecipeWithButterAsync(client, householdId, "Biscuits", 50);
+
+        var cakeEntry = await PlanAsync(client, householdId, cake, Monday);
+        await PlanAsync(client, householdId, biscuits, Monday.AddDays(1));
+        await AddWeekAsync(client, householdId);
+
+        var cakeServings = (await WeekAsync(client, householdId))
+            .First(meal => meal.GetProperty("entryId").GetGuid() == cakeEntry)
+            .GetProperty("recipeServings").GetDecimal();
+
+        // Twice as many people for the cake.
+        await client.PatchAsync(
+            $"/api/v1/households/{householdId}/meal-plan/{cakeEntry}",
+            new { date = Monday, servings = cakeServings * 2 },
+            Token);
+
+        var response = await client.PutAsync(
+            $"/api/v1/households/{householdId}/shopping-list/meals/{cakeEntry}",
+            new { },
+            Token);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        // The cake's 200 g became 400 g; the biscuits' 50 g are untouched.
+        var butter = Butter(response);
+
+        Assert.Equal(450m, butter.GetProperty("quantity").GetDecimal());
+        Assert.Equal(2, butter.GetProperty("sources").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task RefreshPlannedMeal_ShouldLeaveAMealThatIsNotOnTheListOff()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+
+        var entryId = await PlanAsync(client, householdId, recipeId, Monday);
+
+        var response = await client.PutAsync(
+            $"/api/v1/households/{householdId}/shopping-list/meals/{entryId}",
+            new { },
+            Token);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Empty(response.Json!.Value.GetProperty("items").EnumerateArray());
+    }
+
+    [Fact]
+    public async Task RefreshPlannedMeal_ShouldNotFindSomebodyElsesMeal()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+        var entryId = await PlanAsync(client, householdId, recipeId, Monday);
+
+        using var stranger = await SecondAccountAsync();
+
+        var response = await stranger.PutAsync(
+            $"/api/v1/households/{householdId}/shopping-list/meals/{entryId}",
+            new { },
+            Token);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Get_ShouldNameTheAmountNoRecipeAccountsFor()
     {
         using var client = await SignedInAsync();

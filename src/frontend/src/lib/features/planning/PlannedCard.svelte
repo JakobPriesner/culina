@@ -13,11 +13,12 @@
     onremove: () => void;
     /** A press on the grip or card; whether it becomes a drag is the week's business. */
     onpress?: (event: PointerEvent) => void;
-    onmove?: () => void;
+    /** Opens the meal's sheet: its day, meal and servings. */
+    onedit?: () => void;
     lifted?: boolean;
   }
 
-  let { meal, onremove, onpress, onmove, lifted = false }: Props = $props();
+  let { meal, onremove, onpress, onedit, lifted = false }: Props = $props();
 
   // Joined here, not in markup: Svelte trims the space at the start of an {#if} block, which made "Abendessen· 4 Portionen".
   const meta = $derived(
@@ -39,10 +40,10 @@
   onpointerdown={onpress}
   ondragstart={(event) => event.preventDefault()}
 >
-  {#if onmove}
+  {#if onedit}
     <!-- Handle and button are one control: dragging is quick, pressing opens the sheet (the
          keyboard's only way). -->
-    <IconButton label={m['plan.move.handle']({ title: meal.title })} size="sm" onclick={onmove}>
+    <IconButton label={m['plan.move.handle']({ title: meal.title })} size="sm" onclick={onedit}>
       <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
         <circle cx="9" cy="6" r="1.5" />
         <circle cx="15" cy="6" r="1.5" />
@@ -82,6 +83,17 @@
   </a>
 
   <span class="remove" data-no-drag>
+    {#if onedit}
+      <IconButton label={m['plan.edit.action']({ title: meal.title })} size="sm" onclick={onedit}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path
+            d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Zm9-13 3 3"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </IconButton>
+    {/if}
     <IconButton label={m['plan.remove']({ title: meal.title })} size="sm" onclick={onremove}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
@@ -145,6 +157,7 @@
   }
 
   .remove {
+    display: inline-flex;
     margin-inline-start: auto;
   }
 

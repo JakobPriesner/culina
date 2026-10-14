@@ -74,6 +74,36 @@ public class MealPlanEntryTests
         Assert.Equal(MealSlot.Dinner, entry.Slot);
     }
 
+    [Fact]
+    public void WithServings_ShouldChangeOnlyForHowManyTheMealIs()
+    {
+        var entry = MealPlanEntry
+            .Plan(CulinaIdStub, Thursday, CulinaIdStub, servings: 8, MealSlot.Dinner, 2)
+            .ShouldBeSuccess();
+
+        var changed = entry.WithServings(4m).ShouldBeSuccess();
+
+        Assert.Equal(4m, changed.Servings);
+        Assert.Equal(8m, entry.Servings);
+        Assert.Equal(entry.Id, changed.Id);
+        Assert.Equal(entry.Date, changed.Date);
+        Assert.Equal(entry.Slot, changed.Slot);
+        Assert.Equal(entry.SortOrder, changed.SortOrder);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(1001)]
+    public void WithServings_ShouldRefuseWhatNobodyCooks(int servings)
+    {
+        var entry = MealPlanEntry
+            .Plan(CulinaIdStub, Thursday, CulinaIdStub, servings: 8, MealSlot.Dinner, 0)
+            .ShouldBeSuccess();
+
+        entry.WithServings(servings).ShouldBeFailure(PlanningErrors.InvalidServings);
+    }
+
     private static Guid CulinaIdStub => Guid.Parse("01a09999-0000-7000-8000-000000000001");
 }
 

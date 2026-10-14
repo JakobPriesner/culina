@@ -22,6 +22,8 @@ export interface MealDestination {
   readonly slot?: MealSlot;
   /** Gap of the target day it was dropped into, counted with the moved meal still in place; omitted puts it last. */
   readonly position?: number;
+  /** For how many the meal is from now on; omitted keeps what it has. */
+  readonly servings?: number;
 }
 
 export interface MealPlace {
@@ -42,6 +44,9 @@ export const readWeek = (householdId: string, from: string) =>
   );
 
 const rankOf = (slot: string): number => slotRank[slot as keyof typeof slotRank] ?? slotRank.dinner;
+
+/** For how many a meal is: what was chosen for it, or what its recipe is written for. */
+export const servingsOf = (meal: PlannedMeal): number => meal.servings ?? meal.recipeServings;
 
 export const placeOf = (week: readonly PlannedDay[], entryId: string): MealPlace | null => {
   for (const day of week) {
@@ -69,7 +74,7 @@ export const withMealMoved = (week: Week, entryId: string, to: MealDestination):
     return week;
   }
 
-  const moved = { ...meal, slot: to.slot ?? meal.slot };
+  const moved = { ...meal, slot: to.slot ?? meal.slot, servings: to.servings ?? meal.servings };
 
   // Counted against the day as on screen, which still holds the meal when it is the source day.
   const gap = to.position ?? Number.MAX_SAFE_INTEGER;
@@ -193,7 +198,7 @@ class MealPlanStore {
     return result.ok;
   }
 
-  /** Optimistic, since this is a drag. A failure moves just this meal back to where it was, so other drags meanwhile stay. */
+  /** Optimistic, since this is a drag (or an edit that is nearly always accepted). A failure moves just this meal back to where it was, so other drags meanwhile stay. */
   async move(householdId: string, entryId: string, to: MealDestination): Promise<boolean> {
     const before = this.#week && placeOf(this.#week.days, entryId);
 
@@ -208,7 +213,7 @@ class MealPlanStore {
     const result = await request(() =>
       http.PATCH('/api/v1/households/{householdId}/meal-plan/{entryId}', {
         params: { path: { householdId, entryId } },
-        body: { date: to.date, slot: to.slot, position: to.position }
+        body: { date: to.date, slot: to.slot, position: to.position, servings: to.servings }
       })
     );
 
@@ -224,6 +229,11 @@ class MealPlanStore {
     } else {
       this.#putBack(entryId, before);
       this.#error = result.error;
+
+      // A put-back cannot say what the servings were when they were the recipe's own; the server can.
+      if (to.servings !== undefined && this.#week) {
+        void this.load(householdId, this.#week.from);
+      }
     }
 
     return result.ok;

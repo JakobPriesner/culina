@@ -1355,7 +1355,11 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put?: never;
+        /**
+         * Update a planned meal's ingredients on the list
+         * @description Replaces what that meal contributed with what it asks for now: its current servings and day. Another meal's share of a line stays, typed lines stay, and ticked lines stay because they have been bought. A meal that is not on the list is left off it. Repeating it changes nothing.
+         */
+        put: operations["refreshPlannedMealOnShoppingListV1"];
         post?: never;
         /**
          * Remove a planned meal's ingredients
@@ -3485,7 +3489,7 @@ export interface components {
             /** @description The seven days, in order. */
             days: components["schemas"]["PlanningPlannedDay"][];
         };
-        /** @description Moves a planned meal to another day. */
+        /** @description Moves a planned meal to another day, and says for how many it is. */
         PlanningMoveMealRequest: {
             /**
              * Format: date
@@ -3494,6 +3498,11 @@ export interface components {
             date: string;
             /** @description `breakfast`, `lunch` or `dinner`. Omit to keep the current slot, as dragging does. */
             slot?: string | null;
+            /**
+             * Format: double
+             * @description For how many this one meal is. Omit to keep what it has; the recipe's own servings are not touched.
+             */
+            servings?: number | null;
             /**
              * Format: int32
              * @description Which gap in the day it was dropped into, counted from zero on the day as shown (the moved meal still in it); omit to
@@ -5881,15 +5890,6 @@ export interface components {
             isManual: boolean;
             /** @description Which recipes asked for it, and how much each contributed. */
             sources: components["schemas"]["ShoppingSourceContract"][];
-        };
-        /** @description A household's shopping list. */
-        ShoppingResponse: {
-            /**
-             * Format: uuid
-             * @description The list's id.
-             */
-            listId: string;
-            /** @description What is on it, in shop order. */
             /**
              * Format: double
              * @description The part of `quantity` (in the same unit) that no source accounts for: what somebody typed,
@@ -5901,6 +5901,15 @@ export interface components {
              *     so the two stay apart instead of being summed wrongly.
              */
             isListedSeparately?: boolean;
+        };
+        /** @description A household's shopping list. */
+        ShoppingResponse: {
+            /**
+             * Format: uuid
+             * @description The list's id.
+             */
+            listId: string;
+            /** @description What is on it, in shop order. */
             items: components["schemas"]["ShoppingItemContract"][];
             /**
              * Format: int64
@@ -10516,6 +10525,47 @@ export interface operations {
                 };
                 content: {
                     "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    refreshPlannedMealOnShoppingListV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                entryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingResponse"];
                 };
             };
             /** @description Unauthorized */

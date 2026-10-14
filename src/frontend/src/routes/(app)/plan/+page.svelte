@@ -12,7 +12,7 @@
     type MealSlot,
     type PlannedMeal
   } from '$features/planning/mealPlan.svelte';
-  import MoveMealSheet from '$features/planning/MoveMealSheet.svelte';
+  import EditMealSheet from '$features/planning/EditMealSheet.svelte';
   import PlanHeader from '$features/planning/PlanHeader.svelte';
   import PlanRecipePicker from '$features/planning/PlanRecipePicker.svelte';
   import PlanShopBar from '$features/planning/PlanShopBar.svelte';
@@ -43,8 +43,8 @@
   let adding = $state<string | null>(null);
   let slot = $state<MealSlot>('dinner');
 
-  /** The meal whose move is being answered in the sheet, rather than aimed at. */
-  let moving = $state<PlannedMeal | null>(null);
+  /** The meal being answered in the sheet (its day, meal and servings), rather than aimed at. */
+  let editing = $state<PlannedMeal | null>(null);
 
   const monday = $derived(mondayOf(offset));
   const range = $derived(rangeOf(monday, preferences.locale));
@@ -92,13 +92,18 @@
     slot = 'dinner';
   }
 
-  function moveSheetAnswered(to: { date: string; slot?: MealSlot; position?: number }) {
-    const entryId = moving?.entryId;
+  function sheetAnswered(to: {
+    date: string;
+    slot: MealSlot;
+    servings: number;
+    updateList: boolean;
+  }) {
+    const meal = editing;
 
-    moving = null;
+    editing = null;
 
-    if (entryId) {
-      void actions.move(entryId, to);
+    if (meal) {
+      void actions.edit(meal, to);
     }
   }
 </script>
@@ -131,7 +136,7 @@
       {drag}
       ondrop={actions.drop}
       onadd={addOn}
-      onmove={(meal) => (moving = meal)}
+      onedit={(meal) => (editing = meal)}
       onremove={(meal) => void actions.unplan(meal)}
     />
 
@@ -159,12 +164,12 @@
   <CarriedMeal held={drag.held} at={drag.at} />
 {/if}
 
-<MoveMealSheet
-  meal={moving}
+<EditMealSheet
+  meal={editing}
   days={mealPlan.days}
-  from={moving ? (placeOf(mealPlan.days, moving.entryId)?.date ?? monday) : monday}
-  onmove={moveSheetAnswered}
-  onclose={() => (moving = null)}
+  from={editing ? (placeOf(mealPlan.days, editing.entryId)?.date ?? monday) : monday}
+  onsave={sheetAnswered}
+  onclose={() => (editing = null)}
 />
 
 {#if householdId}

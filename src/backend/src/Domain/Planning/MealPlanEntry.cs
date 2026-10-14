@@ -83,6 +83,17 @@ public sealed class MealPlanEntry
     public MealPlanEntry MoveTo(DateOnly date, MealSlot slot, int sortOrder) =>
         new(Id, HouseholdId, date, RecipeId, Servings, slot, sortOrder);
 
+    /// <summary>The same meal for another number of people; the recipe it is of keeps its own servings.</summary>
+    /// <param name="servings">For how many.</param>
+    public Result<MealPlanEntry> WithServings(decimal servings)
+    {
+        servings = Amounts.Round(servings);
+
+        return servings is <= 0 or > 1000
+            ? PlanningErrors.InvalidServings
+            : new MealPlanEntry(Id, HouseholdId, Date, RecipeId, servings, Slot, SortOrder);
+    }
+
     /// <summary>Rebuilds an entry from storage.</summary>
     /// <param name="id">Its id.</param>
     /// <param name="householdId">Whose plan.</param>
