@@ -23,6 +23,7 @@ const serverSettings = {
     requestsPerSessionPerMinute: 600
   },
   telemetry: { otlpEndpoint: null, otlpProtocol: 'grpc' },
+  push: { relayUrl: null },
   connection: { remoteAddress: '172.18.0.5', forwarded: true, proxyTrusted: false },
   pinned: ['Cookies__Secure'],
   writable: true
