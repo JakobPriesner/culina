@@ -19,6 +19,8 @@ declare global {
    * none of the app's code. See src/lib/api/platform.ts.
    */
   const __CULINA_NATIVE__: boolean;
+  /** The push relay the app's publisher runs (`CULINA_RELAY_URL` at build time); empty for none, and always on the website. */
+  const __CULINA_RELAY__: string;
 
   namespace App {
     // interface Error {}

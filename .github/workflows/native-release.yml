@@ -60,8 +60,19 @@ jobs:
       - run: pnpm install --frozen-lockfile
         working-directory: src/frontend
 
+      # The publisher's push relay (deploy/relay), a repository variable; unset, the app offers no import notifications.
       - run: pnpm build:native && pnpm exec cap sync android
         working-directory: src/frontend
+        env:
+          CULINA_RELAY_URL: ${{ vars.CULINA_RELAY_URL }}
+
+      # FCM's project file, which is not committed: without it the Gradle build leaves Firebase (and push) out.
+      - name: Firebase project file
+        working-directory: src/frontend/native/android/app
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then printf '%s' "$GOOGLE_SERVICES_JSON" > google-services.json; fi
 
       # The version shown in the store is the tag; the store's build number only has to grow, which the run number does.
       - name: Signed bundle
@@ -113,6 +124,8 @@ jobs:
 
       - run: pnpm build:native && pnpm exec cap sync ios
         working-directory: src/frontend
+        env:
+          CULINA_RELAY_URL: ${{ vars.CULINA_RELAY_URL }}
 
       # Automatic signing with an App Store Connect API key: Xcode fetches the certificates and profiles it needs
       # (the app, the CulinaTimerWidget extension) and the export uploads straight to App Store Connect.

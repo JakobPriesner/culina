@@ -5,7 +5,8 @@ export { clientError, ErrorCodes, type AppError, type FieldProblem } from './pro
 export { err, ok, type Err, type Ok, type Result } from './result';
 export { handleSessionExpiry } from './session';
 export { forgetEverything as forgetCachedResponses } from './etagCache';
-export { native, nativePlatform, type NativePlatform } from './platform';
+export { native, nativePlatform, relayUrl, type NativePlatform } from './platform';
+export { registerAtRelay, revokeAtRelay } from './relay';
 export {
   apiUrl,
   instanceOrigin,

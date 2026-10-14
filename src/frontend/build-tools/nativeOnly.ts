@@ -19,6 +19,13 @@ const stubs: Record<string, string> = {
     'export async function forgetNativeTimers() {}',
     ''
   ].join('\n'),
+  'src/lib/features/import/nativePush.ts': [
+    'export async function requestDeviceToken() { return null; }',
+    'export async function notificationsAllowed() { return false; }',
+    'export async function stopDeviceToken() {}',
+    'export async function openTappedNotifications() {}',
+    ''
+  ].join('\n'),
   'src/lib/api/connect.ts': [
     'export const supportedApiVersions = { oldest: 0, newest: 0 };',
     "export async function connect() { return 'address'; }",
