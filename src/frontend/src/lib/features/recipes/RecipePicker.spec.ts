@@ -131,6 +131,17 @@ describe('the recipe picker', () => {
     expect(screen.getByRole('button', { name: /Lentil soup/ })).not.toHaveTextContent('Added');
   });
 
+  it('says what the caller has to say about a taken recipe, in place of "Added"', async () => {
+    renderWithProviders(RecipePicker, {
+      props: props({ taken: ['r1'], notes: new Map([['r1', 'Planned Tue · Dinner']]) })
+    });
+
+    const orzo = await screen.findByRole('button', { name: /Orzo/ });
+
+    expect(orzo).toHaveTextContent('Planned Tue · Dinner');
+    expect(orzo).not.toHaveTextContent('Added');
+  });
+
   /* A cookbook caller needs to see which recipes are already on the shelf. */
   describe('for a caller that can take a recipe back', () => {
     it('says which rows are already on before any of them is touched', async () => {
