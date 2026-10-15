@@ -17,6 +17,7 @@ import {
   type Mode,
   type ResolvedMode
 } from './appearance';
+import { followMode } from './themeColor';
 
 /** Appearance and language: the server is the source of truth; `localStorage` is written first and read by the inline script in `app.html` to avoid a flash. */
 export type MeasurementSystem = 'metric' | 'imperial';
@@ -162,6 +163,7 @@ class PreferencesStore {
       root.dataset['theme'] = this.#values.theme;
       root.dataset['mode'] = this.resolvedMode;
       root.lang = this.locale;
+      followMode(this.#values.mode === 'system' ? null : this.resolvedMode);
     }
   }
 
