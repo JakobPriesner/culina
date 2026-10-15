@@ -7,7 +7,7 @@
   import { inheritedFrom } from './recipeMeta';
   import type { RecipeSummary } from './types';
 
-  /** The recipes as columns of text rows (three wide, more on large screens, one on a phone); only the column count changes. */
+  /** The recipes as columns of cards (three wide, more on large screens), and as a list of rows on a phone. */
   interface Props {
     recipes: readonly RecipeSummary[];
     /** Drawn instead of the recipes, when there are none yet to draw. */
@@ -89,6 +89,17 @@
     contain-intrinsic-size: auto 14rem;
     padding: var(--space-2);
     margin: calc(var(--space-2) * -1);
+  }
+
+  /* Rows on a phone sit closer than cards do, and are shorter while off screen. */
+  @media (width < 40rem) {
+    .grid {
+      gap: var(--space-4);
+    }
+
+    .card {
+      contain-intrinsic-size: auto 5rem;
+    }
   }
 
   @media (min-width: 40rem) {
