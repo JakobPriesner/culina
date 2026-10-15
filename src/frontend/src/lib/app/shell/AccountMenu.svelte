@@ -47,7 +47,8 @@
 <svelte:window onkeydown={shortcut} />
 
 {#if user}
-  <ActionMenu minWidth="16rem" maxWidth="20rem" wrap>
+  <!-- A sheet on a phone: from the top corner, the menu's rows ran out of the thumb's reach. -->
+  <ActionMenu minWidth="16rem" maxWidth="20rem" wrap sheetOnPhone>
     {#snippet trigger({ popovertarget })}
       <button
         type="button"
@@ -247,5 +248,12 @@
     color: var(--text-muted);
     font: inherit;
     font-size: var(--text-xs);
+  }
+
+  /* A shortcut only means something with a keyboard. */
+  @media (pointer: coarse) {
+    .hint {
+      display: none;
+    }
   }
 </style>

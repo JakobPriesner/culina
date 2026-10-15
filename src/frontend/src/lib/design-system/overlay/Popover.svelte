@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { MediaQuery } from 'svelte/reactivity';
   import type { Snippet } from 'svelte';
 
   /**
@@ -11,9 +12,15 @@
     children: Snippet;
     /** Which edge of the trigger it lines up with; flips when there is no room. */
     placement?: 'bottom-start' | 'bottom-end';
+    /** On a phone, a sheet along the bottom edge instead: for a long panel opened from the top of the screen, out of the thumb's reach. */
+    sheetOnPhone?: boolean;
   }
 
-  let { trigger, children, placement = 'bottom-start' }: Props = $props();
+  let { trigger, children, placement = 'bottom-start', sheetOnPhone = false }: Props = $props();
+
+  const phone = new MediaQuery('(width < 40rem)', false);
+
+  const asSheet = $derived(sheetOnPhone && phone.current);
 
   const id = $props.id();
   let anchor = $state<HTMLDivElement>();
@@ -35,6 +42,12 @@
     const from = anchor?.getBoundingClientRect();
 
     if (!panel || !from) {
+      return;
+    }
+
+    // A sheet is placed by its CSS; what the last placement left inline would pin it beside the trigger.
+    if (asSheet) {
+      panel.style.left = panel.style.top = panel.style.maxHeight = '';
       return;
     }
 
@@ -98,6 +111,7 @@
     {id}
     bind:this={panel}
     class="panel"
+    class:sheet={asSheet}
     popover="auto"
     ontoggle={(event) => {
       open = event.newState === 'open';
@@ -130,6 +144,17 @@
      * browser with classic scrollbars paint the reserved gutter as a square strip over the right-hand corners and border.
      */
     overflow: clip;
+  }
+
+  /* Along the bottom edge, full width, clear of the home indicator; it scrolls inside when long. */
+  .panel.sheet {
+    inset: auto 0 0;
+    width: 100%;
+    max-width: none;
+    max-height: 85dvh;
+    border-width: 1px 0 0;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
   /* Set only while open: an author `display` would beat the browser's `display: none` for a closed popover. */

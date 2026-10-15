@@ -13,9 +13,18 @@
     minWidth?: string;
     maxWidth?: string;
     wrap?: boolean;
+    /** See `Popover`: a sheet along the bottom on a phone. */
+    sheetOnPhone?: boolean;
   }
 
-  let { trigger, children, minWidth = '12rem', maxWidth, wrap = false }: Props = $props();
+  let {
+    trigger,
+    children,
+    minWidth = '12rem',
+    maxWidth,
+    wrap = false,
+    sheetOnPhone = false
+  }: Props = $props();
 
   function closeOnChoice(event: MouseEvent) {
     const menu = event.currentTarget as HTMLElement;
@@ -33,13 +42,13 @@
   }
 </script>
 
-<Popover placement="bottom-end" {trigger}>
+<Popover placement="bottom-end" {sheetOnPhone} {trigger}>
   <!-- Not a control: it watches presses on inner buttons/links in the capture phase so it runs first. -->
   <div
     class="menu"
     class:wrap
-    style:min-width={minWidth}
-    style:max-width={maxWidth}
+    style:--menu-min-width={minWidth}
+    style:--menu-max-width={maxWidth}
     onclickcapture={closeOnChoice}
   >
     {@render children()}
@@ -47,10 +56,17 @@
 </Popover>
 
 <style>
+  /* Widths as properties, not inline values, so a sheet can let the menu fill the screen. */
   .menu {
     display: flex;
     flex-direction: column;
+    min-width: var(--menu-min-width);
+    max-width: var(--menu-max-width, none);
     text-decoration: none;
+  }
+
+  :global(.sheet) .menu {
+    max-width: none;
   }
 
   /* The rows are the caller's markup, hence `:global`; the `.menu` prefix scopes the rules. */
