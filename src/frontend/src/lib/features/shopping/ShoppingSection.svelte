@@ -3,6 +3,7 @@
 
   import type { Section } from './sections';
   import ShoppingItemRow from './ShoppingItemRow.svelte';
+  import { endsItsName } from './lineRuns';
   import type { ShoppingItem } from './stores/shopping.svelte';
 
   interface Props {
@@ -21,9 +22,11 @@
 
 {#snippet rows()}
   <ul class="list">
-    {#each items as item (item.itemId)}
+    {#each items as item, index (item.itemId)}
+      <!-- Lines of one thing that could not be added up share one note, under the last of them. -->
       <ShoppingItemRow
         {item}
+        noted={endsItsName(items, index)}
         oncheck={(isChecked) => oncheck(item, isChecked)}
         onremove={() => onremove(item)}
         onmove={(section) => onmove(item, section)}
