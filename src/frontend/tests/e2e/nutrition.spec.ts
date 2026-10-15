@@ -125,7 +125,7 @@ test.describe('nutrition on a recipe @offline', () => {
       await responsiveData(page, 'de', { nutritionLines: true, nutritionVariant: 'whole' });
       await page.goto(`/recipes/${recipeId}`);
 
-      await expect(page.locator('p.meta')).toContainText(/ganzes Rezept: 520\skcal/);
+      await expect(page.locator('p.meta')).toContainText(/ganzes Rezept: mind\.\s520\skcal/);
     });
 
     test('is absent while cooking', async ({ page }) => {
