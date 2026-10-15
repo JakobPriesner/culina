@@ -260,7 +260,9 @@ test.describe('writing a recipe', () => {
     const title = unique('Pasted');
 
     await page.goto('/recipes/new');
-    await page.getByRole('button', { name: /paste a recipe|rezept einfügen/i }).click();
+    await page
+      .getByRole('button', { name: /paste a link or text|link oder text einfügen/i })
+      .click();
 
     await page
       .getByRole('textbox', { name: /the recipe, as text|rezept als text/i })
@@ -307,7 +309,9 @@ test.describe('writing a recipe', () => {
     const title = unique('Linked');
 
     await page.goto('/recipes/new');
-    await page.getByRole('button', { name: /paste a recipe|rezept einfügen/i }).click();
+    await page
+      .getByRole('button', { name: /paste a link or text|link oder text einfügen/i })
+      .click();
 
     const link = page.getByRole('textbox', { name: /a link to a recipe|link zum rezept/i });
 
