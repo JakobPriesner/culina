@@ -18,27 +18,29 @@ const recipe = (over: Partial<RecipeSummary>): RecipeSummary =>
 
 describe('the calories on a recipe card', () => {
   it('says per person for a recipe written for several', () => {
-    render(RecipeCalories, { recipe: recipe({}) });
+    const { container } = render(RecipeCalories, { recipe: recipe({}) });
 
-    expect(screen.getByText(/480\skcal per person/)).toBeInTheDocument();
+    expect(container.querySelector('.calories')).toHaveTextContent(/480\skcal per person/);
   });
 
   it('says the figure is for the whole recipe when the recipe makes a single serving', () => {
-    render(RecipeCalories, {
+    const { container } = render(RecipeCalories, {
       recipe: recipe({
         yieldAmount: 1,
         calories: { value: 3200, atLeast: false, estimated: false }
       })
     });
 
-    expect(screen.getByText(/3,?200\skcal whole recipe/)).toBeInTheDocument();
-    expect(screen.queryByText(/per person/)).not.toBeInTheDocument();
+    expect(container.querySelector('.calories')).toHaveTextContent(/3,?200\skcal whole recipe/);
+    expect(container.querySelector('.calories')).not.toHaveTextContent(/per person/);
   });
 
   it('says per piece for pieces, whatever their number', () => {
-    render(RecipeCalories, { recipe: recipe({ yieldKind: 'pieces', yieldAmount: 1 }) });
+    const { container } = render(RecipeCalories, {
+      recipe: recipe({ yieldKind: 'pieces', yieldAmount: 1 })
+    });
 
-    expect(screen.getByText(/480\skcal per piece/)).toBeInTheDocument();
+    expect(container.querySelector('.calories')).toHaveTextContent(/480\skcal per piece/);
   });
 
   it('shows no number when unknown food outweighs what was counted', () => {

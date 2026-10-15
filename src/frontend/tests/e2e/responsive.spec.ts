@@ -92,6 +92,15 @@ test.describe('responsive production layouts @offline', () => {
                   expect((await name.boundingBox())!.width).toBeGreaterThanOrEqual(100);
                 }
               }
+              if (path === '/' && width < 640) {
+                // A phone lists recipes as rows, thumbnail beside the title, so a screen holds several,
+                // even when the first title is a long compound.
+                const card = page.locator('ul.grid > li.card').first();
+                const photo = (await card.locator('.photo').boundingBox())!;
+                const title = (await card.locator('.title').boundingBox())!;
+                expect(photo.x + photo.width).toBeLessThanOrEqual(title.x);
+                expect((await card.boundingBox())!.height).toBeLessThan(900 / 4);
+              }
               if (path === '/' && width >= 1920) {
                 // Large screens widen the whole page (90vw, at most 120rem, less its 3rem gutters) and the
                 // grid fills it with more columns, not bigger cards.
