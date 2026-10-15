@@ -3,8 +3,8 @@ import { LatestRead, registerStore, type LoadStatus } from '$shell/stores';
 
 import type { Unit } from '$features/recipes/units';
 
-import { togetherByName } from '../lineRuns';
-import { sectionOrder, type Section } from '../sections';
+import { groupsToBuy } from '../lineRuns';
+import type { Section } from '../sections';
 
 import type { components } from '$api/generated/schema';
 
@@ -53,14 +53,7 @@ class ShoppingStore {
    * thing (kept apart because their units cannot be added) sit together, where the first of them is.
    */
   get toBuy(): readonly SectionGroup[] {
-    const remaining = this.items.filter((item) => !item.isChecked);
-
-    return sectionOrder
-      .map((section) => ({
-        section,
-        items: togetherByName(remaining.filter((item) => item.section === section))
-      }))
-      .filter((group) => group.items.length > 0);
+    return groupsToBuy(this.items);
   }
 
   /** Already in the trolley; kept visible because putting one back is common. */
