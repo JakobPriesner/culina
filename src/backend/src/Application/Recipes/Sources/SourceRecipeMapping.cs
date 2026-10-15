@@ -118,7 +118,7 @@ internal static class SourceRecipeMapping
 
         List<Step> steps = [];
 
-        foreach (var step in source.Steps.Take(Recipe.MaxSteps))
+        foreach (var step in Unfold(source.Steps).Take(Recipe.MaxSteps))
         {
             var segments = Fit(Trim(ToSegments(step, landed)), Step.MaxTextLength);
 
@@ -150,6 +150,66 @@ internal static class SourceRecipeMapping
         }
 
         return Result<IReadOnlyList<Step>>.Success(steps);
+    }
+
+    /// <summary>
+    /// A method the other app holds as one step but writes as a line per action becomes a step per
+    /// line, so cook mode can walk through it rather than show "Step 1 of 1".
+    /// </summary>
+    /// <remarks>
+    /// Only a lone step without a timer, and only when every line reads as a sentence: line breaks
+    /// in a recipe that has steps, or a list inside a step ("- Mehl"), are the author's own. A
+    /// reference stays with the line it is in; blank lines between paragraphs go.
+    /// </remarks>
+    internal static IReadOnlyList<SourceStep> Unfold(IReadOnlyList<SourceStep> steps)
+    {
+        if (steps is not [{ Seconds: null } only])
+        {
+            return steps;
+        }
+
+        List<List<SourceStepSegment>> lines = [[]];
+
+        foreach (var segment in only.Segments)
+        {
+            if (segment is not SourceTextSegment text)
+            {
+                lines[^1].Add(segment);
+                continue;
+            }
+
+            var parts = text.Value.Split('\n');
+
+            for (var index = 0; index < parts.Length; index++)
+            {
+                if (index > 0)
+                {
+                    lines.Add([]);
+                }
+
+                lines[^1].Add(new SourceTextSegment(parts[index].TrimEnd('\r')));
+            }
+        }
+
+        var written = lines
+            .Where(line => Words(line).Length > 0 || line.Any(part => part is SourceIngredientReference))
+            .ToList();
+
+        return written.Count > 1 && written.All(ReadsAsSentence)
+            ? [.. written.Select(line => new SourceStep(line, null))]
+            : steps;
+    }
+
+    private static string Words(IEnumerable<SourceStepSegment> line) =>
+        string.Concat(line.Select(part => part is SourceTextSegment text ? text.Value : "x")).Trim();
+
+    private static bool ReadsAsSentence(List<SourceStepSegment> line)
+    {
+        var words = Words(line);
+
+        return words.Length > 0
+            && words[^1] is '.' or '!' or '?'
+            && words[0] is not ('-' or '*' or '•');
     }
 
     /// <summary>
