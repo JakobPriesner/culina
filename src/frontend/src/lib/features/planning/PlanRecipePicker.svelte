@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { SectionLabel } from '$ds';
+  import { Field, SectionLabel, SegmentedControl, Select } from '$ds';
 
   import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
   import RecipePicker from '$features/recipes/RecipePicker.svelte';
@@ -24,6 +24,14 @@
   let { open, householdId, date, days, slot = $bindable(), onpick, onclose }: Props = $props();
 
   let narrowedTo = $state<string | null>(null);
+
+  /** One row however many shelves a kitchen has; "" is every recipe. */
+  const shelves = $derived([
+    { value: '', label: m['cookbooks.picker.all']() },
+    ...cookbooks.items.map((cookbook) => ({ value: cookbook.id, label: cookbook.name }))
+  ]);
+
+  const segments = $derived(mealSlots.map((which) => ({ id: which, label: slotLabel[which]() })));
 
   const longDay = (day: string) =>
     formatDate(dayOf(day), { weekday: 'long', day: 'numeric', month: 'long' });
@@ -78,48 +86,36 @@
 >
   <!-- The slot picker lives only here: on the week view it would add three empty rows per day. -->
   {#snippet controls()}
+    <!-- The app's own controls, as on the plan's other sheet: native radios here wrapped into uneven rows and looked like another app. -->
     {#if cookbooks.items.length > 0}
-      <fieldset class="slots">
-        <legend>{m['cookbooks.title']()}</legend>
-        <label>
-          <input type="radio" name="cookbook" value={null} bind:group={narrowedTo} />
-          {m['cookbooks.picker.all']()}
-        </label>
-        {#each cookbooks.items as cookbook (cookbook.id)}
-          <label>
-            <input type="radio" name="cookbook" value={cookbook.id} bind:group={narrowedTo} />
-            {cookbook.name}
-          </label>
-        {/each}
-      </fieldset>
+      <Field label={m['cookbooks.title']()}>
+        {#snippet children({ id })}
+          <Select
+            {id}
+            value={narrowedTo ?? ''}
+            options={shelves}
+            onchange={(value) => (narrowedTo = value || null)}
+          />
+        {/snippet}
+      </Field>
     {/if}
 
-    <fieldset class="slots">
-      <SectionLabel as="legend">{m['plan.pick.slot']()}</SectionLabel>
-      {#each mealSlots as which (which)}
-        <label>
-          <input type="radio" name="slot" value={which} bind:group={slot} />
-          {slotLabel[which]()}
-        </label>
-      {/each}
-    </fieldset>
+    <div class="slot">
+      <SectionLabel tone="muted" as="span" spacing="tight">{m['plan.pick.slot']()}</SectionLabel>
+      <SegmentedControl
+        {segments}
+        selected={slot}
+        label={m['plan.pick.slot']()}
+        onselect={(id) => (slot = id as MealSlot)}
+      />
+    </div>
   {/snippet}
 </RecipePicker>
 
 <style>
-  .slots {
+  .slot {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     min-width: 0;
-    gap: var(--space-4);
-    padding: 0;
-    border: 0;
-  }
-
-  .slots label {
-    min-height: var(--control-sm);
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
   }
 </style>

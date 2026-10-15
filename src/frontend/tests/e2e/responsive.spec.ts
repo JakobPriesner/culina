@@ -286,8 +286,9 @@ test.describe('responsive production layouts @offline', () => {
 
       // Every choice and the last result can be scrolled to and clicked, and the close control stays put.
       await expect(dialog.getByRole('button', { name: /schließen/i })).toBeInViewport();
-      await dialog.getByRole('radio').last().scrollIntoViewIfNeeded();
-      await expect(dialog.getByRole('radio').last()).toBeInViewport();
+      const lastSlot = dialog.getByRole('group', { name: 'Mahlzeit' }).getByRole('button').last();
+      await lastSlot.scrollIntoViewIfNeeded();
+      await expect(lastSlot).toBeInViewport();
       const last = results.getByRole('button').last();
       await last.scrollIntoViewIfNeeded();
       await expect(last).toBeInViewport();
