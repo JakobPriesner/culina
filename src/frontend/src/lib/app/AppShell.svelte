@@ -30,6 +30,11 @@
   let dockHeight = $state(0);
   let barHeight = $state(0);
 
+  /** The bottom bar slides away while a page is read downwards; then it covers nothing. */
+  let barHidden = $state(false);
+
+  const barInset = $derived(barHidden ? 0 : barHeight);
+
   /**
    * Height of the floating header, for pages that put content on its line; measured because it follows the wordmark's font metrics.
    * Unset until measured so the token's figure holds the place in SSR rather than a zero.
@@ -51,7 +56,7 @@
    * (320x568 at 200%: 521px of chrome around 47px of recipe).
    */
   const crowded = $derived(
-    viewportHeight > 0 && (headerHeight ?? 0) + dockHeight + barHeight > viewportHeight / 2
+    viewportHeight > 0 && (headerHeight ?? 0) + dockHeight + barInset > viewportHeight / 2
   );
 </script>
 
@@ -64,8 +69,8 @@
   class:crowded
   class:focused-cooking={focusedCooking}
   class:reading-recipe={readingRecipe}
-  style:--bar-inset="{barHeight}px"
-  style:--bottom-inset="{dockHeight + barHeight}px"
+  style:--bar-inset="{barInset}px"
+  style:--bottom-inset="{dockHeight + barInset}px"
   style:--header-inset={headerHeight === undefined ? null : `${headerHeight}px`}
 >
   <SkipLink />
@@ -78,7 +83,7 @@
 
   <ShellDock bind:height={dockHeight}>{@render dock?.()}</ShellDock>
 
-  <BottomBar bind:height={barHeight} />
+  <BottomBar bind:height={barHeight} bind:hidden={barHidden} />
 
   <Toaster label={m['app.notifications']()} dismissLabel={m['app.dismiss']()} />
 

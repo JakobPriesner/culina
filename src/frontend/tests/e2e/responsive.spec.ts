@@ -642,6 +642,31 @@ test.describe('responsive production layouts @offline', () => {
     await expectStartCookingReachable(page, viewport.width, viewport.height);
   });
 
+  test('a phone reading down a recipe gets the bottom bar out of the way, and back on a scroll up', async ({
+    page
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', 'Explicit phone viewport.');
+    await page.setViewportSize({ width: 402, height: 874 });
+    await responsiveData(page, 'de', { activeCooking: false });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto(`/recipes/${recipeId}`);
+
+    const bar = page.locator('nav.bottom');
+    const action = page.locator('article.surface > .cook-action > footer.foot');
+    await expect(bar).toBeInViewport({ ratio: 1 });
+    const above = (await action.boundingBox())!;
+
+    await page.mouse.move(200, 400);
+    await page.mouse.wheel(0, 300);
+    await expect(bar).not.toBeInViewport();
+    // The start button takes the bar's place at the bottom rather than floating above an empty strip.
+    await expect.poll(async () => (await action.boundingBox())!.y).toBeGreaterThan(above.y + 40);
+
+    await page.mouse.wheel(0, -100);
+    await expect(bar).toBeInViewport({ ratio: 1 });
+    await expect.poll(async () => (await action.boundingBox())!.y).toBeCloseTo(above.y, 0);
+  });
+
   for (const [width, height] of [
     [320, 568],
     [375, 812],
