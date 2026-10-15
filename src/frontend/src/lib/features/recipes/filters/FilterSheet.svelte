@@ -115,10 +115,15 @@
   </div>
 
   {#snippet footer()}
+    <!-- Short words on the buttons, the sheet says what they act on; the full name is what is announced, and contains the word shown. -->
     <div class="actions">
-      <Button variant="ghost" size="sm" onclick={() => view.clear()}>{m['filters.clear']()}</Button>
+      <Button variant="ghost" size="sm" label={m['filters.clear']()} onclick={() => view.clear()}
+        >{m['filters.clearShort']()}</Button
+      >
       {#if onsave}
-        <Button size="sm" onclick={onsave}>{m['saved.save']()}</Button>
+        <Button size="sm" label={m['saved.save']()} onclick={onsave}
+          >{m['saved.saveShort']()}</Button
+        >
       {/if}
       <Button variant="primary" onclick={onclose}>{m['filters.close']()}</Button>
     </div>

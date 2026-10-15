@@ -47,6 +47,26 @@ describe('choosing tags', () => {
     expect(screen.getAllByRole('button')[0]).toBe(chosen);
   });
 
+  it('leaves a tag chosen here where it was tapped, so the next chip under the finger is still the next one', async () => {
+    const { rerender } = chooser();
+    const before = screen.getAllByRole('button').map((chip) => chip.textContent);
+
+    await rerender({ selected: ['tag-3'] });
+
+    expect(screen.getAllByRole('button').map((chip) => chip.textContent)).toEqual(before);
+    expect(screen.getAllByRole('button')[3]).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('keeps a tag chosen from a search in view once the search is cleared', async () => {
+    const { rerender } = chooser();
+
+    await userEvent.type(screen.getByRole('searchbox'), 'creme');
+    await rerender({ selected: ['tag-42'] });
+    await userEvent.clear(screen.getByRole('searchbox'));
+
+    expect(screen.getByRole('button', { name: /Crème/, pressed: true })).toBeInTheDocument();
+  });
+
   it('finds a tag by a few letters, ignoring accents', async () => {
     chooser();
 

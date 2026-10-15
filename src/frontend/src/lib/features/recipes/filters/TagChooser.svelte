@@ -1,11 +1,14 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
+
   import { FilterChip, SearchField, VisuallyHidden } from '$ds';
   import type { TagInUse } from '$features/cookbooks/stores/tags.svelte';
   import { m } from '$shell/i18n';
 
   /**
    * Choosing some of a kitchen's tags: one control for the library filters and cookbook rules, so both answer the same question.
-   * Chosen tags come first and stay in view, then the most-used few until someone asks for the rest or types; the stable order lets a hand learn where a tag is.
+   * Tags chosen before it opened come first, then the most-used few until someone asks for the rest or types; the stable order lets a hand learn where a tag is.
+   * A tag chosen here stays where it was tapped (moving it to the front put another chip under the finger) and stays in view.
    */
   interface Props {
     tags: readonly TagInUse[];
@@ -36,20 +39,28 @@
     )
   );
 
-  const chosen = $derived(ordered.filter((tag) => selected.includes(tag.slug)));
+  /** What was chosen when the chooser opened (a sheet mounts it on opening); only these lead. */
+  const pinned = untrack(() => [...selected]);
+
+  const chosen = $derived(ordered.filter((tag) => pinned.includes(tag.slug)));
 
   const searching = $derived(query.trim().length > 0);
 
   const others = $derived(
     ordered.filter(
       (tag) =>
-        !selected.includes(tag.slug) && (!searching || fold(tag.name).includes(fold(query.trim())))
+        !pinned.includes(tag.slug) &&
+        (selected.includes(tag.slug) || !searching || fold(tag.name).includes(fold(query.trim())))
     )
   );
 
-  const offered = $derived(searching || expanded ? others : others.slice(0, collapsedCount));
+  const offered = $derived(
+    searching || expanded
+      ? others
+      : others.filter((tag, index) => index < collapsedCount || selected.includes(tag.slug))
+  );
 
-  const collapsible = $derived(!searching && tags.length - chosen.length > collapsedCount);
+  const collapsible = $derived(!searching && others.length > collapsedCount);
 </script>
 
 {#if tags.length === 0}
