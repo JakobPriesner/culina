@@ -218,8 +218,10 @@
       color var(--duration-fast) var(--ease-out);
   }
 
-  .day:hover {
-    background: var(--surface-hover);
+  @media (hover: hover) {
+    .day:hover {
+      background: var(--surface-hover);
+    }
   }
 
   /* The input stays in the tab order and in the accessibility tree; the label is what you see. */

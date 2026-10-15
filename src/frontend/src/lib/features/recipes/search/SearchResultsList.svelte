@@ -168,10 +168,15 @@
   }
 
   .option[aria-selected='true'] > button,
-  .option[aria-selected='true'] > a,
-  .option > button:hover,
-  .option > a:hover {
+  .option[aria-selected='true'] > a {
     background: var(--surface-selected);
+  }
+
+  @media (hover: hover) {
+    .option > button:hover,
+    .option > a:hover {
+      background: var(--surface-selected);
+    }
   }
 
   .completion .meta {

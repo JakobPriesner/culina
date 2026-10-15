@@ -84,8 +84,10 @@
     animation: arrive var(--duration-fast) var(--ease-out);
   }
 
-  .chip:hover {
-    border-color: var(--border-strong);
+  @media (hover: hover) {
+    .chip:hover {
+      border-color: var(--border-strong);
+    }
   }
 
   .scope {
@@ -93,8 +95,10 @@
     cursor: default;
   }
 
-  .scope:hover {
-    border-color: var(--border);
+  @media (hover: hover) {
+    .scope:hover {
+      border-color: var(--border);
+    }
   }
 
   .scope svg {

@@ -59,10 +59,12 @@
     cursor: pointer;
     opacity: 0.7;
   }
-  button:hover {
-    opacity: 1;
-    background: var(--surface-sunken);
-    color: var(--text);
+  @media (hover: hover) {
+    button:hover {
+      opacity: 1;
+      background: var(--surface-sunken);
+      color: var(--text);
+    }
   }
   svg {
     width: 1.1rem;

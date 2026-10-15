@@ -127,9 +127,11 @@
     cursor: pointer;
   }
 
-  .dismiss:hover {
-    opacity: 1;
-    text-decoration: underline;
+  @media (hover: hover) {
+    .dismiss:hover {
+      opacity: 1;
+      text-decoration: underline;
+    }
   }
 
   .eyebrow {
@@ -163,9 +165,11 @@
     font-weight: var(--weight-medium);
     text-decoration: none;
   }
-  .feature-link:hover {
-    text-decoration: underline;
-    text-underline-offset: 0.2em;
+  @media (hover: hover) {
+    .feature-link:hover {
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
   }
   .feature-link span {
     font-size: var(--text-xl);

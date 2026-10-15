@@ -525,8 +525,10 @@
     cursor: pointer;
   }
 
-  .food:hover {
-    background: var(--surface-hover);
+  @media (hover: hover) {
+    .food:hover {
+      background: var(--surface-hover);
+    }
   }
 
   .food[aria-current='true'] {

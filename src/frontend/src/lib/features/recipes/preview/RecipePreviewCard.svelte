@@ -71,9 +71,11 @@
     font: inherit;
     cursor: pointer;
   }
-  .open:hover {
-    text-decoration: underline;
-    text-underline-offset: 0.2em;
+  @media (hover: hover) {
+    .open:hover {
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
   }
   .open::after {
     content: '';

@@ -83,8 +83,10 @@
     cursor: pointer;
   }
 
-  .results button:hover {
-    background: var(--surface-hover);
+  @media (hover: hover) {
+    .results button:hover {
+      background: var(--surface-hover);
+    }
   }
 
   .meta {

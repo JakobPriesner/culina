@@ -126,11 +126,18 @@
     width: var(--space-4);
     height: var(--space-4);
   }
-  .recipe:hover .open,
   .recipe:focus-within .open {
     background: var(--surface-accent-subtle);
     border-color: var(--accent);
     color: var(--accent);
+  }
+
+  @media (hover: hover) {
+    .recipe:hover .open {
+      background: var(--surface-accent-subtle);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
   }
 
   .photo {
@@ -173,9 +180,11 @@
     border-radius: var(--radius-lg);
   }
 
-  .link:hover {
-    text-decoration: underline;
-    text-underline-offset: 0.2em;
+  @media (hover: hover) {
+    .link:hover {
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
   }
 
   .meta {
