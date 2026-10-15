@@ -335,16 +335,12 @@ function nutrition(
 }
 
 /**
- * Phones overlay their scrollbars. Linux Chromium does with --enable-features=OverlayScrollbar
- * (playwright.config.ts); macOS headless ignores that flag and draws the app's 10px scrollbar in its
- * stable gutter, so a "320px" phone page was 309px wide there and the narrow specs failed only locally.
+ * Phones overlay their scrollbars, but desktop Chromium reserves the app's 10px scrollbar in its stable gutter,
+ * so a "320px" phone page is 310px wide and the narrow specs measure a layout no phone has. Chromium 156 ignores
+ * --enable-features=OverlayScrollbar on Linux (macOS never honoured it), so the page hides its own scrollbar instead.
  * A constructed stylesheet, not a <style> element: the CSP specs refuse an inline style without a nonce.
  */
 async function overlayScrollbars(page: Page) {
-  if (process.platform !== 'darwin') {
-    return;
-  }
-
   await page.addInitScript(() => {
     document.addEventListener('DOMContentLoaded', () => {
       const sheet = new CSSStyleSheet();
