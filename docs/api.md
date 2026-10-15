@@ -496,6 +496,20 @@ of the list.
 
 Timers are **not** in the API. They are device-local (`domain-model.md`).
 
+## Products
+
+What a household says a barcode is (`docs/barcode-scanning-design.md`): a mapping from
+packaging to an ingredient name, never what the household has at home.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| `GET` | `/households/{householdId}/products` | Every barcode the household and the households it inherits from named, one per barcode, the nearest household's winning: `{ items: [{ gtin, name, ingredient?, quantity?, unit?, cookMinutes?, note?, householdId, version }] }`. Not paged: it seeds the offline cache. `200` + ETag, `304` on `If-None-Match`. |
+| `GET` | `/households/{householdId}/products/{gtin}` | One barcode, from the household's own memory, else the nearest ancestor's (`householdId` says whose). `{gtin}` is read as EAN-8, UPC-A, UPC-E, EAN-13 or GTIN-14 and answered normalised. `404 products.unknown` when nobody named it; `400 products.invalid_gtin` for a malformed code or a wrong check digit. `200` + ETag, `304`. |
+| `PUT` | `/households/{householdId}/products/{gtin}` | `{ name, ingredient?, quantity?, unit?, cookMinutes?, note? }`. Without `If-Match` it names the barcode: `201` + ETag, or `428 products.already_named` when the household has it. With `If-Match` it replaces that version: `200` + the new ETag, `412` when stale, `404 products.unknown` when gone. An heir names its own row without `If-Match`; the ancestor's is never touched. Any member. |
+| `DELETE` | `/households/{householdId}/products/{gtin}` | The household's own row, `If-Match` required (`428`/`412`). `204`, also when already gone. An heir that removes a row it overrode reads its ancestor's again. |
+
+`cookMinutes` is only what the household says: a barcode never supplies one.
+
 ## Shopping
 
 One list per household, under the household. Every write answers `200` with

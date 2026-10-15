@@ -1643,6 +1643,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/households/{householdId}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List what a household says its barcodes are
+         * @description Every barcode this household, and the households it inherits from, have named, one entry per barcode, the nearest household's when several named it (`householdId` says whose). Not paged: it seeds the offline cache, and a household names hundreds of barcodes at most. Has an `ETag` and answers `304` to a matching `If-None-Match`. This is a mapping from packaging to an ingredient, never what the household has at home.
+         */
+        get: operations["listHouseholdProductsV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/products/{gtin}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read what a household says a barcode is
+         * @description The household's own memory of the barcode, else the nearest household it inherits from (`householdId` in the body says whose). `{gtin}` is the digits of an EAN-8, UPC-A, EAN-13 or GTIN-14, or an eight-digit UPC-E, with a correct check digit; the response carries the normalised form (a UPC-A or UPC-E is padded to 13 digits). 404 `products.unknown` when nobody named it: the caller then asks for a name and PUTs it. Has an `ETag`; send it as `If-Match` to change or remove the household's own row.
+         */
+        get: operations["getHouseholdProductV1"];
+        /**
+         * Say what a barcode is
+         * @description Names a barcode for this household, or changes what it said. Without `If-Match` the barcode is being named: 201 with the new `ETag`, or 428 `products.already_named` when this household already has it (two phones naming the same code at once: the later one reads the row and decides). With `If-Match` from a read of the household's own row it is replaced: 200 with the new `ETag`, 412 when the row moved on, 404 `products.unknown` when it is gone. A household that only inherits the barcode names its own row without `If-Match`; the ancestor's is never touched. `{gtin}` is read as for GET and stored normalised. `name` is required; `ingredient`, `quantity` (with `unit`), `cookMinutes` and `note` are optional, and `cookMinutes` is only ever what the household says: a barcode does not supply one. Any member may.
+         */
+        put: operations["setHouseholdProductV1"];
+        post?: never;
+        /**
+         * Forget what a barcode is
+         * @description Removes this household's own row; a household it inherits from keeps its own, so an heir that removes a row it overrode sees the ancestor's again. Requires `If-Match` with the version you last read (428 without, 412 when the row moved on). 204, also when it is already gone.
+         */
+        delete: operations["removeHouseholdProductV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/households/{householdId}/ingredient-names": {
         parameters: {
             query?: never;
@@ -3634,6 +3682,66 @@ export interface components {
                 code: string;
                 detail: string;
             }[] | null;
+        };
+        /** @description What a household says a barcode is, as the household's memory holds it. */
+        ProductsProductDetail: {
+            /** @description The barcode in its normalised form: digits only, a UPC-A padded to 13. */
+            gtin: string;
+            /** @description What to show. */
+            name: string;
+            /** @description The ingredient a recipe line or list item is matched by. */
+            ingredient?: string | null;
+            /**
+             * Format: double
+             * @description What the pack holds.
+             */
+            quantity?: number | null;
+            /** @description The unit of `quantity`. */
+            unit?: string | null;
+            /**
+             * Format: int32
+             * @description Minutes the household found it needs.
+             */
+            cookMinutes?: number | null;
+            /** @description A line for people. */
+            note?: string | null;
+            /**
+             * Format: uuid
+             * @description The household whose memory this is: the one asked, or the nearest household it inherits from. Only that
+             *     household changes or removes it.
+             */
+            householdId: string;
+            /**
+             * Format: int64
+             * @description The version of the row, sent back as `If-Match` to change or remove it.
+             */
+            version: number;
+        };
+        /** @description Every barcode a household, and the households it inherits from, have named. */
+        ProductsProductsResponse: {
+            /** @description The products by barcode; a barcode more than one household named is the nearest household's. */
+            items: components["schemas"]["ProductsProductDetail"][];
+        };
+        /** @description What a household says a barcode is. */
+        ProductsSetProductRequest: {
+            /** @description What to show: "Barilla Spaghetti n.5". Required, at most 200 characters. */
+            name?: string;
+            /** @description The ingredient a recipe line or list item is matched by: "Spaghetti". Blank is none; at most 200 characters. */
+            ingredient?: string | null;
+            /**
+             * Format: double
+             * @description What the pack holds, more than 0 and at most 9999999.
+             */
+            quantity?: number | null;
+            /** @description The unit of `quantity`, written as in a recipe (`g`, `ml`, `pack`); needs a quantity. */
+            unit?: string | null;
+            /**
+             * Format: int32
+             * @description Minutes the household found it needs, 1 to 600. A barcode never supplies this; only the household does.
+             */
+            cookMinutes?: number | null;
+            /** @description A line for people, at most 500 characters. */
+            note?: string | null;
         };
         /** @description Where the copy goes. */
         RecipesCopyRequest: {
@@ -11430,6 +11538,243 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listHouseholdProductsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductsProductsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getHouseholdProductV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                gtin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductsProductDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    setHouseholdProductV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                gtin: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductsSetProductRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductsProductDetail"];
+                };
+            };
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductsProductDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    removeHouseholdProductV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                gtin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };

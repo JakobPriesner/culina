@@ -6,6 +6,7 @@ using Application.Recipes;
 using Application.Telemetry;
 using Domain.Cookbooks;
 using Domain.Cooking;
+using Domain.Products;
 using Domain.Recipes;
 using Domain.Shared;
 
@@ -29,6 +30,7 @@ internal sealed class RestoreArchiveCommandHandler(
     IPersonalNoteRepository notes,
     ICookLogRepository log,
     RecipeImageWriter images,
+    IProductRepository products,
     IUnitOfWork unitOfWork,
     TimeProvider time)
     : ICommandHandler<RestoreArchiveCommand, ArchiveRestored>
@@ -117,8 +119,24 @@ internal sealed class RestoreArchiveCommandHandler(
             await WriteCookbookAsync(command, shelf, written, cancellationToken).ConfigureAwait(false);
         }
 
+        foreach (var product in archive.Products ?? [])
+        {
+            await WriteProductAsync(command, product, cancellationToken).ConfigureAwait(false);
+        }
+
         return new ArchiveRestored(restored, skipped);
     }
+
+    // A barcode the household already named keeps its name, and one that does not hold together is passed over: a restore adds.
+    private async Task WriteProductAsync(
+        RestoreArchiveCommand command,
+        ArchivedProduct entry,
+        CancellationToken cancellationToken) =>
+        await HouseholdProduct
+            .Create(entry.Gtin, entry.Name, entry.Ingredient, entry.Quantity, entry.Unit, entry.CookMinutes, entry.Note)
+            .Match(
+                product => products.AddAsync(command.HouseholdId, command.UserId, product, cancellationToken),
+                error => Task.FromResult(Result<long>.Failure(error))).ConfigureAwait(false);
 
     // One recipe per transaction, not all or nothing: an archive is restored because something went wrong, so one odd recipe must not block the rest. Failures are counted.
     private async Task<Guid?> WriteOneAsync(
