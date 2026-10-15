@@ -46,7 +46,22 @@
   </Field>
 
   {#if !url.trim() && canPasteClipboard}
-    <Button variant="ghost" onclick={onpasteclipboard}>
+    <!-- A bordered button, not ghost text: on an iPhone this is the way a copied link gets in. -->
+    <Button onclick={onpasteclipboard}>
+      {#snippet icon()}
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M8 4.5H6.5a1.5 1.5 0 0 0-1.5 1.5v13a1.5 1.5 0 0 0 1.5 1.5h11a1.5 1.5 0 0 0 1.5-1.5V6a1.5 1.5 0 0 0-1.5-1.5H16M9 3h6v3H9z"
+          />
+        </svg>
+      {/snippet}
       {m['import.url.pasteClipboard']()}
     </Button>
   {/if}
