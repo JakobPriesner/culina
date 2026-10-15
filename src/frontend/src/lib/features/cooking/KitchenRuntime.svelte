@@ -6,6 +6,7 @@
   import { cooking } from './stores/cooking.svelte';
   import { kitchenTimers, kitchenWakeLock } from './kitchen.svelte';
   import { kitchenLighting } from './lighting.svelte';
+  import { speech } from './speech.svelte';
   import { editTimerState } from './timerState';
   import { cookingPip } from './pip.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
@@ -18,7 +19,9 @@
 
   onMount(() => {
     kitchenLighting.load();
+    speech.load();
     return () => {
+      speech.cancel();
       cookingPip.close();
       kitchenMediaSession.stop();
       kitchenTimers.clear();

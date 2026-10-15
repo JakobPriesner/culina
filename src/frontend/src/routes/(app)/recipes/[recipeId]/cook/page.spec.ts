@@ -7,6 +7,7 @@ import { clientError, ErrorCodes } from '$api';
 import { session } from '$features/auth/session.svelte';
 import { cooking } from '$features/cooking/stores/cooking.svelte';
 import { kitchenTimers } from '$features/cooking/kitchen.svelte';
+import { speech } from '$features/cooking/speech.svelte';
 import { recipes } from '$features/recipes/stores/recipes.svelte';
 import type { Recipe } from '$features/recipes/types';
 import { renderWithProviders } from '$lib/test/render';
@@ -93,5 +94,135 @@ describe('a cook session that could not be started', () => {
 
     await waitFor(() => expect(cooking.start).toHaveBeenCalled());
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+describe('reading a step aloud', () => {
+  const spoken: Recipe = {
+    ...recipe,
+    steps: [
+      {
+        ...step('s-1'),
+        segments: [{ kind: 'text', text: 'Stir in 2 tbsp butter and ½ tsp salt.' }]
+      },
+      { ...step('s-2'), segments: [{ kind: 'text', text: 'Serve at 60°C.' }] }
+    ]
+  };
+
+  let said: string[];
+  let cancelled: number;
+
+  const engine = () => ({
+    speak: vi.fn((utterance: { text: string }) => void said.push(utterance.text)),
+    cancel: vi.fn(() => void (cancelled += 1)),
+    getVoices: () => []
+  });
+
+  async function cookStep(index: number) {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              sessionId: 'session-1',
+              recipeId: 'recipe-1',
+              recipeTitle: 'Risotto',
+              servings: 4,
+              currentStepIndex: index,
+              startedAt: '2026-09-20T12:00:00Z',
+              lastActiveAt: '2026-09-20T12:00:00Z',
+              version: 1
+            }),
+            { headers: { 'Content-Type': 'application/json' } }
+          )
+        )
+      )
+    );
+    await cooking.resume();
+  }
+
+  beforeEach(() => {
+    said = [];
+    cancelled = 0;
+    localStorage.clear();
+    speech.cancel();
+    speech.setAutoRead(false);
+    vi.stubGlobal(
+      'SpeechSynthesisUtterance',
+      class {
+        lang = '';
+        voice = null;
+        constructor(readonly text: string) {}
+      }
+    );
+    vi.stubGlobal('speechSynthesis', engine());
+    vi.spyOn(recipes, 'detail', 'get').mockReturnValue(spoken);
+    vi.spyOn(cooking, 'start').mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    cooking.reset();
+    speech.cancel();
+  });
+
+  it('says the current step in words when the speaker is pressed, and stops on a second press', async () => {
+    await cookStep(0);
+    renderWithProviders(CookPage);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Read step aloud' }));
+
+    expect(said).toEqual(['Stir in 2 tablespoons butter and one half teaspoon salt.']);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Stop reading' }));
+
+    expect(screen.getByRole('button', { name: 'Read step aloud' })).toBeTruthy();
+  });
+
+  it('stops reading when the step is changed by hand, and does not start the next', async () => {
+    await cookStep(0);
+    renderWithProviders(CookPage);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Read step aloud' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Next step' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Read step aloud' })).toBeTruthy()
+    );
+    expect(said).toHaveLength(1);
+  });
+
+  it('reads each new step when auto-read is on, but not the one it opens at', async () => {
+    speech.setAutoRead(true);
+    await cookStep(0);
+    renderWithProviders(CookPage);
+
+    await screen.findByRole('button', { name: 'Read step aloud' });
+    expect(said).toEqual([]);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next step' }));
+
+    await waitFor(() => expect(said).toEqual(['Serve at 60 degrees Celsius.']));
+  });
+
+  it('gives way to a timer alarm', async () => {
+    await cookStep(0);
+    renderWithProviders(CookPage);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Read step aloud' }));
+    speech.interrupt();
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Read step aloud' })).toBeTruthy()
+    );
+  });
+
+  it('offers no speaker where the browser cannot speak', async () => {
+    vi.stubGlobal('speechSynthesis', undefined);
+    await cookStep(0);
+    renderWithProviders(CookPage);
+
+    await screen.findByRole('button', { name: 'Next step' });
+    expect(screen.queryByRole('button', { name: 'Read step aloud' })).toBeNull();
   });
 });

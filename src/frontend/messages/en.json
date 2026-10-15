@@ -1905,5 +1905,9 @@
   "shopping.meals.title": "Planned meals on this list: {count}",
   "shopping.meals.pastCount": "{count} already past",
   "shopping.meals.past": "Already past",
-  "shopping.meals.pastNote": "This day has passed, but what it asked for stays on the list until you tick it off or remove it."
+  "shopping.meals.pastNote": "This day has passed, but what it asked for stays on the list until you tick it off or remove it.",
+  "cooking.speech.read": "Read step aloud",
+  "cooking.speech.stop": "Stop reading",
+  "cooking.speech.autoRead": "Auto-read on advance",
+  "cooking.speech.autoReadHint": "Reads each step aloud when you move to it. A timer alarm always cuts the voice off."
 }
