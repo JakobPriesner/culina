@@ -4,12 +4,13 @@
 
   interface Props {
     atLeast: boolean;
+    mostlyMissing?: boolean;
     estimated?: boolean;
     basis?: string;
     detail?: string | null;
   }
 
-  let { atLeast, estimated = false, basis, detail = null }: Props = $props();
+  let { atLeast, mostlyMissing = false, estimated = false, basis, detail = null }: Props = $props();
 </script>
 
 <span class="info">
@@ -31,7 +32,13 @@
     {/snippet}
     <div class="explanation" role="region" aria-label={m['nutrition.calories.info']()}>
       {#if basis}<p class="basis">{basis}</p>{/if}
-      <p>{atLeast ? m['nutrition.calories.lowerBound']() : m['nutrition.calories.calculated']()}</p>
+      <p>
+        {mostlyMissing
+          ? m['nutrition.calories.mostlyMissingWhy']()
+          : atLeast
+            ? m['nutrition.calories.lowerBound']()
+            : m['nutrition.calories.calculated']()}
+      </p>
       {#if estimated}<p>{m['nutrition.calories.estimated']()}</p>{/if}
       {#if detail}<p>{detail}</p>{/if}
     </div>

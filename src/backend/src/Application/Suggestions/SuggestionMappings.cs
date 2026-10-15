@@ -1,4 +1,5 @@
 using Application.Abstractions;
+using Application.Recipes.GetNutrition;
 using Contracts.Suggestions.GetAll;
 using Domain.Suggestions;
 
@@ -22,7 +23,7 @@ internal static class SuggestionMappings
         return new Suggestion
         {
             Calories = scored.Recipe.Calories is { } energy
-                ? new Contracts.Recipes.GetNutrition.NutritionValue { Value = energy.Value, AtLeast = energy.AtLeast, Estimated = energy.Estimated }
+                ? energy.ToContract()
                 : null,
             RecipeId = scored.Recipe.RecipeId,
             HouseholdId = scored.Recipe.HouseholdId,

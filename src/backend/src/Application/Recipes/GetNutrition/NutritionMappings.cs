@@ -39,8 +39,15 @@ internal static class NutritionMappings
             Salt = values.Salt.ToContract()
         };
 
-    private static Contracts.Recipes.GetNutrition.NutritionValue ToContract(this LabelValue value) =>
-        new() { Value = value.Value, AtLeast = value.AtLeast, Estimated = value.Estimated };
+    /// <summary>One value as every answer sends it: the nutrition panel, and the energy on cards and suggestions.</summary>
+    internal static Contracts.Recipes.GetNutrition.NutritionValue ToContract(this LabelValue value) =>
+        new()
+        {
+            Value = value.Value,
+            AtLeast = value.AtLeast,
+            Estimated = value.Estimated,
+            MostlyMissing = value.MostlyMissing
+        };
 
     private static NutritionIngredient ToContract(this NutritionLine line, Whose? whose) =>
         new()

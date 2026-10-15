@@ -578,6 +578,53 @@ public class NutritionCalculatorTests
         Assert.True(none.Variants is null or { Count: 0 });
     }
 
+    [Fact]
+    public void Calculate_ShouldCallTheFigureMostlyMissing_WhenUnknownFoodWeighsMoreThanEverythingCounted()
+    {
+        // Act: bare "Rindfleisch" is no food on purpose (cuts range 110-300 kcal).
+        var result = Calculate(Servings(4m), NoCorrections, Line(1.2m, "kg", "Rindfleisch"), Line(500m, "g", "Mehl"));
+
+        // Assert
+        Assert.Equal(1200m, result.Ingredients[0].WrittenGrams);
+        Assert.All(AllValues(result), value => Assert.True(value.AtLeast && value.MostlyMissing));
+    }
+
+    [Fact]
+    public void Calculate_ShouldKeepTheFloor_WhenTheUnknownFoodWeighsLessThanWhatWasCounted()
+    {
+        // Act
+        var result = Calculate(Servings(4m), NoCorrections, Line(100m, "g", "Rindfleisch"), Line(500m, "g", "Mehl"));
+
+        // Assert
+        Assert.True(result.Values.EnergyKcal.AtLeast);
+        Assert.False(result.Values.EnergyKcal.MostlyMissing);
+    }
+
+    [Fact]
+    public void Calculate_ShouldNotWeighAnUnknownFood_WrittenInAnythingButAMass()
+    {
+        // Act
+        var result = Calculate(Servings(1m), NoCorrections, Line(2m, "Dose", "Kidneybohnen"), Line(10m, "g", "Mehl"));
+
+        // Assert
+        Assert.Null(result.Ingredients[0].WrittenGrams);
+        Assert.False(result.Values.EnergyKcal.MostlyMissing);
+    }
+
+    [Fact]
+    public void Calculate_ShouldNotCallTheFigureMostlyMissing_ForALineTheHouseholdLeftOut()
+    {
+        // Arrange
+        var corrections = new Dictionary<string, string?> { [ItemName.Fold("Rindfleisch")] = null };
+
+        // Act
+        var result = Calculate(Servings(1m), corrections, Line(1m, "kg", "Rindfleisch"), Line(10m, "g", "Mehl"));
+
+        // Assert
+        Assert.Equal(LineStatus.Excluded, result.Ingredients[0].Status);
+        Assert.False(result.Values.EnergyKcal.MostlyMissing);
+    }
+
     private static Dictionary<string, IReadOnlyDictionary<string, decimal>> Weights(
         params (string Name, string Unit, decimal Grams)[] rows) =>
         rows.GroupBy(row => row.Name).ToDictionary(

@@ -28,7 +28,13 @@
   );
 </script>
 
-{#if recipe.calories}
+{#if recipe.calories?.mostlyMissing}
+  <!-- No number at all: "≥ 139 kcal" for a dish whose beef was not counted still reads as a light one. -->
+  <span class="calories partial">
+    <span>{m['nutrition.calories.mostlyMissing']()}</span>
+    <CalorieInfo atLeast mostlyMissing {basis} />
+  </span>
+{:else if recipe.calories}
   <span class="calories" class:partial={recipe.calories.atLeast}>
     <span>
       <!-- A lower bound is shown as one, not only said: a small number that is only part of the dish must not read as a light one. -->

@@ -13,13 +13,14 @@ export interface PlannedFigure {
 /**
  * Whether a recipe gives a per-person figure: a portion of a recipe that makes several. A recipe made of pieces
  * says what a piece has, not what a person eats, and a recipe of one serving is the whole pot, so neither
- * can say how much a person has; they are left out of the day and named.
+ * can say how much a person has; they are left out of the day and named. So is one whose figure is mostly missing.
  */
 const perPerson = (nutrition: Nutrition | null): nutrition is Nutrition =>
   nutrition !== null &&
   nutrition.per === 'serving' &&
   !isWholeRecipe(nutrition) &&
-  nutrition.counted > 0;
+  nutrition.counted > 0 &&
+  nutrition.values.energyKcal.mostlyMissing !== true;
 
 /**
  * What one person has on a day that plans these meals, one portion of each: the energy added up, and
