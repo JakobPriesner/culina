@@ -102,9 +102,8 @@ test.describe('app flow polish @offline', () => {
     await page.getByRole('link', { name: 'Cookbooks', exact: true }).click();
     await page.getByRole('link', { name: 'Shopping', exact: true }).click();
     await expect(page).toHaveURL('/shopping');
-    const target = testInfo.project.use.isMobile
-      ? '[aria-current=page] .icon'
-      : '[aria-current=page]';
+    // The marker is a tile behind the whole current destination, on the bottom dock as at the top.
+    const target = '[aria-current=page]';
     await expectIndicatorFits(visibleNav, target);
     await page.getByRole('link', { name: 'Cookbooks', exact: true }).click();
     await expect(page).toHaveURL('/cookbooks');
@@ -114,10 +113,7 @@ test.describe('app flow polish @offline', () => {
       width: testInfo.project.use.isMobile ? 1280 : 390,
       height: 850
     });
-    await expectIndicatorFits(
-      visibleNav,
-      testInfo.project.use.isMobile ? '[aria-current=page]' : '[aria-current=page] .icon'
-    );
+    await expectIndicatorFits(visibleNav, target);
     await expectReflow(page);
   });
 
