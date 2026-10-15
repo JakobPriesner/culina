@@ -222,6 +222,78 @@ public class SourceRecipeMappingTests
     }
 
     [Fact]
+    public void ToSteps_ShouldSplitALoneStep_WrittenAsALinePerAction()
+    {
+        // As the Tandoor import of a Chefkoch recipe arrives: the whole method in one step.
+        var theirs = Recipe() with
+        {
+            Steps = [new SourceStep("Zwiebeln würfeln.\r\nIn Öl 4 Min. braten.\n\nBei mittlerer Hitze 1 Std. garen!", null)]
+        };
+
+        var steps = Steps(theirs);
+
+        Assert.Equal(
+            ["Zwiebeln würfeln.", "In Öl 4 Min. braten.", "Bei mittlerer Hitze 1 Std. garen!"],
+            steps.Select(step => Assert.IsType<TextSegment>(Assert.Single(step.Segments)).Value));
+        Assert.Equal([0, 1, 2], steps.Select(step => step.SortOrder));
+    }
+
+    [Fact]
+    public void ToSteps_ShouldKeepAReference_WithTheLineItIsIn()
+    {
+        var theirs = Recipe(ingredients: [new SourceIngredient(1m, null, "Zwiebel", null)]) with
+        {
+            Steps =
+            [
+                new SourceStep(
+                    [new SourceTextSegment("Die "), new SourceIngredientReference(0), new SourceTextSegment(" würfeln.\nIn Öl braten.")],
+                    null)
+            ]
+        };
+
+        var ingredients = SourceRecipeMapping.ToGroups(theirs)
+            .Match(value => value, error => throw Failed(error.Code));
+        var steps = SourceRecipeMapping.ToSteps(theirs, ingredients.Landed)
+            .Match(value => value, error => throw Failed(error.Code));
+        var onion = ingredients.Groups.SelectMany(group => group.Ingredients).Single();
+
+        Assert.Equal(2, steps.Count);
+        Assert.Equal([onion.Id], steps[0].Uses);
+        Assert.Empty(steps[1].Uses);
+    }
+
+    [Fact]
+    public void ToSteps_ShouldKeepLineBreaks_InARecipeThatHasStepsOfItsOwn()
+    {
+        var theirs = Recipe() with
+        {
+            Steps = [new SourceStep("Teig kneten.\nRuhen lassen.", null), new SourceStep("Backen.", null)]
+        };
+
+        Assert.Equal(2, Steps(theirs).Count);
+    }
+
+    [Theory]
+    [InlineData("Für den Teig:\n- 200 g Mehl\n- 100 ml Wasser")]
+    [InlineData("Alles verrühren.\nDazu passt Reis")]
+    [InlineData("Nur ein Satz.")]
+    public void ToSteps_ShouldKeepALoneStep_WhoseLinesAreNotEachASentence(string text)
+    {
+        var theirs = Recipe() with { Steps = [new SourceStep(text, null)] };
+
+        Assert.Single(Steps(theirs));
+    }
+
+    [Fact]
+    public void ToSteps_ShouldKeepALoneStep_ThatCarriesATimer()
+    {
+        // The timer belongs to the whole step; split, it would have to go with one line or the other.
+        var theirs = Recipe() with { Steps = [new SourceStep("Anbraten.\nSchmoren.", 600)] };
+
+        Assert.Single(Steps(theirs));
+    }
+
+    [Fact]
     public void ToDetails_ShouldDeduplicateTags_BecauseTwoAppsSpellThemDifferently()
     {
         var details = SourceRecipeMapping.ToDetails(
