@@ -55,9 +55,12 @@ export function createIngredientPanel(source: Source) {
   const needsOf = (step: Step | undefined): Ingredient[] =>
     (step ? usesOf(step) : []).map((id) => byId.get(id)).filter((one) => one !== undefined);
 
-  /** Cooking: the current step's list. `perStep`: only ingredients no step claims. Otherwise all of them. */
+  /**
+   * Cooking: the current step's list, or all of them when a lone step is the whole method.
+   * `perStep`: only ingredients no step claims. Otherwise all of them.
+   */
   const panel = $derived.by(() => {
-    if (source.cooking()) {
+    if (source.cooking() && divisible) {
       return needsOf(source.recipe().steps[source.currentStep()]);
     }
 

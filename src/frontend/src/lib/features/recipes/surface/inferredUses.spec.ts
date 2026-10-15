@@ -48,6 +48,48 @@ describe('inferring what a step needs from its words', () => {
     expect(inferUses([step('Den HARTKASE reiben.')], bolognese)).toEqual([['cheese']]);
   });
 
+  it('finds a compound ingredient from its last part, inflected or not', () => {
+    const chili = [
+      ingredient('onion', 'Gemüsezwiebel'),
+      ingredient('salt', 'Meersalz'),
+      ingredient('stock', 'Gemüsebrühe'),
+      ingredient('beans', 'Kidneybohne')
+    ];
+
+    expect(
+      inferUses([step('Zwiebeln würfeln, mit Salz würzen, Brühe und Bohnen zugeben.')], chili)
+    ).toEqual([['onion', 'salt', 'stock', 'beans']]);
+  });
+
+  it('finds an oil from the short word Öl, alone or as the end of a compound', () => {
+    const olive = ingredient('olive oil', 'Olivenöl');
+
+    expect(inferUses([step('In heißem Öl anbraten.')], [olive, ingredient('oil', 'Öl')])).toEqual([
+      ['oil']
+    ]);
+    expect(inferUses([step('In heißem Öl anbraten.')], [olive])).toEqual([['olive oil']]);
+  });
+
+  it('never reads Öl as the start of a compound', () => {
+    expect(inferUses([step('Mit Öl beträufeln.')], [ingredient('olives', 'Oliven')])).toEqual([[]]);
+  });
+
+  it('prefers the plain word over a compound that ends with it', () => {
+    const sugars = [ingredient('sugar', 'brauner Zucker'), ingredient('icing', 'Puderzucker')];
+
+    expect(inferUses([step('Den Zucker einrühren.')], sugars)).toEqual([['sugar']]);
+  });
+
+  it('prefers a compound that ends with the word over one that starts with it', () => {
+    const tomatoes = [ingredient('bottled', 'Flaschentomate'), ingredient('paste', 'Tomatenmark')];
+
+    expect(inferUses([step('Die Tomaten zugeben.')], tomatoes)).toEqual([['bottled']]);
+  });
+
+  it('does not take a few trailing letters for the last part of a compound', () => {
+    expect(inferUses([step('Die Eier verquirlen.')], [ingredient('sage', 'Salbei')])).toEqual([[]]);
+  });
+
   it('lists nothing for a step that names no ingredient', () => {
     expect(inferUses([step('Den Ofen auf 180 Grad vorheizen.')], bolognese)).toEqual([[]]);
   });
