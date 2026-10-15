@@ -60,6 +60,7 @@
 
     --shadow-card: none;
     --shadow-overlay: none;
+    --shadow-dock: none;
     --shadow-glass: none;
     --scrim: rgb(31 26 22 / 45%);
 
@@ -144,6 +145,7 @@
 
     --shadow-card: none;
     --shadow-overlay: none;
+    --shadow-dock: none;
     --shadow-glass: none;
     --scrim: rgb(0 0 0 / 65%);
 
