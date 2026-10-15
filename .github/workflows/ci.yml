@@ -11,11 +11,14 @@ on:
     branches: [main, master]
   pull_request:
 
-# A superseded run is wasted compute and a confusing status. The newest push to
-# a branch is the only one whose answer anyone acts on.
+# On a pull request a superseded run is wasted compute: only the newest push's
+# answer is acted on. On main nothing is superseded: a cancelled run's commit
+# can never be released (release.yml wants CI green on that exact commit), and
+# the cancel can land between pushing an image and signing it. So a push to
+# main waits for the run before it.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -68,11 +71,64 @@ jobs:
           dotnet test tests/ArchitectureTests --no-build
           dotnet test tests/Relay.Tests --no-build
 
-      # Testcontainers starts a real PostgreSQL. Slower and worth it: the SQL is
-      # hand-written, and a fake would only prove the fake works.
+  # Testcontainers starts a real PostgreSQL. Slower and worth it: the SQL is
+  # hand-written, and a fake would only prove the fake works.
+  #
+  # Every test class shares one database and runs one after another, which on
+  # one runner took sixteen minutes. So the suite is split by namespace across
+  # runners, each with its own container. The last shard runs whatever the
+  # others do not name, so a new namespace is never left out; a shard whose
+  # names match nothing fails (no tests ran) rather than passing empty.
+  integration:
+    name: Integration (${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      # Balanced by measured test time (2026-10-15, serial: 1378 s in all).
+      # Recipes is alone because one class in it, RecipeSearchRelevanceTests,
+      # takes 260 s; the others hold about 300 s each. Move a namespace when
+      # one shard drifts well past the rest.
+      SHARD_1: Recipes
+      SHARD_2: Suggestions Import Users
+      SHARD_3: Settings Households Ingredients Cookbooks Pipeline
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+          cache: true
+          cache-dependency-path: src/backend/**/packages.lock.json
+
+      - run: dotnet restore tests/IntegrationTests --locked-mode
+        working-directory: src/backend
+
+      - run: dotnet build tests/IntegrationTests --no-restore
+        working-directory: src/backend
+
       - name: Integration tests
         working-directory: src/backend
-        run: dotnet test tests/IntegrationTests --no-build
+        env:
+          SHARD: ${{ matrix.shard }}
+        run: |
+          # A namespace filter matches exactly, so each name is given again
+          # with `.*` to bring its sub-namespaces (Suggestions.Replay) along.
+          filters=()
+          if [ "$SHARD" -lt 4 ]; then
+            names="SHARD_${SHARD}"
+            for name in ${!names}; do
+              filters+=(--filter-namespace "IntegrationTests.${name}" --filter-namespace "IntegrationTests.${name}.*")
+            done
+          else
+            for name in $SHARD_1 $SHARD_2 $SHARD_3; do
+              filters+=(--filter-not-namespace "IntegrationTests.${name}" --filter-not-namespace "IntegrationTests.${name}.*")
+            done
+          fi
+          dotnet test tests/IntegrationTests --no-build "${filters[@]}"
 
   frontend:
     name: Frontend
@@ -330,11 +386,14 @@ jobs:
         with:
           dotnet-version: ${{ env.DOTNET_VERSION }}
 
+      # No build for either language: C# is read from source with its NuGet
+      # references resolved (the SDK above helps with that), which takes about
+      # half the time of autobuild. What it cannot see is code that source
+      # generators write at compile time, such as the LoggerMessage methods.
       - uses: github/codeql-action/init@d208ec71e39ae46397cbf6569bef8439b9aab974 # codeql-bundle-v2.27.2
         with:
           languages: ${{ matrix.language }}
-
-      - uses: github/codeql-action/autobuild@d208ec71e39ae46397cbf6569bef8439b9aab974 # codeql-bundle-v2.27.2
+          build-mode: none
 
       - uses: github/codeql-action/analyze@d208ec71e39ae46397cbf6569bef8439b9aab974 # codeql-bundle-v2.27.2
 
@@ -422,7 +481,7 @@ jobs:
     # Every gate above, without exception. An image published from a commit
     # whose tests were still running is an image nobody can reason about, and
     # `edge` is a tag people actually deploy.
-    needs: [backend, frontend, contract, e2e, codeql, security]
+    needs: [backend, integration, frontend, contract, e2e, codeql, security]
     # Only a real push to this repository's main. A pull request — including
     # one from a fork — must never reach the registry, and on a fork the
     # token could not write to it anyway.
