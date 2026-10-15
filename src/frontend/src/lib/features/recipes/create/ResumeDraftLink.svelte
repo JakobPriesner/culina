@@ -42,9 +42,11 @@
       background-color var(--duration-fast) var(--ease-out);
   }
 
-  .resume:hover {
-    border-color: var(--border-strong);
-    background: var(--surface-hover);
+  @media (hover: hover) {
+    .resume:hover {
+      border-color: var(--border-strong);
+      background: var(--surface-hover);
+    }
   }
 
   .resume-text {
@@ -68,8 +70,10 @@
     transition: transform var(--duration-fast) var(--ease-out);
   }
 
-  .resume:hover .resume-arrow {
-    color: var(--accent);
-    transform: translateX(var(--space-1));
+  @media (hover: hover) {
+    .resume:hover .resume-arrow {
+      color: var(--accent);
+      transform: translateX(var(--space-1));
+    }
   }
 </style>

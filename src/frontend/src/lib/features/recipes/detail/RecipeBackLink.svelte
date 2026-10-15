@@ -33,8 +33,10 @@
     text-decoration: none;
   }
 
-  .back:hover {
-    color: var(--text);
+  @media (hover: hover) {
+    .back:hover {
+      color: var(--text);
+    }
   }
 
   .title {

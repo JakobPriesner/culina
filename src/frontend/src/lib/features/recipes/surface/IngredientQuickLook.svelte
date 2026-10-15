@@ -214,9 +214,11 @@
       color var(--duration-fast) var(--ease-out);
   }
 
-  .close-btn:hover {
-    background: var(--surface-hover);
-    color: var(--text);
+  @media (hover: hover) {
+    .close-btn:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
   }
 
   .close-btn svg {
@@ -264,9 +266,11 @@
       color var(--duration-fast) var(--ease-out);
   }
 
-  .locate-btn:hover {
-    background: var(--surface-selected);
-    color: var(--accent);
+  @media (hover: hover) {
+    .locate-btn:hover {
+      background: var(--surface-selected);
+      color: var(--accent);
+    }
   }
 
   .locate-btn svg {

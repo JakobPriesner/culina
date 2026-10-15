@@ -458,9 +458,11 @@
     font-weight: var(--weight-medium);
   }
 
-  .nutrition :global(.summary:hover .affordance) {
-    text-decoration: underline;
-    text-underline-offset: 0.2em;
+  @media (hover: hover) {
+    .nutrition :global(.summary:hover .affordance) {
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
   }
 
   .per,

@@ -161,8 +161,10 @@
     border-bottom: 1px solid var(--border);
     transition: background-color var(--duration-fast) var(--ease-out);
   }
-  .row:hover {
-    background: var(--surface-hover);
+  @media (hover: hover) {
+    .row:hover {
+      background: var(--surface-hover);
+    }
   }
   .check {
     min-width: 0;

@@ -79,8 +79,10 @@
     cursor: pointer;
   }
 
-  .nutrition:hover {
-    color: var(--text);
+  @media (hover: hover) {
+    .nutrition:hover {
+      color: var(--text);
+    }
   }
 
   .shelves {
@@ -97,8 +99,10 @@
     color: inherit;
   }
 
-  .shelves a:hover {
-    color: var(--text);
+  @media (hover: hover) {
+    .shelves a:hover {
+      color: var(--text);
+    }
   }
 
   .origin {

@@ -71,16 +71,20 @@
     transition: color var(--duration-fast) var(--ease-out);
   }
 
-  .back:hover {
-    color: var(--text);
+  @media (hover: hover) {
+    .back:hover {
+      color: var(--text);
+    }
   }
 
   .arrow {
     transition: transform var(--duration-fast) var(--ease-out);
   }
 
-  .back:hover .arrow {
-    transform: translateX(calc(var(--space-1) * -1));
+  @media (hover: hover) {
+    .back:hover .arrow {
+      transform: translateX(calc(var(--space-1) * -1));
+    }
   }
 
   /*

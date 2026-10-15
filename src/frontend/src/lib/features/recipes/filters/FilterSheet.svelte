@@ -176,8 +176,10 @@
     cursor: pointer;
   }
 
-  .ceiling:hover {
-    border-color: var(--border-strong);
+  @media (hover: hover) {
+    .ceiling:hover {
+      border-color: var(--border-strong);
+    }
   }
 
   .ceiling.on {

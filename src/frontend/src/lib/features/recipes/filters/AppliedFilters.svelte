@@ -97,7 +97,9 @@
     cursor: pointer;
   }
 
-  .chip:hover {
-    border-color: var(--border-strong);
+  @media (hover: hover) {
+    .chip:hover {
+      border-color: var(--border-strong);
+    }
   }
 </style>

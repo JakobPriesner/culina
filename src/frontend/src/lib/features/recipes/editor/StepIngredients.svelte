@@ -169,8 +169,10 @@
       transform var(--duration-fast) var(--ease-out);
   }
 
-  .suggestion:hover {
-    background: var(--surface-accent-subtle);
+  @media (hover: hover) {
+    .suggestion:hover {
+      background: var(--surface-accent-subtle);
+    }
   }
 
   .suggestion:active {

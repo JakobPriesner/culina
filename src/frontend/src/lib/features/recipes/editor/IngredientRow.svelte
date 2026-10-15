@@ -135,8 +135,10 @@
     transition: background-color var(--duration-fast) var(--ease-out);
   }
 
-  .row:hover {
-    background: var(--surface-hover);
+  @media (hover: hover) {
+    .row:hover {
+      background: var(--surface-hover);
+    }
   }
 
   .name {
@@ -161,8 +163,10 @@
     cursor: pointer;
   }
 
-  .jump:hover {
-    color: var(--accent);
+  @media (hover: hover) {
+    .jump:hover {
+      color: var(--accent);
+    }
   }
 
   .row.open {

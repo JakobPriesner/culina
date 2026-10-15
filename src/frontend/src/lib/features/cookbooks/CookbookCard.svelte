@@ -81,9 +81,11 @@
     border-radius: var(--radius-lg);
   }
 
-  .link:hover {
-    text-decoration: underline;
-    text-underline-offset: 0.2em;
+  @media (hover: hover) {
+    .link:hover {
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
   }
 
   .meta {

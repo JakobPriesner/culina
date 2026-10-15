@@ -134,8 +134,10 @@
     background: var(--surface-selected);
   }
 
-  li[role='option']:hover:not(.highlighted) {
-    background: var(--surface-hover);
+  @media (hover: hover) {
+    li[role='option']:hover:not(.highlighted) {
+      background: var(--surface-hover);
+    }
   }
 
   .row-content {
