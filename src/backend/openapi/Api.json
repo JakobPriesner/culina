@@ -415,6 +415,177 @@
         }
       }
     },
+    "/api/v1/push/key": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "operationId": "getPushKeyV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesIntakePushKey"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/push/subscription": {
+      "put": {
+        "tags": [
+          "Recipes"
+        ],
+        "operationId": "registerPushV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipesIntakePushRegistration"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Recipes"
+        ],
+        "operationId": "removePushV1",
+        "parameters": [
+          {
+            "name": "endpoint",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "endpoint",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/push/relay": {
+      "get": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Whether the installed apps can be notified",
+        "description": "True when an administrator named a push relay (Push:RelayUrl). An app asks for notification permission only when it is.",
+        "operationId": "getPushRelayV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipesIntakePushRelay"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/push/devices/{deviceId}": {
+      "put": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Register an installed app's device for import notifications",
+        "description": "The app picks the device id and sends the relay token it got from the push relay; the same device signing in again, as anyone, replaces its row. Ten per person (409 Push.TooManyDevices). 409 push.relay_off when this server names no relay.",
+        "operationId": "registerPushDeviceV1",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipesIntakePushDeviceRegistration"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Recipes"
+        ],
+        "summary": "Forget an installed app's device",
+        "description": "On sign-out. 204, also when it was never registered.",
+        "operationId": "removePushDeviceV1",
+        "parameters": [
+          {
+            "name": "deviceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/v1/sessions": {
       "post": {
         "tags": [
@@ -9165,177 +9336,6 @@
         }
       }
     },
-    "/api/v1/push/key": {
-      "get": {
-        "tags": [
-          "Recipes"
-        ],
-        "operationId": "getPushKeyV1",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RecipesIntakePushKey"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/push/subscription": {
-      "put": {
-        "tags": [
-          "Recipes"
-        ],
-        "operationId": "registerPushV1",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RecipesIntakePushRegistration"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Recipes"
-        ],
-        "operationId": "removePushV1",
-        "parameters": [
-          {
-            "name": "endpoint",
-            "in": "query",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "endpoint",
-            "in": "query",
-            "explode": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
-    "/api/v1/push/relay": {
-      "get": {
-        "tags": [
-          "Recipes"
-        ],
-        "summary": "Whether the installed apps can be notified",
-        "description": "True when an administrator named a push relay (Push:RelayUrl). An app asks for notification permission only when it is.",
-        "operationId": "getPushRelayV1",
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RecipesIntakePushRelay"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/push/devices/{deviceId}": {
-      "put": {
-        "tags": [
-          "Recipes"
-        ],
-        "summary": "Register an installed app's device for import notifications",
-        "description": "The app picks the device id and sends the relay token it got from the push relay; the same device signing in again, as anyone, replaces its row. Ten per person (409 Push.TooManyDevices). 409 push.relay_off when this server names no relay.",
-        "operationId": "registerPushDeviceV1",
-        "parameters": [
-          {
-            "name": "deviceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RecipesIntakePushDeviceRegistration"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Conflict",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      },
-      "delete": {
-        "tags": [
-          "Recipes"
-        ],
-        "summary": "Forget an installed app's device",
-        "description": "On sign-out. 204, also when it was never registered.",
-        "operationId": "removePushDeviceV1",
-        "parameters": [
-          {
-            "name": "deviceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/v1/suggestions": {
       "get": {
         "tags": [
@@ -17294,6 +17294,9 @@
       "name": "Users"
     },
     {
+      "name": "Recipes"
+    },
+    {
       "name": "Sessions"
     },
     {
@@ -17313,9 +17316,6 @@
     },
     {
       "name": "Registration"
-    },
-    {
-      "name": "Recipes"
     },
     {
       "name": "SharedRecipes"
