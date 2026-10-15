@@ -158,4 +158,24 @@
   .bottom .destination.active .label {
     font-weight: var(--weight-semibold);
   }
+
+  /*
+   * The floating dock leaves a 320px phone 60px for a label, and "Kochbücher" needs about 70 at the usual size. A tighter
+   * dock inside (its 12px margin to the screen edge stays) and the size of a system tab bar's labels (11px) keep every
+   * label whole; mid-word "Kochbüc/her" read as broken.
+   */
+  @media (width < 22.5rem) {
+    .bottom {
+      gap: 2px;
+      padding: 2px;
+    }
+
+    .bottom .destination {
+      padding-inline: 2px;
+    }
+
+    .bottom .label {
+      font-size: 0.6875rem;
+    }
+  }
 </style>
