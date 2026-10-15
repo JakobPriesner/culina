@@ -13,8 +13,12 @@ export function adoptSaved(
 ): { recipe: Recipe; linked: boolean } {
   // Claimed one by one so same-named lines get distinct ids. Each group draws only from the saved
   // group with its own id: drawing from every group could give one id to two groups, which the save
-  // cannot insert twice.
-  const unclaimed = new Map(saved.groups.map((group) => [group.id, [...group.ingredients]]));
+  // cannot insert twice. Ids the draft already holds are not on offer: a second "Salz" took the
+  // first one's id, and every save after was refused as a duplicate.
+  const held = new Set(draft.groups.flatMap((group) => group.ingredients.map((one) => one.id)));
+  const unclaimed = new Map(
+    saved.groups.map((group) => [group.id, group.ingredients.filter((one) => !held.has(one.id))])
+  );
 
   const claim = (groupId: string | null, name: string): string => {
     const pool = unclaimed.get(groupId) ?? [];
@@ -53,5 +57,30 @@ export function adoptSaved(
   return {
     recipe: { ...draft, version: saved.version + (draft.version - sent), groups, steps },
     linked
+  };
+}
+
+/**
+ * A line repeating an earlier line's id loses it, so the next save makes it a new line. A journal kept
+ * before `adoptSaved` stopped handing out held ids has such twins; reopened as it was, the server refused
+ * every save and the step's ingredient list would not render.
+ */
+export function withDistinctIds(recipe: Recipe): Recipe {
+  const seen = new Set<string>();
+
+  return {
+    ...recipe,
+    groups: recipe.groups.map((group) => ({
+      ...group,
+      ingredients: group.ingredients.map((one) => {
+        if (!one.id || !seen.has(one.id)) {
+          seen.add(one.id);
+
+          return one;
+        }
+
+        return { ...one, id: '' };
+      })
+    }))
   };
 }

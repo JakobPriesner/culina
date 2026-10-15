@@ -13,7 +13,7 @@ import {
   type MinutesField,
   type TypedNumbers
 } from './numbers';
-import { adoptSaved } from './adoptSaved';
+import { adoptSaved, withDistinctIds } from './adoptSaved';
 import { describeSave } from './describeSave';
 
 /** The edited recipe with its local journal, autosave and conflict handling. Has no effects or lifecycle calls, so tests can drive it unmounted. */
@@ -162,7 +162,7 @@ export function createRecipeDraft(recipeId: () => string) {
 
       const kept = session.user ? recall(session.user.userId, recipeId()) : null;
 
-      draft = kept?.recipe ?? loaded;
+      draft = kept ? withDistinctIds(kept.recipe) : loaded;
       unsent = kept !== null;
       recovered = kept !== null;
     },

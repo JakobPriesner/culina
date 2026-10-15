@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { adoptSaved } from './adoptSaved';
+import { adoptSaved, withDistinctIds } from './adoptSaved';
 import type { Ingredient, Recipe } from '../types';
 
 const line = (name: string, id = ''): Ingredient => ({
@@ -67,5 +67,35 @@ describe('adoptSaved across groups', () => {
     const { recipe: adopted } = adoptSaved(draft, saved, 1);
 
     expect(adopted.groups[0]!.ingredients[0]!.id).toBe('');
+  });
+});
+
+describe('adoptSaved beside a line of the same name', () => {
+  it('gives a second "Salz" its own id, not the first one\'s', () => {
+    const draft = recipe([
+      { id: 'g1', name: null, ingredients: [line('Salz', 'salt-1'), line('Salz')] }
+    ]);
+    const saved = recipe([
+      { id: 'g1', name: null, ingredients: [line('Salz', 'salt-1'), line('Salz', 'salt-2')] }
+    ]);
+
+    const { recipe: adopted } = adoptSaved(draft, saved, 1);
+
+    expect(adopted.groups[0]!.ingredients.map((one) => one.id)).toEqual(['salt-1', 'salt-2']);
+  });
+});
+
+describe('withDistinctIds', () => {
+  it('makes a line repeating an earlier id a new line', () => {
+    const kept = recipe([
+      { id: 'g1', name: null, ingredients: [line('Salz', 'salt-1'), line('Zucker', 'sugar')] },
+      { id: 'g2', name: null, ingredients: [line('Salz', 'salt-1'), line('Mehl')] }
+    ]);
+
+    const ids = withDistinctIds(kept).groups.flatMap((group) =>
+      group.ingredients.map((one) => one.id)
+    );
+
+    expect(ids).toEqual(['salt-1', 'sugar', '', '']);
   });
 });
