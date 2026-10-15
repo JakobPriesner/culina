@@ -77,14 +77,18 @@
     pointer-events: none;
   }
 
-  /* Fades the page out under the pills. A gradient, not a full-width backdrop-filter, which would blur the empty gutters every scroll frame. */
+  /*
+   * Hides the page under the pills and fades it out below them. Solid for the header's whole height: fading from a third
+   * of the way down let a heading or a line of text read through beside the pills and above a stuck section heading.
+   * A gradient, not a full-width backdrop-filter, which would blur the empty gutters every scroll frame.
+   */
   .header::before {
     content: '';
     position: absolute;
     inset-block-start: 0;
     inset-inline: 0;
     height: calc(100% + var(--space-8));
-    background: linear-gradient(to bottom, var(--surface) 35%, transparent);
+    background: linear-gradient(to bottom, var(--surface) calc(100% - var(--space-8)), transparent);
   }
 
   /* Brand, destinations and tools share one row; the tools are on every page so the destinations stay centred. */

@@ -75,10 +75,11 @@
     gap: var(--space-2);
     margin-bottom: var(--space-1);
   }
+  /* Over the header's fade, which starts where it sticks: under it, a stuck heading read washed out. */
   .sticky {
     position: sticky;
     top: var(--header-inset);
-    z-index: 1;
+    z-index: var(--z-shell);
     padding-block: var(--space-2);
     background: var(--surface);
   }
