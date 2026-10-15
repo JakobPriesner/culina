@@ -1284,7 +1284,7 @@
   "shopping.sources.hide": "Hide recipes",
   "shopping.source.planned": "{date} · {slot}",
   "shopping.source.other": "Added by hand or from elsewhere",
-  "shopping.separate": "Also listed with another unit, which can't be added to this amount. Keep the line you need and remove the other.",
+  "shopping.separate": "The same thing in units that can't be added up. Keep the line you need and remove the others.",
   "editor.stepDuration": "Timer for step {number}",
   "editor.stepDuration.hint": "Cook mode can start this timer for you.",
   "editor.stepDuration.unit": "minutes",

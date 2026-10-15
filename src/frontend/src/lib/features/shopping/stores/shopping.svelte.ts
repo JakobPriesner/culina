@@ -3,6 +3,7 @@ import { LatestRead, registerStore, type LoadStatus } from '$shell/stores';
 
 import type { Unit } from '$features/recipes/units';
 
+import { togetherByName } from '../lineRuns';
 import { sectionOrder, type Section } from '../sections';
 
 import type { components } from '$api/generated/schema';
@@ -47,14 +48,17 @@ class ShoppingStore {
     return this.#list?.items ?? [];
   }
 
-  /** Still to buy, grouped in shop order; empty sections omitted. */
+  /**
+   * Still to buy, grouped in shop order; empty sections omitted. Within a section, lines of the same
+   * thing (kept apart because their units cannot be added) sit together, where the first of them is.
+   */
   get toBuy(): readonly SectionGroup[] {
     const remaining = this.items.filter((item) => !item.isChecked);
 
     return sectionOrder
       .map((section) => ({
         section,
-        items: remaining.filter((item) => item.section === section)
+        items: togetherByName(remaining.filter((item) => item.section === section))
       }))
       .filter((group) => group.items.length > 0);
   }

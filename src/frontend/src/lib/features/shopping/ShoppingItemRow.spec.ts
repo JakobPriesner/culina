@@ -117,7 +117,7 @@ describe('a line on the shopping list', () => {
 
     row({ ...milk, name: 'Salt', quantity: 1, unit: 'tsp', isListedSeparately: true });
 
-    expect(screen.getByText(/another unit, which can't be added/)).toBeInTheDocument();
+    expect(screen.getByText(/units that can't be added up/)).toBeInTheDocument();
   });
 
   it('says nothing of the kind once the line is in the trolley', () => {
@@ -125,7 +125,7 @@ describe('a line on the shopping list', () => {
 
     row({ ...milk, isChecked: true, isListedSeparately: true });
 
-    expect(screen.queryByText(/another unit/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/can't be added up/)).not.toBeInTheDocument();
   });
 
   it('moves a line to the section it was chosen for, and only when it changes', async () => {
