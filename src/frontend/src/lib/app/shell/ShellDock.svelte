@@ -30,6 +30,8 @@
     position: sticky;
     bottom: var(--bar-inset);
     z-index: var(--z-sticky);
+    /* Follows the bottom bar as it slides away and back. */
+    transition: bottom var(--duration-base) var(--ease-out);
   }
 
   @media print {
