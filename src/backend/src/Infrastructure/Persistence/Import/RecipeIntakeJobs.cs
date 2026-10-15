@@ -125,9 +125,9 @@ internal sealed class RecipeIntakeJobs(DbExecutor db, IntakeChanges changes, App
             row.Stage == "saving" && row.Draft is not null ? JsonSerializer.Deserialize<Draft>(row.Draft, Json) : null);
     }
 
-    public async Task<bool> ProgressAsync(Guid id, string stage, Draft? draft, CancellationToken token) => await ChangeAsync(
+    public async Task<bool> ProgressAsync(Guid id, JobStage stage, Draft? draft, CancellationToken token) => await ChangeAsync(
         "update recipe_intake_jobs set stage=@Stage, draft=coalesce(@Draft::jsonb,draft), updated_at=now() where id=@Id and stage not in ('ready','failed','reviewed') returning id, user_id",
-        new { Id = id, Stage = stage, Draft = draft is null ? null : JsonSerializer.Serialize(draft, Json) }, token).ConfigureAwait(false) > 0;
+        new { Id = id, Stage = stage.Text(), Draft = draft is null ? null : JsonSerializer.Serialize(draft, Json) }, token).ConfigureAwait(false) > 0;
 
     public async Task DraftedAsync(Guid id, CancellationToken token)
     {

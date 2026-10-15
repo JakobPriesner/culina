@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Contracts.Recipes;
+using Domain.Recipes;
 using Domain.Shared;
 
 namespace Application.Recipes;
@@ -7,11 +8,13 @@ namespace Application.Recipes;
 /// <summary>Attaches or removes a recipe image, owning the rule for the file it displaces.</summary>
 /// <param name="recipes">The recipe rows.</param>
 /// <param name="images">The image store.</param>
+/// <param name="release">Deletes a displaced file once nothing uses it.</param>
 /// <param name="unitOfWork">The transaction the row change happens in.</param>
 /// <param name="time">The injected clock.</param>
 public sealed class RecipeImageWriter(
     IRecipeRepository recipes,
     IImageStore images,
+    ImageRelease release,
     IUnitOfWork unitOfWork,
     TimeProvider time)
 {
@@ -59,7 +62,7 @@ public sealed class RecipeImageWriter(
         CancellationToken cancellationToken)
     {
         var replaced = await unitOfWork.InTransactionAsync(
-            token => recipes.SetImageAsync(recipeId, image, WebpContentType, time.GetUtcNow(), token),
+            token => SetImageAsync(recipeId, image, token),
             cancellationToken).ConfigureAwait(false);
 
         return await replaced.Match(
@@ -72,6 +75,24 @@ public sealed class RecipeImageWriter(
                 return reloaded.Map(recipe => recipe.Describe());
             },
             error => Task.FromResult(Result<RecipeDetail>.Failure(error))).ConfigureAwait(false);
+    }
+
+    // Under the file's lock, which a release also takes: storing found the file (or wrote it), and a release that ran in
+    // between may have deleted it since, so it is looked for again before a row is pointed at it.
+    private async Task<Result<ImageReplacement>> SetImageAsync(
+        Guid recipeId,
+        StoredImage image,
+        CancellationToken cancellationToken)
+    {
+        await recipes.LockImageAsync(image.ContentHash, cancellationToken).ConfigureAwait(false);
+
+        var present = await images
+            .CopyToAsync(image.ContentHash, ImageWidths.Card, Stream.Null, cancellationToken)
+            .ConfigureAwait(false);
+
+        return await present.Match(
+            () => recipes.SetImageAsync(recipeId, image, WebpContentType, time.GetUtcNow(), cancellationToken),
+            _ => Task.FromResult(Result<ImageReplacement>.Failure(ImageErrors.Vanished))).ConfigureAwait(false);
     }
 
     // Runs after the commit, never inside it: a file deleted for a rolled-back transaction is a broken
@@ -87,13 +108,9 @@ public sealed class RecipeImageWriter(
             return;
         }
 
-        var wanted = await recipes
-            .IsImageStillUsedAsync(previous, cancellationToken)
-            .ConfigureAwait(false);
+        // A file that cannot be deleted now is only storage a later sweep reclaims.
+        var released = await release.ReleaseIfUnusedAsync(previous, cancellationToken).ConfigureAwait(false);
 
-        if (!wanted)
-        {
-            await images.DeleteAsync(previous, cancellationToken).ConfigureAwait(false);
-        }
+        released.Match(() => { }, _ => { });
     }
 }

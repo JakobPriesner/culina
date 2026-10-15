@@ -123,6 +123,53 @@ public class ArchiveRoundTripTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Restore_ShouldBringBackThePhotoNoteAndCookingHistory_ThatExportWrites()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await FirstHouseholdIdAsync(client);
+        var photo = Convert.ToBase64String(TestImages.Png(600, 400));
+
+        var response = await UploadAsync(
+            client,
+            householdId,
+            $$"""{ "culina": 1, "exportedAt": "2026-09-13T10:00:00+00:00", "recipes": [{ "title": "Lemon orzo", "language": "en", "yieldAmount": 1, "yieldKind": "servings", "tags": [], "groups": [], "steps": [], "image": { "contentType": "image/webp", "data": "{{photo}}" }, "note": "Less salt next time.", "cooked": ["2026-08-01T18:00:00+00:00", "2026-09-01T18:30:00+00:00"] }] }""");
+
+        Assert.Equal(1, response.Json!.Value.GetProperty("restored").GetInt32());
+
+        var restored = await ReadTheRestoredOneAsync(client, householdId);
+        var recipeId = restored.GetProperty("recipeId").GetGuid();
+
+        var image = await client.GetAsync($"/api/v1/recipes/{recipeId}/image?w=400", Token);
+        var notes = await client.GetAsync($"/api/v1/recipes/{recipeId}/notes", Token);
+        var cookLog = await client.GetAsync($"/api/v1/recipes/{recipeId}/cook-log", Token);
+
+        Assert.Equal(HttpStatusCode.OK, image.StatusCode);
+        Assert.Equal("Less salt next time.", notes.Json!.Value.GetProperty("overall").GetString());
+        Assert.Equal(2, cookLog.Json!.Value.GetProperty("count").GetInt32());
+    }
+
+    [Fact]
+    public async Task Restore_ShouldSkipARecipeWhoseDetailsDoNotHoldTogether_AndKeepTheRest()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await FirstHouseholdIdAsync(client);
+
+        var response = await UploadAsync(
+            client,
+            householdId,
+            """{ "culina": 1, "exportedAt": "2026-09-13T10:00:00+00:00", "recipes": [{ "title": "Impossible", "language": "en", "yieldAmount": 1, "yieldKind": "servings", "prepMinutes": 999999, "tags": [], "groups": [], "steps": [], "cooked": [] }, { "title": "Lemon orzo", "language": "en", "yieldAmount": 1, "yieldKind": "servings", "tags": [], "groups": [], "steps": [], "cooked": [] }] }""");
+
+        // Was stored as a bare title and counted as restored.
+        Assert.Equal(1, response.Json!.Value.GetProperty("restored").GetInt32());
+        Assert.Equal(1, response.Json!.Value.GetProperty("skipped").GetInt32());
+
+        var all = await client.GetAsync($"/api/v1/recipes?householdId={householdId}&limit=24", Token);
+        var title = Assert.Single(all.Json!.Value.GetProperty("items").EnumerateArray()).GetProperty("title").GetString();
+
+        Assert.Equal("Lemon orzo", title);
+    }
+
+    [Fact]
     public async Task Restore_ShouldRefuse_AnArchiveFromAVersionItDoesNotKnow()
     {
         using var client = await SignedInAsync();

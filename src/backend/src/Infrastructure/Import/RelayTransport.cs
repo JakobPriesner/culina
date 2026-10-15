@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Security.Cryptography.X509Certificates;
 using Domain.Import;
 
 namespace Infrastructure.Import;
@@ -24,7 +23,7 @@ internal sealed class RelayTransport : IDisposable
     private readonly HttpClient http;
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The owned HttpClient disposes its handler and is disposed by this singleton.")]
-    public RelayTransport() : this(new HttpClient(Handler(), disposeHandler: true) { Timeout = TimeSpan.FromSeconds(15) }) { }
+    public RelayTransport() : this(new HttpClient(CheckedConnections.PublicHandler(), disposeHandler: true) { Timeout = TimeSpan.FromSeconds(15) }) { }
 
     internal RelayTransport(HttpClient http) => this.http = http;
 
@@ -54,17 +53,6 @@ internal sealed class RelayTransport : IDisposable
     }
 
     public void Dispose() => http.Dispose();
-
-    // The same guard as Web Push: the address is an administrator's, but public addresses only, no proxy, no redirects,
-    // checked where a name resolves at connect time.
-    private static SocketsHttpHandler Handler()
-    {
-        var handler = CheckedConnections.Handler(admits: PublicAddress.IsPublic);
-
-        handler.SslOptions.CertificateRevocationCheckMode = X509RevocationMode.Online;
-
-        return handler;
-    }
 }
 
 /// <summary>What crosses the relay: words, a path and a tag, never a recipe, a name or this server's address (7.2).</summary>

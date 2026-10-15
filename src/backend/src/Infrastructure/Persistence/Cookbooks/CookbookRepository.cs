@@ -184,6 +184,12 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
             rows.Count == 0 ? 0 : rows[0].TotalCount);
     }
 
+    public Task<int> CountAsync(Guid householdId, CancellationToken cancellationToken) =>
+        executor.ExecuteScalarAsync<int>(
+            "select count(*)::int from cookbooks where household_id = @householdId;",
+            new { householdId },
+            cancellationToken);
+
     public async Task<Result> AddAsync(Cookbook cookbook, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(cookbook);
@@ -280,6 +286,13 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
+        // The cookbook row, locked until the caller's transaction ends: a second add waits here, then reads the
+        // new maximum in its own statement, so no two recipes are given the same place.
+        await executor.ExecuteAsync(
+            "select 1 from cookbooks where id = @cookbookId for update;",
+            new { cookbookId },
+            cancellationToken).ConfigureAwait(false);
+
         // do nothing, not do update: a recipe already on the shelf keeps when it went on, and its place. A new one goes last.
         var written = await executor.ExecuteAsync(
             """
@@ -295,12 +308,21 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
     }
 
     public Task ReorderAsync(Guid cookbookId, IReadOnlyList<Guid> recipeIds, CancellationToken cancellationToken) =>
+        // The whole shelf is renumbered 1..n: the given recipes first, in the given order, then any row the list
+        // does not name (one the caller cannot see, say) in its old order, so no old number can collide with a new one.
         executor.ExecuteAsync(
             """
             update cookbook_recipes cr
-            set sort_order = ordered.n
-            from unnest(@recipeIds::uuid[]) with ordinality as ordered(recipe_id, n)
-            where cr.cookbook_id = @cookbookId and cr.recipe_id = ordered.recipe_id;
+            set sort_order = numbered.n
+            from (
+                select shelf.recipe_id,
+                       row_number() over (order by ordered.n nulls last, shelf.sort_order, shelf.recipe_id) as n
+                from cookbook_recipes shelf
+                left join unnest(@recipeIds::uuid[]) with ordinality as ordered(recipe_id, n)
+                       on ordered.recipe_id = shelf.recipe_id
+                where shelf.cookbook_id = @cookbookId
+            ) as numbered
+            where cr.cookbook_id = @cookbookId and cr.recipe_id = numbered.recipe_id;
             """,
             new { cookbookId, recipeIds = recipeIds.ToArray() },
             cancellationToken);
@@ -344,6 +366,26 @@ internal sealed class CookbookRepository(DbExecutor executor) : ICookbookReposit
             cancellationToken).ConfigureAwait(false);
 
         return [.. ids];
+    }
+
+    public async Task<ILookup<Guid, Guid>> RecipeIdsAsync(
+        IReadOnlyCollection<Guid> cookbookIds,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(cookbookIds);
+
+        var rows = await executor.QueryAsync<(Guid CookbookId, Guid RecipeId)>(
+            $"""
+            select c.id, on_shelf.id
+            from cookbooks c
+            cross join lateral ({OnTheShelf}) as on_shelf
+            where c.id = any(@cookbookIds)
+            order by c.id, on_shelf.sort_order nulls last, on_shelf.id;
+            """,
+            new { cookbookIds = cookbookIds.ToArray() },
+            cancellationToken).ConfigureAwait(false);
+
+        return rows.ToLookup(row => row.CookbookId, row => row.RecipeId);
     }
 
     public async Task<IReadOnlyList<CookbookOnAShelf>> ContainingAsync(

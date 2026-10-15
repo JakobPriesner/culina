@@ -102,7 +102,7 @@ export function offlineReads({ base, locate, signedOut }: OfflineReadsOptions): 
 
     keepAlive(fresh);
 
-    const response = cached ? await Promise.race([fresh, deadline()]) : await fresh;
+    const response = cached ? await firstOf(fresh) : await fresh;
 
     // A gateway error is the server being away behind its proxy, which for reading is the same as no network: the
     // kept copy beats "Culina is not answering" (an app started on a train, a kitchen server rebooting).
@@ -172,9 +172,18 @@ export function offlineReads({ base, locate, signedOut }: OfflineReadsOptions): 
   return { isApi, policyFor, answer };
 }
 
-/** Resolves with null once the network has had its chance. */
-function deadline(): Promise<null> {
-  return new Promise((resolve) => setTimeout(() => resolve(null), networkDeadlineMs));
+/** The network's answer, or null once it has had its chance; the timer is cleared as soon as either settles. */
+async function firstOf(fresh: Promise<Response | null>): Promise<Response | null> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<null>((resolve) => {
+    timer = setTimeout(() => resolve(null), networkDeadlineMs);
+  });
+
+  try {
+    return await Promise.race([fresh, deadline]);
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function userIdIn(response: Response): Promise<string | null> {

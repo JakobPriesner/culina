@@ -107,3 +107,20 @@ describe('a server that is down behind its proxy', () => {
     expect(read.status).toBe(500);
   });
 });
+
+describe('the wait for the network when a copy exists', () => {
+  it('leaves no timer running once the network has answered', async () => {
+    const kept = reads();
+    await keep('/api/v1/households/h1/shopping-list', { items: ['Brot'] });
+    answers = [json({ items: ['Milch'] })];
+    vi.useFakeTimers();
+
+    try {
+      await kept.answer(list(), 'network-first', () => {});
+
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

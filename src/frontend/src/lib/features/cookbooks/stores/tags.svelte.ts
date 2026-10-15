@@ -1,5 +1,5 @@
 import { http, request, type AppError } from '$api';
-import { registerStore } from '$shell/stores';
+import { LatestRead, registerStore } from '$shell/stores';
 
 /** The tags in use and how much. There is no tag management (a tag exists while a recipe carries it); the rule editor offers these instead of a guessed slug. */
 export interface TagInUse {
@@ -16,6 +16,7 @@ class TagStore {
   #loadedFor: string | null = null;
 
   #loadedAt = 0;
+  #reads = new LatestRead();
 
   get items(): readonly TagInUse[] {
     return this.#items;
@@ -34,9 +35,15 @@ class TagStore {
     this.#loadedFor = householdId;
     this.#loadedAt = Date.now();
 
+    const isLatest = this.#reads.start();
+
     const result = await request(() =>
       http.GET('/api/v1/tags', { params: { query: { householdId } } })
     );
+
+    if (!isLatest()) {
+      return;
+    }
 
     if (result.ok) {
       this.#items = [...result.value.items];
@@ -52,6 +59,7 @@ class TagStore {
   }
 
   reset(): void {
+    this.#reads.cancel();
     this.#items = [];
     this.#error = null;
     this.#loadedFor = null;

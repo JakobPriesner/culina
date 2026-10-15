@@ -91,6 +91,13 @@ public interface IRecipeRepository
     /// </remarks>
     Task<bool> IsImageStillUsedAsync(string contentHash, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Holds a lock on one stored image until the surrounding transaction ends, so attaching it and
+    /// releasing its file cannot interleave.
+    /// </summary>
+    /// <remarks>Only meaningful inside <see cref="IUnitOfWork"/>; outside a transaction it is released at once.</remarks>
+    Task LockImageAsync(string contentHash, CancellationToken cancellationToken);
+
     /// <summary>The content hash of a recipe's image, for serving it.</summary>
     Task<Result<string>> ImageHashAsync(Guid recipeId, CancellationToken cancellationToken);
 

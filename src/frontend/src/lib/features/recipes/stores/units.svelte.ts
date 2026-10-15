@@ -1,5 +1,5 @@
 import { http, request } from '$api';
-import { registerStore } from '$shell/stores';
+import { LatestRead, registerStore } from '$shell/stores';
 
 import { builtInUnits, type Unit } from '../units';
 
@@ -9,6 +9,7 @@ class UnitStore {
 
   /** Which household was asked for; deliberately not `$state`: `load` reads then writes it, so an effect calling it re-ran itself, and a failure (which resets it) became a request per frame. */
   #loadedFor: string | null = null;
+  #reads = new LatestRead();
 
   /** Everything a picker should offer, built-in first. */
   get all(): readonly Unit[] {
@@ -28,14 +29,27 @@ class UnitStore {
     // Claimed before the request so two components mounting together ask once.
     this.#loadedFor = householdId;
 
+    const isLatest = this.#reads.start();
+
     const result = await request(() =>
       http.GET('/api/v1/households/{householdId}/units', {
         params: { path: { householdId } }
       })
     );
 
+    // Another household was asked for since, or the store was reset: this answer is not for what is shown.
+    if (!isLatest()) {
+      return;
+    }
+
     if (result.ok) {
-      this.#own = [...result.value.own];
+      // Merged: a unit remembered while the request was out is not on the server's list yet.
+      const known = new Set(result.value.own.map((one) => one.toLowerCase()));
+
+      this.#own = [
+        ...result.value.own,
+        ...this.#own.filter((one) => !known.has(one.toLowerCase()))
+      ];
 
       return;
     }
@@ -54,6 +68,7 @@ class UnitStore {
   }
 
   reset(): void {
+    this.#reads.cancel();
     this.#own = [];
     this.#loadedFor = null;
   }

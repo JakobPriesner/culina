@@ -49,7 +49,7 @@ internal sealed class ImageStore(StorageSettings settings, IImageFiles files) : 
 
         await using (buffered.ConfigureAwait(false))
         {
-            var copied = await CopyBoundedAsync(content, buffered, cancellationToken)
+            var copied = await BoundedRead.CopyAsync(content, buffered, settings.MaxImageBytes, cancellationToken)
                 .ConfigureAwait(false);
 
             if (!copied)
@@ -109,36 +109,6 @@ internal sealed class ImageStore(StorageSettings settings, IImageFiles files) : 
         }
 
         return Result.Success();
-    }
-
-    /// <summary>Copies at most one byte over the limit, so an oversized upload is refused without being held in full.</summary>
-    private async Task<bool> CopyBoundedAsync(
-        Stream source,
-        Stream destination,
-        CancellationToken cancellationToken)
-    {
-        var buffer = new byte[81920];
-        var total = 0L;
-
-        while (true)
-        {
-            var read = await source.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
-
-            if (read == 0)
-            {
-                return true;
-            }
-
-            total += read;
-
-            if (total > settings.MaxImageBytes)
-            {
-                return false;
-            }
-
-            await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken)
-                .ConfigureAwait(false);
-        }
     }
 
     private Task<Result<StoredImage>> ReEncodeAsync(

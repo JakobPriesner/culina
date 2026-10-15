@@ -42,7 +42,8 @@ internal sealed class ImportFromSourceCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Sources.Import");
 
-        var asked = command.Draft.ExternalIds;
+        // Each recipe once: a repeated id would run twice at the same time and the second would fail on the origin index.
+        var asked = command.Draft.ExternalIds.Distinct(StringComparer.Ordinal).ToList();
 
         if (asked.Count == 0)
         {
@@ -61,7 +62,7 @@ internal sealed class ImportFromSourceCommandHandler(
             .ConfigureAwait(false);
 
         var result = await found.Match(
-            source => StartAsync(source, command, cancellationToken),
+            source => StartAsync(source, command, asked, cancellationToken),
             error => Task.FromResult(Result<ImportStartedResponse>.Failure(error)))
             .ConfigureAwait(false);
 
@@ -72,14 +73,16 @@ internal sealed class ImportFromSourceCommandHandler(
     private Task<Result<ImportStartedResponse>> StartAsync(
         RecipeSource source,
         ImportFromSourceCommand command,
+        IReadOnlyList<string> externalIds,
         CancellationToken cancellationToken) =>
         libraries.For(source.Kind).Match(
-            _ => QueueAsync(source, command, cancellationToken),
+            _ => QueueAsync(source, command, externalIds, cancellationToken),
             error => Task.FromResult(Result<ImportStartedResponse>.Failure(error)));
 
     private async Task<Result<ImportStartedResponse>> QueueAsync(
         RecipeSource source,
         ImportFromSourceCommand command,
+        IReadOnlyList<string> externalIds,
         CancellationToken cancellationToken)
     {
         var shelf = command.Draft.CookbookId is { } earlier
@@ -93,7 +96,7 @@ internal sealed class ImportFromSourceCommandHandler(
                 command.UserId,
                 cookbook.Id,
                 cookbook.Name.Value,
-                command.Draft.ExternalIds,
+                externalIds,
                 time.GetUtcNow())
             {
                 AllowLookalikes = command.Draft.AllowLookalikes,

@@ -14,6 +14,9 @@ if (problems.Count > 0)
     return 1;
 }
 
+// Every relay request is a few hundred bytes of JSON; Kestrel's 30 MB default would only serve an attacker.
+builder.WebHost.ConfigureKestrel(kestrel => kestrel.Limits.MaxRequestBodySize = 16 * 1024);
+
 builder.Services.AddSingleton(options);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<DeviceStore>();

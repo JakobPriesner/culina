@@ -91,9 +91,18 @@ internal sealed class CreateSavedSearchCommandHandler(
             search => unitOfWork.InTransactionAsync(
                 async token =>
                 {
-                    var written = await searches.AddAsync(search, token).ConfigureAwait(false);
+                    // A soft cap: two saves at the very limit may both pass, which costs one extra search.
+                    var count = await searches.CountAsync(search.HouseholdId, token).ConfigureAwait(false);
+                    var room = SavedSearch.EnsureRoom(count);
 
-                    return written.Map(() => search.ToDetail());
+                    return await room.Match(
+                        async () =>
+                        {
+                            var written = await searches.AddAsync(search, token).ConfigureAwait(false);
+
+                            return written.Map(() => search.ToDetail());
+                        },
+                        error => Task.FromResult(Result<SavedSearchDetail>.Failure(error))).ConfigureAwait(false);
                 },
                 cancellationToken),
             error => Task.FromResult(Result<SavedSearchDetail>.Failure(error))).ConfigureAwait(false);

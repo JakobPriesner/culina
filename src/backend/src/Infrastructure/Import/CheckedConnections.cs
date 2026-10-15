@@ -1,5 +1,8 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
+
+using Domain.Import;
 
 namespace Infrastructure.Import;
 
@@ -27,6 +30,19 @@ internal static class CheckedConnections
             ConnectTimeout = TimeSpan.FromSeconds(5),
             ConnectCallback = To(admits, dialling)
         };
+
+    /// <summary>
+    /// A handler for public addresses only, with online certificate revocation checks: for connections to a name
+    /// somebody else supplied (a browser's push endpoint, an administrator's relay address).
+    /// </summary>
+    internal static SocketsHttpHandler PublicHandler()
+    {
+        var handler = Handler(admits: PublicAddress.IsPublic);
+
+        handler.SslOptions.CertificateRevocationCheckMode = X509RevocationMode.Online;
+
+        return handler;
+    }
 
     private static Func<SocketsHttpConnectionContext, CancellationToken, ValueTask<Stream>> To(
         Func<IPAddress, bool> admits,

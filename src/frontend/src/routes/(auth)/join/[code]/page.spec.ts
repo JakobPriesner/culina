@@ -1,4 +1,5 @@
 import { screen } from '@testing-library/svelte';
+import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import JoinPage from './+page.svelte';
@@ -84,7 +85,9 @@ describe('opening an invitation', () => {
     expect(await screen.findByText("You're invited to join Graces Küche.")).toBeVisible();
     expect(screen.getByRole('button', { name: 'Join household' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Back to your kitchen' })).toHaveAttribute('href', '/');
-    await new Promise((settled) => setTimeout(settled, 50));
+    // The invitation has drawn; give any effect it triggers a chance to run before saying nothing was joined.
+    await tick();
+    await tick();
 
     expect(redemptions(fetched)).toHaveLength(0);
     expect(goto).not.toHaveBeenCalled();
@@ -132,9 +135,10 @@ describe('opening an invitation', () => {
       () => json({ code: 'server.unexpected', detail: 'Oops.' }, 500)
     );
 
-    renderWithProviders(JoinPage);
+    const { container } = renderWithProviders(JoinPage);
     await vi.waitFor(() => expect(fetched).toHaveBeenCalled());
-    await new Promise((settled) => setTimeout(settled, 50));
+    // The failed read has settled once the placeholder for the name is gone.
+    await vi.waitFor(() => expect(container.querySelector('.skeleton')).toBeNull());
 
     expect(screen.queryByText(/invited to join/)).not.toBeInTheDocument();
     await joinIt();

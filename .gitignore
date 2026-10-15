@@ -19,6 +19,7 @@ coverage/
 
 # ── Node / SvelteKit ───────────────────────────────────────────────
 node_modules/
+.pnpm-store/
 .svelte-kit/
 build/
 .vite/

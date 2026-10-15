@@ -163,18 +163,21 @@ internal sealed class ExportArchiveQueryHandler(
         {
             var page = await cookbooks.ListAsync(householdId, cursor, Page, cancellationToken).ConfigureAwait(false);
 
-            foreach (var cookbook in page.Items.Select(shelf => shelf.Cookbook))
+            var shelves = page.Items.Select(shelf => shelf.Cookbook).ToList();
+
+            // One query for the page, not one per cookbook.
+            var onShelves = await cookbooks
+                .RecipeIdsAsync([.. shelves.Select(shelf => shelf.Id)], cancellationToken)
+                .ConfigureAwait(false);
+
+            foreach (var cookbook in shelves)
             {
                 var archived = new ArchivedCookbook
                 {
                     Name = cookbook.Name.Value,
                     Description = cookbook.Description,
                     Recipes = cookbook.Kind == CookbookKind.Manual
-                        ? [
-                            .. (await cookbooks.RecipeIdsAsync(cookbook.Id, cancellationToken).ConfigureAwait(false))
-                                .Where(positions.ContainsKey)
-                                .Select(id => positions[id])
-                        ]
+                        ? [.. onShelves[cookbook.Id].Where(positions.ContainsKey).Select(id => positions[id])]
                         : null,
                     Rules = cookbook.Kind == CookbookKind.Smart
                         ? new ArchivedRules(cookbook.Rules.Tags, cookbook.Rules.Ingredients, cookbook.Rules.MaxMinutes)

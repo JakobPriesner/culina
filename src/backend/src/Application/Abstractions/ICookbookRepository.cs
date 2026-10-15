@@ -23,6 +23,9 @@ public interface ICookbookRepository
         int limit,
         CancellationToken cancellationToken);
 
+    /// <summary>How many cookbooks the household has, for its cap.</summary>
+    Task<int> CountAsync(Guid householdId, CancellationToken cancellationToken);
+
     /// <summary>Writes a new cookbook.</summary>
     Task<Result> AddAsync(Cookbook cookbook, CancellationToken cancellationToken);
 
@@ -41,6 +44,7 @@ public interface ICookbookRepository
         CancellationToken cancellationToken);
 
     /// <summary>Puts a recipe on a shelf, or leaves it where it already is.</summary>
+    /// <remarks>Call inside a transaction: it locks the cookbook until that ends, so concurrent adds take successive places.</remarks>
     /// <returns>
     /// Whether a row was written; false (already on) is a success, and spares the cookbook's
     /// version a no-op bump.
@@ -52,7 +56,8 @@ public interface ICookbookRepository
         DateTimeOffset now,
         CancellationToken cancellationToken);
 
-    /// <summary>Puts a chosen shelf's recipes in this order; the list holds every recipe on it, once.</summary>
+    /// <summary>Puts a chosen shelf's recipes in this order; the list holds every recipe on it, once.
+    /// Renumbers the whole shelf from 1; call inside a transaction.</summary>
     Task ReorderAsync(Guid cookbookId, IReadOnlyList<Guid> recipeIds, CancellationToken cancellationToken);
 
     /// <summary>Takes a recipe off a shelf; returns whether a row was removed.</summary>
@@ -66,6 +71,11 @@ public interface ICookbookRepository
 
     /// <summary>Every recipe on a shelf, whichever kind it is, by id, in shelf order.</summary>
     Task<IReadOnlyList<Guid>> RecipeIdsAsync(Guid cookbookId, CancellationToken cancellationToken);
+
+    /// <summary>Every recipe on several shelves, by shelf, each in shelf order: one round trip for a page of them.</summary>
+    Task<ILookup<Guid, Guid>> RecipeIdsAsync(
+        IReadOnlyCollection<Guid> cookbookIds,
+        CancellationToken cancellationToken);
 
     /// <summary>Which of this household's shelves a recipe is on.</summary>
     Task<IReadOnlyList<CookbookOnAShelf>> ContainingAsync(

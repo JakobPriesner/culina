@@ -33,6 +33,12 @@ public static class ImageErrors
         "That image is no longer stored.",
         ErrorType.NotFound);
 
+    /// <summary>The file an upload had just been stored as was released before it could be attached.</summary>
+    public static readonly Error Vanished = new(
+        "recipes.image_vanished",
+        "That image was replaced elsewhere while it was being attached. Try the upload again.",
+        ErrorType.Conflict);
+
     /// <summary>The requested rendition is not one that exists.</summary>
     public static readonly Error UnknownWidth = new(
         "recipes.image_unknown_width",

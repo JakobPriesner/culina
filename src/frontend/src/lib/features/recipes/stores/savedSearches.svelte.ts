@@ -1,6 +1,7 @@
 import type { components } from '$api/generated/schema';
 import { http, request, type AppError } from '$api';
-import { registerStore } from '$shell/stores';
+import { ResetEpoch, removeUndoable } from '$shell/optimistic';
+import { LatestRead, registerStore } from '$shell/stores';
 
 import { fromWireSort, toWireSort, type RecipeSort } from './libraryView.svelte';
 
@@ -35,6 +36,8 @@ class SavedSearchStore {
   #items = $state<SavedSearch[]>([]);
   #error = $state<AppError | null>(null);
   #loadedFor: string | null = null;
+  #reads = new LatestRead();
+  #epoch = new ResetEpoch();
 
   get items(): readonly SavedSearch[] {
     return this.#items;
@@ -52,9 +55,15 @@ class SavedSearchStore {
 
     this.#loadedFor = householdId;
 
+    const isLatest = this.#reads.start();
+
     const result = await request(() =>
       http.GET('/api/v1/searches', { params: { query: { householdId } } })
     );
+
+    if (!isLatest()) {
+      return;
+    }
 
     if (!result.ok) {
       // Retry next time instead of staying missing for the session.
@@ -96,8 +105,6 @@ class SavedSearchStore {
     name: string,
     criteria: SearchCriteria
   ): Promise<SavedSearch | AppError> {
-    const before = this.#items;
-
     const result = await request(() =>
       http.PATCH('/api/v1/searches/{searchId}', {
         params: { path: { searchId } },
@@ -105,8 +112,8 @@ class SavedSearchStore {
       })
     );
 
+    // Nothing was changed optimistically, so a refusal has nothing to put back.
     if (!result.ok) {
-      this.#items = before;
       this.#error = result.error;
 
       return result.error;
@@ -120,9 +127,10 @@ class SavedSearchStore {
   }
 
   async forget(searchId: string): Promise<AppError | null> {
-    const before = this.#items;
+    const gone = removeUndoable(this.#items, (one) => one.id === searchId);
+    const putBack = this.#epoch.guard(() => (this.#items = gone.undo(this.#items)));
 
-    this.#items = this.#items.filter((one) => one.id !== searchId);
+    this.#items = gone.items;
 
     const result = await request(() =>
       http.DELETE('/api/v1/searches/{searchId}', { params: { path: { searchId } } })
@@ -132,7 +140,7 @@ class SavedSearchStore {
       return null;
     }
 
-    this.#items = before;
+    putBack();
     this.#error = result.error;
 
     return result.error;
@@ -143,6 +151,8 @@ class SavedSearchStore {
   }
 
   reset(): void {
+    this.#reads.cancel();
+    this.#epoch.bump();
     this.#items = [];
     this.#error = null;
     this.#loadedFor = null;

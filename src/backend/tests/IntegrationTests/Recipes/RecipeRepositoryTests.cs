@@ -144,6 +144,54 @@ public class RecipeRepositoryTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Update_ShouldKeepEditedStepsAndAddNewOnes_InOneWrite()
+    {
+        await using var scope = await NewScopeAsync();
+        var recipe = await scope.SeedRecipeAsync();
+        var kept = recipe.Steps[0].Id;
+
+        recipe.SetContents(
+            [.. recipe.Groups],
+            [
+                Step.Create(kept, 0, [new TextSegment("Stir longer.")], [], 90).ShouldBeSuccess(),
+                Step.Create(null, 1, [new TextSegment("Serve.")], [], null).ShouldBeSuccess()
+            ],
+            Now).ShouldBeSuccess();
+
+        (await scope.Recipes.UpdateAsync(recipe, 1, Token)).ShouldBeSuccess();
+
+        var found = (await scope.Recipes.FindAsync(recipe.Id, Token)).ShouldBeSuccess();
+        Assert.Equal(2, found.Steps.Count);
+        Assert.Equal(kept, found.Steps[0].Id);
+        Assert.Equal(90, found.Steps[0].DurationSeconds);
+        Assert.Equal(2, await scope.CountAsync("select count(*) from steps where recipe_id = '" + recipe.Id + "';"));
+    }
+
+    [Fact]
+    public async Task Update_ShouldRefuse_WhenAStepIdBelongsToAnotherRecipe_AndLeaveThatStepAlone()
+    {
+        await using var scope = await NewScopeAsync();
+        var first = await scope.SeedRecipeAsync();
+        var second = Recipe.Create(
+            first.HouseholdId,
+            RecipeTitle.Create("Ragù").ShouldBeSuccess(),
+            first.CreatedBy,
+            Language.En,
+            Now);
+        await scope.Recipes.AddAsync(second, Token);
+        second.SetContents(
+            [],
+            [Step.Create(first.Steps[0].Id, 0, [new TextSegment("Stir.")], [], null).ShouldBeSuccess()],
+            Now).ShouldBeSuccess();
+
+        var result = await scope.Recipes.UpdateAsync(second, 1, Token);
+
+        result.ShouldBeFailure(RecipeErrors.DuplicateStep);
+        var untouched = (await scope.Recipes.FindAsync(first.Id, Token)).ShouldBeSuccess();
+        Assert.Equal(first.Steps.Count, untouched.Steps.Count);
+    }
+
+    [Fact]
     public async Task Delete_ShouldHideTheRecipe_ButKeepEverythingUnderItForARestore()
     {
         await using var scope = await NewScopeAsync();

@@ -1,5 +1,6 @@
 using Api.Extensions;
 using Api.Infrastructure;
+using Application.Abstractions.Messaging;
 using Application.Recipes.Intake;
 using Contracts.Recipes.Intake;
 using Request = Contracts.Recipes.Drafts.Request;
@@ -17,18 +18,19 @@ internal sealed class StartRecipeDraftEndpoint : IEndpoint
                 Guid id,
                 Request request,
                 HttpContext context,
-                RecipeIntake intake,
+                ICommandHandler<StartRecipeDraftCommand, IntakeJob> handler,
                 CancellationToken cancellationToken) =>
             {
-                var result = await intake
-                    .StartDraftAsync(
-                        id,
-                        context.CurrentUser().UserId,
-                        request.HouseholdId,
-                        request.Kind,
-                        request.Material,
-                        request.RecipeId,
-                        request.Language,
+                var result = await handler
+                    .Handle(
+                        new StartRecipeDraftCommand(
+                            id,
+                            context.CurrentUser().UserId,
+                            request.HouseholdId,
+                            request.Kind,
+                            request.Material,
+                            request.RecipeId,
+                            request.Language),
                         cancellationToken)
                     .ConfigureAwait(false);
 

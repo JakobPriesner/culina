@@ -6,10 +6,11 @@ const stages: readonly SetupStage[] = ['database', 'account', 'complete'];
 
 /**
  * Setup stage of this instance, or null if the server couldn't be asked. Null is not "complete":
- * an offline phone must not be pushed onto setup for an instance set up years ago.
+ * an offline phone must not be pushed onto setup for an instance set up years ago. `deadlineMs` replaces the client's default wait.
  */
-export async function readSetup(): Promise<Setup | null> {
-  const result = await request(() => http.GET('/api/v1/setup'));
+export async function readSetup(deadlineMs?: number): Promise<Setup | null> {
+  const signal = deadlineMs === undefined ? undefined : AbortSignal.timeout(deadlineMs);
+  const result = await request(() => http.GET('/api/v1/setup', { signal }));
 
   if (!result.ok) {
     return null;

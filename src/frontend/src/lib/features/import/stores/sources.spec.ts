@@ -609,3 +609,42 @@ describe('importing', () => {
     expect(asked).toHaveLength(1);
   });
 });
+
+describe('disconnecting a library the server refuses to forget', () => {
+  const wireSource = (id: string) => ({ ...source, sourceId: id });
+
+  async function disconnectingWhileOut() {
+    serverAnswers(() => json({ items: [wireSource('s1'), wireSource('s2')] }));
+    await sources.list('h1');
+
+    const held = Promise.withResolvers<Response>();
+    const refuse = () => held.resolve(json({ status: 500 }, 500));
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => held.promise)
+    );
+
+    return { disconnecting: sources.disconnect('s1'), refuse: () => refuse() };
+  }
+
+  it('puts back that library at its place, keeping the rest', async () => {
+    const { disconnecting, refuse } = await disconnectingWhileOut();
+
+    expect(sources.items.map((one) => one.sourceId)).toEqual(['s2']);
+    refuse();
+    await disconnecting;
+
+    expect(sources.items.map((one) => one.sourceId)).toEqual(['s1', 's2']);
+  });
+
+  it('does not refill the store after sign-out cleared it', async () => {
+    const { disconnecting, refuse } = await disconnectingWhileOut();
+
+    sources.reset();
+    refuse();
+    await disconnecting;
+
+    expect(sources.items).toEqual([]);
+  });
+});

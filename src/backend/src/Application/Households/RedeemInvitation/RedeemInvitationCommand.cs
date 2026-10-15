@@ -68,8 +68,9 @@ internal sealed class RedeemInvitationCommandHandler(
             return await AlreadyInAsync(invitation, cancellationToken).ConfigureAwait(false);
         }
 
-        return await unitOfWork
-            .InTransactionAsync(token => AddMemberAsync(invitation, userId, now, token), cancellationToken)
+        // Whole attempts rerun when another member change got there first; a rolled-back attempt leaves the code unused.
+        return await HouseholdWrites
+            .ApplyAsync(unitOfWork, token => AddMemberAsync(invitation, userId, now, token), cancellationToken)
             .ConfigureAwait(false);
     }
 

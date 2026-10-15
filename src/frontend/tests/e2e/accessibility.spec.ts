@@ -3,6 +3,7 @@ import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 
 import {
   accountFor,
+  frames,
   needsBackend,
   seedCookbook,
   seedRecipe,
@@ -242,7 +243,9 @@ test.describe('what moves while a page loads', () => {
 
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-      await page.waitForTimeout(1500);
+      // Fonts and images have landed, then about a second of painting for late content to shift.
+      await page.evaluate(() => document.fonts.ready);
+      await frames(page, 60);
 
       const shift = await page.evaluate(() => (window as unknown as { shift: number }).shift);
 

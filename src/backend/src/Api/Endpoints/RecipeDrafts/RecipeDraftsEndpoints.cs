@@ -13,5 +13,11 @@ internal static class RecipeDraftsEndpoints
             .AddSingleton<IEndpoint, ReadRecipeDraftEndpoint>()
             .AddSingleton<IEndpoint, ReadMediaRecipeDraftEndpoint>()
             .AddSingleton<IEndpoint, Job.V1.StartRecipeDraftEndpoint>()
-            .AddSingleton<IEndpoint, Intake.V1.RecipeIntakeEndpoint>();
+            .AddSingleton<IEndpoint, StartIntake.V1.StartRecipeIntakeEndpoint>()
+            .AddSingleton<IEndpoint, RetryIntake.V1.RetryRecipeIntakeEndpoint>()
+            .AddSingleton<IEndpoint, ListIntakes.V1.ListRecipeIntakesEndpoint>()
+            .AddSingleton<IEndpoint, WatchIntakes.V1.WatchRecipeIntakesEndpoint>()
+            .AddSingleton<IEndpoint, GetIntake.V1.GetRecipeIntakeEndpoint>()
+            .AddSingleton<IEndpoint, GetIntakePhoto.V1.GetRecipeIntakePhotoEndpoint>()
+            .AddSingleton<IEndpoint, ReviewIntake.V1.ReviewRecipeIntakeEndpoint>();
 }

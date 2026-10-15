@@ -38,20 +38,22 @@ internal sealed class RecordImpressionsCommandHandler(
             return tracked.Record(Result.Failure(SuggestionErrors.TooManyImpressions));
         }
 
-        var member = await households
-            .IsMemberAsync(command.HouseholdId, command.UserId, cancellationToken)
+        // Not-found, not forbidden, as every household read gives a non-member.
+        var access = await HouseholdAccess
+            .LibraryOfMemberAsync(households, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (!member)
-        {
-            // Not-found, not forbidden, as every household read gives a non-member.
-            return tracked.Record(Result.Failure(HouseholdErrors.NotFound(command.HouseholdId)));
-        }
+        return await access.Match(
+            library => RecordAsync(command, library, tracked, cancellationToken),
+            error => Task.FromResult(tracked.Record(Result.Failure(error)))).ConfigureAwait(false);
+    }
 
-        var library = await HouseholdAccess
-            .LibraryAsync(households, command.HouseholdId, cancellationToken)
-            .ConfigureAwait(false);
-
+    private async Task<Result> RecordAsync(
+        RecordImpressionsCommand command,
+        IReadOnlyList<Guid> library,
+        UseCaseActivity tracked,
+        CancellationToken cancellationToken)
+    {
         // The server's day, as the GET ranks by it: a client's clock would let a set be filed under a day it was not shown.
         await impressions
             .RecordAsync(

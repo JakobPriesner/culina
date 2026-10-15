@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Cookbooks;
+using Application.Households;
 using Application.Search;
 using Application.Telemetry;
 using Contracts.Recipes.GetAll;
@@ -33,22 +34,23 @@ internal sealed class GetRecipesQueryHandler(
 
         using var tracked = UseCaseActivity.Start("Recipes.GetAll");
 
-        var member = await households
-            .IsMemberAsync(query.Search.HouseholdId, query.Search.UserId, cancellationToken)
+        // Not-found rather than forbidden, like every household read for a non-member; the library is
+        // the household's own recipes plus every inherited one.
+        var library = await HouseholdAccess
+            .LibraryOfMemberAsync(households, query.Search.HouseholdId, query.Search.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (!member)
-        {
-            // Not-found rather than forbidden, like every household read for a non-member.
-            return tracked.Record(
-                Result<Response>.Failure(HouseholdErrors.NotFound(query.Search.HouseholdId)));
-        }
+        return await library.Match(
+            found => SearchAsync(query, found, tracked, cancellationToken),
+            error => Task.FromResult(tracked.Record(Result<Response>.Failure(error)))).ConfigureAwait(false);
+    }
 
-        // The household's own recipes plus every inherited one form one library.
-        var ancestors = await households
-            .AncestorsAsync(query.Search.HouseholdId, cancellationToken)
-            .ConfigureAwait(false);
-
+    private async Task<Result<Response>> SearchAsync(
+        GetRecipesQuery query,
+        IReadOnlyList<Guid> library,
+        UseCaseActivity tracked,
+        CancellationToken cancellationToken)
+    {
         // A cookbook names either rows (filled by hand) or conditions (fills itself); resolved here
         // so the searcher never knows what a cookbook is.
         var scope = await CookbookScope
@@ -64,7 +66,7 @@ internal sealed class GetRecipesQueryHandler(
 
         var search = query.Search with
         {
-            InheritedFrom = [.. ancestors.Select(ancestor => ancestor.HouseholdId)],
+            InheritedFrom = [.. library.Skip(1)],
             Query = intent.FreeText,
             Ingredients = [.. query.Search.Ingredients, .. intent.Ingredients],
             MaxMinutes = Min(query.Search.MaxMinutes, intent.MaxMinutes),

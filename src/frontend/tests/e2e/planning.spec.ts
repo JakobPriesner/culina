@@ -151,7 +151,7 @@ test.describe('planning a week', () => {
 
     await expect(cardOf(page, title)).toBeVisible();
 
-    const onto = await dayOtherThan(page, await dayHolding(page, title));
+    const onto = await dayOtherThan(page, await settledDay(page, title));
 
     await dragCardOnto(page, title, onto);
 
@@ -166,7 +166,7 @@ test.describe('planning a week', () => {
 
     await expect(cardOf(page, title)).toBeVisible();
 
-    const from = await dayHolding(page, title);
+    const from = await settledDay(page, title);
     const onto = await dayOtherThan(page, from);
 
     await dragCardOnto(page, title, onto);
@@ -193,7 +193,7 @@ test.describe('planning a week', () => {
 
     await expect(cardOf(page, title)).toBeVisible();
 
-    const onto = await dayOtherThan(page, await dayHolding(page, title));
+    const onto = await dayOtherThan(page, await settledDay(page, title));
     const which = await indexOfDay(page, onto);
 
     await page
@@ -229,7 +229,7 @@ test.describe('planning a week', () => {
       await openWeek(screen);
       await expect(cardOf(screen, title)).toBeVisible();
 
-      const from = await dayHolding(screen, title);
+      const from = await settledDay(screen, title);
 
       await touchDragOnto(screen, title, await dayOtherThan(screen, from), { holdMs: 0 });
       await expect.poll(() => dayHolding(screen, title)).toBe(from);
@@ -298,6 +298,13 @@ async function dayHolding(page: Page, title: string): Promise<string> {
   }
 
   return '';
+}
+
+/** The day a card is on once it is on one: `dayHolding` alone answers '' while the week is still loading. */
+async function settledDay(page: Page, title: string): Promise<string> {
+  await expect.poll(() => dayHolding(page, title)).not.toBe('');
+
+  return dayHolding(page, title);
 }
 
 async function indexOfDay(page: Page, date: string): Promise<number> {

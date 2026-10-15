@@ -22,6 +22,12 @@ public static class CookbookErrors
         "A cookbook needs a name, and it must be shorter than that.",
         ErrorType.Validation);
 
+    /// <summary>The household has as many cookbooks as it may keep.</summary>
+    public static readonly Error TooMany = new(
+        "cookbooks.too_many",
+        "A household may keep at most 200 cookbooks; delete one to start another.",
+        ErrorType.Validation);
+
     /// <summary>A smart cookbook that asks for nothing would be every recipe.</summary>
     public static readonly Error RulesRequired = new(
         "cookbooks.rules_required",

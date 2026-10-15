@@ -137,7 +137,7 @@ public class IntakeChangesTests
         public Task SourceAsync(Guid id, IntakeMaterial material, CancellationToken token) => throw new NotSupportedException();
         public Task ReviewAsync(Guid id, Guid userId, CancellationToken token) => throw new NotSupportedException();
         public Task<IntakeWork?> ClaimAsync(CancellationToken token) => throw new NotSupportedException();
-        public Task<bool> ProgressAsync(Guid id, string stage, Contracts.Recipes.Drafts.Response? draft, CancellationToken token) => throw new NotSupportedException();
+        public Task<bool> ProgressAsync(Guid id, JobStage stage, Contracts.Recipes.Drafts.Response? draft, CancellationToken token) => throw new NotSupportedException();
         public Task DraftedAsync(Guid id, CancellationToken token) => throw new NotSupportedException();
         public Task CompleteAsync(Guid id, Guid recipeId, CancellationToken token) => throw new NotSupportedException();
         public Task FailAsync(Guid id, string errorCode, CancellationToken token) => throw new NotSupportedException();

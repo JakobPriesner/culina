@@ -88,6 +88,29 @@ public class HouseholdRepositoryTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task LibraryOfMember_ShouldListTheHouseholdThenWhatItInheritsFrom_ForAMember()
+    {
+        await using var scope = await NewScopeAsync();
+        var (parent, heir, setter) = await InheritingAsync(scope);
+
+        var library = await scope.Households.LibraryOfMemberAsync(heir.Id, setter, Token);
+
+        Assert.Equal([heir.Id, parent.Id], library);
+        Assert.Equal([parent.Id], await scope.Households.LibraryOfMemberAsync(parent.Id, setter, Token));
+    }
+
+    [Fact]
+    public async Task LibraryOfMember_ShouldBeEmpty_ForSomebodyWhoIsNotInTheHousehold()
+    {
+        await using var scope = await NewScopeAsync();
+        var (parent, heir, _) = await InheritingAsync(scope);
+        var parentOnly = parent.Members.Select(member => member.UserId).Single(id => id != heir.Members[0].UserId);
+
+        Assert.Empty(await scope.Households.LibraryOfMemberAsync(heir.Id, parentOnly, Token));
+        Assert.Empty(await scope.Households.LibraryOfMemberAsync(heir.Id, Guid.NewGuid(), Token));
+    }
+
+    [Fact]
     public async Task Delete_ShouldHideTheHousehold_ButKeepItsMembershipForARestore()
     {
         await using var scope = await NewScopeAsync();

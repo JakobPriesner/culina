@@ -88,8 +88,9 @@ export default defineConfig({
 
   resolve: underTest ? { conditions: ['browser'] } : {},
 
+  // Localhost only unless `--host` is passed (make dev LAN=1); the proxy carries cookies and CSRF.
   // Same-origin dev (proxied /api) so cookies, SameSite and CSRF behave as in production; hence no CORS or dev-only auth.
-  server: { host: '0.0.0.0', port: 5173, proxy: apiProxy },
+  server: { port: 5173, proxy: apiProxy },
 
   // Same proxy for `vite preview`, which the e2e suite runs against a real backend.
   preview: { proxy: apiProxy },

@@ -103,6 +103,26 @@ public class NutritionCalculatorTests
     }
 
     [Fact]
+    public void Calculate_ShouldApplyACorrectionToEveryWayOfWritingItsIngredient_AndToNoOtherIngredient()
+    {
+        // Arrange
+        var corrections = new Dictionary<string, string?> { [ItemName.Fold("Brühen")] = "Z999999" };
+
+        // Act
+        var lines = Calculate(
+            Servings(1m),
+            corrections,
+            Line(500m, "ml", "Brühe"),
+            Line(500m, "ml", "Brühen"),
+            Line(200m, "g", "Mehl")).Ingredients;
+
+        // Assert
+        Assert.Equal("Z999999", lines[0].Food!.Code);
+        Assert.Equal("Z999999", lines[1].Food!.Code);
+        Assert.NotEqual("Z999999", lines[2].Food?.Code);
+    }
+
+    [Fact]
     public void Calculate_ShouldMakeEveryValueALowerBound_WhenOneLineIsNotCounted()
     {
         // Act

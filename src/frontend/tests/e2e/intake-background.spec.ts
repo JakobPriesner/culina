@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Route } from '@playwright/test';
+import { frames } from './support/culina';
 import { expectReflow, responsiveData } from './support/responsive';
 
 const id = '00000000-0000-4000-8000-000000000055';
@@ -165,13 +166,14 @@ test.describe('background intake @offline', () => {
     await page.reload();
     await expect(page.locator('.pencil')).toBeVisible();
     // Inspect a frame during the first stroke, with ordinary motion enabled.
-    await page.waitForTimeout(700);
+    await frames(page, 42);
     await page
       .locator('svg.olli')
       .screenshot({ path: testInfo.outputPath('olli-writing-motion.png') });
     const pen = page.locator('.pencil').locator('..');
     const pausedTransform = await pen.getAttribute('transform');
-    await page.waitForTimeout(800);
+    expect(pausedTransform, 'the pencil has a transform to hold').not.toBeNull();
+    await frames(page, 48);
     await expect(pen).toHaveAttribute('transform', pausedTransform!);
   });
 });
