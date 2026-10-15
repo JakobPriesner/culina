@@ -72,6 +72,19 @@
       </a>
     {/if}
 
+    <!-- Second: a link or a page of a book is how most recipes arrive on a phone, which cannot share into the app on iOS. -->
+    {#if session.user?.assistance.read}
+      {#if onpaste}
+        <button type="button" class="way" onclick={onpaste}>
+          {@render way(icons.photo, m['assist.photo.title'](), m['assist.photo.hint']())}
+        </button>
+      {:else}
+        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- The route is resolved; only the form to open is appended. -->
+        <a class="way" href="{newRecipe}?start=paste">
+          {@render way(icons.photo, m['assist.photo.title'](), m['assist.photo.hint']())}
+        </a>
+      {/if}
+    {/if}
     <a class="way" href={resolve('/(app)/recipes/import')}>
       {@render way(icons.source, m['import.source.title'](), m['import.source.hint']())}
     </a>
@@ -86,19 +99,6 @@
         <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- The route is resolved; only the form to open is appended. -->
         <a class="way" href="{newRecipe}?start=idea">
           {@render way(icons.idea, m['assist.idea.title'](), m['assist.idea.hint']())}
-        </a>
-      {/if}
-    {/if}
-
-    {#if session.user?.assistance.read}
-      {#if onpaste}
-        <button type="button" class="way" onclick={onpaste}>
-          {@render way(icons.photo, m['assist.photo.title'](), m['assist.photo.hint']())}
-        </button>
-      {:else}
-        <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- The route is resolved; only the form to open is appended. -->
-        <a class="way" href="{newRecipe}?start=paste">
-          {@render way(icons.photo, m['assist.photo.title'](), m['assist.photo.hint']())}
         </a>
       {/if}
     {/if}
