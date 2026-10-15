@@ -17,10 +17,10 @@ const recipe = (over: Partial<RecipeSummary>): RecipeSummary =>
   }) as RecipeSummary;
 
 describe('the calories on a recipe card', () => {
-  it('says per person for a recipe written for several', () => {
+  it('says per serving for a recipe written for several', () => {
     const { container } = render(RecipeCalories, { recipe: recipe({}) });
 
-    expect(container.querySelector('.calories')).toHaveTextContent(/480\skcal per person/);
+    expect(container.querySelector('.calories')).toHaveTextContent(/480\skcal per serving/);
   });
 
   it('says the figure is for the whole recipe when the recipe makes a single serving', () => {
@@ -32,7 +32,7 @@ describe('the calories on a recipe card', () => {
     });
 
     expect(container.querySelector('.calories')).toHaveTextContent(/3,?200\skcal whole recipe/);
-    expect(container.querySelector('.calories')).not.toHaveTextContent(/per person/);
+    expect(container.querySelector('.calories')).not.toHaveTextContent(/per serving/);
   });
 
   it('says per piece for pieces, whatever their number', () => {
@@ -52,14 +52,24 @@ describe('the calories on a recipe card', () => {
     expect(screen.queryByText(/139/)).not.toBeInTheDocument();
   });
 
-  it('shows a lower bound as one, and not only to a screen reader', () => {
+  it('shows a lower bound as one, in a word the eye and a screen reader both read', () => {
     const { container } = render(RecipeCalories, {
-      recipe: recipe({ calories: { value: 18, atLeast: true, estimated: false } })
+      recipe: recipe({ calories: { value: 18, atLeast: true, estimated: true } })
     });
 
-    expect(container.querySelector('.bound')).toHaveTextContent('≥');
-    expect(container.querySelector('.bound')).toHaveAttribute('aria-hidden', 'true');
-    expect(container).toHaveTextContent('at least');
+    // The bound wins: "at least about 18" says less than it costs; the estimate is in the explanation.
+    expect(container.querySelector('.calories')).toHaveTextContent(
+      /^at least\s18\skcal per serving/
+    );
+    expect(container.querySelector('.qualifier')).not.toHaveAttribute('aria-hidden');
+  });
+
+  it('says about for an estimate that is not a bound', () => {
+    const { container } = render(RecipeCalories, {
+      recipe: recipe({ calories: { value: 480, atLeast: false, estimated: true } })
+    });
+
+    expect(container.querySelector('.calories')).toHaveTextContent(/^about\s480\skcal per serving/);
   });
 
   it('shows no bound for a figure that is the whole dish', () => {

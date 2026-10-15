@@ -23,7 +23,7 @@
   import { roundForLabel } from './rounding';
   import type { NutritionValue } from './types';
   import CalorieInfo from './CalorieInfo.svelte';
-  import EstimateMark from './EstimateMark.svelte';
+  import Qualifier from './Qualifier.svelte';
   import NutritionBreakdown from './NutritionBreakdown.svelte';
   import NutritionLabel from './NutritionLabel.svelte';
   import NutritionSkeleton from './NutritionSkeleton.svelte';
@@ -151,17 +151,13 @@
           <span class="overview">
             <span class="headline">
               <span class="figure">
-                {#if answer.values.energyKcal.atLeast}
-                  <span class="bound"
-                    ><VisuallyHidden>{m['nutrition.atLeast']()}{nbsp}</VisuallyHidden></span
-                  >
-                {/if}
-                <span class="energyNumber"
-                  ><EstimateMark estimated={answer.values.energyKcal.estimated} />{labelNumber(
-                    'energy',
-                    answer.values.energyKcal
-                  )}</span
+                <span class="bound"
+                  ><Qualifier
+                    atLeast={answer.values.energyKcal.atLeast}
+                    estimated={answer.values.energyKcal.estimated}
+                  /></span
                 >
+                <span class="energyNumber">{labelNumber('energy', answer.values.energyKcal)}</span>
                 <span class="energyUnit">kcal</span>
                 <CalorieInfo
                   atLeast={answer.values.energyKcal.atLeast}
@@ -184,14 +180,15 @@
                       <span class="macroNumber" aria-hidden="true">–</span>
                       <VisuallyHidden>{m['nutrition.notKnown']()}</VisuallyHidden>
                     {:else}
-                      {#if macro.value.atLeast}
-                        <span class="macroBound">{m['nutrition.atLeast']()}</span>
-                      {/if}
+                      <span class="macroBound"
+                        ><Qualifier
+                          atLeast={macro.value.atLeast}
+                          estimated={macro.value.estimated}
+                        /></span
+                      >
                       <span class="macroNumber"
-                        ><EstimateMark estimated={macro.value.estimated} />{labelNumber(
-                          'macro',
-                          macro.value
-                        )}{nbsp}<span class="macroUnit">g</span></span
+                        >{labelNumber('macro', macro.value)}{nbsp}<span class="macroUnit">g</span
+                        ></span
                       >
                     {/if}
                   </span>

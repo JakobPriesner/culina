@@ -24,6 +24,25 @@ export const withBound = (text: string, atLeast: boolean): string =>
 export const wholeOrTenth = (grams: number): string =>
   formatNumber(grams, { maximumFractionDigits: grams < 10 ? 1 : 0 });
 
-/** An estimate is marked where it is shown, not only where it is explained; the words come with it for a screen reader. */
-export const withEstimate = (text: string, estimated: boolean): string =>
-  estimated ? `≈${nbsp}${text}` : text;
+/**
+ * The one word before a figure that is not exact, the same on every screen: "mind." for a lower bound,
+ * else "ca." for an estimate. A bound wins: "mind. ca." says less than it costs, and the estimate is
+ * explained beside the figure. Words, not ≥ and ≈ glyphs, so they read the same to eye and screen reader.
+ */
+export function qualifierOf(value: Pick<NutritionValue, 'atLeast' | 'estimated'>): string | null {
+  if (value.atLeast) {
+    return m['nutrition.atLeast']();
+  }
+
+  return value.estimated ? m['nutrition.about']() : null;
+}
+
+/** A figure with its qualifier: "mind. 184 kcal", "ca. 520 kcal", "760 kcal". */
+export function qualified(
+  text: string,
+  value: Pick<NutritionValue, 'atLeast' | 'estimated'>
+): string {
+  const word = qualifierOf(value);
+
+  return word ? `${word}${nbsp}${text}` : text;
+}

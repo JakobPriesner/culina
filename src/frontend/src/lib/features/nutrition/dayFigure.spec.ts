@@ -31,7 +31,7 @@ describe('what one person has on a planned day', () => {
   it('adds one portion of each meal, exactly when every part is exact', () => {
     const words = dayWords([meal('Soup', answer(450)), meal('Pasta', answer(700.4))]);
 
-    expect(plain(words)).toBe('1,150 kcal per person');
+    expect(plain(words)).toBe('1,150 kcal per serving');
   });
 
   it('leaves out and names a meal whose figure is mostly missing, rather than adding its floor', () => {
@@ -44,7 +44,7 @@ describe('what one person has on a planned day', () => {
       meal('Pasta', answer(700))
     ]);
 
-    expect(plain(words)).toBe('at least 700 kcal per person · without Chili');
+    expect(plain(words)).toBe('at least 700 kcal per serving · without Chili');
   });
 
   it('is a lower bound when a part is, and rounds down', () => {
@@ -53,25 +53,25 @@ describe('what one person has on a planned day', () => {
       meal('Pasta', answer(700))
     ]);
 
-    expect(plain(words)).toBe('at least 1,150 kcal per person');
+    expect(plain(words)).toBe('at least 1,150 kcal per serving');
   });
 
-  it('says it is partly estimated when a meal is, and rounds the sum the usual way', () => {
+  it('says about when a meal is estimated, and rounds the sum the usual way', () => {
     const words = dayWords([
       meal('Soup', answer(450.5, { estimated: true })),
       meal('Pasta', answer(700))
     ]);
 
-    expect(plain(words)).toBe('1,151 kcal per person · partly estimated');
+    expect(plain(words)).toBe('about 1,151 kcal per serving');
   });
 
-  it('says both: a part left out and a part estimated', () => {
+  it('says at least, not also about, when a part is left out and a part estimated', () => {
     const words = dayWords([
       meal('Soup', answer(450, { estimated: true })),
       meal('Cake', answer(300, { per: 'piece', yield: 12 }))
     ]);
 
-    expect(plain(words)).toBe('at least 450 kcal per person · without Cake · partly estimated');
+    expect(plain(words)).toBe('at least 450 kcal per serving · without Cake');
   });
 
   it('leaves out a recipe of pieces, and says so', () => {
@@ -80,13 +80,13 @@ describe('what one person has on a planned day', () => {
       meal('Cake', answer(300, { per: 'piece', yield: 12 }))
     ]);
 
-    expect(plain(words)).toBe('at least 450 kcal per person · without Cake');
+    expect(plain(words)).toBe('at least 450 kcal per serving · without Cake');
   });
 
   it('leaves out a recipe that makes one serving: that is the whole pot', () => {
     const words = dayWords([meal('Soup', answer(450)), meal('Stew', answer(2400, { yield: 1 }))]);
 
-    expect(plain(words)).toBe('at least 450 kcal per person · without Stew');
+    expect(plain(words)).toBe('at least 450 kcal per serving · without Stew');
   });
 
   it('leaves out what could not be counted or read, by name, once each', () => {
@@ -97,7 +97,7 @@ describe('what one person has on a planned day', () => {
       meal('Mystery', answer(0, { counted: 0, atLeast: true }))
     ]);
 
-    expect(plain(words)).toBe('at least 450 kcal per person · without Mystery and Unread');
+    expect(plain(words)).toBe('at least 450 kcal per serving · without Mystery and Unread');
   });
 
   it('names two and counts the rest', () => {
@@ -109,7 +109,7 @@ describe('what one person has on a planned day', () => {
       meal('D', null)
     ]);
 
-    expect(plain(words)).toBe('at least 450 kcal per person · without A, B and 2 more');
+    expect(plain(words)).toBe('at least 450 kcal per serving · without A, B and 2 more');
   });
 
   it('says nothing when nothing could be added, or there is no meal', () => {
@@ -123,7 +123,7 @@ describe('what one person has on a planned day', () => {
     preferences.setLocale('de');
 
     expect(plain(dayWords([meal('Suppe', answer(1850.4, { atLeast: true }))]))).toBe(
-      'mind. 1.850 kcal pro Person'
+      'mind. 1.850 kcal pro Portion'
     );
   });
 });

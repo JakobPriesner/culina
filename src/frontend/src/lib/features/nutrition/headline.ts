@@ -1,7 +1,7 @@
 import { everyIngredient, type Ingredient, type RecipeReading } from '$features/recipes/types';
 import { formatList, formatNumber, m } from '$shell/i18n';
 
-import { labelNumber, withBound, withEstimate } from './format';
+import { labelNumber, qualified, withBound } from './format';
 import type { Nutrition, NutritionLine, NutritionReason, NutritionStatus } from './types';
 
 /** A recipe that makes one serving: "per serving" would be the whole pot, so it says so. */
@@ -25,7 +25,7 @@ export const columnWords = (nutrition: Pick<Nutrition, 'per' | 'yield'>): string
 export const isEstimated = (nutrition: Pick<Nutrition, 'values'>): boolean =>
   nutrition.values.energyKcal.estimated === true;
 
-/** "520 kcal", or "at least 520 kcal" when something left out could only have added to it; "partly estimated" is said after it, for a reader who cannot see the "≈". */
+/** The accessible name's figure: "at least 520 kcal" when something left out could only have added to it, and "partly estimated" after it, said in full where the visible figure has room for one word. */
 export function energyFigure(nutrition: Nutrition): string {
   const figure = withBound(
     m['nutrition.energyLine']({ kcal: labelNumber('energy', nutrition.values.energyKcal) }),
@@ -46,12 +46,9 @@ export function metaFigure(nutrition: Nutrition, qualifier = false): string {
 
   const figure = qualifier
     ? energyFigure(nutrition)
-    : withBound(
-        withEstimate(
-          m['nutrition.energyLine']({ kcal: labelNumber('energy', nutrition.values.energyKcal) }),
-          isEstimated(nutrition)
-        ),
-        nutrition.values.energyKcal.atLeast
+    : qualified(
+        m['nutrition.energyLine']({ kcal: labelNumber('energy', nutrition.values.energyKcal) }),
+        nutrition.values.energyKcal
       );
 
   return isWholeRecipe(nutrition) ? m['nutrition.meta.whole']({ figure }) : figure;

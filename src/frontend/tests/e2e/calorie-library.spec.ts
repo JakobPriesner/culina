@@ -77,7 +77,7 @@ test.describe('calories in the overview @offline', () => {
         const background = luminance(
           getComputedStyle(calories.closest('.feature')!).backgroundColor
         );
-        return [...calories.querySelectorAll('.mark, .bound')].map((marker) => {
+        return [...calories.querySelectorAll('.qualifier')].map((marker) => {
           const text = luminance(getComputedStyle(marker).color);
           const [light, dark] = text > background ? [text, background] : [background, text];
           return { marker: marker.textContent, ratio: (light + 0.05) / (dark + 0.05) };

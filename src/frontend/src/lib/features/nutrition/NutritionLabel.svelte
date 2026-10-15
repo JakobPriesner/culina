@@ -6,7 +6,7 @@
   import { columnWords } from './headline';
   import { roundForLabel } from './rounding';
   import type { Nutrient } from './rounding';
-  import EstimateMark from './EstimateMark.svelte';
+  import Qualifier from './Qualifier.svelte';
   import type { Nutrition, NutritionValue } from './types';
 
   /**
@@ -25,7 +25,7 @@
   const unknown = (nutrient: Nutrient, value: NutritionValue) =>
     value.atLeast && roundForLabel(nutrient, value.value, true).value === 0;
 
-  // The bound comes first and the estimate mark after it, so a value reads "mind. ≈ 9,2 g": at least about this much.
+  // One word before a value, the bound winning over the estimate: "mind. 9,2 g", "ca. 9,2 g" (see `qualifierOf`).
   const energy = $derived({
     text: `${labelNumber('energy', values.energyKj)}${nbsp}kJ / ${labelNumber('energy', values.energyKcal)}${nbsp}kcal`,
     atLeast: values.energyKj.atLeast || values.energyKcal.atLeast,
@@ -65,9 +65,7 @@
     <tr class="energy">
       <th scope="row">{m['nutrition.energy']()}</th>
       <td class="value"
-        >{#if energy.atLeast}{m['nutrition.atLeast']()}{nbsp}{/if}<EstimateMark
-          estimated={energy.estimated}
-        />{energy.text}</td
+        ><Qualifier atLeast={energy.atLeast} estimated={energy.estimated} />{energy.text}</td
       >
     </tr>
 
@@ -80,9 +78,7 @@
               >{m['nutrition.notKnown']()}</VisuallyHidden
             >
           {:else}
-            {#if row.atLeast}{m['nutrition.atLeast']()}{nbsp}{/if}<EstimateMark
-              estimated={row.estimated}
-            />{row.text}
+            <Qualifier atLeast={row.atLeast} estimated={row.estimated} />{row.text}
           {/if}
         </td>
       </tr>
