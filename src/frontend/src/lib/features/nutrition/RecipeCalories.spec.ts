@@ -41,6 +41,15 @@ describe('the calories on a recipe card', () => {
     expect(screen.getByText(/480\skcal per piece/)).toBeInTheDocument();
   });
 
+  it('shows no number when unknown food outweighs what was counted', () => {
+    render(RecipeCalories, {
+      recipe: recipe({ calories: { value: 139, atLeast: true, mostlyMissing: true } })
+    });
+
+    expect(screen.getByText('calories incomplete')).toBeInTheDocument();
+    expect(screen.queryByText(/139/)).not.toBeInTheDocument();
+  });
+
   it('shows a lower bound as one, and not only to a screen reader', () => {
     const { container } = render(RecipeCalories, {
       recipe: recipe({ calories: { value: 18, atLeast: true, estimated: false } })

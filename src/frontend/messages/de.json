@@ -1679,6 +1679,8 @@
   "nutrition.calories.lowerBound": "Das ist ein Mindestwert: Einige Zutaten konnten nicht berücksichtigt werden. Das vollständige Rezept kann mehr Kalorien enthalten.",
   "nutrition.calories.calculated": "Aus den Zutatenmengen und Lebensmittelreferenzwerten berechnet.",
   "nutrition.calories.estimated": "Enthält geschätzte Zutatengewichte.",
+  "nutrition.calories.mostlyMissing": "Kalorien unvollständig",
+  "nutrition.calories.mostlyMissingWhy": "Zutaten ohne bekannte Nährwerte wiegen mehr als alles Gezählte, deshalb steht hier keine Zahl. Im Rezept kannst du unter „Details anzeigen“ passende Lebensmittel wählen.",
   "filters.calories": "Kalorien",
   "filters.calories.hint": "Höchstwert pro Portion oder Stück. Rezepte mit fehlenden Kalorienangaben werden nicht angezeigt.",
   "filters.calories.any": "Alle Kalorienwerte",

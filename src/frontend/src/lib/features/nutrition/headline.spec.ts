@@ -30,12 +30,21 @@ const answer = (over: Partial<Nutrition>): Nutrition =>
 beforeEach(() => preferences.setLocale('en'));
 
 describe('the short figure for the meta line', () => {
-  it('keeps the visible figure simple and can qualify its accessible name', () => {
-    expect(plain(metaFigureOf(answer({})))).toBe('520 kcal');
+  it('says a floor is a floor, visibly and in its accessible name', () => {
+    expect(plain(metaFigureOf(answer({})))).toBe('at least 520 kcal');
     expect(plain(metaFigureOf(answer({}), true))).toBe('at least 520 kcal');
     expect(
       plain(metaFigureOf(answer({ values: { energyKcal: value(520.4, false) } as never })))
     ).toBe('520 kcal');
+  });
+
+  it('says the figure is incomplete instead of a floor far below it', () => {
+    const chili = answer({
+      values: { energyKcal: { value: 184, atLeast: true, mostlyMissing: true } } as never
+    });
+
+    expect(metaFigureOf(chili)).toBe('calories incomplete');
+    expect(metaFigureOf(chili, true)).toBe('calories incomplete');
   });
 
   it('says whole recipe for one portion', () => {

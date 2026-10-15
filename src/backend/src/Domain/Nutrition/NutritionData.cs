@@ -14,7 +14,7 @@ public static class NutritionData
     /// <see cref="FoodNames"/>, <see cref="TypicalWeights"/> or <see cref="FoodVariants"/> raises
     /// <see cref="Version"/> through its own version.
     /// </summary>
-    private const int ExtractAndRulesVersion = 4;
+    private const int ExtractAndRulesVersion = 5;
 
     /// <summary>
     /// What an ETag over a nutrition figure includes, so a deploy with new data is never answered

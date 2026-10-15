@@ -13223,6 +13223,10 @@
           "estimated": {
             "type": "boolean",
             "description": "True when a line that adds to this value was counted by a typical weight (`via` is `typicalWeight`),\nso the figure is partly an estimate. Always sent; a client written before this field may ignore it."
+          },
+          "mostlyMissing": {
+            "type": "boolean",
+            "description": "True when lines of unknown food weigh more than everything counted, so `value` is too far below\nthe real value to show as a figure. Implies `atLeast`. Always sent; an older client may ignore it."
           }
         },
         "description": "One label value."

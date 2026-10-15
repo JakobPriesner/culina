@@ -35,13 +35,23 @@ export function energyFigure(nutrition: Nutrition): string {
   return isEstimated(nutrition) ? `${figure}, ${m['nutrition.partlyEstimated']()}` : figure;
 }
 
-/** The line in the recipe's meta line, short: the figure and what it is for, when it is not a single serving. */
+/**
+ * The line in the recipe's meta line, short: the figure and what it is for, when it is not a single serving.
+ * A floor says so even here: "184 kcal" for a chili whose beef was not counted reads as the answer.
+ */
 export function metaFigure(nutrition: Nutrition, qualifier = false): string {
+  if (nutrition.values.energyKcal.mostlyMissing) {
+    return m['nutrition.calories.mostlyMissing']();
+  }
+
   const figure = qualifier
     ? energyFigure(nutrition)
-    : withEstimate(
-        m['nutrition.energyLine']({ kcal: labelNumber('energy', nutrition.values.energyKcal) }),
-        isEstimated(nutrition)
+    : withBound(
+        withEstimate(
+          m['nutrition.energyLine']({ kcal: labelNumber('energy', nutrition.values.energyKcal) }),
+          isEstimated(nutrition)
+        ),
+        nutrition.values.energyKcal.atLeast
       );
 
   return isWholeRecipe(nutrition) ? m['nutrition.meta.whole']({ figure }) : figure;

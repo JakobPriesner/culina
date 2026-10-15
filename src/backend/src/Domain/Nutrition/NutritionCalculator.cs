@@ -46,6 +46,7 @@ public enum LineStatus
 /// <param name="UnitKey">The canonical unit a household's weight for this line is stored under (see <see cref="UnitKeys"/>); null when the line has no amount, a mass or a volume.</param>
 /// <param name="Source">Where the typical weight comes from, for <see cref="GramsBasis.TypicalWeight"/>; null otherwise.</param>
 /// <param name="Variants">The alternatives to the food, itself included; null when it has none or the line has no food.</param>
+/// <param name="WrittenGrams">For a line whose food is unknown, the grams it writes as a mass, so the figure knows how much it lacks; null otherwise.</param>
 public sealed record NutritionLine(
     Guid IngredientId,
     LineStatus Status,
@@ -59,7 +60,8 @@ public sealed record NutritionLine(
     string? LabelEn = null,
     string? UnitKey = null,
     string? Source = null,
-    IReadOnlyList<FoodVariantEnergy>? Variants = null)
+    IReadOnlyList<FoodVariantEnergy>? Variants = null,
+    decimal? WrittenGrams = null)
 {
     /// <summary>
     /// Whether this line, left out of the figure, could still add energy to it: it is not counted,
@@ -92,7 +94,9 @@ public sealed record FoodVariantEnergy(string Code, string LabelDe, string Label
 /// <param name="Value">What was summed, unrounded.</param>
 /// <param name="AtLeast">True when something left out could only have added to it.</param>
 /// <param name="Estimated">True when a line that adds to it was counted by a typical weight, not by an amount or the household's own weight.</param>
-public readonly record struct LabelValue(decimal Value, bool AtLeast, bool Estimated = false);
+/// <param name="MostlyMissing">True when lines of unknown food weigh more than everything counted: the floor is too far below the
+/// real value to show as a figure ("184 kcal" for a chili whose 1,2 kg of beef is unknown).</param>
+public readonly record struct LabelValue(decimal Value, bool AtLeast, bool Estimated = false, bool MostlyMissing = false);
 
 /// <summary>The label values of one portion or piece.</summary>
 public sealed record LabelValues(
@@ -268,7 +272,10 @@ public static class NutritionCalculator
 
         if (food is null)
         {
-            return uncounted(!corrected && IsUnknownKind(ingredient.Name) ? LineStatus.UnknownKind : LineStatus.UnknownFood, corrected);
+            return uncounted(!corrected && IsUnknownKind(ingredient.Name) ? LineStatus.UnknownKind : LineStatus.UnknownFood, corrected) with
+            {
+                WrittenGrams = NutritionGrams.WrittenMass(ingredient.Quantity)
+            };
         }
 
         // A food nobody wrote density, egg words or a label for counts by mass only and is named by BLS.
@@ -341,6 +348,7 @@ public static class NutritionCalculator
     {
         var counted = lines.Where(line => line.Status == LineStatus.Counted).ToList();
         var nothingToGoOn = lines.All(line => line.Status == LineStatus.Excluded);
+        var mostlyMissing = lines.Sum(line => line.WrittenGrams ?? 0m) > counted.Sum(line => line.Grams!.Value);
 
         LabelValue Of(Func<Nutrients, decimal?> value)
         {
@@ -361,7 +369,7 @@ public static class NutritionCalculator
                 }
             }
 
-            return new LabelValue(total, missing, estimated);
+            return new LabelValue(total, missing, estimated, mostlyMissing);
         }
 
         return new LabelValues(

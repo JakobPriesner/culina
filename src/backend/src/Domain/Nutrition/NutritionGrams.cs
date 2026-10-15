@@ -182,6 +182,16 @@ public static class NutritionGrams
     public static bool HasOwnSize(Unit? unit) =>
         Units.FamilyOf(unit) is UnitFamily.Mass or UnitFamily.Volume || MillilitresOfUsMeasure(unit) is not null;
 
+    /// <summary>The grams a line writes as a mass ("1,2 kg"), whatever its food; null for any other unit or no amount.</summary>
+    public static decimal? WrittenMass(Quantity quantity)
+    {
+        ArgumentNullException.ThrowIfNull(quantity);
+
+        return quantity.Amount is { } amount && Units.FamilyOf(quantity.Unit) == UnitFamily.Mass
+            ? amount * Units.ToCanonicalFactor(quantity.Unit)
+            : null;
+    }
+
     /// <summary>Reads the grams a recipe line stands for, or says why not.</summary>
     /// <param name="quantity">How much the recipe calls for.</param>
     /// <param name="food">The food it was recognised as.</param>
