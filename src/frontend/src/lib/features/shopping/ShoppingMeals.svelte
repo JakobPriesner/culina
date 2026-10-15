@@ -35,10 +35,12 @@
   <div class="meals">
     <Disclosure>
       {#snippet summary()}
-        {m['shopping.meals.title']({ count: meals })}
-        {#if past > 0}<span class="past-count"
-            >· {m['shopping.meals.pastCount']({ count: past })}</span
-          >{/if}
+        <!-- One run of text: as two items of the summary's row, a narrow screen wrapped them into two ragged columns. -->
+        <span
+          >{m['shopping.meals.title']({ count: meals })}{#if past > 0}
+            <span class="past-count">· {m['shopping.meals.pastCount']({ count: past })}</span
+            >{/if}</span
+        >
       {/snippet}
 
       {#each days as day (day.date)}
@@ -83,6 +85,8 @@
     font-size: var(--text-sm);
   }
   .past-count {
+    /* The block's leading whitespace is dropped, so the gap is drawn. */
+    margin-inline-start: 0.3em;
     color: var(--text-muted);
     font-weight: var(--weight-regular);
   }

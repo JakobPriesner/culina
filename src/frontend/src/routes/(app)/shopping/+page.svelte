@@ -107,7 +107,7 @@
 <svelte:head><title>{m['shopping.title']()}</title></svelte:head>
 
 <Page width="reading">
-  <ShoppingHeader {remaining} done={shopping.bought.length} total={shopping.items.length} />
+  <ShoppingHeader {remaining} />
 
   <!-- A glanceable bar for how much of the shop is done; the sentence above gives what is left. -->
   {#if started}
