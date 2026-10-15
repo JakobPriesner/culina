@@ -433,14 +433,14 @@ test.describe('nutrition on a recipe @offline', () => {
       await page.goto('/plan');
 
       await expect(days(page)).toHaveCount(7);
-      await expect(days(page).first()).toHaveText(/^mind\.\s520\skcal\spro\sPerson$/);
+      await expect(days(page).first()).toHaveText(/^mind\.\s520\skcal\spro\sPortion$/);
     });
 
     test('leaves out the "mind." when everything is exact', async ({ page }) => {
       await responsiveData(page, 'en');
       await page.goto('/plan');
 
-      await expect(days(page).first()).toHaveText(/^521\skcal per person$/);
+      await expect(days(page).first()).toHaveText(/^521\skcal per serving$/);
     });
 
     test('says nothing for a recipe that makes one serving, which is the whole pot', async ({

@@ -36,7 +36,8 @@ test.describe('typical weights, household weights and kinds of a food @offline',
     );
     await expect(row(page, 'Zwiebel')).toContainText('≈ 110 g · typisch');
     await expect(row(page, 'Zwiebel')).toContainText('Quelle: USDA FoodData Central');
-    await expect(page.getByRole('row', { name: /Brennwert/ })).toContainText('≈');
+    // Also a lower bound, and the bound wins the one word before the figure.
+    await expect(page.getByRole('row', { name: /Brennwert/ })).toContainText('mind. 2.179 kJ');
   });
 
   test('chooses another kind of milk in one tap and the figure follows', async ({ page }) => {

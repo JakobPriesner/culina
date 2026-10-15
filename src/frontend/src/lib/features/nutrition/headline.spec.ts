@@ -172,12 +172,12 @@ describe('estimates', () => {
   const line = (ingredientId: string, status: string, via: string | null) =>
     ({ ingredientId, status, via, canRaiseEnergy: false }) as never;
 
-  it('marks the meta figure with a sign, and says it for a screen reader after the figure', () => {
+  it('marks the meta figure with a word, and says it for a screen reader after the figure', () => {
     const rough = answer({
       values: { energyKcal: { value: 520.4, atLeast: false, estimated: true } } as never
     });
 
-    expect(plain(metaFigureOf(rough))).toBe('≈ 520 kcal');
+    expect(plain(metaFigureOf(rough))).toBe('about 520 kcal');
     expect(plain(metaFigureOf(rough, true))).toBe('520 kcal, partly estimated');
     expect(
       plain(

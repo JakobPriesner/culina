@@ -908,11 +908,9 @@ describe('estimates are said where they are shown', () => {
     const summary = await headline();
 
     expect(summary).toHaveTextContent('partly estimated: onion');
-    expect(summary.querySelector('.energyNumber')).toHaveTextContent('≈ estimated 521');
-    // Only the estimated macros carry the sign.
-    expect(within(summary).getByText('Protein').closest('.macro')).toHaveTextContent(
-      '≈ estimated 9.2 g'
-    );
+    expect(summary.querySelector('.figure')).toHaveTextContent(/^about\s521\s*kcal/);
+    // Only the estimated macros carry the word.
+    expect(within(summary).getByText('Protein').closest('.macro')).toHaveTextContent('about 9.2 g');
     expect(within(summary).getByText('Fat').closest('.macro')).not.toHaveTextContent('≈');
     expect(summary.querySelector('.info .explanation')).toHaveTextContent(
       'Includes estimated ingredient weights.'
@@ -970,9 +968,9 @@ describe('estimates are said where they are shown', () => {
     const row = (name: string) =>
       within(within(table).getByRole('rowheader', { name }).closest('tr')!);
 
-    expect(row('Energy').getByRole('cell')).toHaveTextContent('≈ estimated 2,178 kJ / 521 kcal');
-    expect(row('Protein').getByRole('cell')).toHaveTextContent('≈ estimated 9.2 g');
-    expect(row('Fat').getByRole('cell')).not.toHaveTextContent('≈');
+    expect(row('Energy').getByRole('cell')).toHaveTextContent('about 2,178 kJ / 521 kcal');
+    expect(row('Protein').getByRole('cell')).toHaveTextContent('about 9.2 g');
+    expect(row('Fat').getByRole('cell')).not.toHaveTextContent('about');
   });
 
   it('reads a row as the weight it was counted at, from where, and whose it is', async () => {

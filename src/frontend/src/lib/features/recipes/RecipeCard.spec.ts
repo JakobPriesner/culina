@@ -42,13 +42,13 @@ describe('a recipe in the list', () => {
     expect(screen.queryByText(/min/)).not.toBeInTheDocument();
   });
 
-  it('leaves the servings out and gives the calories per person instead', () => {
+  it('leaves the servings out and gives the calories per serving instead', () => {
     const { container } = renderWithProviders(RecipeCard, {
       props: { recipe: recipe({ calories: { value: 520, atLeast: false } }) }
     });
 
     expect(screen.queryByText(/servings/)).not.toBeInTheDocument();
-    expect(container.querySelector('.calories')).toHaveTextContent(/520\skcal per person/);
+    expect(container.querySelector('.calories')).toHaveTextContent(/520\skcal per serving/);
   });
 
   it('gives the calories per piece for a recipe that makes pieces', () => {

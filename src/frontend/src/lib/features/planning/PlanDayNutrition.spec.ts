@@ -76,7 +76,7 @@ describe('a planned day, per person', () => {
 
     await recipeAnswers.ensure(['soup', 'pasta'], 'h1');
 
-    expect(await screen.findByText(/1,150\s+kcal per person/)).toBeInTheDocument();
+    expect(await screen.findByText(/1,150\s+kcal per serving/)).toBeInTheDocument();
   });
 
   it('waits for every meal: a sum that grows as answers arrive would be too small for a while', async () => {
@@ -96,7 +96,7 @@ describe('a planned day, per person', () => {
     await recipeAnswers.ensure(['soup', 'cake', 'gone'], 'h1');
 
     expect(
-      await screen.findByText(/at least 450\s+kcal per person · without Cake and Gone/)
+      await screen.findByText(/at least 450\s+kcal per serving · without Cake and Gone/)
     ).toBeInTheDocument();
   });
 
