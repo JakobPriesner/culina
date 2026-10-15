@@ -1,9 +1,9 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Households;
 using Application.Planning;
 using Application.Telemetry;
 using Contracts.Shopping;
-using Domain.Households;
 using Domain.Recipes;
 using Domain.Shared;
 using Domain.Shopping;
@@ -31,16 +31,29 @@ internal sealed class AddPlannedMealsToListCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Shopping.AddPlannedMeals");
 
-        var member = await households
-            .IsMemberAsync(command.HouseholdId, command.UserId, cancellationToken)
+        var allowed = await HouseholdAccess
+            .MemberOfAsync(households, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (!member)
-        {
-            return tracked.Record(
-                Result<Response>.Failure(HouseholdErrors.NotFound(command.HouseholdId)));
-        }
+        var result = await allowed.Bind(() => PlanningWords.Plannable(command.From)).Match(
+            () => ShoppingListWrites.ApplyAsync(
+                lists,
+                names,
+                unitOfWork,
+                command.HouseholdId,
+                (list, token) => ShopAsync(list, command, token),
+                cancellationToken),
+            error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
 
+        return tracked.Record(result);
+    }
+
+    /// <summary>One attempt: the week is read inside it, so a retry sees a meal withdrawn since the last one.</summary>
+    private async Task<Result> ShopAsync(
+        ShoppingList list,
+        AddPlannedMealsToListCommand command,
+        CancellationToken cancellationToken)
+    {
         var week = await plans
             .ForWeekAsync(command.HouseholdId, command.From, PlanWeek.Days, cancellationToken)
             .ConfigureAwait(false);
@@ -51,17 +64,7 @@ internal sealed class AddPlannedMealsToListCommandHandler(
             .SectionOverridesAsync(command.HouseholdId, cancellationToken)
             .ConfigureAwait(false);
 
-        var result = await ShoppingListWrites
-            .ApplyAsync(
-                lists,
-                names,
-                unitOfWork,
-                command.HouseholdId,
-                (list, _) => Task.FromResult(Shop(list, week, cooked, overrides)),
-                cancellationToken)
-            .ConfigureAwait(false);
-
-        return tracked.Record(result);
+        return Shop(list, week, cooked, overrides);
     }
 
     private static Result Shop(

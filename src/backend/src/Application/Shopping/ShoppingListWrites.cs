@@ -8,10 +8,9 @@ namespace Application.Shopping;
 /// <summary>Changes a household's list, re-reading it when somebody else wrote first.</summary>
 /// <remarks>
 /// A guarded read-modify-write on a one-row list; two people shopping together is why it is shared,
-/// so it retries instead of erroring. Each attempt is one transaction: reading upserts the row
-/// (<c>on conflict do update</c> holds it), so a second writer waits rather than reading a stale
-/// version. Retrying is safe, unlike the blind retries <see cref="ConcurrencyErrors"/> warns
-/// against: the client states no expected version, and a change whose target is gone fails with its
+/// so it retries instead of erroring. Each attempt is one transaction; a writer that read a list
+/// somebody else saved first fails the version check and goes round again.
+/// Retrying is safe, unlike the blind retries <see cref="ConcurrencyErrors"/> warns against: the client states no expected version, and a change whose target is gone fails with its
 /// own error, unretried.
 /// </remarks>
 internal static class ShoppingListWrites

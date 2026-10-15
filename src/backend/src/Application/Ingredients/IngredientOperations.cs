@@ -128,7 +128,9 @@ internal sealed class CreateIngredientMergeCommandHandler(
         var existing = await names.MergesAsync(command.HouseholdId, cancellationToken).ConfigureAwait(false);
         var kept = new IngredientMerges(existing).Resolve(command.To.Trim());
 
-        return await IngredientMerge.Create(command.From, kept).Match(
+        return await IngredientMerge.Create(command.From, kept).Bind(merge => merge
+                .EnsureRoom(existing)
+                .Map(() => merge)).Match(
             async merge =>
             {
                 var rewritten = await names
@@ -271,15 +273,29 @@ internal sealed class SetIngredientNounCommandHandler(
             .ConfigureAwait(false);
 
         var result = await allowed.Bind(() => IngredientNouns.Own(command.One, command.Many)).Match(
-            async noun =>
+            noun => SetAsync(command.HouseholdId, noun, cancellationToken),
+            error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
+
+        return tracked.Record(result);
+    }
+
+    private async Task<Result> SetAsync(
+        Guid householdId,
+        IngredientNouns.Noun noun,
+        CancellationToken cancellationToken)
+    {
+        var existing = await names.NounsAsync(householdId, cancellationToken).ConfigureAwait(false);
+
+        var room = IngredientNouns.EnsureRoom(existing, noun);
+
+        return await room.Match(
+            async () =>
             {
-                await names.SetNounAsync(command.HouseholdId, noun, cancellationToken).ConfigureAwait(false);
+                await names.SetNounAsync(householdId, noun, cancellationToken).ConfigureAwait(false);
 
                 return Result.Success();
             },
             error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
-
-        return tracked.Record(result);
     }
 }
 

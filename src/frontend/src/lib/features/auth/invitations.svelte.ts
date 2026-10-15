@@ -1,4 +1,5 @@
 import { http, request, type AppError } from '$api';
+import { ResetEpoch, removeUndoable } from '$shell/optimistic';
 import { LatestRead, registerStore, type LoadStatus } from '$shell/stores';
 
 /**
@@ -23,6 +24,7 @@ class Invitations {
   /** Plain, not $state: read before the first await of an effect-called method, where a tracked read would retrigger on its own writes. */
   #householdId: string | null = null;
   #reads = new LatestRead();
+  #epoch = new ResetEpoch();
 
   get items(): readonly Invitation[] {
     return this.#items;
@@ -98,9 +100,10 @@ class Invitations {
 
   async revoke(householdId: string, invitationId: string): Promise<AppError | null> {
     // Gone from the list at once, so nobody watches a spinner over a mistake.
-    const before = this.#items;
+    const gone = removeUndoable(this.#items, (one) => one.invitationId === invitationId);
+    const putBack = this.#epoch.guard(() => (this.#items = gone.undo(this.#items)));
 
-    this.#items = this.#items.filter((one) => one.invitationId !== invitationId);
+    this.#items = gone.items;
 
     const result = await request(() =>
       http.DELETE('/api/v1/households/{householdId}/invitations/{invitationId}', {
@@ -109,7 +112,7 @@ class Invitations {
     );
 
     if (!result.ok) {
-      this.#items = before;
+      putBack();
       this.#error = result.error;
 
       return result.error;
@@ -121,6 +124,7 @@ class Invitations {
   /** Switches to another household's invitations: a link made for one must not show under another's name. */
   #adopt(householdId: string): void {
     if (this.#householdId !== householdId) {
+      this.#epoch.bump();
       this.#householdId = householdId;
       this.#items = [];
       this.#fresh = null;
@@ -129,6 +133,7 @@ class Invitations {
 
   reset(): void {
     this.#reads.cancel();
+    this.#epoch.bump();
     this.#householdId = null;
     this.#items = [];
     this.#status = 'idle';

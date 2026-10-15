@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { imageSource, pickCandidate } from './imageSources';
+  import { imageSource, pickCandidate, releaseImage } from './imageSources';
 
   /**
    * A photo that does not move the page: the box is reserved from the aspect ratio, on a warm tint (grey reads as a broken image mid-fade).
@@ -40,7 +40,18 @@
   /** Set only where photos must be fetched before they can be shown (the app); otherwise the browser loads `src` itself. */
   const resolve = imageSource();
   let width = $state(0);
-  let resolved = $state<{ for: string; url: string }>();
+  let resolved = $state<{ for: string; url: string; asked: string }>();
+  /** Bumped to ask again after a failure, e.g. once the connection is back. */
+  let attempt = $state(0);
+
+  /** A photo that failed (offline, a broken answer) is asked for again when the device is back online. */
+  function retry() {
+    if (failedSource) {
+      failedSource = undefined;
+      resolved = undefined;
+      attempt++;
+    }
+  }
 
   // Measured first, so the fetched candidate fits the box as `srcset` would have chosen; asked again only when the photo changes.
   const wanted = $derived(resolve && src && width > 0 ? pickCandidate(src, srcset, width) : null);
@@ -49,6 +60,8 @@
     const url = wanted;
     const owner = src;
 
+    void attempt;
+
     if (!resolve || !url || !owner || resolved?.for === owner) {
       return;
     }
@@ -56,12 +69,16 @@
     let current = true;
 
     void resolve(url).then((answer) => {
+      if (!current || !answer) {
+        releaseImage(url);
+      }
+
       if (!current) {
         return;
       }
 
       if (answer) {
-        resolved = { for: owner, url: answer };
+        resolved = { for: owner, url: answer, asked: url };
       } else {
         failedSource = owner;
       }
@@ -70,6 +87,15 @@
     return () => {
       current = false;
     };
+  });
+
+  // Held while shown: the source must not free an address still on screen.
+  $effect(() => {
+    const held = resolved?.asked;
+
+    if (held) {
+      return () => releaseImage(held);
+    }
   });
 
   /** Read once: the box is reserved from its ratio, so its width is known before any photo arrives. The website never measures. */
@@ -81,6 +107,8 @@
     resolve ? (resolved && resolved.for === src ? resolved.url : undefined) : src
   );
 </script>
+
+<svelte:window ononline={retry} />
 
 <div
   class="frame"

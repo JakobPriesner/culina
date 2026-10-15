@@ -8,6 +8,7 @@ using Api.Endpoints.LogRecords;
 using Api.Endpoints.Nutrition;
 using Api.Endpoints.PasswordResets;
 using Api.Endpoints.Planning;
+using Api.Endpoints.Push;
 using Api.Endpoints.RecipeDrafts;
 using Api.Endpoints.Recipes;
 using Api.Endpoints.RecipeSources;
@@ -36,6 +37,7 @@ internal static class EndpointExtensions
 
         return services
             .AddUsersEndpoints()
+            .AddPushEndpoints()
             .AddSessionsEndpoints()
             .AddPasswordResetsEndpoints()
             .AddRecoveryCodesEndpoints()

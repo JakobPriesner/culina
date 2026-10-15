@@ -367,6 +367,86 @@ public class InvitationEndpointTests(PostgresFixture postgres)
             .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
 
     [Fact]
+    public async Task Redeem_ShouldAdmitEveryJoiner_WhenSeveralJoinAtOnce_AndTheyThenLeaveAtOnce()
+    {
+        // Arrange
+        // Every join and every leave bumps the household's version; none of them sent an If-Match, so none may see a 412.
+        var (owner, first) = await TwoUsersAsync();
+        using var ownerClient = owner;
+        using var firstClient = first;
+        var householdId = await FirstHouseholdIdAsync(owner);
+        List<ApiClient> joiners = [first];
+
+        for (var number = 0; number < 3; number++)
+        {
+            joiners.Add(await SignedInAsync($"joiner{number}@example.com"));
+        }
+
+        List<string> codes = [];
+
+        foreach (var _ in joiners)
+        {
+            codes.Add(await IssueCodeAsync(owner, householdId));
+        }
+
+        // Act
+        var joined = await Task.WhenAll(joiners.Select(
+            (joiner, index) => joiner.PostAsync($"/api/v1/invitations/{codes[index]}/redemptions", new { }, Token)));
+
+        var ids = await Task.WhenAll(joiners.Select(async joiner =>
+            (await joiner.GetAsync("/api/v1/users/me", Token)).Json!.Value.GetProperty("userId").GetGuid()));
+        var left = await Task.WhenAll(joiners.Select(
+            (joiner, index) => joiner.DeleteAsync($"/api/v1/households/{householdId}/members/{ids[index]}", Token)));
+
+        // Assert
+        Assert.All(joined, response => Assert.Equal(HttpStatusCode.Created, response.StatusCode));
+        Assert.All(left, response => Assert.Equal(HttpStatusCode.NoContent, response.StatusCode));
+        var members = await owner.GetAsync($"/api/v1/households/{householdId}/members", Token);
+        Assert.Equal(1, members.Json!.Value.GetProperty("items").GetArrayLength());
+
+        foreach (var joiner in joiners.Skip(1))
+        {
+            joiner.Dispose();
+        }
+    }
+
+    [Fact]
+    public async Task Leave_ShouldKeepTheLastOwner_WhenTwoOwnersLeaveAtOnce()
+    {
+        // Arrange
+        var (owner, other) = await TwoUsersAsync();
+        using var ownerClient = owner;
+        using var otherClient = other;
+        var householdId = await FirstHouseholdIdAsync(owner);
+        var code = await IssueCodeAsync(owner, householdId);
+        await other.PostAsync($"/api/v1/invitations/{code}/redemptions", new { }, Token);
+        var ownerId = (await owner.GetAsync("/api/v1/users/me", Token)).Json!.Value.GetProperty("userId").GetGuid();
+        var otherId = (await other.GetAsync("/api/v1/users/me", Token)).Json!.Value.GetProperty("userId").GetGuid();
+        var promoted = await PatchRoleAsync(owner, householdId, otherId, "owner");
+
+        // Act
+        var left = await Task.WhenAll(
+            owner.DeleteAsync($"/api/v1/households/{householdId}/members/{ownerId}", Token),
+            other.DeleteAsync($"/api/v1/households/{householdId}/members/{otherId}", Token));
+
+        // Assert
+        // Whoever goes second is the last owner, however the two interleave; neither is told to reload.
+        Assert.Equal(HttpStatusCode.OK, promoted.StatusCode);
+        Assert.Single(left, response => response.StatusCode == HttpStatusCode.NoContent);
+        Assert.Single(left, response => response.ProblemCode == "households.last_owner");
+        var members = await postgres.QuerySingleAsync<long>("select count(*) from household_members;", Token);
+        Assert.Equal(1L, members);
+    }
+
+    private static Task<ApiResponse> PatchRoleAsync(ApiClient client, Guid householdId, Guid memberId, string role) =>
+        client.SendAsync(
+            new HttpRequestMessage(HttpMethod.Patch, $"/api/v1/households/{householdId}/members/{memberId}")
+            {
+                Content = System.Net.Http.Json.JsonContent.Create(new { role })
+            },
+            Token);
+
+    [Fact]
     public async Task Redeem_ShouldRefuseACodeThatHasExpired()
     {
         // Arrange

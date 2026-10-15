@@ -255,6 +255,63 @@ public class MealPlanEndpointTests(PostgresFixture postgres)
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData("0001-01-03")]
+    [InlineData("9999-12-28")]
+    [InlineData("9999-12-31")]
+    public async Task Get_ShouldRefuseADayTooNearTheEdgeOfTheCalendar_NotFail(string from)
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+
+        var response = await client.GetAsync($"/api/v1/households/{householdId}/meal-plan?from={from}", Token);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("planning.invalid_date", response.Json!.Value.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task Plan_ShouldRefuseADayAtTheEndOfTheCalendar_AndStoreNothing()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeAsync(client, householdId, "Curry");
+
+        var response = await client.PostAsync(
+            $"/api/v1/households/{householdId}/meal-plan",
+            new { date = "9999-12-31", recipeId },
+            Token);
+
+        var stored = await postgres.QuerySingleAsync<long>("select count(*) from meal_plan_entries", Token);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(0, stored);
+    }
+
+    [Fact]
+    public async Task Move_ShouldRefuseADayAtTheEndOfTheCalendar_AndKeepTheMealWhereItWas()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeAsync(client, householdId, "Curry");
+
+        var planned = await client.PostAsync(
+            $"/api/v1/households/{householdId}/meal-plan",
+            new { date = Monday, recipeId },
+            Token);
+        var entryId = MealsOn(planned, Monday)[0].GetProperty("entryId").GetGuid();
+
+        var response = await client.PatchAsync(
+            $"/api/v1/households/{householdId}/meal-plan/{entryId}",
+            new { date = "0001-01-01" },
+            Token);
+
+        var week = await client.GetAsync($"/api/v1/households/{householdId}/meal-plan?from={Monday:yyyy-MM-dd}", Token);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Single(MealsOn(week, Monday));
+    }
+
     private static List<System.Text.Json.JsonElement> MealsOn(ApiResponse week, DateOnly date) =>
         [
             .. week.Json!.Value.GetProperty("days")

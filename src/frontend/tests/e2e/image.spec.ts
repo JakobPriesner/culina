@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { frames } from './support/culina';
 
 /**
  * The document the .NET host serves, under its CSP; `vite preview` sets none, so nothing else
@@ -37,7 +38,8 @@ test.describe('the shipped image @image', () => {
       ).toBeVisible();
       // SvelteKit's route announcer mounts after the heading, and a refused style on it is reported
       // then.
-      await page.waitForLoadState('networkidle');
+      await expect(page.locator('#svelte-announcer')).toBeAttached();
+      await frames(page, 10);
 
       expect(failures, 'the page was refused or threw while booting').toEqual([]);
     });

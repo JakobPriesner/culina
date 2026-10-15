@@ -39,6 +39,14 @@ jobs:
     timeout-minutes: 30
     environment: app-stores
     steps:
+      # A dispatch skips the Release workflow's gate, so it may only run on a release tag: the version
+      # below comes from the ref, and a branch name is not a store version.
+      - name: Require a release tag
+        if: github.event_name == 'workflow_dispatch' && !(github.ref_type == 'tag' && startsWith(github.ref_name, 'v'))
+        run: |
+          echo "::error::Dispatch this workflow from a v* release tag, not from ${GITHUB_REF}."
+          exit 1
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
@@ -47,7 +55,7 @@ jobs:
         with:
           package_json_file: ${{ env.PNPM_PACKAGE_JSON }}
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm
@@ -108,6 +116,13 @@ jobs:
     timeout-minutes: 60
     environment: app-stores
     steps:
+      # See the Android job: a dispatch must name a release tag.
+      - name: Require a release tag
+        if: github.event_name == 'workflow_dispatch' && !(github.ref_type == 'tag' && startsWith(github.ref_name, 'v'))
+        run: |
+          echo "::error::Dispatch this workflow from a v* release tag, not from ${GITHUB_REF}."
+          exit 1
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
@@ -116,7 +131,7 @@ jobs:
         with:
           package_json_file: ${{ env.PNPM_PACKAGE_JSON }}
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: pnpm

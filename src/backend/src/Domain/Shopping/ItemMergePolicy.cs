@@ -1,4 +1,3 @@
-using Domain.Ingredients;
 using Domain.Recipes;
 
 namespace Domain.Shopping;
@@ -41,6 +40,6 @@ public static class ItemMergePolicy
         ArgumentNullException.ThrowIfNull(right);
 
         return string.Equals(left.ComparisonKey, right.ComparisonKey, StringComparison.Ordinal) ||
-               IngredientWords.Read(left.Value).IsSameIngredient(IngredientWords.Read(right.Value));
+               left.Reading.IsSameIngredient(right.Reading);
     }
 }

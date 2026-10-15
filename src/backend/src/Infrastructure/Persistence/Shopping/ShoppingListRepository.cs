@@ -66,16 +66,7 @@ internal sealed class ShoppingListRepository(DbExecutor executor) : IShoppingLis
         Guid householdId,
         CancellationToken cancellationToken)
     {
-        // Created on first look; the unique index on household_id keeps two devices from making two.
-        var row = await executor.QuerySingleOrDefaultAsync<ShoppingListRow>(
-            """
-            insert into shopping_lists (id, household_id)
-            values (gen_random_uuid(), @householdId)
-            on conflict (household_id) do update set household_id = excluded.household_id
-            returning id, household_id, version;
-            """,
-            new { householdId },
-            cancellationToken).ConfigureAwait(false);
+        var row = await FindOrCreateRowAsync(householdId, cancellationToken).ConfigureAwait(false);
 
         if (row is null)
         {
@@ -115,6 +106,35 @@ internal sealed class ShoppingListRepository(DbExecutor executor) : IShoppingLis
             .Select(item => ToItem(item, sourcesByItem[item.Id]))
             .Collect()
             .Map(restored => ShoppingList.Rehydrate(row.Id, row.HouseholdId, restored, row.Version));
+    }
+
+    /// <summary>
+    /// The list's row, created on first look. A read of an existing list writes nothing; the unique
+    /// index on household_id keeps two devices that look first at once from making two.
+    /// </summary>
+    private async Task<ShoppingListRow?> FindOrCreateRowAsync(Guid householdId, CancellationToken cancellationToken)
+    {
+        const string Select = "select id, household_id, version from shopping_lists where household_id = @householdId;";
+
+        var row = await executor.QuerySingleOrDefaultAsync<ShoppingListRow>(Select, new { householdId }, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (row is not null)
+        {
+            return row;
+        }
+
+        await executor.ExecuteAsync(
+            """
+            insert into shopping_lists (id, household_id)
+            values (gen_random_uuid(), @householdId)
+            on conflict (household_id) do nothing;
+            """,
+            new { householdId },
+            cancellationToken).ConfigureAwait(false);
+
+        return await executor.QuerySingleOrDefaultAsync<ShoppingListRow>(Select, new { householdId }, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public async Task<Result> SaveAsync(

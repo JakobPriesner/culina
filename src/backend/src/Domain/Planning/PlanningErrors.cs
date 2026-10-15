@@ -17,6 +17,12 @@ public static class PlanningErrors
         "A plan is read a week at a time.",
         ErrorType.Validation);
 
+    /// <summary>The day is too near the ends of the calendar to have a week around it.</summary>
+    public static readonly Error InvalidDate = new(
+        "planning.invalid_date",
+        "That day is too far from today to plan.",
+        ErrorType.Validation);
+
     /// <summary>A move asks for a position that is not an index.</summary>
     public static readonly Error InvalidPosition = new(
         "planning.invalid_position",

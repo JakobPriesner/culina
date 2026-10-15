@@ -74,6 +74,14 @@ public sealed class Cookbook
     /// </summary>
     public Guid? CoverRecipeId { get; private set; }
 
+    /// <summary>How many cookbooks a household may keep.</summary>
+    public const int MaxPerHousehold = 200;
+
+    /// <summary>Whether a household that has <paramref name="existing"/> cookbooks may start another.</summary>
+    /// <param name="existing">How many it has.</param>
+    public static Result EnsureRoom(int existing) =>
+        existing >= MaxPerHousehold ? CookbookErrors.TooMany : Result.Success();
+
     /// <summary>Starts a cookbook.</summary>
     public static Result<Cookbook> Create(
         Guid householdId,

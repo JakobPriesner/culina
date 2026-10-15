@@ -17,6 +17,22 @@ internal static class HouseholdAccess
             ? Result.Success()
             : HouseholdErrors.NotFound(householdId);
 
+    /// <summary>The library of a household the caller is in, from one query: not-found for a non-member, the same answer as <see cref="MemberOfAsync"/>.</summary>
+    internal static async Task<Result<IReadOnlyList<Guid>>> LibraryOfMemberAsync(
+        IHouseholdRepository households,
+        Guid householdId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        var library = await households
+            .LibraryOfMemberAsync(householdId, userId, cancellationToken)
+            .ConfigureAwait(false);
+
+        return library.Count > 0
+            ? Result<IReadOnlyList<Guid>>.Success(library)
+            : HouseholdErrors.NotFound(householdId);
+    }
+
     /// <summary>Every household whose recipes this one sees: itself first, then what it inherits, nearest first. Says nothing about the caller.</summary>
     internal static async Task<IReadOnlyList<Guid>> LibraryAsync(
         IHouseholdRepository households,

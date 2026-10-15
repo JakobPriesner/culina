@@ -171,6 +171,7 @@ step "pnpm install" "$FRONTEND" pnpm install --frozen-lockfile
     step "domain unit tests" "$BACKEND" dotnet test tests/Domain.UnitTests --no-build &&
     step "application unit tests" "$BACKEND" dotnet test tests/Application.UnitTests --no-build &&
     step "architecture tests" "$BACKEND" dotnet test tests/ArchitectureTests --no-build &&
+    step "relay tests" "$BACKEND" dotnet test tests/Relay.Tests --no-build &&
     step "integration tests" "$BACKEND" dotnet test tests/IntegrationTests --no-build
 } &
 LANES="$LANES $!"

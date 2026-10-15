@@ -185,6 +185,37 @@ internal sealed class HouseholdRepository(DbExecutor executor) : IHouseholdRepos
         return [.. rows.Select(row => new InheritedHousehold(row.Id, row.Name))];
     }
 
+    public async Task<IReadOnlyList<Guid>> LibraryOfMemberAsync(
+        Guid householdId,
+        Guid userId,
+        CancellationToken cancellationToken)
+    {
+        // IsMemberAsync and AncestorsAsync in one walk: it starts at the household only when the user
+        // is in it, so a non-member gets nothing, and goes up one parent at a time from there.
+        var ids = await executor.QueryAsync<Guid>(
+            """
+            with recursive chain (id, inherits_from, depth) as (
+                select h.id, h.inherits_from, 0
+                from households h
+                where h.id = @householdId
+                  and exists (
+                      select 1 from household_members m
+                      where m.household_id = h.id and m.user_id = @userId)
+                union all
+                select p.id, p.inherits_from, c.depth + 1
+                from chain c
+                join households p on p.id = c.inherits_from
+            ) cycle id set looped using path
+            select id from chain
+            where not looped
+            order by depth;
+            """,
+            new { householdId, userId },
+            cancellationToken).ConfigureAwait(false);
+
+        return [.. ids];
+    }
+
     public async Task<IReadOnlyList<Heir>> HeirsAsync(
         Guid householdId,
         CancellationToken cancellationToken)

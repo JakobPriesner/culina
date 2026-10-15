@@ -1,4 +1,3 @@
-using System.Security.Cryptography.X509Certificates;
 using Domain.Import;
 using Lib.Net.Http.WebPush;
 using Lib.Net.Http.WebPush.Authentication;
@@ -12,7 +11,7 @@ internal sealed class PushTransport : IDisposable
     private readonly PushServiceClient client;
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "The owned HttpClient disposes its handler and is disposed by this singleton.")]
-    public PushTransport() : this(new HttpClient(Handler(), disposeHandler: true) { Timeout = TimeSpan.FromSeconds(15) }) { }
+    public PushTransport() : this(new HttpClient(CheckedConnections.PublicHandler(), disposeHandler: true) { Timeout = TimeSpan.FromSeconds(15) }) { }
     internal PushTransport(HttpClient http)
     {
         this.http = http;
@@ -27,15 +26,4 @@ internal sealed class PushTransport : IDisposable
     }
 
     public void Dispose() => http.Dispose();
-
-    // Public addresses only, no proxy, no redirects. The endpoint is browser-supplied and the allow list holds
-    // names, so where a name resolves is checked here at connect time.
-    private static SocketsHttpHandler Handler()
-    {
-        var handler = CheckedConnections.Handler(admits: PublicAddress.IsPublic);
-
-        handler.SslOptions.CertificateRevocationCheckMode = X509RevocationMode.Online;
-
-        return handler;
-    }
 }

@@ -169,3 +169,57 @@ describe('answers that arrive after a household switch', () => {
     expect(shopping.items).toEqual([]);
   });
 });
+
+describe('a tick then an untick that both fail', () => {
+  it('leaves the line as the server still has it', async () => {
+    const answers: ((response: Response) => void)[] = [];
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) =>
+        input.method === 'GET'
+          ? json({ items: [milk] })
+          : new Promise<Response>((resolve) => answers.push(resolve))
+      )
+    );
+
+    await shopping.load('h1');
+
+    const tick = shopping.check('h1', 'i1', true);
+    const untick = shopping.check('h1', 'i1', false);
+
+    await vi.waitFor(() => expect(answers).toHaveLength(2));
+    answers[0]!(json({ title: 'Offline', status: 500 }, 500));
+    await tick;
+    answers[1]!(json({ title: 'Offline', status: 500 }, 500));
+    await untick;
+
+    expect(shopping.items[0]?.isChecked).toBe(false);
+  });
+
+  it('restores the tick the server did confirm when only the untick fails', async () => {
+    const answers: ((response: Response) => void)[] = [];
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) =>
+        input.method === 'GET'
+          ? json({ items: [milk] })
+          : new Promise<Response>((resolve) => answers.push(resolve))
+      )
+    );
+
+    await shopping.load('h1');
+
+    const tick = shopping.check('h1', 'i1', true);
+    const untick = shopping.check('h1', 'i1', false);
+
+    await vi.waitFor(() => expect(answers).toHaveLength(2));
+    answers[0]!(json({ items: [{ ...milk, isChecked: true }] }));
+    await tick;
+    answers[1]!(json({ title: 'Offline', status: 500 }, 500));
+    await untick;
+
+    expect(shopping.items[0]?.isChecked).toBe(true);
+  });
+});

@@ -169,8 +169,13 @@ public static class NutritionCalculator
         ArgumentNullException.ThrowIfNull(corrections);
         ArgumentNullException.ThrowIfNull(weights);
 
+        // Each correction's name is read once here, not again for every ingredient that misses it.
+        var readings = corrections
+            .Select(one => new Correction(one.Key, one.Value, IngredientWords.Read(one.Key)))
+            .ToList();
+
         var lines = ingredients
-            .Select(line => Read(line, findFood, corrections, weights, useTypicalWeights, yield.Amount))
+            .Select(line => Read(line, findFood, corrections, readings, weights, useTypicalWeights, yield.Amount))
             .ToList();
 
         return new NutritionResult(yield.Kind, yield.Amount, Sum(lines, yield.Amount), lines);
@@ -190,11 +195,15 @@ public static class NutritionCalculator
     /// </summary>
     internal const decimal MaxGramsPerLine = 10_000m;
 
+    /// <summary>A household's choice for one name, with that name already read.</summary>
+    private sealed record Correction(string Key, string? Chosen, IngredientReading Reading);
+
     // "Tomate" takes the food the household chose for "Tomaten": one ingredient, written otherwise.
     private static bool TryCorrection(
         string name,
         string nameKey,
         IReadOnlyDictionary<string, string?> corrections,
+        IReadOnlyList<Correction> readings,
         out string? code)
     {
         if (corrections.TryGetValue(nameKey, out code))
@@ -204,11 +213,11 @@ public static class NutritionCalculator
 
         var reading = IngredientWords.Read(name);
 
-        foreach (var (key, chosen) in corrections)
+        foreach (var correction in readings)
         {
-            if (IngredientWords.Read(key).IsSameIngredient(reading))
+            if (correction.Reading.IsSameIngredient(reading))
             {
-                code = chosen;
+                code = correction.Chosen;
 
                 return true;
             }
@@ -233,6 +242,7 @@ public static class NutritionCalculator
         RecipeIngredient ingredient,
         Func<string, Food?> findFood,
         IReadOnlyDictionary<string, string?> corrections,
+        IReadOnlyList<Correction> readings,
         IReadOnlyDictionary<string, IReadOnlyDictionary<string, decimal>> weights,
         bool useTypicalWeights,
         decimal yield)
@@ -241,7 +251,7 @@ public static class NutritionCalculator
             new NutritionLine(ingredient.Id, status, null, null, GramsBasis.None, corrected, null);
 
         var nameKey = ItemName.Fold(ingredient.Name);
-        var corrected = TryCorrection(ingredient.Name, nameKey, corrections, out var code);
+        var corrected = TryCorrection(ingredient.Name, nameKey, corrections, readings, out var code);
 
         if (corrected && code is null)
         {

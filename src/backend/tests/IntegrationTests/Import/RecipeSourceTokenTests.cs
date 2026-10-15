@@ -41,6 +41,22 @@ public class RecipeSourceTokenTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task StartAsync_ShouldLeaveAlreadyProtectedTokensAlone()
+    {
+        using var client = await SignedInAsync();
+        await ConnectAsync();
+        var before = await postgres.QuerySingleAsync<string>("select secret from recipe_sources", Token);
+        var encryption = postgres.Api.Services
+            .GetServices<IHostedService>()
+            .OfType<RecipeSourceTokenEncryption>()
+            .Single();
+
+        await encryption.StartAsync(Token);
+
+        Assert.Equal(before, await postgres.QuerySingleAsync<string>("select secret from recipe_sources", Token));
+    }
+
+    [Fact]
     public async Task StartAsync_ShouldEncryptATokenStoredBeforeTokensWereEncrypted()
     {
         // A row as written before migration 0027: plain token plus the flag it gave existing rows.

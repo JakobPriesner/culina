@@ -1,4 +1,5 @@
 import { expect, test, type Route } from '@playwright/test';
+import { frames } from './support/culina';
 import { recipeId, responsiveData } from './support/responsive';
 
 test.describe('drawing Olli @offline', () => {
@@ -51,8 +52,9 @@ test.describe('drawing Olli @offline', () => {
     await expect.poll(() => requests).toBe(1);
     await expect(frame.getByRole('button', { name: /animation/i })).toHaveCount(0);
     const pausedTransform = await brush.getAttribute('transform');
-    // Exercise a real interval while the stream is still pending.
-    await page.waitForTimeout(800);
+    expect(pausedTransform, 'the brush has a transform to hold').not.toBeNull();
+    // Let a real interval pass while the stream is still pending.
+    await frames(page, 48);
     await expect(brush).toHaveAttribute('transform', pausedTransform!);
     await expect(frame.getByRole('status')).toHaveText('Creating image…');
     expect(requests).toBe(1);

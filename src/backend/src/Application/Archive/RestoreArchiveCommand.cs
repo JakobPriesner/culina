@@ -5,6 +5,7 @@ using Application.Households;
 using Application.Recipes;
 using Application.Telemetry;
 using Domain.Cookbooks;
+using Domain.Cooking;
 using Domain.Recipes;
 using Domain.Shared;
 
@@ -25,6 +26,9 @@ internal sealed class RestoreArchiveCommandHandler(
     IRecipeRepository recipes,
     ICookbookRepository cookbooks,
     IHouseholdRepository households,
+    IPersonalNoteRepository notes,
+    ICookLogRepository log,
+    RecipeImageWriter images,
     IUnitOfWork unitOfWork,
     TimeProvider time)
     : ICommandHandler<RestoreArchiveCommand, ArchiveRestored>
@@ -131,9 +135,66 @@ internal sealed class RestoreArchiveCommandHandler(
                     token => recipes.AddAsync(recipe, token),
                     cancellationToken).ConfigureAwait(false);
 
-                return added.Match(() => (Guid?)recipe.Id, _ => null);
+                // The recipe is kept even when a picture, note or cook entry is not: it is the part that matters.
+                return await added.Match(
+                    async () =>
+                    {
+                        await WriteExtrasAsync(command, recipe.Id, entry, cancellationToken).ConfigureAwait(false);
+
+                        return (Guid?)recipe.Id;
+                    },
+                    _ => Task.FromResult<Guid?>(null)).ConfigureAwait(false);
             },
             _ => Task.FromResult<Guid?>(null)).ConfigureAwait(false);
+    }
+
+    // What export writes beside the recipe: its photograph and the restoring person's note and cooking history.
+    // Each is passed over when it does not hold together, like a cookbook, rather than failing the recipe.
+    private async Task WriteExtrasAsync(
+        RestoreArchiveCommand command,
+        Guid recipeId,
+        ArchivedRecipe entry,
+        CancellationToken cancellationToken)
+    {
+        var now = time.GetUtcNow();
+
+        if (entry.Image is { } image)
+        {
+            await WriteImageAsync(recipeId, image, cancellationToken).ConfigureAwait(false);
+        }
+
+        var note = PersonalNote.Write(recipeId, command.UserId, null, entry.Note, now);
+
+        await note.Match(
+            written => notes.ReplaceAsync(recipeId, command.UserId, [written], cancellationToken),
+            _ => Task.FromResult(Result.Success())).ConfigureAwait(false);
+
+        foreach (var madeAt in entry.Cooked ?? [])
+        {
+            var cooked = CookLogEntry.Record(recipeId, command.UserId, command.HouseholdId, madeAt, null, null);
+
+            await cooked.Match(
+                one => log.AddAsync(one, cancellationToken),
+                _ => Task.FromResult(Result.Success())).ConfigureAwait(false);
+        }
+    }
+
+    private async Task WriteImageAsync(Guid recipeId, ArchivedImage image, CancellationToken cancellationToken)
+    {
+        var bytes = new byte[image.Data.Length];
+
+        if (!Convert.TryFromBase64String(image.Data, bytes, out var length))
+        {
+            return;
+        }
+
+        var content = new MemoryStream(bytes, 0, length);
+
+        await using (content.ConfigureAwait(false))
+        {
+            // Stored again through the same path as an upload, so it is decoded and re-encoded, never trusted.
+            await images.AttachAsync(recipeId, content, cancellationToken).ConfigureAwait(false);
+        }
     }
 
     // A shelf in its own transaction, like a recipe, and passed over when it does not hold together. Its recipes are
@@ -211,24 +272,25 @@ internal sealed class RestoreArchiveCommandHandler(
         var groups = BuildGroups(entry);
 
         return measure.Bind(yields => groups.Bind(built =>
-            title.Bind(named => language.Map(spoken =>
+            title.Bind(named => language.Bind(spoken =>
             {
                 var recipe = Recipe.Create(householdId, named, userId, spoken, now);
 
-                recipe.Describe(
-                    new RecipeDetails(
-                        named,
-                        RecipeFit.Description(entry.Description),
-                        spoken,
-                        yields,
-                        entry.PrepMinutes,
-                        entry.CookMinutes,
-                        RecipeFit.Tags(entry.Tags)),
-                    now);
-
-                recipe.SetContents(built, BuildSteps(entry, built), now);
-
-                return recipe;
+                // Chained, not discarded: a recipe that does not hold together (an impossible duration, too many
+                // lines, a dangling reference) is skipped, not stored as a title with nothing in it.
+                return recipe
+                    .Describe(
+                        new RecipeDetails(
+                            named,
+                            RecipeFit.Description(entry.Description),
+                            spoken,
+                            yields,
+                            entry.PrepMinutes,
+                            entry.CookMinutes,
+                            RecipeFit.Tags(entry.Tags)),
+                        now)
+                    .Bind(() => recipe.SetContents(built, BuildSteps(entry, built), now))
+                    .Map(() => recipe);
             }))));
     }
 

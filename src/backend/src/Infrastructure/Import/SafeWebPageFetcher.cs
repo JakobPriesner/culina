@@ -33,7 +33,7 @@ internal sealed partial class SafeWebPageFetcher : IWebPageFetcher, IDisposable
 
         // Never private, whatever the operator allows for a connected source: the address came from
         // a text box.
-        handler = CheckedConnections.Handler(admits: PublicAddress.IsPublic);
+        handler = CheckedConnections.PublicHandler();
 
         client = new HttpClient(handler, disposeHandler: false) { Timeout = Deadline };
 
@@ -138,27 +138,16 @@ internal sealed partial class SafeWebPageFetcher : IWebPageFetcher, IDisposable
 
         await using (body.ConfigureAwait(false))
         {
-            var buffer = new MemoryStream();
-            var chunk = new byte[81_920];
+            using var buffer = new MemoryStream();
 
-            while (buffer.Length <= MaxBytes)
+            if (!await BoundedRead.CopyAsync(body, buffer, MaxBytes, cancellationToken).ConfigureAwait(false))
             {
-                var read = await body.ReadAsync(chunk, cancellationToken).ConfigureAwait(false);
-
-                if (read == 0)
-                {
-                    return new WebPage(
-                        url,
-                        PageEncoding.Decode(
-                            buffer.ToArray(),
-                            response.Content.Headers.ContentType?.CharSet));
-                }
-
-                await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken)
-                    .ConfigureAwait(false);
+                return ImportErrors.TooLarge;
             }
 
-            return ImportErrors.TooLarge;
+            return new WebPage(
+                url,
+                PageEncoding.Decode(buffer.ToArray(), response.Content.Headers.ContentType?.CharSet));
         }
     }
 

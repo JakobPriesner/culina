@@ -25,6 +25,15 @@ internal sealed class RemoveMemberCommandHandler(
 
         using var tracked = UseCaseActivity.Start("Households.RemoveMember");
 
+        var result = await HouseholdWrites
+            .ApplyAsync(unitOfWork, token => RemoveAsync(command, token), cancellationToken)
+            .ConfigureAwait(false);
+
+        return tracked.Record(result);
+    }
+
+    private async Task<Result> RemoveAsync(RemoveMemberCommand command, CancellationToken cancellationToken)
+    {
         var found = await households.FindAsync(command.HouseholdId, cancellationToken).ConfigureAwait(false);
 
         // Who may remove whom, and the last-owner rule, live in the aggregate.
@@ -32,20 +41,16 @@ internal sealed class RemoveMemberCommandHandler(
             .Remove(command.MemberId, command.UserId)
             .Map(() => household));
 
-        var result = await removed.Match(
-            household => unitOfWork.InTransactionAsync(
-                async token =>
-                {
-                    // The loaded version: this is a same-request membership change, so there is no If-Match.
-                    var saved = await households
-                        .UpdateAsync(household, household.Version, token)
-                        .ConfigureAwait(false);
+        return await removed.Match(
+            async household =>
+            {
+                // The loaded version: this is a same-request membership change, so there is no If-Match.
+                var saved = await households
+                    .UpdateAsync(household, household.Version, cancellationToken)
+                    .ConfigureAwait(false);
 
-                    return saved.Match(_ => Result.Success(), Result.Failure);
-                },
-                cancellationToken),
+                return saved.Match(_ => Result.Success(), Result.Failure);
+            },
             error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
-
-        return tracked.Record(result);
     }
 }

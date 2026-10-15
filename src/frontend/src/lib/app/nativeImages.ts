@@ -6,30 +6,62 @@ const kept = 150;
 
 const urls = new Map<string, Promise<string | null>>();
 
+/** How many images show each photo right now; a photo on screen is never released, however long the scroll. */
+const showing = new Map<string, number>();
+
 /**
  * The app's photos: an `<img>` cannot send the bearer token, so each API photo is fetched (through the offline copies)
  * and shown from an object URL. Anything not under `/api/` (a picked file's preview) is shown as it is.
  */
 export function startNativeImages(): void {
-  useImageSource((url) => {
-    if (!url.startsWith('/api/')) {
-      return Promise.resolve(url);
-    }
+  useImageSource(resolve, stopShowing);
+}
 
-    let found = urls.get(url);
+function resolve(url: string): Promise<string | null> {
+  if (!url.startsWith('/api/')) {
+    return Promise.resolve(url);
+  }
 
-    if (!found) {
-      found = fetchFile(url).then((blob) => (blob ? URL.createObjectURL(blob) : null));
-      urls.set(url, found);
-      release();
-    } else {
-      // Most recently used last, so a photo on screen is not the next one released.
-      urls.delete(url);
-      urls.set(url, found);
-    }
+  showing.set(url, (showing.get(url) ?? 0) + 1);
 
-    return found;
-  });
+  let found = urls.get(url);
+
+  if (!found) {
+    const asked = fetchFile(url).then((blob) => {
+      if (blob) {
+        return URL.createObjectURL(blob);
+      }
+
+      // Not kept: a failure (offline) must not be the answer until sign-out; the next ask fetches again.
+      if (urls.get(url) === asked) {
+        urls.delete(url);
+      }
+
+      return null;
+    });
+
+    found = asked;
+    urls.set(url, found);
+    release();
+  } else {
+    // Most recently used last, so a photo on screen is not the next one released.
+    urls.delete(url);
+    urls.set(url, found);
+  }
+
+  return found;
+}
+
+/** An image stopped showing the photo it got for this address. */
+function stopShowing(url: string): void {
+  const left = (showing.get(url) ?? 1) - 1;
+
+  if (left > 0) {
+    showing.set(url, left);
+  } else {
+    showing.delete(url);
+    release();
+  }
 }
 
 /** Releases every photo, on sign-out: the next person must not be shown them. */
@@ -39,17 +71,19 @@ export function forgetNativeImages(): void {
   }
 
   urls.clear();
+  showing.clear();
 }
 
+/** Drops the oldest photos beyond the limit that nothing shows. */
 function release(): void {
-  while (urls.size > kept) {
-    const [oldest] = urls;
-
-    if (!oldest) {
+  for (const [address, photo] of urls) {
+    if (urls.size <= kept) {
       return;
     }
 
-    urls.delete(oldest[0]);
-    void oldest[1].then((objectUrl) => objectUrl && URL.revokeObjectURL(objectUrl));
+    if (!showing.has(address)) {
+      urls.delete(address);
+      void photo.then((objectUrl) => objectUrl && URL.revokeObjectURL(objectUrl));
+    }
   }
 }

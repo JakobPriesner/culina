@@ -111,7 +111,15 @@ public static class DependencyInjection
         // Grouped by domain, in folder order; the order itself does not matter.
         return services
             // Users
-            .AddScoped<Application.Recipes.Intake.RecipeIntake>()
+            .AddScoped<Application.Recipes.Intake.IntakeProcessor>()
+            .AddScoped<Application.Recipes.Intake.DraftToRecipe>()
+            .AddScoped<Application.Recipes.Intake.IntakeSubmission>()
+            .AddScoped<ICommandHandler<Application.Recipes.Intake.StartRecipeIntakeCommand, Contracts.Recipes.Intake.IntakeJob>,
+                Application.Recipes.Intake.StartRecipeIntakeCommandHandler>()
+            .AddScoped<ICommandHandler<Application.Recipes.Intake.RetryRecipeIntakeCommand, Contracts.Recipes.Intake.IntakeJob>,
+                Application.Recipes.Intake.RetryRecipeIntakeCommandHandler>()
+            .AddScoped<ICommandHandler<Application.Recipes.Intake.StartRecipeDraftCommand, Contracts.Recipes.Intake.IntakeJob>,
+                Application.Recipes.Intake.StartRecipeDraftCommandHandler>()
             .AddScoped<Application.Recipes.Intake.IntakeWatch>()
             // A singleton: a stream listens for changes made by the worker's own scope.
             .AddSingleton<Application.Recipes.Intake.IntakeChanges>()
@@ -244,6 +252,7 @@ public static class DependencyInjection
 
             // The assistant
             .AddScoped<AssistantRun>()
+            .AddScoped<ImageRelease>()
             .AddScoped<RecipeImageWriter>()
             .AddScoped<ICommandHandler<DrawRecipeImageCommand, DrawingProgress>,
                 DrawRecipeImageCommandHandler>()

@@ -15,13 +15,8 @@
   import PushRelayFields from '$features/server/PushRelayFields.svelte';
   import TelemetryFields from '$features/server/TelemetryFields.svelte';
   import { server, type SaveOutcome } from '$features/server/stores/server.svelte';
-  import {
-    unreadableDatabaseNumbers,
-    unreadableNumbers,
-    variables,
-    type DatabaseDraft,
-    type ServerDraft
-  } from '$features/server/types';
+  import { variables } from '$features/server/types';
+  import { useServerDrafts, type ServerPart } from '$features/server/useServerDrafts.svelte';
 
   import IssueRecoveryCodePanel from '$features/auth/IssueRecoveryCodePanel.svelte';
 
@@ -33,21 +28,9 @@
    * A restart is said on the button, not in a dialog.
    */
 
-  let serverDraft = $state<ServerDraft | null>(null);
-  let databaseDraft = $state<DatabaseDraft | null>(null);
-  let serverOutcome = $state<SaveOutcome | null>(null);
-  let databaseOutcome = $state<SaveOutcome | null>(null);
-  let saving = $state<'server' | 'database' | null>(null);
+  const drafts = useServerDrafts();
 
-  function copyDrafts() {
-    serverDraft = server.server ? structuredClone($state.snapshot(server.server)) : null;
-    databaseDraft = server.database ? structuredClone($state.snapshot(server.database)) : null;
-  }
-
-  onMount(async () => {
-    await server.load();
-    copyDrafts();
-  });
+  onMount(() => drafts.loadAll());
 
   /** After a restart the session may be gone (toggling secure cookies renames the cookie); checked, not assumed, and sent to sign in again only if lost. */
   async function settle(outcome: SaveOutcome) {
@@ -63,43 +46,24 @@
       return;
     }
 
-    await server.load();
-    copyDrafts();
+    await drafts.loadAll();
   }
 
   async function saveServer() {
-    if (!serverDraft || unreadableNumbers(serverDraft).length > 0) return;
+    const outcome = await drafts.saveServer();
 
-    saving = 'server';
-    serverOutcome = await server.saveServer($state.snapshot(serverDraft) as ServerDraft);
-    saving = null;
-
-    await settle(serverOutcome);
+    if (outcome) await settle(outcome);
   }
 
   async function saveDatabase() {
-    if (!databaseDraft || unreadableDatabaseNumbers(databaseDraft).length > 0) return;
+    const outcome = await drafts.saveDatabase();
 
-    saving = 'database';
-    databaseOutcome = await server.saveDatabase($state.snapshot(databaseDraft) as DatabaseDraft);
-    saving = null;
-
-    await settle(databaseOutcome);
+    if (outcome) await settle(outcome);
   }
 
-  async function retry(which: 'server' | 'database') {
-    const outcome = await server.awaitRestart();
-
-    if (which === 'server') {
-      serverOutcome = outcome;
-    } else {
-      databaseOutcome = outcome;
-    }
-
-    await settle(outcome);
+  async function retry(part: ServerPart) {
+    await settle(await drafts.retry(part));
   }
-
-  const busy = $derived(saving !== null || server.phase !== 'idle');
 </script>
 
 <svelte:head><title>{m['me.server']()}</title></svelte:head>
@@ -112,12 +76,12 @@
     requestId={server.error?.requestId}
   >
     {#snippet action()}
-      <Button variant="primary" onclick={() => server.load().then(copyDrafts)}>
+      <Button variant="primary" onclick={() => drafts.loadAll()}>
         {m['error.retry']()}
       </Button>
     {/snippet}
   </ErrorState>
-{:else if serverDraft && databaseDraft && server.serverFacts && server.databaseFacts}
+{:else if drafts.serverDraft && drafts.databaseDraft && server.serverFacts && server.databaseFacts}
   {@const facts = server.serverFacts}
   {@const databaseFacts = server.databaseFacts}
   {@const readonly = !facts.writable}
@@ -129,56 +93,60 @@
   <SettingsSection title={m['server.signIn']()} description={m['server.signIn.hint']()}>
     <div class="fields">
       <SecureCookiesField
-        bind:checked={serverDraft.secure}
+        bind:checked={drafts.serverDraft.secure}
         pinned={facts.pinned.has(variables.secure)}
-        disabled={readonly || busy}
+        disabled={readonly || drafts.busy}
       />
-      <SessionFields bind:draft={serverDraft} {facts} disabled={readonly || busy} />
+      <SessionFields bind:draft={drafts.serverDraft} {facts} disabled={readonly || drafts.busy} />
     </div>
   </SettingsSection>
 
   <SettingsSection title={m['server.proxy']()} description={m['server.proxy.hint']()}>
     <div class="fields">
-      <ProxyFields bind:draft={serverDraft} {facts} disabled={readonly || busy} />
+      <ProxyFields bind:draft={drafts.serverDraft} {facts} disabled={readonly || drafts.busy} />
     </div>
   </SettingsSection>
 
   <SettingsSection title={m['server.limits']()} description={m['server.limits.hint']()}>
     <div class="fields">
-      <LimitFields bind:draft={serverDraft} {facts} disabled={readonly || busy} />
+      <LimitFields bind:draft={drafts.serverDraft} {facts} disabled={readonly || drafts.busy} />
     </div>
   </SettingsSection>
 
   <SettingsSection title={m['server.telemetry']()} description={m['server.telemetry.hint']()}>
     <div class="fields">
-      <TelemetryFields bind:draft={serverDraft} {facts} disabled={readonly || busy} />
+      <TelemetryFields bind:draft={drafts.serverDraft} {facts} disabled={readonly || drafts.busy} />
     </div>
   </SettingsSection>
 
   <SettingsSection title={m['server.push']()} description={m['server.push.hint']()}>
     <div class="fields">
-      <PushRelayFields bind:draft={serverDraft} {facts} disabled={readonly || busy} />
+      <PushRelayFields bind:draft={drafts.serverDraft} {facts} disabled={readonly || drafts.busy} />
     </div>
   </SettingsSection>
 
   <div class="actions">
-    <Button onclick={saveServer} loading={saving === 'server'} disabled={readonly || busy}>
+    <Button
+      onclick={saveServer}
+      loading={drafts.saving === 'server'}
+      disabled={readonly || drafts.busy}
+    >
       {m['server.save']()}
     </Button>
     <p class="note">{m['server.save.hint']()}</p>
   </div>
   <SaveStatus
-    phase={saving === 'server' ? server.phase : 'idle'}
-    outcome={serverOutcome}
+    phase={drafts.saving === 'server' ? server.phase : 'idle'}
+    outcome={drafts.serverOutcome}
     onretry={() => retry('server')}
   />
 
   <SettingsSection title={m['server.database']()} description={m['server.database.hint']()}>
     <div class="fields">
       <DatabaseFields
-        bind:draft={databaseDraft}
+        bind:draft={drafts.databaseDraft}
         facts={databaseFacts}
-        disabled={!databaseFacts.writable || busy}
+        disabled={!databaseFacts.writable || drafts.busy}
       />
       <p class="note">{m['server.database.move']()}</p>
     </div>
@@ -187,15 +155,15 @@
   <div class="actions">
     <Button
       onclick={saveDatabase}
-      loading={saving === 'database'}
-      disabled={!databaseFacts.writable || busy}
+      loading={drafts.saving === 'database'}
+      disabled={!databaseFacts.writable || drafts.busy}
     >
       {m['server.database.save']()}
     </Button>
   </div>
   <SaveStatus
-    phase={saving === 'database' ? server.phase : 'idle'}
-    outcome={databaseOutcome}
+    phase={drafts.saving === 'database' ? server.phase : 'idle'}
+    outcome={drafts.databaseOutcome}
     onretry={() => retry('database')}
   />
 {:else}

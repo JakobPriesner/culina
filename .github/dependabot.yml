@@ -22,8 +22,9 @@ updates:
         patterns: ['*']
 
   # The Dockerfile's base images.
+  # The docker ecosystem does not recurse: the relay's Dockerfile is its own directory.
   - package-ecosystem: docker
-    directory: /
+    directories: ['/', '/deploy/relay']
     schedule:
       interval: weekly
     open-pull-requests-limit: 2

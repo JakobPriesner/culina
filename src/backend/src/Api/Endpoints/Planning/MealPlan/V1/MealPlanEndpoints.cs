@@ -21,12 +21,8 @@ internal sealed class GetMealPlanEndpoint : IEndpoint
                 IQueryHandler<GetMealPlanQuery, MealPlanResponse> handler,
                 CancellationToken cancellationToken) =>
             {
-                // Snapped to the Monday of its week so no caller has to work that out.
                 var request = context.Request.Query.ReadDate("from").Map(from =>
-                    new GetMealPlanQuery(
-                        householdId,
-                        context.CurrentUser().UserId,
-                        PlanningWeek.StartOfWeekContaining(from.Value ?? DateOnly.FromDateTime(DateTime.UtcNow))));
+                    new GetMealPlanQuery(householdId, context.CurrentUser().UserId, from.Value));
 
                 return await request.Match(
                     async asked =>

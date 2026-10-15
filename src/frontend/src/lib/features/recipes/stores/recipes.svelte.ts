@@ -1,4 +1,5 @@
 import { clientError, ErrorCodes, http, request, type AppError } from '$api';
+import { ResetEpoch } from '$shell/optimistic';
 import { registerStore, type LoadStatus } from '$shell/stores';
 
 import { toRecipe, toWireRecipe } from '../mappers';
@@ -26,6 +27,7 @@ class RecipeStore {
   #pending = $state<string[]>([]);
 
   #writes = new WriteQueue();
+  #epoch = new ResetEpoch();
 
   /** The same stale-read guard as the list's, for going from one recipe to the next. */
   #detailToken = 0;
@@ -172,6 +174,12 @@ class RecipeStore {
    */
   async update(next: Recipe): Promise<AppError | null> {
     const before = this.#detail;
+    // Only while this recipe is still the one shown: the person may have opened another during the save.
+    const undo = this.#epoch.guard(() => {
+      if (this.#detail?.id === next.id) {
+        this.#detail = before;
+      }
+    });
 
     this.#detail = next;
     this.#markPending(next.id, true);
@@ -198,7 +206,7 @@ class RecipeStore {
     }
 
     // Restore exactly what was there; retrying a stale version would lose someone else's change.
-    this.#detail = before;
+    undo();
 
     return outcome.error;
   }
@@ -241,6 +249,7 @@ class RecipeStore {
   }
 
   reset(): void {
+    this.#epoch.bump();
     this.#list.reset();
     this.#detail = null;
     this.#detailStatus = 'idle';

@@ -196,11 +196,7 @@ internal sealed class SourceHttp : IDisposable
 
             try
             {
-                using var capped = new CappedStream(body, maxPictureBytes);
-
-                await capped.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
-
-                if (capped.Overflowed)
+                if (!await BoundedRead.CopyAsync(body, buffer, maxPictureBytes, cancellationToken).ConfigureAwait(false))
                 {
                     await buffer.DisposeAsync().ConfigureAwait(false);
 
@@ -285,27 +281,26 @@ internal sealed class SourceHttp : IDisposable
         await using (body.ConfigureAwait(false))
         {
             // Capped while reading: Content-Length is a claim.
-            using var capped = new CappedStream(body, MaxBytes);
+            using var buffer = new MemoryStream();
+
+            if (!await BoundedRead.CopyAsync(body, buffer, MaxBytes, cancellationToken).ConfigureAwait(false))
+            {
+                return ImportErrors.TooLarge;
+            }
+
+            buffer.Position = 0;
 
             try
             {
                 var parsed = await JsonSerializer
-                    .DeserializeAsync<TBody>(capped, Json, cancellationToken)
+                    .DeserializeAsync<TBody>(buffer, Json, cancellationToken)
                     .ConfigureAwait(false);
-
-                // Asked even on success: a truncated document can parse when it ends on a boundary.
-                if (capped.Overflowed)
-                {
-                    return ImportErrors.TooLarge;
-                }
 
                 return parsed is null ? ImportErrors.SourceNotUnderstood : parsed;
             }
             catch (JsonException)
             {
-                return capped.Overflowed
-                    ? ImportErrors.TooLarge
-                    : ImportErrors.SourceNotUnderstood;
+                return ImportErrors.SourceNotUnderstood;
             }
         }
     }
@@ -322,60 +317,5 @@ internal sealed class SourceHttp : IDisposable
     {
         client.Dispose();
         handler.Dispose();
-    }
-
-    // Ends rather than throwing and reports Overflowed, so callers need no second path.
-    private sealed class CappedStream(Stream inner, int limit) : Stream
-    {
-        private long read;
-
-        /// <summary>Whether the body had more in it than was allowed.</summary>
-        internal bool Overflowed { get; private set; }
-
-        public override bool CanRead => true;
-
-        public override bool CanSeek => false;
-
-        public override bool CanWrite => false;
-
-        public override long Length => throw new NotSupportedException();
-
-        public override long Position
-        {
-            get => read;
-            set => throw new NotSupportedException();
-        }
-
-        public override int Read(byte[] buffer, int offset, int count) =>
-            Count(inner.Read(buffer, offset, count));
-
-        public override async ValueTask<int> ReadAsync(
-            Memory<byte> buffer,
-            CancellationToken cancellationToken = default) =>
-            Count(await inner.ReadAsync(buffer, cancellationToken).ConfigureAwait(false));
-
-        public override void Flush() => inner.Flush();
-
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
-
-        public override void SetLength(long value) => throw new NotSupportedException();
-
-        public override void Write(byte[] buffer, int offset, int count) =>
-            throw new NotSupportedException();
-
-        private int Count(int taken)
-        {
-            read += taken;
-
-            if (read <= limit)
-            {
-                return taken;
-            }
-
-            Overflowed = true;
-
-            // Ends here: a document cut in half is not a smaller document; callers check Overflowed.
-            return 0;
-        }
     }
 }

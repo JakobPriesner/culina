@@ -236,6 +236,12 @@ internal sealed class RecipeRepository(
             new { contentHash },
             cancellationToken).ConfigureAwait(false);
 
+    public Task LockImageAsync(string contentHash, CancellationToken cancellationToken) =>
+        executor.ExecuteAsync(
+            "select pg_advisory_xact_lock(hashtextextended(@contentHash, 0));",
+            new { contentHash },
+            cancellationToken);
+
     public async Task<Result<ImageReplacement>> SetImageAsync(
         Guid recipeId,
         StoredImage image,
@@ -485,9 +491,9 @@ internal sealed class RecipeRepository(
                 cancellationToken).ConfigureAwait(false);
         }
 
-        foreach (var step in recipe.Steps)
+        if (recipe.Steps.Count > 0)
         {
-            await WriteStepAsync(recipe.Id, step, cancellationToken).ConfigureAwait(false);
+            await WriteStepsAsync(recipe.Id, recipe.Steps, cancellationToken).ConfigureAwait(false);
         }
 
         // Step.Create already widened each step's set to everything its sentence mentions.
@@ -518,38 +524,43 @@ internal sealed class RecipeRepository(
         await documents.WriteAsync(recipe.Id, cancellationToken).ConfigureAwait(false);
     }
 
-    // Updates are limited to this recipe's steps, so another recipe's id fails on the primary key instead of moving that step.
-    private async Task WriteStepAsync(Guid recipeId, Step step, CancellationToken cancellationToken)
+    // Two statements for all the steps, not two per step. Updates are limited to this recipe's steps, and an
+    // insert is tried for every id not already among them, so another recipe's id fails on the primary key
+    // (steps_pkey, DuplicateStep) instead of moving that step.
+    private async Task WriteStepsAsync(Guid recipeId, IReadOnlyList<Step> steps, CancellationToken cancellationToken)
     {
         var parameters = new
         {
-            id = step.Id,
             recipeId,
-            sortOrder = step.SortOrder,
-            title = step.Title,
-            body = StepText.Serialise(step.Segments),
-            durationSeconds = step.DurationSeconds
+            ids = steps.Select(step => step.Id).ToArray(),
+            sortOrders = steps.Select(step => step.SortOrder).ToArray(),
+            titles = steps.Select(step => step.Title).ToArray(),
+            bodies = steps.Select(step => StepText.Serialise(step.Segments)).ToArray(),
+            durationSeconds = steps.Select(step => step.DurationSeconds).ToArray()
         };
 
-        var updated = await executor.ExecuteAsync(
+        await executor.ExecuteAsync(
             """
-            update steps
-            set sort_order = @sortOrder, title = @title, body = @body,
-                duration_seconds = @durationSeconds
-            where id = @id and recipe_id = @recipeId;
+            update steps s
+            set sort_order = i.sort_order, title = i.title, body = i.body, duration_seconds = i.duration_seconds
+            from unnest(
+                @ids::uuid[], @sortOrders::integer[], @titles::text[], @bodies::text[], @durationSeconds::integer[])
+                as i(id, sort_order, title, body, duration_seconds)
+            where s.id = i.id and s.recipe_id = @recipeId;
             """,
             parameters,
             cancellationToken).ConfigureAwait(false);
 
-        if (updated == 0)
-        {
-            await executor.ExecuteAsync(
-                """
-                insert into steps (id, recipe_id, sort_order, title, body, duration_seconds)
-                values (@id, @recipeId, @sortOrder, @title, @body, @durationSeconds);
-                """,
-                parameters,
-                cancellationToken).ConfigureAwait(false);
-        }
+        await executor.ExecuteAsync(
+            """
+            insert into steps (id, recipe_id, sort_order, title, body, duration_seconds)
+            select i.id, @recipeId, i.sort_order, i.title, i.body, i.duration_seconds
+            from unnest(
+                @ids::uuid[], @sortOrders::integer[], @titles::text[], @bodies::text[], @durationSeconds::integer[])
+                as i(id, sort_order, title, body, duration_seconds)
+            where not exists (select 1 from steps s where s.id = i.id and s.recipe_id = @recipeId);
+            """,
+            parameters,
+            cancellationToken).ConfigureAwait(false);
     }
 }

@@ -37,38 +37,47 @@ internal sealed class ChangeMemberRoleCommandHandler(
                 new FieldError("role", HouseholdErrors.InvalidRole.Code, "Role must be 'owner' or 'member'.")));
         }
 
+        var result = await HouseholdWrites
+            .ApplyAsync(unitOfWork, token => ChangeAsync(command, role, token), cancellationToken)
+            .ConfigureAwait(false);
+
+        return tracked.Record(result);
+    }
+
+    private async Task<Result<Response>> ChangeAsync(
+        ChangeMemberRoleCommand command,
+        HouseholdRole role,
+        CancellationToken cancellationToken)
+    {
         var found = await households.FindAsync(command.HouseholdId, cancellationToken).ConfigureAwait(false);
 
         var changed = found.Bind(household => household
             .ChangeRole(command.MemberId, role, command.UserId)
             .Map(() => household));
 
-        var result = await changed.Match(
+        return await changed.Match(
             household => SaveAsync(household, command, cancellationToken),
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
-
-        return tracked.Record(result);
     }
 
     private async Task<Result<Response>> SaveAsync(
         Household household,
         ChangeMemberRoleCommand command,
-        CancellationToken cancellationToken) =>
-        await unitOfWork.InTransactionAsync(
-            async token =>
-            {
-                var saved = await households
-                    .UpdateAsync(household, household.Version, token)
-                    .ConfigureAwait(false);
+        CancellationToken cancellationToken)
+    {
+        var saved = await households
+            .UpdateAsync(household, household.Version, cancellationToken)
+            .ConfigureAwait(false);
 
-                var members = await households.MembersAsync(household.Id, token).ConfigureAwait(false);
+        // A lost race is retried by the caller; do not read members for a change that did not happen.
+        return await saved.Match(
+            async version =>
+            {
+                var members = await households.MembersAsync(household.Id, cancellationToken).ConfigureAwait(false);
                 var member = members.Single(candidate => candidate.UserId == command.MemberId);
 
-                return saved.Map(version => new Response
-                {
-                    Member = member.ToContract(),
-                    Version = version
-                });
+                return Result<Response>.Success(new Response { Member = member.ToContract(), Version = version });
             },
-            cancellationToken).ConfigureAwait(false);
+            error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
+    }
 }

@@ -23,6 +23,9 @@ class ShoppingStore {
   /** Plain counter of tick writes still in flight; a whole-list answer is only taken once none are left. */
   #inFlight = 0;
 
+  /** Per line with a write out: what the server last confirmed, and how many writes are out. A failed write goes back to this, never to the optimistic value a neighbouring tick left. */
+  #confirmed = new Map<string, { item: ShoppingItem; writes: number }>();
+
   /** Plain, not $state: read before the first await of an effect-called method, where a tracked read would retrigger on its own writes. */
   #householdId: string | null = null;
   #reads = new LatestRead();
@@ -211,6 +214,7 @@ class ShoppingStore {
 
   reset(): void {
     this.#reads.cancel();
+    this.#confirmed.clear();
     this.#householdId = null;
     this.#list = null;
     this.#status = 'idle';
@@ -223,7 +227,14 @@ class ShoppingStore {
     itemId: string,
     change: Partial<Pick<ShoppingItem, 'isChecked' | 'section'>>
   ): Promise<AppError | null> {
-    const before = this.#list?.items.find((item) => item.itemId === itemId);
+    const current = this.#list?.items.find((item) => item.itemId === itemId);
+    const held = this.#confirmed.get(itemId) ?? (current ? { item: current, writes: 0 } : null);
+
+    if (held) {
+      held.writes++;
+      this.#confirmed.set(itemId, held);
+    }
+
     this.#inFlight++;
 
     this.#replace(itemId, change);
@@ -237,7 +248,17 @@ class ShoppingStore {
 
     this.#inFlight--;
 
+    if (held && --held.writes === 0) {
+      this.#confirmed.delete(itemId);
+    }
+
     if (result.ok) {
+      const answered = result.value.items.find((item) => item.itemId === itemId);
+
+      if (held && answered) {
+        held.item = answered;
+      }
+
       // Another tick still out would be undone by this list; the last answer to land carries all of them.
       if (this.#inFlight === 0 && householdId === this.#householdId) {
         this.#list = result.value;
@@ -246,12 +267,13 @@ class ShoppingStore {
       return null;
     }
 
-    // Exact restore of this line's old values, not an inverse: inverses drift if something else changed meanwhile.
-    if (before) {
+    // Back to what the server last confirmed, not an inverse and not the value before this tick: a tick then untick that both fail must end where they began.
+    // While another write to this line is out, its answer or failure settles the line.
+    if (held && held.writes === 0) {
       this.#replace(
         itemId,
         Object.fromEntries(
-          Object.keys(change).map((key) => [key, before[key as keyof typeof change]])
+          Object.keys(change).map((key) => [key, held.item[key as keyof typeof change]])
         )
       );
     }

@@ -130,6 +130,45 @@ public class CookbookOrderTests(PostgresFixture postgres)
         Assert.Equal(["Eins", "Zwei"], await TitlesAsync(kitchen, cookbookId));
     }
 
+    [Fact]
+    public async Task Add_ShouldGiveEachRecipeItsOwnPlace_WhenSeveralGoOnAtOnce()
+    {
+        var kitchen = await Kitchen.OpenAsync(postgres);
+        var (cookbookId, _) = await ShelfAsync(kitchen);
+        var recipeIds = new List<Guid>();
+
+        for (var number = 0; number < 8; number++)
+        {
+            recipeIds.Add(await kitchen.SaveAsync($"Gericht {number}", "de", null, null, [], [], "Kochen."));
+        }
+
+        var added = await Task.WhenAll(recipeIds.Select(
+            recipeId => kitchen.Client.PutAsync($"/api/v1/cookbooks/{cookbookId}/recipes/{recipeId}", new { }, Token)));
+
+        Assert.All(added, response => Assert.True(response.StatusCode is HttpStatusCode.NoContent or HttpStatusCode.OK or HttpStatusCode.Created));
+        Assert.Equal(8L, await postgres.QuerySingleAsync<long>("select count(distinct sort_order) from cookbook_recipes;", Token));
+    }
+
+    [Fact]
+    public async Task Reorder_ShouldRenumberTheWholeShelf_EvenForARowTheListCannotName()
+    {
+        var kitchen = await Kitchen.OpenAsync(postgres);
+        var (cookbookId, ids) = await ShelfAsync(kitchen, "Eins", "Zwei", "Drei");
+        using var stranger = await Kitchen.StrangerAsync(postgres);
+        var strangerHousehold = (await stranger.PostAsync("/api/v1/households", new { name = "Anderswo" }, Token))
+            .Json!.Value.GetProperty("householdId").GetGuid();
+        // Out of reach of the household's library, so the shelf shows (and the client can send) only two of its three rows.
+        await postgres.ExecuteAsync(
+            $"update recipes set household_id = '{strangerHousehold}' where id = '{ids[0]}';",
+            Token);
+
+        var arranged = await ReorderAsync(kitchen, cookbookId, await ETagAsync(kitchen, cookbookId), [ids[2], ids[1]]);
+
+        Assert.Equal(HttpStatusCode.OK, arranged.StatusCode);
+        Assert.Equal(["Drei", "Zwei"], await TitlesAsync(kitchen, cookbookId));
+        Assert.Equal(3L, await postgres.QuerySingleAsync<long>("select count(distinct sort_order) from cookbook_recipes;", Token));
+    }
+
     private static async Task<(Guid CookbookId, List<Guid> Ids)> ShelfAsync(Kitchen kitchen, params string[] titles)
     {
         var created = await kitchen.Client.PostAsync(

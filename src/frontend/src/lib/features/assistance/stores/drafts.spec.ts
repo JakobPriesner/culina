@@ -197,6 +197,38 @@ describe('the draft store', () => {
     expect(drafts.draft?.title).toBe('Auberginen');
   });
 
+  it('settles the ask when the draft is dismissed mid-stream, and stops listening for the page being hidden', async () => {
+    assistant();
+
+    const removed = vi.spyOn(document, 'removeEventListener');
+    const drafts = createDraftStore();
+    const finished = drafts.ask(aText);
+
+    await opened();
+    FakeStream.last!.send({ draft: { title: 'Auberginen' } });
+
+    drafts.dismiss();
+
+    expect(await finished).toBeNull();
+    expect(drafts.asking).toBe(false);
+    expect(removed).toHaveBeenCalledWith('visibilitychange', expect.any(Function));
+    removed.mockRestore();
+  });
+
+  it('settles the ask when the store is reset on sign-out', async () => {
+    assistant();
+
+    const drafts = createDraftStore();
+    const finished = drafts.ask(aText);
+
+    await opened();
+
+    drafts.reset();
+
+    expect(await finished).toBeNull();
+    expect(drafts.asking).toBe(false);
+  });
+
   it('keeps a refusal to start as an ordinary failure', async () => {
     assistant(() => problem('assistance.budget_exhausted', 429));
 

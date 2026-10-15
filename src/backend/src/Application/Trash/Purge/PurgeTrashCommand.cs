@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Recipes;
 using Application.Telemetry;
 using Domain.Shared;
 using Domain.Trash;
@@ -11,7 +12,7 @@ public sealed record PurgeTrashCommand(DateTimeOffset Now);
 
 internal sealed class PurgeTrashCommandHandler(
     ITrashRepository trash,
-    IImageStore images,
+    ImageRelease release,
     IUnitOfWork unitOfWork)
     : ICommandHandler<PurgeTrashCommand, int>
 {
@@ -29,7 +30,10 @@ internal sealed class PurgeTrashCommandHandler(
         // broken picture, one left by a failure is only storage a later sweep reclaims.
         foreach (var hash in purged.ReleasedImages)
         {
-            await images.DeleteAsync(hash, cancellationToken).ConfigureAwait(false);
+            // Checked again under the image's lock: an upload of the same bytes may have claimed the file since.
+            var released = await release.ReleaseIfUnusedAsync(hash, cancellationToken).ConfigureAwait(false);
+
+            released.Match(() => { }, _ => { });
         }
 
         return tracked.Record(Result<int>.Success(purged.Removed));

@@ -411,3 +411,53 @@ describe('switching households', () => {
     await reading;
   });
 });
+
+describe('a refused save', () => {
+  it('does not put recipe A back on screen after recipe B was opened', async () => {
+    const put = Promise.withResolvers<Response>();
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) =>
+        Promise.resolve(
+          input.method === 'PUT'
+            ? put.promise
+            : input.url.endsWith('/recipes/a')
+              ? json(recipe('a', 'Orzo'))
+              : json(recipe('b', 'Soup'))
+        )
+      )
+    );
+
+    await recipes.load('a');
+
+    const saving = recipes.update({ ...recipes.detail!, title: 'Orzo!' });
+
+    await recipes.load('b');
+    put.resolve(json({ code: 'recipes.unavailable', detail: 'No.' }, 500));
+    await saving;
+
+    expect(recipes.detail?.id).toBe('b');
+  });
+
+  it('still restores the recipe when it is the one shown', async () => {
+    const put = Promise.withResolvers<Response>();
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) =>
+        Promise.resolve(input.method === 'PUT' ? put.promise : json(recipe('a', 'Orzo')))
+      )
+    );
+
+    await recipes.load('a');
+
+    const saving = recipes.update({ ...recipes.detail!, title: 'Orzo!' });
+
+    expect(recipes.detail?.title).toBe('Orzo!');
+    put.resolve(json({ code: 'recipes.unavailable', detail: 'No.' }, 500));
+    await saving;
+
+    expect(recipes.detail?.title).toBe('Orzo');
+  });
+});

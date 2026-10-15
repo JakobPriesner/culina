@@ -29,6 +29,8 @@ public class BackgroundImportTests(PostgresFixture postgres)
     private static readonly string[] Two = ["1", "2"];
     private static readonly string[] TheSecond = ["2"];
 
+    private static readonly string[] WithRepeats = ["1", "2", "1", "1"];
+
     private static CancellationToken Token => TestContext.Current.CancellationToken;
 
     [Fact]
@@ -111,6 +113,28 @@ public class BackgroundImportTests(PostgresFixture postgres)
 
         Assert.Equal(4, recipes.Count);
         Assert.Equal("failed", Assert.Single(recipes, line => line["ExternalId"] == "3")["Outcome"]);
+    }
+
+    [Fact]
+    public async Task Import_ShouldCountAndRunARepeatedId_Once()
+    {
+        using var tandoor = FakeTandoor.Start(recipes: 2, broken: null);
+        using var factory = Factory();
+        using var client = await SignedInAsync(factory);
+        var sourceId = await ConnectAsync(client, tandoor);
+
+        var started = await client.PostAsync(
+            $"/api/v1/recipe-sources/{sourceId}/imports",
+            new { externalIds = WithRepeats },
+            Token);
+
+        var events = await WatchAsync(client, sourceId, started.Json!.Value.GetProperty("importId").GetGuid());
+
+        Assert.Equal(2, started.Json!.Value.GetProperty("total").GetInt32());
+        Assert.Equal(2, events[^1].GetProperty("done").GetInt32());
+        Assert.Equal(3, events.Count);
+        Assert.DoesNotContain(events, one => one.TryGetProperty("recipe", out var recipe)
+            && recipe.ValueKind != JsonValueKind.Null && recipe.GetProperty("outcome").GetString() == "failed");
     }
 
     [Fact]

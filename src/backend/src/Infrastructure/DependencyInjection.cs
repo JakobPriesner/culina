@@ -60,6 +60,7 @@ public static class DependencyInjection
             .AddRecipeImport()
             .AddAssistance()
             .AddScoped<IRecipeIntakeJobs, RecipeIntakeJobs>()
+            .AddScoped<IIntakePurge, IntakePurge>()
             .AddSingleton<PushTransport>()
             .AddSingleton<RelayTransport>()
             .AddScoped<IIntakeNotifications, IntakeNotifications>()

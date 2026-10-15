@@ -233,10 +233,10 @@ public sealed class ShoppingList
     /// </summary>
     private int PlaceFor(ItemName name, ShoppingSection section)
     {
-        var reading = IngredientWords.Read(name.Value);
+        var reading = name.Reading;
         var kinds = items
             .Where(item => item.Section == section && !item.IsChecked &&
-                           IngredientWords.Read(item.Name.Value).HasSameHead(reading))
+                           item.Name.Reading.HasSameHead(reading))
             .ToList();
 
         if (kinds.Count == 0)

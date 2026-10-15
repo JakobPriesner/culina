@@ -75,6 +75,41 @@ public sealed class RelayDeliveryTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task APushServiceThatTimesOut_ShouldBeRetriedWithBackoff_AndStillLetTheDevicesBeServed()
+    {
+        var relay = new ScriptedRelay(HttpStatusCode.Accepted);
+        using var factory = new CulinaApiFactory(
+            postgres,
+            new Dictionary<string, string> { ["Push:RelayUrl"] = "https://relay.example/" },
+            replace: services =>
+            {
+                services.AddSingleton(new RelayTransport(new HttpClient(relay)));
+                services.AddSingleton(new PushTransport(new HttpClient(new TimingOutPush())));
+            });
+        using var client = await SignedInAsync(factory);
+        var browser = IntakeNotifications.GenerateKeys();
+        await client.PutAsync(
+            "/api/v1/push/subscription",
+            new
+            {
+                endpoint = "https://fcm.googleapis.com/push/slow",
+                p256dh = browser.PublicKey,
+                auth = Convert.ToBase64String(System.Security.Cryptography.RandomNumberGenerator.GetBytes(16)),
+                language = "en"
+            },
+            Token);
+        await client.PutAsync($"/api/v1/push/devices/{Guid.NewGuid()}", new { relayToken = "rt-1" }, Token);
+
+        await ReadyImportAsync(factory, client);
+        var failure = await Record.ExceptionAsync(() => DeliverAsync(factory));
+
+        Assert.Null(failure);
+        Assert.Single(relay.Received);
+        // Two minutes after the first attempt (2^attempts), not the flat minute the claim itself sets.
+        Assert.Equal(1, await CountAsync(factory, "select count(*) from recipe_intake_notifications where delivered_at is null and retry_at > now() + interval '90 seconds'"));
+    }
+
+    [Fact]
     public async Task Devices_ShouldBeRefused_WhenNoRelayIsNamed()
     {
         await postgres.ResetAsync(Token);
@@ -174,5 +209,12 @@ public sealed class RelayDeliveryTests(PostgresFixture postgres)
 
             return new HttpResponseMessage(answer);
         }
+    }
+
+    /// <summary>A push service that never answers: the transport's own deadline fires.</summary>
+    private sealed class TimingOutPush : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            throw new TaskCanceledException("The request timed out.");
     }
 }
