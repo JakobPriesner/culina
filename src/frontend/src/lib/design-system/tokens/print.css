@@ -45,6 +45,7 @@
     /* A shadow lifts something off the page; paper is the page. */
     --shadow-card: none;
     --shadow-overlay: none;
+    --shadow-dock: none;
     --scrim: transparent;
 
     --skeleton-base: var(--c-white);

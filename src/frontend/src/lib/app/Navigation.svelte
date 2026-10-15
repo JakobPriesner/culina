@@ -109,9 +109,7 @@
     border: 1px solid var(--border);
     border-radius: 1.75rem;
     background: var(--surface-raised);
-    box-shadow:
-      0 4px 24px color-mix(in srgb, var(--text) 10%, transparent),
-      0 1px 3px color-mix(in srgb, var(--text) 5%, transparent);
+    box-shadow: var(--shadow-dock);
     pointer-events: auto;
   }
 
