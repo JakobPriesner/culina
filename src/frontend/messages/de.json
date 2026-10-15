@@ -204,6 +204,7 @@
   "editor.new": "Neues Rezept",
   "editor.title": "Titel",
   "editor.titleHint": "Das Einzige, was ein Rezept braucht. Alles andere kann warten.",
+  "units.pinches": "Prisen",
   "editor.description": "Einleitung",
   "editor.yieldAmount": "Ergibt",
   "editor.prepMinutes": "Arbeitszeit (Minuten)",
