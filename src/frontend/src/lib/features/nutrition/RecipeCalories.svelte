@@ -43,7 +43,7 @@
       <EstimateMark estimated={recipe.calories.estimated} />{labelNumber(
         'energy',
         recipe.calories
-      )}{nbsp}kcal {per}
+      )}{nbsp}kcal <span class="per">{per}</span>
     </span>
     <CalorieInfo atLeast={recipe.calories.atLeast} estimated={recipe.calories.estimated} {basis} />
   </span>
@@ -64,7 +64,11 @@
     gap: 0.125rem;
     color: inherit;
     font-size: var(--text-sm);
-    white-space: nowrap;
     font-variant-numeric: tabular-nums;
+  }
+
+  /* A narrow card wraps between the figure and what it is for, never inside either ("p. P." stays one). */
+  .per {
+    white-space: nowrap;
   }
 </style>

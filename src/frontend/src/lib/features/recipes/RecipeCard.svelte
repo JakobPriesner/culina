@@ -11,7 +11,10 @@
   import { reasonLine } from './search/wording';
   import type { RecipeSummary } from './types';
 
-  /** One recipe row: a hairline, editorial title and the few facts that decide tonight, not a bordered box. The whole row is the link. */
+  /**
+   * One recipe: an editorial title and the few facts that decide tonight, not a bordered box. The whole card is the link.
+   * A phone shows it as a row, thumbnail beside the words, so a screen holds several recipes rather than one photo.
+   */
   interface Props {
     recipe: RecipeSummary;
     pending?: boolean;
@@ -38,7 +41,7 @@
     <Image
       src={recipe.imageId ? imageUrl(recipe.id, 400, recipe.imageId) : undefined}
       srcset={recipe.imageId ? imageSrcset(recipe.id, recipe.imageId) : undefined}
-      sizes="(min-width: 64rem) 20rem, (min-width: 40rem) 45vw, 90vw"
+      sizes="(min-width: 64rem) 20rem, (min-width: 40rem) 45vw, 6.5rem"
       alt=""
       ratio={4 / 3}
       loading={priority ? 'eager' : 'lazy'}
@@ -46,43 +49,45 @@
     />
   </div>
 
-  {#if eyebrow}
-    <p class="eyebrow">{eyebrow}</p>
-  {/if}
+  <div class="text">
+    {#if eyebrow}
+      <p class="eyebrow">{eyebrow}</p>
+    {/if}
 
-  <h3 class="title">
-    <a
-      class="link"
-      href={resolve('/(app)/recipes/[recipeId]', { recipeId: recipe.id })}
-      aria-label={m['recipes.card.open']({ title: recipe.title })}
-    >
-      <Highlighted text={recipe.title} {query} />
-    </a>
-  </h3>
+    <h3 class="title">
+      <a
+        class="link"
+        href={resolve('/(app)/recipes/[recipeId]', { recipeId: recipe.id })}
+        aria-label={m['recipes.card.open']({ title: recipe.title })}
+      >
+        <Highlighted text={recipe.title} {query} />
+      </a>
+    </h3>
 
-  <div class="details">
-    <div class="facts">
-      {#if meta}<p class="meta">{meta}</p>{/if}
-      <RecipeCalories {recipe} />
+    <div class="details">
+      <div class="facts">
+        {#if meta}<p class="meta">{meta}</p>{/if}
+        <RecipeCalories {recipe} />
+      </div>
+      <span class="open" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M5 12h14m-5-5 5 5-5 5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </span>
     </div>
-    <span class="open" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M5 12h14m-5-5 5 5-5 5" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
-    </span>
+
+    {#if match}
+      <p class="match" class:complete={recipe.match?.missing === 0}>{match}</p>
+    {/if}
+
+    {#if reason}
+      <p class="reason"><Highlighted text={reason} {query} /></p>
+    {/if}
+
+    {#if from}
+      <p class="from">{m['recipes.card.from']({ household: from })}</p>
+    {/if}
   </div>
-
-  {#if match}
-    <p class="match" class:complete={recipe.match?.missing === 0}>{match}</p>
-  {/if}
-
-  {#if reason}
-    <p class="reason"><Highlighted text={reason} {query} /></p>
-  {/if}
-
-  {#if from}
-    <p class="from">{m['recipes.card.from']({ household: from })}</p>
-  {/if}
 </article>
 
 <style>
@@ -142,6 +147,13 @@
 
   .photo {
     margin-bottom: var(--space-2);
+  }
+
+  .text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
   }
 
   .from {
@@ -205,5 +217,37 @@
 
   .complete {
     color: var(--text-success);
+  }
+
+  /* Below the grid's two columns: a row, so the title stays whole beside a thumbnail. */
+  @media (width < 40rem) {
+    .recipe {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: var(--space-4);
+      padding-bottom: 0;
+    }
+
+    .photo {
+      flex: 0 0 6.5rem;
+      margin-bottom: 0;
+    }
+
+    .text {
+      flex: 1;
+      gap: var(--space-1);
+    }
+
+    /* Beside a thumbnail a long compound has half the width: it hyphenates by the page's language, as on a plan card. */
+    .title {
+      font-size: var(--text-lg);
+      hyphens: auto;
+      overflow-wrap: break-word;
+    }
+
+    /* The whole row is the link; the arrow only takes the width the title needs. */
+    .open {
+      display: none;
+    }
   }
 </style>
