@@ -1,6 +1,6 @@
 import { m } from '$shell/i18n';
 
-import { labelNumber, withBound } from './format';
+import { labelNumber, qualified } from './format';
 import { isEstimated, isWholeRecipe, withoutWords } from './headline';
 import type { Nutrition } from './types';
 
@@ -47,7 +47,7 @@ export function dayFigure(meals: readonly PlannedFigure[]) {
   };
 }
 
-/** "at least 1,850 kcal per person · without cake · partly estimated"; null when nothing could be added. */
+/** "at least 1,850 kcal per serving · without cake", "about 1,850 kcal per serving"; null when nothing could be added. */
 export function dayWords(meals: readonly PlannedFigure[]): string | null {
   const figure = dayFigure(meals);
 
@@ -55,19 +55,13 @@ export function dayWords(meals: readonly PlannedFigure[]): string | null {
     return null;
   }
 
-  const energy = withBound(
+  const energy = qualified(
     m['nutrition.energyLine']({
       kcal: labelNumber('energy', { value: figure.kcal, atLeast: figure.atLeast })
     }),
-    figure.atLeast
+    figure
   );
-  const line = m['nutrition.day.perPerson']({ figure: energy });
+  const line = m['nutrition.day.perServing']({ figure: energy });
 
-  return [
-    line,
-    withoutWords(figure.left),
-    figure.estimated ? m['nutrition.partlyEstimated']() : null
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  return [line, withoutWords(figure.left)].filter(Boolean).join(' · ');
 }
