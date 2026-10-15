@@ -11,7 +11,7 @@ using Domain.Shared;
 
 namespace Application.Archive;
 
-/// <summary>Writes a household's recipes out as a file.</summary>
+/// <summary>Writes a household's recipes, cookbooks and barcode memory out as a file.</summary>
 public sealed record ExportArchiveQuery(Guid HouseholdId, Guid UserId, Stream Destination);
 
 /// <summary>What was written, so the response can name the file.</summary>
@@ -21,6 +21,7 @@ internal sealed class ExportArchiveQueryHandler(
     IRecipeRepository recipes,
     ICookbookRepository cookbooks,
     IHouseholdRepository households,
+    IProductRepository products,
     IPersonalNoteRepository notes,
     ICookLogRepository log,
     IImageStore images,
@@ -143,12 +144,41 @@ internal sealed class ExportArchiveQueryHandler(
             await WriteCookbooksAsync(writer, query.HouseholdId, positions, cancellationToken).ConfigureAwait(false);
             writer.WriteEndArray();
 
+            writer.WritePropertyName("products");
+            writer.WriteStartArray();
+            await WriteProductsAsync(writer, query.HouseholdId, cancellationToken).ConfigureAwait(false);
+            writer.WriteEndArray();
+
             writer.WriteEndObject();
 
             await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
 
             return new ArchiveWritten(written);
         }
+    }
+
+    // Only what the household itself said: an ancestor's memory leaves with the ancestor's archive.
+    private async Task WriteProductsAsync(Utf8JsonWriter writer, Guid householdId, CancellationToken cancellationToken)
+    {
+        var own = await products.ForLibraryAsync([householdId], cancellationToken).ConfigureAwait(false);
+
+        foreach (var product in own.Select(stored => stored.Product))
+        {
+            writer.WriteRawValue(
+                JsonSerializer.SerializeToUtf8Bytes(
+                    new ArchivedProduct(
+                        product.Gtin.Value,
+                        product.Name,
+                        product.Ingredient,
+                        product.Quantity,
+                        product.Unit,
+                        product.CookMinutes,
+                        product.Note),
+                    RecipeArchive.Format),
+                skipInputValidation: true);
+        }
+
+        await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private async Task WriteCookbooksAsync(

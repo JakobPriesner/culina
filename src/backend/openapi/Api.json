@@ -6636,6 +6636,321 @@
         }
       }
     },
+    "/api/v1/households/{householdId}/products": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "List what a household says its barcodes are",
+        "description": "Every barcode this household, and the households it inherits from, have named, one entry per barcode, the nearest household's when several named it (`householdId` says whose). Not paged: it seeds the offline cache, and a household names hundreds of barcodes at most. Has an `ETag` and answers `304` to a matching `If-None-Match`. This is a mapping from packaging to an ingredient, never what the household has at home.",
+        "operationId": "listHouseholdProductsV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductsProductsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/products/{gtin}": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "Read what a household says a barcode is",
+        "description": "The household's own memory of the barcode, else the nearest household it inherits from (`householdId` in the body says whose). `{gtin}` is the digits of an EAN-8, UPC-A, EAN-13 or GTIN-14, or an eight-digit UPC-E, with a correct check digit; the response carries the normalised form (a UPC-A or UPC-E is padded to 13 digits). 404 `products.unknown` when nobody named it: the caller then asks for a name and PUTs it. Has an `ETag`; send it as `If-Match` to change or remove the household's own row.",
+        "operationId": "getHouseholdProductV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "gtin",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductsProductDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "Say what a barcode is",
+        "description": "Names a barcode for this household, or changes what it said. Without `If-Match` the barcode is being named: 201 with the new `ETag`, or 428 `products.already_named` when this household already has it (two phones naming the same code at once: the later one reads the row and decides). With `If-Match` from a read of the household's own row it is replaced: 200 with the new `ETag`, 412 when the row moved on, 404 `products.unknown` when it is gone. A household that only inherits the barcode names its own row without `If-Match`; the ancestor's is never touched. `{gtin}` is read as for GET and stored normalised. `name` is required; `ingredient`, `quantity` (with `unit`), `cookMinutes` and `note` are optional, and `cookMinutes` is only ever what the household says: a barcode does not supply one. Any member may.",
+        "operationId": "setHouseholdProductV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "gtin",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsSetProductRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductsProductDetail"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductsProductDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "Forget what a barcode is",
+        "description": "Removes this household's own row; a household it inherits from keeps its own, so an heir that removes a row it overrode sees the ancestor's again. Requires `If-Match` with the version you last read (428 without, 412 when the row moved on). 204, also when it is already gone.",
+        "operationId": "removeHouseholdProductV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "gtin",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/households/{householdId}/ingredient-names": {
       "get": {
         "tags": [
@@ -12175,6 +12490,116 @@
         },
         "description": "An RFC 9457 problem document. Branch on `code`; `detail` is prose and will be reworded."
       },
+      "ProductsProductDetail": {
+        "required": [
+          "gtin",
+          "name",
+          "householdId",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "gtin": {
+            "type": "string",
+            "description": "The barcode in its normalised form: digits only, a UPC-A padded to 13."
+          },
+          "name": {
+            "type": "string",
+            "description": "What to show."
+          },
+          "ingredient": {
+            "type": "string",
+            "description": "The ingredient a recipe line or list item is matched by.",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "number",
+            "description": "What the pack holds.",
+            "format": "double",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "description": "The unit of `quantity`.",
+            "nullable": true
+          },
+          "cookMinutes": {
+            "type": "integer",
+            "description": "Minutes the household found it needs.",
+            "format": "int32",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "description": "A line for people.",
+            "nullable": true
+          },
+          "householdId": {
+            "type": "string",
+            "description": "The household whose memory this is: the one asked, or the nearest household it inherits from. Only that\nhousehold changes or removes it.",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "description": "The version of the row, sent back as `If-Match` to change or remove it.",
+            "format": "int64"
+          }
+        },
+        "description": "What a household says a barcode is, as the household's memory holds it."
+      },
+      "ProductsProductsResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductsProductDetail"
+            },
+            "description": "The products by barcode; a barcode more than one household named is the nearest household's."
+          }
+        },
+        "description": "Every barcode a household, and the households it inherits from, have named."
+      },
+      "ProductsSetProductRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "What to show: \"Barilla Spaghetti n.5\". Required, at most 200 characters."
+          },
+          "ingredient": {
+            "type": "string",
+            "description": "The ingredient a recipe line or list item is matched by: \"Spaghetti\". Blank is none; at most 200 characters.",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "number",
+            "description": "What the pack holds, more than 0 and at most 9999999.",
+            "format": "double",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "description": "The unit of `quantity`, written as in a recipe (`g`, `ml`, `pack`); needs a quantity.",
+            "nullable": true
+          },
+          "cookMinutes": {
+            "type": "integer",
+            "description": "Minutes the household found it needs, 1 to 600. A barcode never supplies this; only the household does.",
+            "format": "int32",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "description": "A line for people, at most 500 characters.",
+            "nullable": true
+          }
+        },
+        "description": "What a household says a barcode is."
+      },
       "RecipesCopyRequest": {
         "required": [
           "householdId"
@@ -17448,6 +17873,9 @@
     },
     {
       "name": "Nutrition"
+    },
+    {
+      "name": "Products"
     },
     {
       "name": "Ingredients"

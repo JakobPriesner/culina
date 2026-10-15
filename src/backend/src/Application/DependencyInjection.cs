@@ -27,6 +27,7 @@ using Application.LogRecords.Create;
 using Application.Nutrition;
 using Application.PasswordResets.Create;
 using Application.Planning;
+using Application.Products;
 using Application.Recipes;
 using Application.Recipes.Copy;
 using Application.Recipes.Create;
@@ -212,6 +213,10 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<CreateHouseholdFoodCommand, Contracts.Nutrition.HouseholdFoodDetail>, CreateHouseholdFoodCommandHandler>()
             .AddScoped<ICommandHandler<DeleteHouseholdFoodCommand>, DeleteHouseholdFoodCommandHandler>()
             .AddScoped<IQueryHandler<GetFoodsQuery, Contracts.Nutrition.FoodsResponse>, GetFoodsQueryHandler>()
+            .AddScoped<IQueryHandler<GetProductQuery, Contracts.Products.ProductDetail>, GetProductQueryHandler>()
+            .AddScoped<IQueryHandler<ListProductsQuery, Contracts.Products.ProductsResponse>, ListProductsQueryHandler>()
+            .AddScoped<ICommandHandler<SetProductCommand, Contracts.Products.ProductDetail>, SetProductCommandHandler>()
+            .AddScoped<ICommandHandler<RemoveProductCommand>, RemoveProductCommandHandler>()
             .AddScoped<IQueryHandler<GetShoppingListQuery,
                 Contracts.Shopping.Response>, GetShoppingListQueryHandler>()
             .AddScoped<ICommandHandler<AddShoppingItemCommand,
