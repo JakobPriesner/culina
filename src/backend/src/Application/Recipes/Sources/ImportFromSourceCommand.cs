@@ -123,7 +123,7 @@ internal sealed class ImportFromSourceCommandHandler(
     {
         var now = time.GetUtcNow();
 
-        return await CookbookName.Create(ShelfName(source, now)).Match(
+        return await CookbookName.Create(ShelfName(source.Label, now)).Match(
             async name => await unitOfWork.InTransactionAsync(
                     async token => await Cookbook
                         .Create(source.HouseholdId, name, ShelfDescription(source), userId, now)
@@ -156,11 +156,11 @@ internal sealed class ImportFromSourceCommandHandler(
                 : CookbookErrors.NotFound(cookbookId));
     }
 
-    // The date tells two imports apart. Invariant rather than localised: the name is stored and read by the
-    // whole household in any language.
-    private static string ShelfName(RecipeSource source, DateTimeOffset now) =>
+    // The date tells two imports apart. A numeric ISO date rather than a localised one: the name is stored
+    // and read by the whole household in any language, and a month name would be English to all of them.
+    internal static string ShelfName(string label, DateTimeOffset now) =>
         Truncate(
-            $"{source.Label} · {now.UtcDateTime.ToString("d MMMM yyyy", CultureInfo.InvariantCulture)}",
+            $"{label} · {now.UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}",
             CookbookName.MaxLength);
 
     private static string ShelfDescription(RecipeSource source) =>
