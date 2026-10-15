@@ -1558,7 +1558,7 @@
   "kitchen.short": "Küche",
   "cooking.autoScroll.start": "Auto-Scroll",
   "cooking.autoScroll.stop": "Scrollen stoppen",
-  "cooking.autoScroll.hint": "Auto-Scroll bewegt lange Schritte langsam nach unten und wieder nach oben, mit einer Pause an beiden Enden. Berühre das Rezept oder scrolle selbst, um zu stoppen. Bei reduzierter Bewegung werden überlappende Abschnitte ohne Animation gezeigt.",
+  "cooking.autoScroll.hint": "Auto-Scroll führt langsam durch lange Schritte und hält an beiden Enden kurz an. Tippe auf das Rezept oder scrolle selbst, um es anzuhalten.",
   "notAllowed.ticket.order": "Bestellung #403",
   "notAllowed.ticket.table": "Tisch: Einstellungen",
   "notAllowed.ticket.chef": "Nur für die Küchenleitung",

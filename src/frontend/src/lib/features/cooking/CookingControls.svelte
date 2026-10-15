@@ -142,9 +142,11 @@
               <rect x="7" y="7" width="10" height="10" rx="2" />
             </svg>
           {:else}
+            <!-- A page with an arrow running down and back up it: the page moving by itself, not a download (an arrow into a tray). -->
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="5" y="3" width="14" height="18" rx="3" />
               <path
-                d="M12 4v13m-5-5 5 5 5-5M6 21h12"
+                d="M12 7.5v9m-2.5-6.5 2.5-2.5 2.5 2.5m-5 4 2.5 2.5 2.5-2.5"
                 stroke-linecap="round"
                 stroke-linejoin="round"
               />
