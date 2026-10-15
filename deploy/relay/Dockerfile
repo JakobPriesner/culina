@@ -8,6 +8,8 @@ WORKDIR /src
 # The build applies the repository's style rules as errors, so it needs them.
 COPY .editorconfig ./
 COPY src/backend/Directory.Build.props src/backend/Directory.Packages.props src/backend/global.json ./
+# Names the runtimes the lock file was restored for; without it the locked restore refuses.
+COPY src/backend/src/Directory.Build.props src/
 COPY src/backend/src/Relay/Relay.csproj src/backend/src/Relay/packages.lock.json src/Relay/
 
 RUN dotnet restore src/Relay/Relay.csproj --locked-mode
