@@ -46,13 +46,13 @@ function serverAnswers(searches: ReturnType<typeof saved>[] = []) {
   );
 }
 
-function show(view: RecipeQuery, savable = true) {
+function show(view: RecipeQuery, savable = true, ranks = false) {
   return renderWithProviders(LibraryToolbar, {
     props: {
       id: 'search',
       householdId: household,
       view,
-      context: { searching: false, ranks: false, inACookbook: false },
+      context: { searching: false, ranks, inACookbook: false },
       searchLabel: 'Search recipes',
       searchPlaceholder: 'Recipe or ingredient',
       savable
@@ -64,6 +64,9 @@ beforeEach(() => {
   savedSearches.reset();
   tags.reset();
   vi.unstubAllGlobals();
+  HTMLDialogElement.prototype.showModal = function showModal(this: HTMLDialogElement) {
+    this.open = true;
+  };
 });
 
 describe('the library toolbar', () => {
@@ -81,6 +84,18 @@ describe('the library toolbar', () => {
 
     // The words are visible in the box already; a badge counting them would say "1" over an empty panel.
     expect(screen.getByRole('button', { name: /Filter \(2\)/ })).toBeInTheDocument();
+  });
+
+  it('opens the sheet on the order the list is in when none was chosen', async () => {
+    serverAnswers();
+
+    show(new RecipeQuery(), true, true);
+    await settle();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Filter' }));
+
+    expect(screen.getByRole('radio', { name: 'Recently updated' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: 'For tonight' })).not.toBeChecked();
   });
 
   it('takes a filter off from the chip that shows it', async () => {
