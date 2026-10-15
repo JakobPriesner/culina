@@ -4,12 +4,13 @@
   /** A trigger and a menu with a heading, a button and a link. */
   interface Props {
     onchoose: () => void;
+    sheetOnPhone?: boolean;
   }
 
-  let { onchoose }: Props = $props();
+  let { onchoose, sheetOnPhone = false }: Props = $props();
 </script>
 
-<ActionMenu>
+<ActionMenu {sheetOnPhone}>
   {#snippet trigger({ popovertarget })}
     <button type="button" {popovertarget}>Open</button>
   {/snippet}

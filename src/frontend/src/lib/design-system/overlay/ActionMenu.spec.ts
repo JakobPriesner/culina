@@ -45,4 +45,22 @@ describe('an action menu', () => {
 
     expect(hidden).not.toHaveBeenCalled();
   });
+
+  it('is a sheet along the bottom on a phone only when asked, and stays beside its trigger otherwise', () => {
+    // jsdom has no layout: the media query is answered here, as a phone's would be.
+    vi.stubGlobal('matchMedia', (query: string) => ({
+      matches: query.includes('width < 40rem'),
+      media: query,
+      addEventListener: () => {},
+      removeEventListener: () => {}
+    }));
+
+    const asked = render(ActionMenuHarness, { onchoose: vi.fn(), sheetOnPhone: true });
+    const plain = render(ActionMenuHarness, { onchoose: vi.fn() });
+
+    expect(asked.container.querySelector('[popover]')).toHaveClass('sheet');
+    expect(plain.container.querySelector('[popover]')).not.toHaveClass('sheet');
+
+    vi.unstubAllGlobals();
+  });
 });
