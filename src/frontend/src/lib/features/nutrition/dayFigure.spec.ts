@@ -34,6 +34,19 @@ describe('what one person has on a planned day', () => {
     expect(plain(words)).toBe('1,150 kcal per person');
   });
 
+  it('leaves out and names a meal whose figure is mostly missing, rather than adding its floor', () => {
+    const chili = answer(184, { atLeast: true });
+    const words = dayWords([
+      meal('Chili', {
+        ...chili,
+        values: { energyKcal: { value: 184, atLeast: true, mostlyMissing: true } }
+      } as Nutrition),
+      meal('Pasta', answer(700))
+    ]);
+
+    expect(plain(words)).toBe('at least 700 kcal per person · without Chili');
+  });
+
   it('is a lower bound when a part is, and rounds down', () => {
     const words = dayWords([
       meal('Soup', answer(450.6, { atLeast: true })),

@@ -4170,6 +4170,11 @@ export interface components {
              *     so the figure is partly an estimate. Always sent; a client written before this field may ignore it.
              */
             estimated?: boolean;
+            /**
+             * @description True when lines of unknown food weigh more than everything counted, so `value` is too far below
+             *     the real value to show as a figure. Implies `atLeast`. Always sent; an older client may ignore it.
+             */
+            mostlyMissing?: boolean;
         };
         /** @description The label values of one portion or piece. */
         RecipesGetNutritionNutritionValues: {

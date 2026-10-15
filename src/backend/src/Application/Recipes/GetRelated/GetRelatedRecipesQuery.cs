@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Households;
+using Application.Recipes.GetNutrition;
 using Application.Telemetry;
 using Contracts.Recipes.GetRelated;
 using Domain.Search;
@@ -79,7 +80,7 @@ internal sealed class GetRelatedRecipesQueryHandler(
                 items = [.. items.Select(item => item with
                 {
                     Calories = figures.TryGetValue(item.RecipeId, out var energy)
-                        ? new Contracts.Recipes.GetNutrition.NutritionValue { Value = energy.Value, AtLeast = energy.AtLeast, Estimated = energy.Estimated }
+                        ? energy.ToContract()
                         : null
                 })];
 

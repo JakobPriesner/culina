@@ -70,6 +70,12 @@ public sealed record NutritionValue
     /// so the figure is partly an estimate. Always sent; a client written before this field may ignore it.
     /// </summary>
     public bool Estimated { get; init; }
+
+    /// <summary>
+    /// True when lines of unknown food weigh more than everything counted, so <c>value</c> is too far below
+    /// the real value to show as a figure. Implies <c>atLeast</c>. Always sent; an older client may ignore it.
+    /// </summary>
+    public bool MostlyMissing { get; init; }
 }
 
 /// <summary>What became of one ingredient line.</summary>

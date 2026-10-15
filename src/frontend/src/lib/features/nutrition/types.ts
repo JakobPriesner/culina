@@ -18,6 +18,8 @@ export interface NutritionValue {
   readonly value: number;
   /** A lower bound: something left out, or a food without this value, could only have added to it. */
   readonly atLeast: boolean;
+  /** Unknown food outweighs everything counted: the bound is too far below the real value to show. */
+  readonly mostlyMissing?: boolean;
 }
 
 export interface NutritionValues {

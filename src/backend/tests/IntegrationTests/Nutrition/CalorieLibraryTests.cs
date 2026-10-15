@@ -64,6 +64,25 @@ public class CalorieLibraryTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task DetailAndCards_ShouldSayTheFigureIsMostlyMissing_WhenUnknownFoodOutweighsWhatWasCounted()
+    {
+        var kitchen = await Kitchen.OpenAsync(postgres);
+        var mostly = await RecipeAsync(kitchen, "Mostly unknown", 50m, unknown: true);
+        var partly = await RecipeAsync(kitchen, "Partly unknown", 300m, unknown: true);
+
+        var browse = await kitchen.Client.GetAsync($"/api/v1/recipes?householdId={kitchen.HouseholdId}", Token);
+        foreach (var (id, expected) in new[] { (mostly, true), (partly, false) })
+        {
+            var detail = await kitchen.Client.GetAsync($"/api/v1/recipes/{id}/nutrition", Token);
+            var energy = detail.Json!.Value.GetProperty("values").GetProperty("energyKcal");
+            var card = Items(browse).Single(item => item.GetProperty("recipeId").GetGuid() == id);
+            Assert.True(energy.GetProperty("atLeast").GetBoolean());
+            Assert.Equal(expected, energy.GetProperty("mostlyMissing").GetBoolean());
+            Assert.Equal(expected, card.GetProperty("calories").GetProperty("mostlyMissing").GetBoolean());
+        }
+    }
+
+    [Fact]
     public async Task Filter_ShouldFollowTheReadingHouseholdsCorrections_AndRecipeEdits()
     {
         var kitchen = await Kitchen.OpenAsync(postgres);

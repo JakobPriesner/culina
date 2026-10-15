@@ -1679,6 +1679,8 @@
   "nutrition.calories.lowerBound": "This is a minimum: some ingredients could not be included. The complete recipe may contain more calories.",
   "nutrition.calories.calculated": "Calculated from the ingredient amounts and food reference values.",
   "nutrition.calories.estimated": "Includes estimated ingredient weights.",
+  "nutrition.calories.mostlyMissing": "calories incomplete",
+  "nutrition.calories.mostlyMissingWhy": "Ingredients without known values weigh more than everything counted, so no number is shown. In the recipe, choose matching foods under “Show details”.",
   "filters.calories": "Calories",
   "filters.calories.hint": "Maximum per serving or piece. Values with missing calorie information are excluded.",
   "filters.calories.any": "Any calories",
