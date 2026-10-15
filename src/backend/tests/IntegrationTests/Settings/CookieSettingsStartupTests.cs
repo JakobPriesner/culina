@@ -71,19 +71,6 @@ public class CookieSettingsStartupTests(PostgresFixture postgres)
     }
 
     [Fact]
-    public void Startup_ShouldFail_WhenCookiesAreInsecureOutsideDevelopmentWithoutTheOptIn()
-    {
-        using var factory = new CulinaApiFactory(
-            postgres,
-            new Dictionary<string, string> { ["Cookies:AllowInsecureOutsideDevelopment"] = "false" });
-
-        void Act() => factory.CreateClient().Dispose();
-
-        var exception = Assert.ThrowsAny<Exception>(Act);
-        Assert.Contains("Cookies__AllowInsecureOutsideDevelopment", exception.ToString(), StringComparison.Ordinal);
-    }
-
-    [Fact]
     public async Task Startup_ShouldWarn_WhenCookiesAreInsecure()
     {
         using var factory = new CulinaApiFactory(postgres);

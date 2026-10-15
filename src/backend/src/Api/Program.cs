@@ -12,44 +12,58 @@ using Infrastructure.Settings;
 
 // Bootstrap settings are read once and immutable, so a saved change applies by rebuilding the host
 // in this loop. See IHostRestart.
-while (true)
+//
+// A failure is said and exited, not thrown: in the chiseled image an unhandled exception here printed its
+// stack trace and then left the process at 99% CPU with the container still up, so nothing restarted it.
+try
 {
-    var builder = WebApplication.CreateBuilder(args);
-
-    // Health probe: makes one HTTP request and exits, before anything else is configured.
-    if (HealthCheckProbe.Requested(args))
+    while (true)
     {
-        return await HealthCheckProbe.RunAsync(builder.Configuration).ConfigureAwait(false);
+        var builder = WebApplication.CreateBuilder(args);
+
+        // Health probe: makes one HTTP request and exits, before anything else is configured.
+        if (HealthCheckProbe.Requested(args))
+        {
+            return await HealthCheckProbe.RunAsync(builder.Configuration).ConfigureAwait(false);
+        }
+
+        // Above appsettings.json, below the environment. See IServerConfiguration.
+        builder.Configuration.AddServerConfigurationFile();
+
+        // The export starts the host but must not take the app's port; port 0 is any free one.
+        if (OpenApiExport.Requested(args))
+        {
+            builder.WebHost.UseUrls("http://127.0.0.1:0");
+        }
+
+        // No database configured yet: serve only the setup screen.
+        var app = builder.Configuration.IsDatabaseConfigured() ? BuildCulina(builder) : BuildSetup(builder);
+
+        // After the endpoints are mapped, since the document is built by enumerating them.
+        if (OpenApiExport.Requested(args))
+        {
+            await OpenApiExport.WriteAsync(app, args).ConfigureAwait(false);
+
+            return 0;
+        }
+
+        var restart = app.Services.GetRequiredService<HostRestart>();
+
+        await app.RunAsync().ConfigureAwait(false);
+
+        if (!restart.Requested)
+        {
+            return 0;
+        }
     }
+}
+#pragma warning disable CA1031 // Every failure to start is the same to an orchestrator: exit non-zero.
+catch (Exception exception)
+#pragma warning restore CA1031
+{
+    await Console.Error.WriteLineAsync($"Culina failed to start: {exception}").ConfigureAwait(false);
 
-    // Above appsettings.json, below the environment. See IServerConfiguration.
-    builder.Configuration.AddServerConfigurationFile();
-
-    // The export starts the host but must not take the app's port; port 0 is any free one.
-    if (OpenApiExport.Requested(args))
-    {
-        builder.WebHost.UseUrls("http://127.0.0.1:0");
-    }
-
-    // No database configured yet: serve only the setup screen.
-    var app = builder.Configuration.IsDatabaseConfigured() ? BuildCulina(builder) : BuildSetup(builder);
-
-    // After the endpoints are mapped, since the document is built by enumerating them.
-    if (OpenApiExport.Requested(args))
-    {
-        await OpenApiExport.WriteAsync(app, args).ConfigureAwait(false);
-
-        return 0;
-    }
-
-    var restart = app.Services.GetRequiredService<HostRestart>();
-
-    await app.RunAsync().ConfigureAwait(false);
-
-    if (!restart.Requested)
-    {
-        return 0;
-    }
+    return 1;
 }
 
 static WebApplication BuildCulina(WebApplicationBuilder builder)
