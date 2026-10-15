@@ -11,6 +11,8 @@
   import ShoppingListSkeleton from '$features/shopping/ShoppingListSkeleton.svelte';
   import ShoppingRecipePicker from '$features/shopping/ShoppingRecipePicker.svelte';
   import ShoppingSection from '$features/shopping/ShoppingSection.svelte';
+  import { groupsToBuy } from '$features/shopping/lineRuns';
+  import { createLingering } from '$features/shopping/lingering.svelte';
   import { trackShopFinished } from '$features/shopping/shopFinished.svelte';
   import { shopping, type ShoppingItem } from '$features/shopping/stores/shopping.svelte';
   import { asDate } from '$features/planning/mealPlan.svelte';
@@ -58,8 +60,37 @@
     );
   }
 
-  const check = (item: ShoppingItem, checked: boolean) =>
-    householdId && shopping.check(householdId, item.itemId, checked);
+  const lingering = createLingering();
+
+  const toBuy = $derived(groupsToBuy(shopping.items, lingering.ids));
+  const bought = $derived(shopping.bought.filter((item) => !lingering.ids.includes(item.itemId)));
+
+  /** The last tick's Undo; a new tick replaces it, so ticking through a shop does not stack messages. */
+  let tickToast: string | null = null;
+
+  function check(item: ShoppingItem, checked: boolean) {
+    const household = householdId;
+
+    if (!household) {
+      return;
+    }
+
+    if (checked) {
+      lingering.hold(item.itemId);
+
+      if (tickToast) toaster.dismiss(tickToast);
+      tickToast = toaster.show({
+        message: () => m['shopping.ticked']({ name: item.name }),
+        action: {
+          label: m['shopping.ticked.undo'],
+          run: () => void shopping.check(household, item.itemId, false)
+        },
+        durationMs: 4000
+      });
+    }
+
+    void shopping.check(household, item.itemId, checked);
+  }
 
   const remove = (item: ShoppingItem) => householdId && shopping.remove(householdId, item.itemId);
 
@@ -119,7 +150,7 @@
       {/snippet}
     </EmptyState>
   {:else}
-    {#each shopping.toBuy as group (group.section)}
+    {#each toBuy as group (group.section)}
       <ShoppingSection
         label={nameOf(group.section)}
         count={group.items.length}
@@ -134,12 +165,12 @@
       <ShoppingFinishedNote celebrate={shop.justFinished} />
     {/if}
 
-    {#if shopping.bought.length > 0}
+    {#if bought.length > 0}
       <ShoppingSection
         apart
         label={m['shopping.completed']()}
-        count={shopping.bought.length}
-        items={shopping.bought}
+        count={bought.length}
+        items={bought}
         oncheck={check}
         onremove={remove}
         onmove={(item, section) => void move(item, section)}

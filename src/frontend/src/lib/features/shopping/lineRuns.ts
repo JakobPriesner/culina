@@ -1,4 +1,5 @@
-import type { ShoppingItem } from './stores/shopping.svelte';
+import { sectionOrder } from './sections';
+import type { SectionGroup, ShoppingItem } from './stores/shopping.svelte';
 
 /*
  * Lines of one thing the server keeps apart, because their units cannot be added ("1 Prise Salz",
@@ -19,4 +20,22 @@ export function endsItsName(items: readonly ShoppingItem[], index: number): bool
   const next = items[index + 1];
 
   return next === undefined || nameKey(next) !== nameKey(items[index]!);
+}
+
+/**
+ * What is still to buy, by section in shop order, same names together; `keep` names ticked lines that
+ * stay where they were for a moment, so the list does not move under the thumb that ticked one.
+ */
+export function groupsToBuy(
+  items: readonly ShoppingItem[],
+  keep: readonly string[] = []
+): SectionGroup[] {
+  const remaining = items.filter((item) => !item.isChecked || keep.includes(item.itemId));
+
+  return sectionOrder
+    .map((section) => ({
+      section,
+      items: togetherByName(remaining.filter((item) => item.section === section))
+    }))
+    .filter((group) => group.items.length > 0);
 }
