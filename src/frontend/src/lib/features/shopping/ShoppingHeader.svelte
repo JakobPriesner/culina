@@ -1,11 +1,10 @@
 <script lang="ts">
   import { m } from '$shell/i18n';
+  /** What is left says how the shop is going; done-of-total is the progress bar's to show, not a second line of numbers. */
   interface Props {
     remaining: number;
-    done: number;
-    total: number;
   }
-  let { remaining, done, total }: Props = $props();
+  let { remaining }: Props = $props();
 </script>
 
 <header class="head">
@@ -14,7 +13,6 @@
     <p>
       {remaining > 0 ? m['shopping.remaining']({ count: remaining }) : m['shopping.subtitle']()}
     </p>
-    {#if total > 0}<p>{m['shopping.progress']({ done, total })}</p>{/if}
   </div>
 </header>
 

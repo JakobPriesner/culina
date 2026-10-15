@@ -28,6 +28,11 @@ describe('the shared quantity labels', () => {
     expect(show(1, 'can')).not.toBe(show(2, 'can').replace('2', '1'));
   });
 
+  it('pluralise a pinch too, because "3 Prise" is not German either', () => {
+    expect(show(1, 'pinch')).toBe('1\u00a0pinch');
+    expect(show(3, 'pinch')).toBe('3\u00a0pinches');
+  });
+
   it('give a word or a short form to every unit but the bare count', () => {
     // A unit that renders as nothing silently drops information: `600` on a shopping list is no amount.
     for (const unit of builtInUnits.filter((candidate) => candidate !== 'piece')) {

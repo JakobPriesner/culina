@@ -15,7 +15,7 @@ const unitNames: Partial<Record<Named, readonly [one: () => string, many: () => 
   // Spoons are abbreviated differently per language (EL/TL vs tbsp/tsp); neither pluralises.
   tsp: [m['units.tsp'], m['units.tsp']],
   tbsp: [m['units.tbsp'], m['units.tbsp']],
-  pinch: [m['units.pinch'], m['units.pinch']],
+  pinch: [m['units.pinch'], m['units.pinches']],
   clove: [m['units.clove'], m['units.cloves']],
   bunch: [m['units.bunch'], m['units.bunches']],
   slice: [m['units.slice'], m['units.slices']],

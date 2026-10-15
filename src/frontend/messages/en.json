@@ -204,6 +204,7 @@
   "editor.new": "New recipe",
   "editor.title": "Title",
   "editor.titleHint": "The only thing a recipe needs. Everything else can wait.",
+  "units.pinches": "pinches",
   "editor.description": "Introduction",
   "editor.yieldAmount": "Makes",
   "editor.prepMinutes": "Hands-on minutes",

@@ -47,6 +47,6 @@ describe('the amount to buy', () => {
   });
 
   it('keeps a pinch a pinch', () => {
-    expect(shown(2, 'pinch')).toBe('2 pinch');
+    expect(shown(2, 'pinch')).toBe('2 pinches');
   });
 });
