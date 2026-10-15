@@ -173,9 +173,11 @@
     cursor: pointer;
   }
 
-  .empty:hover {
-    background: var(--surface-hover);
-    color: var(--text-muted);
+  @media (hover: hover) {
+    .empty:hover {
+      background: var(--surface-hover);
+      color: var(--text-muted);
+    }
   }
 
   .empty svg {
@@ -201,8 +203,10 @@
     cursor: pointer;
   }
 
-  .action:hover {
-    color: var(--text);
+  @media (hover: hover) {
+    .action:hover {
+      color: var(--text);
+    }
   }
 
   @media print {

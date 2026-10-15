@@ -192,8 +192,10 @@
     text-decoration: none;
   }
 
-  .recipe-return:hover {
-    color: var(--accent-hover);
+  @media (hover: hover) {
+    .recipe-return:hover {
+      color: var(--accent-hover);
+    }
   }
 
   .tools {

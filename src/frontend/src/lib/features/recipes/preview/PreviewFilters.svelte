@@ -66,9 +66,11 @@
     cursor: pointer;
   }
 
-  .filters button:hover {
-    background: var(--surface-hover);
-    color: var(--text);
+  @media (hover: hover) {
+    .filters button:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
   }
 
   .filters button.active {

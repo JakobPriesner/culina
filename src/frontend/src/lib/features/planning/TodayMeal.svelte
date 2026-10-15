@@ -82,8 +82,10 @@
       transform var(--duration-fast) var(--ease-out);
   }
 
-  .today:hover {
-    background: var(--surface-highlight);
+  @media (hover: hover) {
+    .today:hover {
+      background: var(--surface-highlight);
+    }
   }
 
   .today:active {

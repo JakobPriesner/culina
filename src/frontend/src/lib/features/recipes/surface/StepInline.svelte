@@ -164,11 +164,18 @@
   }
 
   /* Pointed at (here or from the ingredient list) the stroke fills the words, not a ring that would read as focus; the open quick look stays lit. */
-  .ingredient:hover,
   .ingredient.is-highlighted {
     background-size: 100% 100%;
     transition-duration: var(--duration-fast);
     transition-timing-function: var(--ease-out);
+  }
+
+  @media (hover: hover) {
+    .ingredient:hover {
+      background-size: 100% 100%;
+      transition-duration: var(--duration-fast);
+      transition-timing-function: var(--ease-out);
+    }
   }
 
   .ingredient-plain {

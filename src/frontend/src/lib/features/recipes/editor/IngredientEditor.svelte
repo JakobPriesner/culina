@@ -278,9 +278,11 @@
     border-top: 1px solid var(--border);
   }
 
-  .more:hover {
-    background: var(--surface-hover);
-    color: var(--text);
+  @media (hover: hover) {
+    .more:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
   }
 
   .none {

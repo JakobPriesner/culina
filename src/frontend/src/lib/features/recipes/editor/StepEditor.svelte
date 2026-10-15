@@ -120,9 +120,11 @@
       color var(--duration-fast) var(--ease-out);
   }
 
-  .add:hover {
-    background: var(--surface-hover);
-    color: var(--text);
+  @media (hover: hover) {
+    .add:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
   }
 
   .plus {

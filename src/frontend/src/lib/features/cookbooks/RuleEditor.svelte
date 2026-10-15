@@ -192,7 +192,9 @@
     cursor: pointer;
   }
 
-  .chosen button:hover {
-    border-color: var(--border-strong);
+  @media (hover: hover) {
+    .chosen button:hover {
+      border-color: var(--border-strong);
+    }
   }
 </style>

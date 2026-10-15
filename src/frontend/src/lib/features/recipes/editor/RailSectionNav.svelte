@@ -61,9 +61,11 @@
         background-color var(--duration-fast) var(--ease-out);
     }
 
-    .section:hover {
-      background: var(--surface-hover);
-      color: var(--text);
+    @media (hover: hover) {
+      .section:hover {
+        background: var(--surface-hover);
+        color: var(--text);
+      }
     }
 
     .section.selected {

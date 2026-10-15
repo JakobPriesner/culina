@@ -74,8 +74,10 @@
     padding: var(--space-1) var(--space-2);
     text-decoration: none;
   }
-  a:hover {
-    background: var(--surface-sunken);
+  @media (hover: hover) {
+    a:hover {
+      background: var(--surface-sunken);
+    }
   }
   .dot {
     width: 0.45rem;

@@ -123,8 +123,10 @@
       transform var(--duration-fast) var(--ease-out);
   }
 
-  .chip:hover {
-    background: var(--surface-highlight);
+  @media (hover: hover) {
+    .chip:hover {
+      background: var(--surface-highlight);
+    }
   }
 
   .chip:active {

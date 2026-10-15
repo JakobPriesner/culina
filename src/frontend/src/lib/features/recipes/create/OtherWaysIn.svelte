@@ -148,9 +148,11 @@
       transform var(--duration-fast) var(--ease-out);
   }
 
-  .way:hover {
-    border-color: var(--border-strong);
-    background: var(--surface-raised);
+  @media (hover: hover) {
+    .way:hover {
+      border-color: var(--border-strong);
+      background: var(--surface-raised);
+    }
   }
 
   .way:active {
