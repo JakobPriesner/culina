@@ -66,6 +66,12 @@ describe('the ingredient panel', () => {
     expect(names(panel.panel)).toEqual(['flour']);
   });
 
+  it('holds the whole list while cooking a lone step, since that step is the whole method', () => {
+    const panel = panelFor([step('a', ['butter'])], true, 0);
+
+    expect(names(panel.panel)).toEqual(['butter', 'flour', 'salt']);
+  });
+
   it('remembers the arrangement for the next recipe', () => {
     panelFor([step('a', ['butter'])]).choose('perStep');
 
