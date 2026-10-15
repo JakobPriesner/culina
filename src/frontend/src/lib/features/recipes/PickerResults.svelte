@@ -1,6 +1,8 @@
 <script lang="ts">
+  import { Image } from '$ds';
   import { m } from '$shell/i18n';
 
+  import { imageUrl } from './recipeImage';
   import { metaLineFor } from './recipeMeta';
   import type { RecipeSummary } from './types';
 
@@ -36,14 +38,25 @@
             {/if}
           </span>
         {/if}
-        <span class="title">{recipe.title}</span>
-        {#if isTaken && notes?.has(recipe.id)}
-          <span class="meta note">{notes.get(recipe.id)}</span>
-        {:else if isTaken}
-          <span class="meta taken">{m['picker.taken']()}</span>
-        {:else}
-          <span class="meta">{metaLineFor(recipe)}</span>
-        {/if}
+        <!-- A photo finds a dish faster than its name; the row keeps one shape, its facts always under the title. -->
+        <span class="thumb">
+          <Image
+            src={recipe.imageId ? imageUrl(recipe.id, 400, recipe.imageId) : undefined}
+            alt=""
+            ratio={1}
+            loading="lazy"
+          />
+        </span>
+        <span class="words">
+          <span class="title">{recipe.title}</span>
+          {#if isTaken && notes?.has(recipe.id)}
+            <span class="meta note">{notes.get(recipe.id)}</span>
+          {:else if isTaken}
+            <span class="meta taken">{m['picker.taken']()}</span>
+          {:else if metaLineFor(recipe)}
+            <span class="meta">{metaLineFor(recipe)}</span>
+          {/if}
+        </span>
       </button>
     </li>
   {/each}
@@ -67,13 +80,11 @@
 
   .results button {
     display: flex;
-    align-items: baseline;
-    flex-wrap: wrap;
+    align-items: center;
     min-height: var(--control-sm);
-    justify-content: space-between;
-    gap: var(--space-4);
+    gap: var(--space-3);
     width: 100%;
-    padding: var(--space-3);
+    padding: var(--space-2) var(--space-3);
     border: 0;
     border-radius: var(--radius-sm);
     background: none;
@@ -89,10 +100,20 @@
     }
   }
 
+  .thumb {
+    flex: 0 0 2.75rem;
+  }
+
+  .words {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-width: 0;
+  }
+
   .meta {
     color: var(--text-muted);
     font-size: var(--text-sm);
-    white-space: nowrap;
   }
 
   .note {
@@ -106,15 +127,6 @@
   }
 
   /* The leading mark lets a column of toggles be scanned for what is already taken. */
-  .results .toggle {
-    align-items: center;
-    justify-content: flex-start;
-    gap: var(--space-3);
-  }
-
-  .toggle .title {
-    flex: 1 1 auto;
-  }
 
   .tick {
     display: inline-grid;
