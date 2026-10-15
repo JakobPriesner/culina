@@ -4,6 +4,7 @@
   import { m } from '$shell/i18n';
 
   import {
+    effectiveSort,
     sortsFor,
     timeCeilings,
     calorieCeilings,
@@ -44,15 +45,11 @@
 
   /**
    * The resolved order, not the stored null: radios with none chosen would say the list has no
-   * order.
+   * order. Resolved as the list resolves it, so the sheet and the list name the same order.
    */
-  const chosen = $derived(view.sort ?? defaultOf(orders));
+  const chosen = $derived(effectiveSort(view.sort, context));
 
   const ceilings = $derived<readonly (number | null)[]>([null, ...timeCeilings]);
-
-  function defaultOf(available: readonly RecipeSort[]): RecipeSort {
-    return available[0] ?? 'recent';
-  }
 
   function chooseSort(value: string) {
     view.sort = value as RecipeSort;
