@@ -26,6 +26,18 @@ internal sealed partial class RecipeSourceTokenEncryption(
         {
             var executor = scope.ServiceProvider.GetRequiredService<DbExecutor>();
 
+            // The usual boot: nothing is plain, so one cheap check and no row is read or written.
+            var anyPlain = await executor.ExecuteScalarAsync<bool>(
+                    "select exists(select 1 from recipe_sources where not secret_protected);",
+                    null,
+                    cancellationToken)
+                .ConfigureAwait(false);
+
+            if (!anyPlain)
+            {
+                return;
+            }
+
             var plain = await executor.QueryAsync<PlainToken>(
                     "select id, secret from recipe_sources where not secret_protected;",
                     null,
@@ -44,10 +56,7 @@ internal sealed partial class RecipeSourceTokenEncryption(
                     .ConfigureAwait(false);
             }
 
-            if (plain.Count > 0)
-            {
-                LogEncrypted(logger, plain.Count);
-            }
+            LogEncrypted(logger, plain.Count);
         }
     }
 

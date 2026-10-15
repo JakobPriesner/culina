@@ -123,4 +123,36 @@ public class PlanningWeekTests
 
         Assert.Equal(DateOnly.Parse(expected, null), monday);
     }
+
+    [Fact]
+    public void IsPlannable_ShouldAcceptOrdinaryDays_AndRefuseTheEdgesOfTheCalendar()
+    {
+        Assert.True(PlanningWeek.IsPlannable(new DateOnly(2026, 9, 17)));
+        Assert.True(PlanningWeek.IsPlannable(PlanningWeek.Earliest));
+        Assert.True(PlanningWeek.IsPlannable(PlanningWeek.Latest));
+
+        Assert.False(PlanningWeek.IsPlannable(DateOnly.MinValue));
+        Assert.False(PlanningWeek.IsPlannable(PlanningWeek.Earliest.AddDays(-1)));
+        Assert.False(PlanningWeek.IsPlannable(PlanningWeek.Latest.AddDays(1)));
+        Assert.False(PlanningWeek.IsPlannable(DateOnly.MaxValue));
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void StartOfWeekContaining_ShouldStayOnTheCalendar_ForEveryPlannableDayAtEitherEnd(bool atTheEnd)
+    {
+        var edge = atTheEnd ? PlanningWeek.Latest : PlanningWeek.Earliest;
+
+        for (var offset = 0; offset < 7; offset++)
+        {
+            var day = atTheEnd ? edge.AddDays(-offset) : edge.AddDays(offset);
+
+            var monday = PlanningWeek.StartOfWeekContaining(day);
+
+            Assert.Equal(DayOfWeek.Monday, monday.DayOfWeek);
+            // A week is read as the seven days after its Monday, as the repository does.
+            _ = monday.AddDays(7);
+        }
+    }
 }

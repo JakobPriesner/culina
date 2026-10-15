@@ -55,6 +55,12 @@ internal sealed class SavedSearchRepository(DbExecutor executor) : ISavedSearchR
         return row is null ? SavedSearchErrors.NotFound(searchId) : ToSearch(row);
     }
 
+    public Task<int> CountAsync(Guid householdId, CancellationToken cancellationToken) =>
+        executor.ExecuteScalarAsync<int>(
+            "select count(*)::int from saved_searches where household_id = @householdId;",
+            new { householdId },
+            cancellationToken);
+
     public async Task<IReadOnlyList<SavedSearch>> ListAsync(
         Guid householdId,
         CancellationToken cancellationToken)

@@ -1,4 +1,5 @@
 import { http, request, type AppError } from '$api';
+import { ResetEpoch, removeUndoable } from '$shell/optimistic';
 import type { LoadStatus } from '$shell/stores';
 
 import type { ConnectedSource } from '../types';
@@ -26,6 +27,7 @@ export class Connections {
    * reactive state it writes would re-trigger it forever. Claimed before the request so two mounts ask once.
    */
   #listedFor: string | null = null;
+  #epoch = new ResetEpoch();
 
   #connecting = $state(false);
   #connectError = $state<AppError | null>(null);
@@ -125,24 +127,26 @@ export class Connections {
 
   /** Forgets a connection. Everything it brought over stays. */
   async disconnect(sourceId: string): Promise<void> {
-    const before = this.#items;
+    const gone = removeUndoable(this.#items, (one) => one.sourceId === sourceId);
+    const putBack = this.#epoch.guard(() => (this.#items = gone.undo(this.#items)));
 
     this.#disconnectError = null;
 
     // Optimistic: the answer is 204 even for an already-gone source.
-    this.#items = this.#items.filter((one) => one.sourceId !== sourceId);
+    this.#items = gone.items;
 
     const result = await request(() =>
       http.DELETE('/api/v1/recipe-sources/{sourceId}', { params: { path: { sourceId } } })
     );
 
     if (!result.ok) {
-      this.#items = before;
+      putBack();
       this.#disconnectError = result.error;
     }
   }
 
   reset(): void {
+    this.#epoch.bump();
     this.#items = [];
     this.#listedFor = null;
     this.#status = 'idle';

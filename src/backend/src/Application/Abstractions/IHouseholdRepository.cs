@@ -41,6 +41,15 @@ public interface IHouseholdRepository
         CancellationToken cancellationToken);
 
     /// <summary>
+    /// The household followed by every household it inherits from, nearest first, in one query; empty
+    /// when the user is not a member of it.
+    /// </summary>
+    Task<IReadOnlyList<Guid>> LibraryOfMemberAsync(
+        Guid householdId,
+        Guid userId,
+        CancellationToken cancellationToken);
+
+    /// <summary>
     /// Every household that sees this one's recipes, directly or through others, nearest first.
     /// </summary>
     Task<IReadOnlyList<Heir>> HeirsAsync(Guid householdId, CancellationToken cancellationToken);

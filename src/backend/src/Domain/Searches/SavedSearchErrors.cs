@@ -30,6 +30,12 @@ public static class SavedSearchErrors
         "A saved search needs at least one of words, tags, a time limit or an order.",
         ErrorType.Validation);
 
+    /// <summary>The household has as many saved searches as it may keep.</summary>
+    public static readonly Error TooMany = new(
+        "searches.too_many",
+        "A household may keep at most 100 saved searches; delete one to save another.",
+        ErrorType.Validation);
+
     /// <summary>A filter nobody could have meant.</summary>
     public static readonly Error InvalidCriteria = new(
         "searches.invalid_criteria",

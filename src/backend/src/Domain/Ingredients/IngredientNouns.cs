@@ -40,6 +40,9 @@ public static class IngredientNouns
     /// <param name="Of">For German, the gender; null for English, whose adjectives do not change.</param>
     public sealed record Noun(string One, string Many, Gender? Of);
 
+    /// <summary>How many words of its own a household may list.</summary>
+    public const int MaxOwnPerHousehold = 500;
+
     /// <summary>The longest word a household may list.</summary>
     private const int LongestOwnForm = 60;
 
@@ -175,6 +178,20 @@ public static class IngredientNouns
         return IsWord(singular) && IsWord(plural) && ItemName.Fold(singular) != ItemName.Fold(plural)
             ? new Noun(singular, plural, null)
             : IngredientErrors.InvalidNoun;
+    }
+
+    /// <summary>Whether <paramref name="noun"/> fits beside the household's <paramref name="existing"/> words; changing the plural of a listed one always does.</summary>
+    /// <param name="existing">The words the household already listed.</param>
+    /// <param name="noun">The one to list.</param>
+    public static Result EnsureRoom(IReadOnlyList<Noun> existing, Noun noun)
+    {
+        ArgumentNullException.ThrowIfNull(existing);
+        ArgumentNullException.ThrowIfNull(noun);
+
+        return existing.Count >= MaxOwnPerHousehold
+               && existing.All(other => ItemName.Fold(other.One) != ItemName.Fold(noun.One))
+            ? IngredientErrors.TooManyNouns
+            : Result.Success();
     }
 
     private static bool IsWord(string form) =>

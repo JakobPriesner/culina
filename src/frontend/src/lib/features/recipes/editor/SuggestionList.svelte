@@ -1,5 +1,6 @@
 <script lang="ts">
   import { m } from '$shell/i18n';
+  import Highlighted from '../search/Highlighted.svelte';
 
   /**
    * The list a field offers while typing: presentation and pointer handling only. The keyboard belongs to the field, which keeps focus,
@@ -56,15 +57,7 @@
               <span class="icon glyph-icon" aria-hidden="true">@</span>
             {/if}
             <span class="label">
-              {#if query && item.label.toLowerCase().includes(query.toLowerCase())}
-                {@const q = query.toLowerCase()}
-                {@const matchIdx = item.label.toLowerCase().indexOf(q)}
-                {item.label.slice(0, matchIdx)}<mark class="match"
-                  >{item.label.slice(matchIdx, matchIdx + q.length)}</mark
-                >{item.label.slice(matchIdx + q.length)}
-              {:else}
-                {item.label}
-              {/if}
+              <Highlighted text={item.label} {query} />
             </span>
           {/if}
         </span>
@@ -188,12 +181,6 @@
   .add-label {
     font-weight: var(--weight-medium);
     color: var(--accent);
-  }
-
-  .match {
-    background: transparent;
-    color: var(--accent);
-    font-weight: var(--weight-semibold);
   }
 
   .detail {

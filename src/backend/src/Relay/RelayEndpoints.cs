@@ -1,4 +1,5 @@
 using System.Diagnostics.Metrics;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using System.Threading.RateLimiting;
 
@@ -22,6 +23,9 @@ internal static partial class RelayEndpoints
     private const int MaxPath = 200;
     private const int MaxTag = 64;
     private const int MaxDeviceToken = 4096;
+
+    // A relay token is 43 base64url characters; anything longer or differently shaped was never issued.
+    private const int MaxRelayToken = 64;
 
     private static readonly Meter Meter = new("Culina.Relay");
 
@@ -87,7 +91,7 @@ internal static partial class RelayEndpoints
         IEnumerable<IPushSender> senders,
         CancellationToken cancellationToken)
     {
-        if (request.RelayToken is not { Length: > 0 } relayToken
+        if (request.RelayToken is not { Length: > 0 and <= MaxRelayToken } relayToken || !RelayTokenShape().IsMatch(relayToken)
             || request.Title is not { Length: > 0 and <= MaxTitle } title
             || request.Body is not { Length: > 0 and <= MaxBody } body
             || request.Path is not { Length: > 0 and <= MaxPath } path || path[0] != '/' || path.StartsWith("//", StringComparison.Ordinal)
@@ -98,8 +102,8 @@ internal static partial class RelayEndpoints
             return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "A relay token, a title, a body and a path starting with / are needed.");
         }
 
-        // Each token and each sending address is limited, so a leaked token can only annoy, never flood.
-        if (!limits.Admit($"token:{relayToken}") || !limits.Admit($"notify:{context.Connection.RemoteIpAddress}"))
+        // The address first: a flood of made-up tokens is stopped before it can create a limiter partition each.
+        if (!limits.Admit($"notify:{context.Connection.RemoteIpAddress}"))
         {
             Count("rate_limited");
 
@@ -115,6 +119,14 @@ internal static partial class RelayEndpoints
             return Results.StatusCode(StatusCodes.Status410Gone);
         }
 
+        // Only a token that exists gets a partition, and each is limited, so a leaked token can only annoy, never flood.
+        if (!limits.Admit($"token:{relayToken}"))
+        {
+            Count("rate_limited");
+
+            return Results.StatusCode(StatusCodes.Status429TooManyRequests);
+        }
+
         var sender = senders.FirstOrDefault(one => one.Platform == device.Platform);
 
         if (sender is null)
@@ -124,7 +136,7 @@ internal static partial class RelayEndpoints
             return Results.StatusCode(StatusCodes.Status503ServiceUnavailable);
         }
 
-        var delivery = await sender.SendAsync(device.DeviceToken, new Notification(title, body, path, request.Tag), cancellationToken)
+        var delivery = await SendAsync(sender, device, new Notification(title, body, path, request.Tag), cancellationToken)
             .ConfigureAwait(false);
 
         switch (delivery)
@@ -146,12 +158,29 @@ internal static partial class RelayEndpoints
         }
     }
 
+    // A store that times out, drops the connection or answers nonsense is a failed delivery, not a crash.
+    private static async Task<Delivery> SendAsync(IPushSender sender, Device device, Notification notification, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await sender.SendAsync(device.DeviceToken, notification, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or JsonException
+            || (exception is TaskCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            return Delivery.Failed;
+        }
+    }
+
     private static void Count(string outcome) =>
         Notifications.Add(1, new KeyValuePair<string, object?>("outcome", outcome));
 
     // APNs tokens are hex, FCM tokens base64url-ish with colons: nothing else belongs in a URL path or a JSON string.
     [GeneratedRegex("^[A-Za-z0-9_:\\-]+$")]
     private static partial Regex TokenShape();
+
+    [GeneratedRegex("^[A-Za-z0-9_\\-]+$")]
+    private static partial Regex RelayTokenShape();
 }
 
 /// <summary>A fixed hourly window per key (relay token or address), in memory: a restart forgets, which errs towards delivering.</summary>

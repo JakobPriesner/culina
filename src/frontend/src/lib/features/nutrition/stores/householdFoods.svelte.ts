@@ -1,5 +1,6 @@
 import { http, ok, request, type Result } from '$api';
-import { registerStore } from '$shell/stores';
+import { ResetEpoch, removeUndoable } from '$shell/optimistic';
+import { LatestRead, registerStore } from '$shell/stores';
 
 import type { FoodHit } from '../types';
 
@@ -67,6 +68,8 @@ class HouseholdFoodStore {
 
   /** Not `$state`, as in the units store: `load` reads then writes it. */
   #loadedFor: string | null = null;
+  #reads = new LatestRead();
+  #epoch = new ResetEpoch();
 
   get foods(): readonly HouseholdFood[] {
     return this.#foods;
@@ -79,9 +82,15 @@ class HouseholdFoodStore {
 
     this.#loadedFor = householdId;
 
+    const isLatest = this.#reads.start();
+
     const result = await request(() =>
       http.GET('/api/v1/households/{householdId}/foods', { params: { path: { householdId } } })
     );
+
+    if (!isLatest()) {
+      return;
+    }
 
     if (result.ok) {
       this.#foods = result.value.items.map(toFood);
@@ -114,9 +123,10 @@ class HouseholdFoodStore {
 
   /** Removes one, and with it every choice of it; a refusal puts it back. */
   async remove(householdId: string, id: string): Promise<Result<null>> {
-    const before = this.#foods;
+    const gone = removeUndoable(this.#foods, (food) => food.id === id);
+    const putBack = this.#epoch.guard(() => (this.#foods = gone.undo(this.#foods)));
 
-    this.#foods = before.filter((food) => food.id !== id);
+    this.#foods = gone.items;
 
     const result = await request(() =>
       http.DELETE('/api/v1/households/{householdId}/foods/{foodId}', {
@@ -125,7 +135,7 @@ class HouseholdFoodStore {
     );
 
     if (!result.ok) {
-      this.#foods = before;
+      putBack();
 
       return result;
     }
@@ -134,6 +144,8 @@ class HouseholdFoodStore {
   }
 
   reset(): void {
+    this.#reads.cancel();
+    this.#epoch.bump();
     this.#foods = [];
     this.#loadedFor = null;
   }

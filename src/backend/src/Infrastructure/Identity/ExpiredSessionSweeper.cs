@@ -6,7 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Infrastructure.Identity;
 
-/// <summary>Deletes sessions that have lapsed or been revoked, and household invitations that expired unused. Housekeeping, not security: neither works once expired.</summary>
+/// <summary>Deletes sessions that have lapsed or been revoked, household invitations that expired unused, and intake jobs and push outbox rows long finished. Housekeeping, not security: neither works once expired.</summary>
 internal sealed class ExpiredSessionSweeper(
     IServiceScopeFactory scopeFactory,
     TimeProvider time,
@@ -63,6 +63,15 @@ internal sealed class ExpiredSessionSweeper(
             if (lapsed > 0)
             {
                 IdentityLogs.SweptInvitations(logger, lapsed);
+            }
+
+            var purged = await scope.ServiceProvider.GetRequiredService<IIntakePurge>()
+                .PurgeAsync(now, cancellationToken)
+                .ConfigureAwait(false);
+
+            if (purged.Jobs + purged.Notifications > 0)
+            {
+                IdentityLogs.SweptIntake(logger, purged.Jobs, purged.Notifications);
             }
         }
     }

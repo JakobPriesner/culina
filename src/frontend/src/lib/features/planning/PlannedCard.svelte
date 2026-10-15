@@ -83,17 +83,6 @@
   </a>
 
   <span class="remove" data-no-drag>
-    {#if onedit}
-      <IconButton label={m['plan.edit.action']({ title: meal.title })} size="sm" onclick={onedit}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path
-            d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Zm9-13 3 3"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      </IconButton>
-    {/if}
     <IconButton label={m['plan.remove']({ title: meal.title })} size="sm" onclick={onremove}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />

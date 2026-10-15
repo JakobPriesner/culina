@@ -1,7 +1,8 @@
 import { fireEvent, screen } from '@testing-library/svelte';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '$lib/test/render';
 import Image from './Image.svelte';
+import { useImageSource } from './imageSources';
 
 describe('Image', () => {
   it('retains the description when a photo fails and can display a replacement', async () => {
@@ -47,5 +48,35 @@ describe('Image', () => {
 
     expect(img).toHaveAttribute('loading', 'eager');
     expect(img).toHaveAttribute('fetchpriority', 'high');
+  });
+});
+
+describe('Image in the app, where photos are fetched first', () => {
+  afterEach(() => useImageSource(null));
+
+  it('asks again when the device comes back online after the first answer was a failure', async () => {
+    let calls = 0;
+    const released: string[] = [];
+
+    useImageSource(
+      () => Promise.resolve(++calls === 1 ? null : 'blob:photo'),
+      (url) => released.push(url)
+    );
+
+    const view = renderWithProviders(Image, { props: { src: '/api/v1/photo', alt: 'Orzo' } });
+
+    await vi.waitFor(() => expect(view.container.querySelector('.fallback')).toBeInTheDocument());
+
+    window.dispatchEvent(new Event('online'));
+
+    await vi.waitFor(() =>
+      expect(view.container.querySelector('img')).toHaveAttribute('src', 'blob:photo')
+    );
+    expect(calls).toBe(2);
+    // The failed ask was released at once; the shown one is held until the image goes.
+    expect(released).toEqual(['/api/v1/photo']);
+
+    view.unmount();
+    expect(released).toEqual(['/api/v1/photo', '/api/v1/photo']);
   });
 });

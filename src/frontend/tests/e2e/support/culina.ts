@@ -15,6 +15,18 @@ const origin = 'http://localhost:4173';
 export const skipReason =
   'Set CULINA_E2E_EMAIL and CULINA_E2E_PASSWORD to an administrator account, with a backend running.';
 
+/** Lets `count` animation frames pass: time that advances only while the page paints, instead of a fixed sleep. */
+export const frames = (page: Page, count: number): Promise<void> =>
+  page.evaluate(
+    (total) =>
+      new Promise<void>((resolve) => {
+        let seen = 0;
+        const tick = () => (++seen >= total ? resolve() : requestAnimationFrame(tick));
+        requestAnimationFrame(tick);
+      }),
+    count
+  );
+
 /** A name unique per run, project and worker; the suites share one instance and household. */
 export const unique = (word: string): string =>
   `${word} ${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;

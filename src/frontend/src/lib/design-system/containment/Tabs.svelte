@@ -76,7 +76,7 @@
         type="button"
         role="tab"
         aria-selected={selected === tab.id}
-        aria-controls={panelId(tab.id)}
+        aria-controls={selected === tab.id ? panelId(tab.id) : undefined}
         tabindex={selected === tab.id ? 0 : -1}
         onclick={() => select(tab.id)}
         onkeydown={move}

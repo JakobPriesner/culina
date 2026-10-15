@@ -27,6 +27,7 @@ public sealed class ExpiredSessionSweeperTests : IDisposable
         services = new ServiceCollection()
             .AddScoped<ISessionStore>(_ => store)
             .AddScoped<IInvitationRepository, NoInvitations>()
+            .AddScoped<IIntakePurge, NoPurge>()
             .BuildServiceProvider();
         sweeper = new ExpiredSessionSweeper(
             services.GetRequiredService<IServiceScopeFactory>(),
@@ -86,6 +87,12 @@ public sealed class ExpiredSessionSweeperTests : IDisposable
         services.Dispose();
         loggers.Dispose();
         logs.Dispose();
+    }
+
+    private sealed class NoPurge : IIntakePurge
+    {
+        public Task<IntakePurged> PurgeAsync(DateTimeOffset now, CancellationToken cancellationToken) =>
+            Task.FromResult(new IntakePurged(0, 0));
     }
 
     /// <summary>Nothing to sweep: these tests are about the session store failing.</summary>

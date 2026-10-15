@@ -7,11 +7,20 @@ import type { Attachment } from 'svelte/attachments';
  */
 export type ImageSource = (url: string) => Promise<string | null>;
 
+/** Says an image no longer shows what an earlier call to the source answered, so that answer may be freed. Every call to the source is paired with one release, whatever its answer. */
+export type ImageRelease = (url: string) => void;
+
 let source: ImageSource | null = null;
+let release: ImageRelease | null = null;
 
 /** Registered once at start-up by a build that needs it. */
-export function useImageSource(next: ImageSource | null): void {
+export function useImageSource(next: ImageSource | null, done: ImageRelease | null = null): void {
   source = next;
+  release = done;
+}
+
+export function releaseImage(url: string): void {
+  release?.(url);
 }
 
 export function imageSource(): ImageSource | null {

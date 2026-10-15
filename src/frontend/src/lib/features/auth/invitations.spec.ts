@@ -104,3 +104,56 @@ describe('answers that arrive after a switch', () => {
     expect(invitations.items.map((one) => one.invitationId)).toEqual(['f']);
   });
 });
+
+describe('revoking a link that the server refuses', () => {
+  const one = (id: string) => ({ invitationId: id, createdAt: 'x', expiresAt: 'y' });
+
+  /** Lists two links, then holds the DELETE until the test answers it. */
+  async function revokingWhileOut() {
+    const held = Promise.withResolvers<Response>();
+    const refuse = () => held.resolve(json({ status: 500 }, 500));
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) =>
+        input.method === 'DELETE'
+          ? held.promise
+          : Promise.resolve(json({ items: [one('a'), one('b')] }))
+      )
+    );
+
+    await invitations.load('h1');
+
+    const revoking = invitations.revoke('h1', 'a');
+
+    await vi.waitFor(() => expect(invitations.items).toHaveLength(1));
+
+    return { revoking, refuse: () => refuse() };
+  }
+
+  it('puts back that link and nothing else', async () => {
+    const { revoking, refuse } = await revokingWhileOut();
+
+    // A list read that landed meanwhile has a third link.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(json({ items: [one('b'), one('c')] })))
+    );
+    await invitations.load('h1');
+
+    refuse();
+    await revoking;
+
+    expect(invitations.items.map((link) => link.invitationId)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('does not refill the store after sign-out cleared it', async () => {
+    const { revoking, refuse } = await revokingWhileOut();
+
+    invitations.reset();
+    refuse();
+    await revoking;
+
+    expect(invitations.items).toEqual([]);
+  });
+});

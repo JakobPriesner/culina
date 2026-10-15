@@ -306,6 +306,19 @@ jobs:
 
       # The real image against a real database, so the suite exercises what
       # ships rather than a development arrangement that resembles it.
+      # Layers from the publish job's cache (read only here), so pnpm install, dotnet restore and the
+      # frontend build are not paid again on the critical path.
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build the image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          tags: culina:ci
+          build-args: REVISION=${{ github.sha }}
+          cache-from: type=gha
+
       - name: Start the stack
         # The suite gives every flow its own account and every request arrives
         # from one address, so the rate limits are doing their job when they
@@ -317,9 +330,7 @@ jobs:
           # Six browsers driving one instance is a burst no person produces.
           RateLimits__RequestsPerSessionPerMinute: '20000'
           ForwardedHeaders__KnownNetworks: 172.16.0.0/12
-        run: |
-          docker build -t culina:ci --build-arg REVISION="${GITHUB_SHA::7}" .
-          CULINA_IMAGE=culina:ci docker compose up -d --wait
+        run: CULINA_IMAGE=culina:ci docker compose up -d --wait
 
       # The setup screen's first step: compose says where the database is, and
       # the role and password are for the app to be told.
@@ -442,8 +453,16 @@ jobs:
       - run: pnpm audit --audit-level=high
         working-directory: src/frontend
 
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
       - name: Build the image to scan
-        run: docker build -t culina:scan --build-arg REVISION="${GITHUB_SHA::7}" .
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          load: true
+          tags: culina:scan
+          build-args: REVISION=${{ github.sha }}
+          cache-from: type=gha
 
       - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -474,6 +493,48 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # The relay's image is built and shipped on its own (deploy/relay), so nothing above would notice it stop
+  # building or pick up a vulnerable base layer.
+  relay:
+    name: Relay image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build the relay image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: deploy/relay/Dockerfile
+          load: true
+          tags: culina-relay:scan
+          cache-from: type=gha,scope=relay
+          cache-to: type=gha,scope=relay,mode=max
+
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: culina-relay:scan
+          format: sarif
+          output: trivy-relay.sarif
+          severity: HIGH,CRITICAL
+          limit-severities-for-sarif: true
+          ignore-unfixed: true
+          trivyignores: .trivyignore
+          exit-code: '1'
+
+      - uses: github/codeql-action/upload-sarif@d208ec71e39ae46397cbf6569bef8439b9aab974 # codeql-bundle-v2.27.2
+        if: always() && hashFiles('trivy-relay.sarif') != ''
+        with:
+          sarif_file: trivy-relay.sarif
+          category: trivy-relay
+
   publish:
     name: Publish
     runs-on: ubuntu-latest
@@ -481,7 +542,7 @@ jobs:
     # Every gate above, without exception. An image published from a commit
     # whose tests were still running is an image nobody can reason about, and
     # `edge` is a tag people actually deploy.
-    needs: [backend, integration, frontend, contract, e2e, codeql, security]
+    needs: [backend, integration, frontend, contract, e2e, codeql, security, relay]
     # Only a real push to this repository's main. A pull request — including
     # one from a fork — must never reach the registry, and on a fork the
     # token could not write to it anyway.

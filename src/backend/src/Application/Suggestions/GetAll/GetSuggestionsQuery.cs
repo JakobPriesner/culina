@@ -33,21 +33,22 @@ internal sealed class GetSuggestionsQueryHandler(
 
         tracked.Tag("culina.suggestion.purpose", context.Purpose.ToString());
 
-        var member = await households
-            .IsMemberAsync(context.HouseholdId, context.UserId, cancellationToken)
+        // Not-found, not forbidden, as every household read gives a non-member.
+        var access = await HouseholdAccess
+            .LibraryOfMemberAsync(households, context.HouseholdId, context.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        if (!member)
-        {
-            // Not-found, not forbidden, as every household read gives a non-member.
-            return tracked.Record(
-                Result<Response>.Failure(HouseholdErrors.NotFound(context.HouseholdId)));
-        }
+        return await access.Match(
+            library => RankAsync(context, library, tracked, cancellationToken),
+            error => Task.FromResult(tracked.Record(Result<Response>.Failure(error)))).ConfigureAwait(false);
+    }
 
-        var library = await HouseholdAccess
-            .LibraryAsync(households, context.HouseholdId, cancellationToken)
-            .ConfigureAwait(false);
-
+    private async Task<Result<Response>> RankAsync(
+        SuggestionContext context,
+        IReadOnlyList<Guid> library,
+        UseCaseActivity tracked,
+        CancellationToken cancellationToken)
+    {
         // Ranked over everything this household sees, inherited recipes too.
         context = context with { InheritedFrom = [.. library.Skip(1)] };
 

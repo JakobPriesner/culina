@@ -16,15 +16,13 @@
     {@const active = destination.match(current)}
     <a
       class="destination"
-      data-selection={placement === 'top' ? destination.href : undefined}
+      data-selection={destination.href}
       class:active
       href={destination.href}
       aria-current={active ? 'page' : undefined}
     >
-      <span
-        class="icon"
-        data-selection={placement === 'bottom' ? destination.href : undefined}
-        aria-hidden="true"><NavIcon icon={destination.icon} current={active} /></span
+      <span class="icon" aria-hidden="true"
+        ><NavIcon icon={destination.icon} current={active} /></span
       >
       <span class="label">{destination.label()}</span>
     </a>
@@ -100,50 +98,66 @@
     box-shadow: var(--shadow-card);
   }
 
+  /* An inset dock keeps the four destinations in thumb reach, with one moving tile for the current page. */
   .bottom {
-    padding-block: var(--space-1);
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-1);
+    max-width: 32rem;
+    margin-inline: auto;
+    padding: 0.375rem;
+    border: 1px solid var(--border);
+    border-radius: 1.75rem;
+    background: var(--surface-raised);
+    box-shadow:
+      0 4px 24px color-mix(in srgb, var(--text) 10%, transparent),
+      0 1px 3px color-mix(in srgb, var(--text) 5%, transparent);
+    pointer-events: auto;
   }
 
   .bottom .destination {
-    flex: 1 1 auto;
     min-width: 0;
+    min-height: 3.5rem;
+    padding: var(--space-1);
+    border-radius: 1.25rem;
     text-align: center;
     flex-direction: column;
     justify-content: center;
     gap: var(--space-1);
-    min-height: var(--control-lg);
-    padding: var(--space-2) var(--space-1);
   }
 
-  /* A raised pill behind the icon marks the current destination without relying on colour. */
   .bottom .icon {
-    box-sizing: border-box;
-    width: calc(var(--space-6) + 2 * var(--space-3));
-    max-width: 100%;
-    height: calc(var(--space-6) + 2 * var(--space-1));
-    padding: var(--space-1);
-    border-radius: var(--radius-full);
-    transition:
-      background-color var(--duration-fast) var(--ease-out),
-      box-shadow var(--duration-fast) var(--ease-out);
+    width: var(--space-6);
+    height: var(--space-6);
   }
 
   .bottom .destination.active {
     color: var(--accent);
   }
 
-  .bottom:not([data-indicator-ready]) .destination.active .icon {
-    background: var(--surface-raised);
-    box-shadow: var(--shadow-card);
+  .bottom:not([data-indicator-ready]) .destination.active,
+  .bottom :global(.selection-indicator) {
+    border-radius: 1.25rem;
+    background: var(--surface-accent-subtle);
+    box-shadow: none;
   }
 
-  .bottom .destination:not(.active):hover .icon {
+  .bottom .destination:not(.active):hover {
+    background: var(--surface-hover);
+  }
+
+  .bottom .destination:active {
     background: var(--surface-selected);
-    box-shadow: var(--shadow-card);
   }
 
   .bottom .label {
     font-size: var(--text-xs);
     font-weight: var(--weight-medium);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+
+  .bottom .destination.active .label {
+    font-weight: var(--weight-semibold);
   }
 </style>

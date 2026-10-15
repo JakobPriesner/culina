@@ -30,6 +30,37 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Get_ShouldWriteNothing_WhenTheListAlreadyExists()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+
+        await client.GetAsync($"/api/v1/households/{householdId}/shopping-list", Token);
+        var rowVersion = await postgres.QuerySingleAsync<long>("select xmin::text::bigint from shopping_lists", Token);
+
+        await client.GetAsync($"/api/v1/households/{householdId}/shopping-list", Token);
+        await client.GetAsync($"/api/v1/households/{householdId}/shopping-list", Token);
+
+        // A read that rewrote the row would have given it a new tuple version each time.
+        Assert.Equal(rowVersion, await postgres.QuerySingleAsync<long>("select xmin::text::bigint from shopping_lists", Token));
+        Assert.Equal(1L, await postgres.QuerySingleAsync<long>("select count(*) from shopping_lists", Token));
+    }
+
+    [Fact]
+    public async Task AddPlannedMeals_ShouldRefuseAWeekRunningOffTheCalendar()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+
+        var response = await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/meals",
+            new { from = "9999-12-28" },
+            Token);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Get_ShouldNotExistForSomebodyElsesHousehold()
     {
         using var client = await SignedInAsync();

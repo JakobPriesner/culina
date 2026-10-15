@@ -12,8 +12,8 @@ namespace Application.Planning;
 /// <summary>Reads a week of a household's plan.</summary>
 /// <param name="HouseholdId">Whose plan.</param>
 /// <param name="UserId">Who is asking.</param>
-/// <param name="From">The day the week starts on.</param>
-public sealed record GetMealPlanQuery(Guid HouseholdId, Guid UserId, DateOnly From);
+/// <param name="From">Any day of the week to read; this week when null.</param>
+public sealed record GetMealPlanQuery(Guid HouseholdId, Guid UserId, DateOnly? From);
 
 /// <summary>Puts a recipe on a day.</summary>
 /// <param name="HouseholdId">Whose plan.</param>
@@ -44,7 +44,10 @@ internal static class PlanWeek
     internal const int Days = 7;
 }
 
-internal sealed class GetMealPlanQueryHandler(IMealPlanRepository plans, IHouseholdRepository households)
+internal sealed class GetMealPlanQueryHandler(
+    IMealPlanRepository plans,
+    IHouseholdRepository households,
+    TimeProvider time)
     : IQueryHandler<GetMealPlanQuery, MealPlanResponse>
 {
     public async Task<Result<MealPlanResponse>> Handle(
@@ -59,14 +62,19 @@ internal sealed class GetMealPlanQueryHandler(IMealPlanRepository plans, IHouseh
             .MemberOfAsync(households, query.HouseholdId, query.UserId, cancellationToken)
             .ConfigureAwait(false);
 
-        var result = await allowed.Match(
+        // Snapped to the Monday of its week so no caller has to work that out.
+        var asked = query.From ?? DateOnly.FromDateTime(time.GetUtcNow().UtcDateTime);
+
+        var result = await allowed.Bind(() => PlanningWords.Plannable(asked)).Match(
             async () =>
             {
+                var monday = PlanningWeek.StartOfWeekContaining(asked);
+
                 var planned = await plans
-                    .ForWeekAsync(query.HouseholdId, query.From, PlanWeek.Days, cancellationToken)
+                    .ForWeekAsync(query.HouseholdId, monday, PlanWeek.Days, cancellationToken)
                     .ConfigureAwait(false);
 
-                return Result<MealPlanResponse>.Success(planned.ToResponse(query.From));
+                return Result<MealPlanResponse>.Success(planned.ToResponse(monday));
             },
             error => Task.FromResult(Result<MealPlanResponse>.Failure(error))).ConfigureAwait(false);
 
@@ -113,7 +121,8 @@ internal sealed class PlanMealCommandHandler(
         unitOfWork.InTransactionAsync(
             async token =>
             {
-                var slot = PlanningWords.ToSlot(command.Draft.Slot);
+                var slot = PlanningWords.Plannable(command.Draft.Date)
+                    .Bind(() => PlanningWords.ToSlot(command.Draft.Slot));
 
                 return await slot.Match(
                     async which =>
@@ -217,9 +226,9 @@ internal sealed class MoveMealCommandHandler(
         }
 
         // An omitted slot keeps its current one (what dragging sends).
-        var slot = command.Draft.Slot is null
+        var slot = PlanningWords.Plannable(command.Draft.Date).Bind(() => command.Draft.Slot is null
             ? Result<MealSlot>.Success(entry.Slot)
-            : PlanningWords.ToSlot(command.Draft.Slot);
+            : PlanningWords.ToSlot(command.Draft.Slot));
 
         return await slot.Match(
             which => ServeAsync(command, entry, which, cancellationToken),

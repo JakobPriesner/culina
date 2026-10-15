@@ -1,4 +1,5 @@
 import { waitFor } from '@testing-library/svelte';
+import { tick } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import RecipePage from './+page.svelte';
@@ -101,7 +102,9 @@ describe('the recipe page', () => {
     await waitFor(() => expect(count('/recipes/r1')).toBe(1));
     releaseRecipe();
     await waitFor(() => expect(recipes.detail?.id).toBe('r1'));
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // Effects the drawn panels trigger run within a couple of ticks; a repeat read would be counted by now.
+    await tick();
+    await tick();
 
     expect(count('/recipes/r1')).toBe(1);
     expect(count('/recipes/r1/notes')).toBe(1);

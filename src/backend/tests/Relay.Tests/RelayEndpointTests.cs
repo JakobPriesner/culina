@@ -130,6 +130,55 @@ public sealed class RelayEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task ASenderThatThrows_ShouldBeABadGateway_NotAServerError()
+    {
+        using var client = factory.CreateClient();
+        var relayToken = await RegisterAsync(client, "ios", "a1b2c3d4");
+        apple.Throw = new HttpRequestException("store unreachable");
+
+        var timedOut = await NotifyAsync(client, relayToken);
+        apple.Throw = new TaskCanceledException("timeout");
+        var cancelled = await NotifyAsync(client, relayToken);
+        apple.Throw = new JsonException("empty body");
+        var malformed = await NotifyAsync(client, relayToken);
+
+        Assert.Equal(HttpStatusCode.BadGateway, timedOut.StatusCode);
+        Assert.Equal(HttpStatusCode.BadGateway, cancelled.StatusCode);
+        Assert.Equal(HttpStatusCode.BadGateway, malformed.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("has spaces")]
+    [InlineData("with/slash")]
+    public async Task ARelayTokenThatCouldNeverHaveBeenIssued_ShouldBeRefused_BeforeAnyLimiterIsTouched(string relayToken)
+    {
+        using var client = factory.CreateClient();
+        var tooLong = new string('a', 65);
+
+        var oddShape = await NotifyAsync(client, relayToken);
+        var longOne = await NotifyAsync(client, tooLong);
+
+        Assert.Equal(HttpStatusCode.BadRequest, oddShape.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, longOne.StatusCode);
+    }
+
+    [Fact]
+    public async Task UnknownTokens_ShouldNotUseUpTheTokenLimit_ButTheAddressLimitStillStopsThem()
+    {
+        using var client = factory.CreateClient();
+
+        List<HttpStatusCode> answers = [];
+
+        // PerHour is 5: the address limit is what ends a run of guesses, one token each.
+        for (var attempt = 0; attempt < 6; attempt++)
+        {
+            answers.Add((await NotifyAsync(client, $"guess{attempt}")).StatusCode);
+        }
+
+        Assert.Equal([.. Enumerable.Repeat(HttpStatusCode.Gone, 5), HttpStatusCode.TooManyRequests], answers);
+    }
+
+    [Fact]
     public async Task OneToken_ShouldBeLimitedPerHour()
     {
         using var client = factory.CreateClient();
@@ -213,10 +262,17 @@ public sealed class RelayEndpointTests : IDisposable
 
         public Delivery Next { get; set; } = Delivery.Delivered;
 
+        public Exception? Throw { get; set; }
+
         public Platform Platform => platform;
 
         public Task<Delivery> SendAsync(string deviceToken, Notification notification, CancellationToken cancellationToken)
         {
+            if (Throw is not null)
+            {
+                throw Throw;
+            }
+
             Sent.Add((deviceToken, notification));
 
             return Task.FromResult(Next);

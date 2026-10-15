@@ -20,13 +20,8 @@
   import SessionFields from '$features/server/SessionFields.svelte';
   import TelemetryFields from '$features/server/TelemetryFields.svelte';
   import { server, type SaveOutcome } from '$features/server/stores/server.svelte';
-  import {
-    unreadableDatabaseNumbers,
-    unreadableNumbers,
-    variables,
-    type DatabaseDraft,
-    type ServerDraft
-  } from '$features/server/types';
+  import { variables } from '$features/server/types';
+  import { useServerDrafts, type ServerPart } from '$features/server/useServerDrafts.svelte';
 
   /**
    * Fresh-instance setup in dependency order: database, then the network-dependent settings (secure cookies, trusted proxy), then the account.
@@ -43,10 +38,7 @@
       : ['server', 'account'];
 
   let step = $state<Step>(steps[0]!);
-  let databaseDraft = $state<DatabaseDraft | null>(null);
-  let serverDraft = $state<ServerDraft | null>(null);
-  let outcome = $state<SaveOutcome | null>(null);
-  let saving = $state(false);
+  const drafts = useServerDrafts();
 
   let displayName = $state('');
   let email = $state('');
@@ -57,33 +49,22 @@
 
   onDestroy(() => submission.dispose());
 
-  onMount(() => (step === 'database' ? openDatabase() : openServer()));
-
-  async function openDatabase() {
-    await server.loadDatabase();
-    databaseDraft = server.database ? structuredClone($state.snapshot(server.database)) : null;
-  }
+  onMount(() => (step === 'database' ? drafts.loadDatabase() : openServer()));
 
   async function openServer() {
-    await server.loadServer();
+    await drafts.loadServer();
 
-    if (!server.server || !server.serverFacts) return;
-
-    const draft = structuredClone($state.snapshot(server.server));
+    if (!drafts.serverDraft || !server.serverFacts) return;
 
     // The browser knows whether it will keep a Secure cookie on this page; a TLS-terminating proxy hides that from the server.
     // A secure context rather than https: alone, since http://localhost keeps them too.
     if (!server.serverFacts.pinned.has(variables.secure)) {
-      draft.secure = window.isSecureContext;
+      drafts.serverDraft.secure = window.isSecureContext;
     }
-
-    serverDraft = draft;
   }
 
   /** Goes on once a save is in effect; stays, with the reason on screen, when it is not. */
-  async function advance(result: SaveOutcome, next: () => Promise<void>) {
-    outcome = result;
-
+  async function advance(part: ServerPart, result: SaveOutcome, next: () => Promise<void>) {
     if (result.kind === 'failed' || result.kind === 'stalled') {
       return;
     }
@@ -95,20 +76,18 @@
       return;
     }
 
-    outcome = null;
+    drafts.dismissOutcome(part);
     await next();
   }
 
   async function connect(event: SubmitEvent) {
     event.preventDefault();
 
-    if (!databaseDraft || unreadableDatabaseNumbers(databaseDraft).length > 0) return;
+    const result = await drafts.saveDatabase();
 
-    saving = true;
-    const result = await server.saveDatabase($state.snapshot(databaseDraft) as DatabaseDraft);
-    saving = false;
+    if (!result) return;
 
-    await advance(result, async () => {
+    await advance('database', result, async () => {
       step = 'server';
       await openServer();
     });
@@ -117,19 +96,19 @@
   async function configure(event: SubmitEvent) {
     event.preventDefault();
 
-    if (!serverDraft || unreadableNumbers(serverDraft).length > 0) return;
+    const result = await drafts.saveServer();
 
-    saving = true;
-    const result = await server.saveServer($state.snapshot(serverDraft) as ServerDraft);
-    saving = false;
+    if (!result) return;
 
-    await advance(result, async () => {
+    await advance('server', result, async () => {
       step = 'account';
     });
   }
 
   async function retry() {
-    await advance(await server.awaitRestart(), async () => {
+    const part = step === 'database' ? 'database' : 'server';
+
+    await advance(part, await drafts.retry(part), async () => {
       step = step === 'database' ? 'server' : 'account';
 
       if (step === 'server') await openServer();
@@ -151,7 +130,6 @@
     }
   }
 
-  const busy = $derived(saving || server.phase !== 'idle');
   const position = $derived(steps.indexOf(step) + 1);
 </script>
 
@@ -182,37 +160,45 @@
     </p>
   </header>
 
-  {#if step === 'database' && databaseDraft && server.databaseFacts}
+  {#if step === 'database' && drafts.databaseDraft && server.databaseFacts}
     <form class="form" onsubmit={connect} novalidate>
-      <DatabaseFields bind:draft={databaseDraft} facts={server.databaseFacts} disabled={busy} />
+      <DatabaseFields
+        bind:draft={drafts.databaseDraft}
+        facts={server.databaseFacts}
+        disabled={drafts.busy}
+      />
 
-      <SaveStatus phase={server.phase} {outcome} onretry={retry} />
+      <SaveStatus phase={server.phase} outcome={drafts.databaseOutcome} onretry={retry} />
 
-      <Button type="submit" variant="primary" loading={busy}>{m['setup.database.submit']()}</Button>
+      <Button type="submit" variant="primary" loading={drafts.busy}
+        >{m['setup.database.submit']()}</Button
+      >
     </form>
-  {:else if step === 'server' && serverDraft && server.serverFacts}
+  {:else if step === 'server' && drafts.serverDraft && server.serverFacts}
     {@const facts = server.serverFacts}
 
     <form class="form" onsubmit={configure} novalidate>
       <SecureCookiesField
-        bind:checked={serverDraft.secure}
+        bind:checked={drafts.serverDraft.secure}
         pinned={facts.pinned.has(variables.secure)}
-        disabled={busy}
+        disabled={drafts.busy}
       />
 
-      <ProxyFields bind:draft={serverDraft} {facts} disabled={busy} />
+      <ProxyFields bind:draft={drafts.serverDraft} {facts} disabled={drafts.busy} />
 
       <Disclosure summary={m['setup.server.advanced']()}>
         <div class="advanced">
-          <SessionFields bind:draft={serverDraft} {facts} disabled={busy} />
-          <LimitFields bind:draft={serverDraft} {facts} disabled={busy} />
-          <TelemetryFields bind:draft={serverDraft} {facts} disabled={busy} />
+          <SessionFields bind:draft={drafts.serverDraft} {facts} disabled={drafts.busy} />
+          <LimitFields bind:draft={drafts.serverDraft} {facts} disabled={drafts.busy} />
+          <TelemetryFields bind:draft={drafts.serverDraft} {facts} disabled={drafts.busy} />
         </div>
       </Disclosure>
 
-      <SaveStatus phase={server.phase} {outcome} onretry={retry} />
+      <SaveStatus phase={server.phase} outcome={drafts.serverOutcome} onretry={retry} />
 
-      <Button type="submit" variant="primary" loading={busy}>{m['setup.server.submit']()}</Button>
+      <Button type="submit" variant="primary" loading={drafts.busy}
+        >{m['setup.server.submit']()}</Button
+      >
     </form>
   {:else if step === 'account'}
     <form class="form" onsubmit={createAccount} novalidate>
@@ -260,7 +246,7 @@
     </form>
   {:else if server.error}
     <p class="failure" role="alert">{m['setup.unreadable']()}</p>
-    <Button onclick={() => (step === 'database' ? openDatabase() : openServer())}>
+    <Button onclick={() => (step === 'database' ? drafts.loadDatabase() : openServer())}>
       {m['error.retry']()}
     </Button>
   {/if}

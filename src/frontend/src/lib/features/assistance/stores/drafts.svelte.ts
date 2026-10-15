@@ -402,6 +402,9 @@ class DraftStore {
         resolve(this.#error);
       };
 
+      // So dismissing or resetting mid-stream settles this too (and drops the listener) instead of hanging the caller.
+      this.#settle = settle;
+
       this.#stream = askServer<DraftEventWire>(path, body, {
         message: (event) => {
           // Kept even alongside a failure: a stopped provider's partial draft was paid for.

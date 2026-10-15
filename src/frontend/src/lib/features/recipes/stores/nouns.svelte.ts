@@ -1,5 +1,6 @@
 import { http, request, type AppError } from '$api';
-import { registerStore } from '$shell/stores';
+import { ResetEpoch } from '$shell/optimistic';
+import { LatestRead, registerStore } from '$shell/stores';
 
 /** A word the household writes in both numbers: "1 Maultasche", "2 Maultaschen". */
 export interface OwnNoun {
@@ -18,6 +19,8 @@ class NounStore {
 
   /** Not `$state`, as in the units store: `load` reads then writes it, and an effect calling it would re-run. */
   #loadedFor: string | null = null;
+  #reads = new LatestRead();
+  #epoch = new ResetEpoch();
 
   get own(): readonly OwnNoun[] {
     return this.#own;
@@ -30,11 +33,17 @@ class NounStore {
 
     this.#loadedFor = householdId;
 
+    const isLatest = this.#reads.start();
+
     const result = await request(() =>
       http.GET('/api/v1/households/{householdId}/ingredient-nouns', {
         params: { path: { householdId } }
       })
     );
+
+    if (!isLatest()) {
+      return;
+    }
 
     if (result.ok) {
       this.#own = [...result.value.items];
@@ -48,11 +57,10 @@ class NounStore {
 
   /** Lists a word, or changes the plural of the one listed under the same singular. */
   async set(householdId: string, noun: OwnNoun): Promise<AppError | null> {
-    const before = this.#own;
+    const previous = this.#own.find((listed) => sameWord(listed.one, noun.one));
+    const undo = this.#epoch.guard(() => this.#put(noun.one, previous));
 
-    this.#own = [...before.filter((listed) => !sameWord(listed.one, noun.one)), noun].sort((a, b) =>
-      a.one.localeCompare(b.one)
-    );
+    this.#put(noun.one, noun);
 
     const result = await request(() =>
       http.PUT('/api/v1/households/{householdId}/ingredient-nouns/{one}', {
@@ -62,16 +70,17 @@ class NounStore {
     );
 
     if (!result.ok) {
-      this.#own = before;
+      undo();
     }
 
     return result.ok ? null : result.error;
   }
 
   async remove(householdId: string, one: string): Promise<AppError | null> {
-    const before = this.#own;
+    const previous = this.#own.find((listed) => sameWord(listed.one, one));
+    const undo = this.#epoch.guard(() => this.#put(one, previous));
 
-    this.#own = before.filter((listed) => !sameWord(listed.one, one));
+    this.#put(one, undefined);
 
     const result = await request(() =>
       http.DELETE('/api/v1/households/{householdId}/ingredient-nouns/{one}', {
@@ -80,13 +89,22 @@ class NounStore {
     );
 
     if (!result.ok) {
-      this.#own = before;
+      undo();
     }
 
     return result.ok ? null : result.error;
   }
 
+  /** Lists, replaces or (with undefined) drops the one word, leaving every other entry as it is now. */
+  #put(one: string, noun: OwnNoun | undefined): void {
+    const others = this.#own.filter((listed) => !sameWord(listed.one, one));
+
+    this.#own = (noun ? [...others, noun] : others).sort((a, b) => a.one.localeCompare(b.one));
+  }
+
   reset(): void {
+    this.#reads.cancel();
+    this.#epoch.bump();
     this.#own = [];
     this.#loadedFor = null;
   }

@@ -74,8 +74,19 @@ internal sealed class IntakeNotifications(
 
     public async Task DeliverAsync(CancellationToken token)
     {
-        await DeliverToDevicesAsync(token).ConfigureAwait(false);
+        // One channel failing must not starve the other: browsers are served even when the device pass throws.
+        try
+        {
+            await DeliverToDevicesAsync(token).ConfigureAwait(false);
+        }
+        finally
+        {
+            await DeliverToBrowsersAsync(token).ConfigureAwait(false);
+        }
+    }
 
+    private async Task DeliverToBrowsersAsync(CancellationToken token)
+    {
         var deliveries = await db.QueryAsync<Delivery>("""
             select n.job_id,s.endpoint,s.p256dh,s.auth,s.language,j.purpose,j.material->>'draftKind' as draft_kind,(j.material->>'recipeId')::uuid as revised_recipe_id
             from recipe_intake_notifications n join web_push_subscriptions s on s.endpoint=n.endpoint
@@ -117,7 +128,8 @@ internal sealed class IntakeNotifications(
             {
                 await db.ExecuteAsync("delete from web_push_subscriptions where endpoint=@Endpoint", delivery, token).ConfigureAwait(false);
             }
-            catch (Exception exception) when (exception is PushServiceClientException or HttpRequestException)
+            catch (Exception exception) when (exception is PushServiceClientException or HttpRequestException
+                || (exception is TaskCanceledException && !token.IsCancellationRequested))
             {
                 await db.ExecuteAsync("update recipe_intake_notifications set retry_at=now()+ least(power(2,attempts),60) * interval '1 minute' where job_id=@JobId and endpoint=@Endpoint", delivery, token).ConfigureAwait(false);
             }

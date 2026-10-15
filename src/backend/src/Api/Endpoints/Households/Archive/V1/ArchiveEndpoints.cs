@@ -16,6 +16,7 @@ internal sealed class ExportArchiveEndpoint : IEndpoint
         app.MapGet($"{ApiPaths.V1}/households/{{householdId:guid}}/archive", async (
                 Guid householdId,
                 HttpContext context,
+                TimeProvider time,
                 IQueryHandler<ExportArchiveQuery, ArchiveWritten> handler,
                 CancellationToken cancellationToken) =>
             {
@@ -23,7 +24,7 @@ internal sealed class ExportArchiveEndpoint : IEndpoint
                 // problem response.
                 context.Response.ContentType = "application/json";
                 context.Response.Headers.ContentDisposition =
-                    $"attachment; filename=\"culina-{DateTime.UtcNow:yyyy-MM-dd}.json\"";
+                    $"attachment; filename=\"culina-{time.GetUtcNow():yyyy-MM-dd}.json\"";
 
                 var result = await handler
                     .Handle(

@@ -26,6 +26,14 @@ public sealed class SavedSearch
         UpdatedAt = updatedAt;
     }
 
+    /// <summary>How many saved searches a household may keep, so listing them stays a handful.</summary>
+    public const int MaxPerHousehold = 100;
+
+    /// <summary>Whether a household that has <paramref name="existing"/> searches may save another.</summary>
+    /// <param name="existing">How many it has.</param>
+    public static Result EnsureRoom(int existing) =>
+        existing >= MaxPerHousehold ? SavedSearchErrors.TooMany : Result.Success();
+
     /// <summary>The saved search's id.</summary>
     public Guid Id { get; }
 

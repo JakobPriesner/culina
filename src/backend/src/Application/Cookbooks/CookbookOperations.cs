@@ -158,7 +158,11 @@ internal sealed class CreateCookbookCommandHandler(
             cookbook => unitOfWork.InTransactionAsync(
                 async token =>
                 {
-                    var written = await cookbooks.AddAsync(cookbook, token).ConfigureAwait(false);
+                    // A soft cap: two creations at the very limit may both pass, which costs one extra cookbook.
+                    var count = await cookbooks.CountAsync(cookbook.HouseholdId, token).ConfigureAwait(false);
+                    var written = await Cookbook.EnsureRoom(count).Match(
+                        () => cookbooks.AddAsync(cookbook, token),
+                        error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
 
                     return await written.Match(
                         // A manual shelf starts empty; a smart one is full on creation, so read it back.

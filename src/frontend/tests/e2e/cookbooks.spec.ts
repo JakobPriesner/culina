@@ -148,6 +148,9 @@ test.describe('an automatic cookbook', () => {
     const sheet = page.getByRole('dialog');
     const find = sheet.getByRole('searchbox', { name: /find a tag|schlagwort suchen/i });
 
+    // Either the tag is listed already or the search box for finding it is; wait for one, not a snapshot.
+    await expect(find.or(sheet.getByRole('button', { name: new RegExp(tag) }))).toBeVisible();
+
     if (await find.isVisible()) {
       await find.fill(tag);
     }

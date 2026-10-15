@@ -1,4 +1,4 @@
-import { chromium, type Browser } from '../node_modules/@playwright/test/index.mjs';
+import { chromium, type Browser } from '@playwright/test';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { dirname, join } from 'node:path';

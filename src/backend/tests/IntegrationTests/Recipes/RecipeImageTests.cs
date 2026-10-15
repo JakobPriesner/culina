@@ -102,6 +102,26 @@ public class RecipeImageTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Remove_ShouldKeepTheFile_WhenAnotherRecipeUsesTheSameBytes()
+    {
+        var (client, recipeId) = await SeedAsync();
+        var householdId = (await client.GetAsync("/api/v1/households", Token))
+            .Json!.Value.GetProperty("items")[0].GetProperty("householdId").GetGuid();
+        var other = (await client.PostAsync("/api/v1/recipes", new { householdId, title = "Ragu" }, Token))
+            .Json!.Value.GetProperty("recipeId").GetGuid();
+        var bytes = TestImages.Png(600, 400);
+
+        await UploadAsync(client, recipeId, bytes, "photo.png", "image/png");
+        await UploadAsync(client, other, bytes, "photo.png", "image/png");
+        await client.DeleteAsync($"/api/v1/recipes/{recipeId}/image", Token);
+
+        // Content-addressed: the release checks under the file's lock that nothing else points at it.
+        var served = await client.GetAsync($"/api/v1/recipes/{other}/image?w=400", Token);
+
+        Assert.Equal(HttpStatusCode.OK, served.StatusCode);
+    }
+
+    [Fact]
     public async Task Upload_ShouldBeRefused_ForARecipeInAnotherHousehold()
     {
         var (client, _) = await SeedAsync();

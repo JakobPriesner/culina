@@ -19,5 +19,13 @@ src/frontend/native
 **/test-results
 **/.DS_Store
 **/.env
+# Local data (the data-protection key ring, config, recipe images) and tooling.
+data
+.claude
+.idea
+.pnpm-store
+.agents
+.codex
+.code-review-graph
 docs
 *.md

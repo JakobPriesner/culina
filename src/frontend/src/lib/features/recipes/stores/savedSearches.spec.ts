@@ -178,3 +178,140 @@ describe('whether there is anything to save', () => {
     expect(worthSaving({ query: '', tags: [], maxMinutes: null, sort: 'title' })).toBe(true);
   });
 });
+
+describe('answers that do not belong any more', () => {
+  const list = (...ids: string[]) => ({ items: ids.map((id) => wire(id, id, {})) });
+
+  it('drops a read that lands after the store was reset, so a signed-out list is not shown', async () => {
+    const held = Promise.withResolvers<Response>();
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => held.promise)
+    );
+
+    const loading = savedSearches.load('h1');
+
+    savedSearches.reset();
+    held.resolve(json(list('s1')));
+    await loading;
+
+    expect(savedSearches.items).toEqual([]);
+  });
+
+  it('keeps the household asked for last when the first answers last', async () => {
+    const answers: Record<string, (response: Response) => void> = {};
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (input: Request) =>
+          new Promise<Response>((resolve) => {
+            answers[new URL(input.url).searchParams.get('householdId')!] = resolve;
+          })
+      )
+    );
+
+    const first = savedSearches.load('hA');
+    const second = savedSearches.load('hB');
+
+    await vi.waitFor(() => expect(Object.keys(answers)).toHaveLength(2));
+    answers.hB!(json(list('b')));
+    await second;
+    answers.hA!(json(list('a')));
+    await first;
+
+    expect(savedSearches.items.map((one) => one.id)).toEqual(['b']);
+  });
+
+  it('keeps a search saved meanwhile when a revision is refused, and changes nothing it never changed', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(json(list('s1'))))
+    );
+    await savedSearches.load(household);
+
+    const held = Promise.withResolvers<Response>();
+    const refuse = () => held.resolve(json({ status: 500 }, 500));
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) =>
+        input.method === 'PATCH' ? held.promise : Promise.resolve(json(wire('s2', 's2', {})))
+      )
+    );
+
+    const revising = savedSearches.revise('s1', 'new', {
+      query: '',
+      tags: [],
+      maxMinutes: null,
+      sort: null
+    });
+
+    await savedSearches.save(household, 's2', {
+      query: 'x',
+      tags: [],
+      maxMinutes: null,
+      sort: null
+    });
+    refuse();
+    await revising;
+
+    expect(savedSearches.items.map((one) => one.id)).toEqual(['s1', 's2']);
+  });
+
+  it('puts back only the forgotten search when the server refuses', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(json(list('s1', 's2'))))
+    );
+    await savedSearches.load(household);
+
+    const held = Promise.withResolvers<Response>();
+    const refuse = () => held.resolve(json({ status: 500 }, 500));
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) =>
+        input.method === 'DELETE' ? held.promise : Promise.resolve(json(wire('s3', 's3', {})))
+      )
+    );
+
+    const forgetting = savedSearches.forget('s1');
+
+    await savedSearches.save(household, 's3', {
+      query: 'x',
+      tags: [],
+      maxMinutes: null,
+      sort: null
+    });
+    refuse();
+    await forgetting;
+
+    expect(savedSearches.items.map((one) => one.id)).toEqual(['s1', 's2', 's3']);
+  });
+
+  it('does not bring a forgotten search back after sign-out', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(json(list('s1'))))
+    );
+    await savedSearches.load(household);
+
+    const held = Promise.withResolvers<Response>();
+    const refuse = () => held.resolve(json({ status: 500 }, 500));
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => held.promise)
+    );
+
+    const forgetting = savedSearches.forget('s1');
+
+    savedSearches.reset();
+    refuse();
+    await forgetting;
+
+    expect(savedSearches.items).toEqual([]);
+  });
+});

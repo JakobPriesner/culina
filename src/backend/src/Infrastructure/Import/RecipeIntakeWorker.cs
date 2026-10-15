@@ -41,7 +41,7 @@ internal sealed partial class RecipeIntakeWorker(IServiceScopeFactory scopes, In
                     deadline.CancelAfter(TimeSpan.FromMinutes(10));
                     try
                     {
-                        await scope.ServiceProvider.GetRequiredService<RecipeIntake>().ProcessAsync(work, deadline.Token).ConfigureAwait(false);
+                        await scope.ServiceProvider.GetRequiredService<IntakeProcessor>().ProcessAsync(work, deadline.Token).ConfigureAwait(false);
                     }
                     catch (OperationCanceledException) when (!stoppingToken.IsCancellationRequested)
                     {

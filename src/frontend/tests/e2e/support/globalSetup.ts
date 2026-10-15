@@ -27,10 +27,22 @@ async function signInOnce(
 }
 
 export default async function openRegistration(): Promise<void> {
+  if (process.env['CI'] && !process.env['CULINA_IMAGE_URL']) {
+    // The @image specs, including the CSP check on the real image, skip without it.
+    throw new Error('CI must set CULINA_IMAGE_URL; refusing to skip the @image specs.');
+  }
+
   const email = process.env['CULINA_E2E_EMAIL'];
   const password = process.env['CULINA_E2E_PASSWORD'];
 
   if (!email || !password) {
+    if (process.env['CI']) {
+      // A renamed or dropped secret would otherwise turn nearly every suite into a skip and leave the job green.
+      throw new Error(
+        'CI must set CULINA_E2E_EMAIL and CULINA_E2E_PASSWORD; refusing to skip the signed-in suites.'
+      );
+    }
+
     // No backend: every signed-in suite skips.
     return;
   }

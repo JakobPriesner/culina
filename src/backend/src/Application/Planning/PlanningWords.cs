@@ -17,6 +17,10 @@ internal static class PlanningWords
         _ => "dinner"
     };
 
+    /// <summary>Whether a week can be built around the day; a day at the calendar's edge has none.</summary>
+    internal static Result Plannable(DateOnly day) =>
+        PlanningWeek.IsPlannable(day) ? Result.Success() : PlanningErrors.InvalidDate;
+
     /// <summary>
     /// Reads a slot, defaulting to dinner (the ordinary case, so a household never has to learn the
     /// concept).

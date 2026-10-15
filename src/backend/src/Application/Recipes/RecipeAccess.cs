@@ -122,18 +122,15 @@ internal static class RecipeAccess
             {
                 var kitchen = householdId ?? recipe.HouseholdId;
 
-                if (!await households.IsMemberAsync(kitchen, userId, cancellationToken).ConfigureAwait(false))
-                {
-                    return RecipeErrors.NotFound(recipeId);
-                }
-
                 var library = await HouseholdAccess
-                    .LibraryAsync(households, kitchen, cancellationToken)
+                    .LibraryOfMemberAsync(households, kitchen, userId, cancellationToken)
                     .ConfigureAwait(false);
 
-                return library.Contains(recipe.HouseholdId)
-                    ? Result<Recipe>.Success(recipe)
-                    : RecipeErrors.NotFound(recipeId);
+                return library.Match(
+                    found => found.Contains(recipe.HouseholdId)
+                        ? Result<Recipe>.Success(recipe)
+                        : RecipeErrors.NotFound(recipeId),
+                    _ => RecipeErrors.NotFound(recipeId));
             },
             error => Task.FromResult(Result<Recipe>.Failure(error))).ConfigureAwait(false);
     }

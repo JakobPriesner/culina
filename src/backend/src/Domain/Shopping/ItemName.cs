@@ -1,4 +1,5 @@
 using System.Text;
+using Domain.Ingredients;
 using Domain.Shared;
 
 namespace Domain.Shopping;
@@ -12,6 +13,8 @@ public sealed record ItemName
     /// <summary>The longest name a shopping list needs.</summary>
     public const int MaxLength = 120;
 
+    private IngredientReading? reading;
+
     private ItemName(string value, string comparisonKey)
     {
         Value = value;
@@ -23,6 +26,16 @@ public sealed record ItemName
 
     /// <summary>What it is compared as: folded, lowercased, trimmed.</summary>
     public string ComparisonKey { get; }
+
+    /// <summary>The name read into its thing and the words about it, once however often it is compared; a rename is a new name, so it is never stale.</summary>
+    public IngredientReading Reading => reading ??= IngredientWords.Read(Value);
+
+    /// <summary>Names are equal when they say the same; the cached reading is no part of what a name is.</summary>
+    public bool Equals(ItemName? other) =>
+        other is not null && Value == other.Value && ComparisonKey == other.ComparisonKey;
+
+    /// <summary>A hash of what <see cref="Equals(ItemName?)"/> compares.</summary>
+    public override int GetHashCode() => HashCode.Combine(Value, ComparisonKey);
 
     /// <summary>Reads a name, or says why it is not one.</summary>
     /// <param name="value">What the person typed.</param>

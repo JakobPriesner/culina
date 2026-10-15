@@ -16,6 +16,11 @@ public interface ISavedSearchRepository
     /// <param name="cancellationToken">Cancels the query.</param>
     Task<IReadOnlyList<SavedSearch>> ListAsync(Guid householdId, CancellationToken cancellationToken);
 
+    /// <summary>How many searches the household has, for its cap.</summary>
+    /// <param name="householdId">Whose searches.</param>
+    /// <param name="cancellationToken">Cancels the query.</param>
+    Task<int> CountAsync(Guid householdId, CancellationToken cancellationToken);
+
     /// <summary>
     /// Writes a new saved search; fails with <see cref="SavedSearchErrors.NameTaken"/> from the unique index,
     /// as a separate check could interleave.
