@@ -19,9 +19,11 @@
     oncheck: (isChecked: boolean) => void;
     onremove: () => void;
     onmove: (section: Section) => void;
+    /** Whether this line says why it is listed apart; false for all but the last of several lines of one thing. */
+    noted?: boolean;
   }
 
-  let { item, oncheck, onremove, onmove }: Props = $props();
+  let { item, oncheck, onremove, onmove, noted = true }: Props = $props();
 
   let showingSources = $state(false);
 
@@ -123,7 +125,7 @@
       {/if}
     </ActionMenu>
   </div>
-  {#if item.isListedSeparately && !item.isChecked}
+  {#if item.isListedSeparately && !item.isChecked && noted}
     <p class="separate">{m['shopping.separate']()}</p>
   {/if}
   {#if showingSources}
