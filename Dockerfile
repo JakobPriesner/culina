@@ -42,7 +42,14 @@ COPY src/frontend/ ./
 RUN pnpm generate:api && pnpm build
 
 # ── 2. The server ────────────────────────────────────────────────────────────
-FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa AS backend
+# Runs on the build platform too, and compiles *for* the target: the IL is the
+# same for both architectures, and only the native launcher (/app/Api) and a few
+# native packages are not, which `-a` picks. Building arm64 under emulation is
+# what made publishing take twenty minutes.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa AS backend
+
+# amd64 or arm64, set by buildx; `-a` accepts Docker's names as they are.
+ARG TARGETARCH
 
 WORKDIR /src
 
@@ -54,6 +61,8 @@ COPY .editorconfig ./
 # Same idea: every project file and lock file before any source.
 COPY src/backend/Directory.Build.props src/backend/Directory.Packages.props \
      src/backend/global.json src/backend/backend.slnx ./
+# Names the runtimes the lock files hold, which the restore below asks for.
+COPY src/backend/src/Directory.Build.props src/
 COPY src/backend/src/Domain/Domain.csproj src/backend/src/Domain/packages.lock.json src/Domain/
 COPY src/backend/src/Contracts/Contracts.csproj src/backend/src/Contracts/packages.lock.json src/Contracts/
 COPY src/backend/src/Application/Application.csproj src/backend/src/Application/packages.lock.json src/Application/
@@ -62,7 +71,7 @@ COPY src/backend/src/Api/Api.csproj src/backend/src/Api/packages.lock.json src/A
 
 # Locked: a build that silently resolves a different version of a dependency is
 # not the build that was tested.
-RUN dotnet restore src/Api/Api.csproj --locked-mode
+RUN dotnet restore src/Api/Api.csproj --locked-mode -a "$TARGETARCH"
 
 COPY src/backend/src/ src/
 
@@ -72,6 +81,7 @@ COPY --from=frontend /src/build/ src/Api/wwwroot/
 RUN dotnet publish src/Api/Api.csproj \
         --configuration Release \
         --no-restore \
+        -a "$TARGETARCH" \
         --output /app
 
 # The three data directories, made here because the runtime image has no shell

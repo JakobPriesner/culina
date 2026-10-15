@@ -1,0 +1,13 @@
+<Project>
+
+    <!-- Everything in ../Directory.Build.props, plus what is true only for the projects that ship. -->
+    <Import Project="../Directory.Build.props" />
+
+    <PropertyGroup>
+        <!-- The image builds both architectures on the build machine's own (the Dockerfile's
+             backend stage), restoring each project for the target's runtime. A locked restore
+             refuses a runtime its lock file has not seen, so both are named here. -->
+        <RuntimeIdentifiers>linux-x64;linux-arm64</RuntimeIdentifiers>
+    </PropertyGroup>
+
+</Project>
