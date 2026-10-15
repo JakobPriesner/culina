@@ -17,10 +17,14 @@
   import { cooking } from '$features/cooking/stores/cooking.svelte';
   import { kitchenTimers as timers } from '$features/cooking/kitchen.svelte';
   import KitchenSheet from '$features/cooking/KitchenSheet.svelte';
+  import { speech } from '$features/cooking/speech.svelte';
+  import StepSpeaker from '$features/cooking/StepSpeaker.svelte';
+  import { stepSpeech } from '$features/cooking/stepSpeech';
   import NotesSheet from '$features/cooking/NotesSheet.svelte';
   import { createStepGestures } from '$features/cooking/stepGestures';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
+  import { createScaling } from '$features/recipes/surface/scaled.svelte';
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
   import { m } from '$shell/i18n';
   import { haptics } from '$shell/haptics';
@@ -69,7 +73,41 @@
 
     return () => {
       release();
+      speech.cancel();
     };
+  });
+
+  /** The step being cooked as it is said aloud, at the yield on screen. */
+  const scaling = createScaling(
+    () => recipe,
+    () => servings
+  );
+  const stepText = $derived(
+    recipe
+      ? stepSpeech(recipe.steps[currentStep], scaling.amountFor, scaling.nameFor, recipe.language)
+      : ''
+  );
+
+  /** The step last seen, so only a move reads aloud: arriving at a step does not. */
+  let seenStep: number | null = null;
+
+  // A new step ends the old one's reading, however the move came (a tap, the remote, another device).
+  $effect(() => {
+    const index = currentStep;
+
+    if (!ready) return;
+
+    untrack(() => {
+      const moved = seenStep !== null && seenStep !== index;
+
+      seenStep = index;
+
+      if (!moved) return;
+
+      speech.cancel();
+
+      if (speech.autoRead && !over && recipe) speech.speak(stepText, recipe.language);
+    });
   });
 
   $effect(() => {
@@ -183,6 +221,12 @@
   let kitchenOpen = $state(false);
 </script>
 
+{#snippet stepaction()}
+  {#if recipe}
+    <StepSpeaker text={stepText} language={recipe.language} />
+  {/if}
+{/snippet}
+
 {#snippet cookedArt()}
   <Olli pose="celebrating" size="sm" still />
 {/snippet}
@@ -196,6 +240,7 @@
   onkeydown={gestures.keydown}
   ontouchstart={gestures.touchstart}
   ontouchend={gestures.touchend}
+  onpagehide={() => speech.cancel()}
 />
 
 <Page>
@@ -226,6 +271,7 @@
         {currentStep}
         onstep={move}
         onstopcooking={() => finish(false)}
+        {stepaction}
       />
 
       <CookingControls

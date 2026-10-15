@@ -4,6 +4,7 @@ import { playKitchenChime } from './kitchenAudio';
 import { notifyTimerDone } from './timerNotification';
 import { haptics } from '$shell/haptics';
 import { createTimers } from './timers.svelte';
+import { speech } from './speech.svelte';
 import { applyTimerAction, editTimerState, forgetKitchen, type TimerNotice } from './timerState';
 vi.mock('./timerNotification', () => ({
   notifyTimerDone: vi.fn(),
@@ -88,6 +89,23 @@ it('rings once across two windows, using the chime and foreground haptic cadence
   } finally {
     stopFirst();
     stopSecond();
+  }
+});
+
+it('silences a step being read aloud when the alarm rings', async () => {
+  vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] });
+  const interrupt = vi.spyOn(speech, 'interrupt');
+  const kitchen = createTimers(() => 's1');
+  kitchen.start(0, 1, 'Simmer');
+  await kitchen.refresh();
+  vi.setSystemTime(Date.now() + 2000);
+  const stop = kitchen.tick();
+  try {
+    await kitchen.refresh();
+    expect(interrupt).toHaveBeenCalledOnce();
+  } finally {
+    stop();
+    interrupt.mockRestore();
   }
 });
 

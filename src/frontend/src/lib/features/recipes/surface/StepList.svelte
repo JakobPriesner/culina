@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
   import { m } from '$shell/i18n';
   import type { Ingredient, Step } from '../types';
   import { followCurrentStep } from './followCurrentStep.svelte';
@@ -18,6 +19,8 @@
     highlighted: string | null;
     written: readonly Ingredient[];
     needsOf: (step: Step) => Ingredient[];
+    /** Extra controls under the step being cooked, supplied by the cook page. */
+    stepaction?: Snippet;
     onstep?: (index: number) => void;
     onhighlight: (ingredientId: string | null) => void;
     onlocate: (ingredientId: string) => void;
@@ -33,6 +36,7 @@
     highlighted,
     written,
     needsOf,
+    stepaction,
     onstep,
     onhighlight,
     onlocate
@@ -74,6 +78,11 @@
               <span class="number">{step.title ?? m['recipe.step']({ number: index + 1 })}</span>
               <StepText {step} {scaling} interactive={false} />
             </button>
+
+            <!-- Beside the button, not in it: a button inside a button is invalid HTML. -->
+            {#if stepaction && index === currentStep}
+              <div class="step-action">{@render stepaction()}</div>
+            {/if}
           {:else}
             <div class="step-body">
               <span class="number">{step.title ?? m['recipe.step']({ number: index + 1 })}</span>
@@ -172,8 +181,14 @@
     border-radius: var(--radius-lg);
   }
 
-  .perStep .step-body {
+  .perStep .step-body,
+  .perStep .step-action {
     grid-column: 2;
+  }
+
+  .step-action {
+    display: flex;
+    margin-block-start: var(--space-3);
   }
 
   .step-body {

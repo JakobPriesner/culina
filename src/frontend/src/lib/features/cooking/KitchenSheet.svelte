@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { Select, Sheet } from '$ds';
+  import { Select, Sheet, Switch } from '$ds';
   import type { RecipeReading } from '$features/recipes/types';
   import { m } from '$shell/i18n';
   import CookingPipToggle from './CookingPipToggle.svelte';
   import CookingRemoteToggle from './CookingRemoteToggle.svelte';
   import { kitchenWakeLock as wakeLock } from './kitchen.svelte';
   import { kitchenLighting } from './lighting.svelte';
+  import { speech } from './speech.svelte';
 
   /** The kitchen's own settings: lighting, staying awake, and where cooking shows up. */
   interface Props {
@@ -40,6 +41,14 @@
       </span>
       <CookingPipToggle {recipe} />
       <CookingRemoteToggle {recipe} />
+      {#if speech.supported}
+        <Switch
+          checked={speech.autoRead}
+          label={m['cooking.speech.autoRead']()}
+          description={m['cooking.speech.autoReadHint']()}
+          onchange={(on) => speech.setAutoRead(on)}
+        />
+      {/if}
     </div>
   {/if}
 </Sheet>

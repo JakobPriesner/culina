@@ -1905,5 +1905,9 @@
   "shopping.meals.title": "Geplante Mahlzeiten auf dieser Liste: {count}",
   "shopping.meals.pastCount": "{count} schon vergangen",
   "shopping.meals.past": "Schon vergangen",
-  "shopping.meals.pastNote": "Dieser Tag ist vorbei, doch was er braucht, bleibt auf der Liste, bis du es abhakst oder entfernst."
+  "shopping.meals.pastNote": "Dieser Tag ist vorbei, doch was er braucht, bleibt auf der Liste, bis du es abhakst oder entfernst.",
+  "cooking.speech.read": "Schritt vorlesen",
+  "cooking.speech.stop": "Vorlesen beenden",
+  "cooking.speech.autoRead": "Beim Weiterschalten vorlesen",
+  "cooking.speech.autoReadHint": "Liest jeden Schritt vor, sobald du zu ihm wechselst. Ein Timer-Alarm unterbricht die Stimme immer."
 }
