@@ -100,6 +100,8 @@
       left: var(--action-left);
       width: var(--action-width);
       z-index: var(--z-sticky);
+      /* Follows the bottom bar as it slides away and back. */
+      transition: top var(--duration-base) var(--ease-out);
     }
   }
 
