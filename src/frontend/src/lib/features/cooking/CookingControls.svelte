@@ -4,6 +4,7 @@
   import { m } from '$shell/i18n';
   import CookingControlsBar from './CookingControlsBar.svelte';
   import { kitchenTimers as timers } from './kitchen.svelte';
+  import { durationsIn } from './stepDurations';
   import StepTimer from './StepTimer.svelte';
 
   interface Props {
@@ -42,6 +43,17 @@
   const stepTimer = $derived(timers.timers.find((timer) => timer.stepIndex === currentStep));
   const duration = $derived(recipe.steps[currentStep]?.durationSeconds ?? null);
 
+  /** The waits the step's words name ("4 Min. braten"), offered as timers when the recipe set none for it. */
+  const written = $derived.by(() => {
+    const step = recipe.steps[currentStep];
+
+    return step && duration === null
+      ? durationsIn(
+          step.segments.map((segment) => (segment.kind === 'text' ? segment.text : '')).join(' ')
+        )
+      : [];
+  });
+
   /** Timers outlive this screen, so prefer the step's own title ("Proving") over "Step 3". */
   const stepName = $derived(
     recipe.steps[currentStep]?.title ?? m['recipe.step']({ number: currentStep + 1 })
@@ -49,18 +61,37 @@
 </script>
 
 <CookingControlsBar bind:height>
-  {#if duration !== null}
+  {#if duration !== null || stepTimer}
     <div class="control-timer">
       <StepTimer
         size="lg"
-        durationSeconds={duration}
+        durationSeconds={duration ?? 0}
         timer={stepTimer}
         secondsLeft={stepTimer ? timers.remaining(stepTimer) : 0}
-        onstart={() => timers.start(currentStep, duration, stepName)}
+        onstart={() => duration !== null && timers.start(currentStep, duration, stepName)}
         ondismiss={() => timers.dismiss(currentStep)}
         onpause={() => timers.pause(currentStep)}
         onresume={() => timers.resume(currentStep)}
       />
+    </div>
+  {:else if written.length > 0}
+    <!-- One tap per wait the step names; a range starts at its lower bound, since early is safe and late is not. -->
+    <div class="control-timer written" role="group" aria-label={m['cooking.timer.written']()}>
+      {#each written as seconds (seconds)}
+        <Button
+          size="lg"
+          label={m['cooking.timer.start']({ minutes: Math.round(seconds / 60) })}
+          onclick={() => timers.start(currentStep, seconds, stepName)}
+        >
+          {#snippet icon()}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="13" r="7.5" />
+              <path d="M12 9.5V13l2.5 2M10 2.5h4M12 2.5v3" stroke-linecap="round" />
+            </svg>
+          {/snippet}
+          {m['cooking.timer.minutes']({ minutes: Math.round(seconds / 60) })}
+        </Button>
+      {/each}
     </div>
   {/if}
 
@@ -153,6 +184,20 @@
   .control-timer {
     grid-column: 1 / -1;
     min-width: 0;
+  }
+
+  /* Shares one row when it can: a second row would push the step up under the cook's eyes. */
+  .written {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+
+  /* A short label needs less side room than a sentence; it must stay on one line. */
+  .written > :global(.button) {
+    flex: 1 1 0;
+    padding-inline: var(--space-3);
+    white-space: nowrap;
   }
 
   .control-summary {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Button } from '$ds';
+  import { Button, IconButton } from '$ds';
 
   import { m } from '$shell/i18n';
   import type { KitchenTimer } from './timers.svelte';
@@ -51,6 +51,12 @@
     {:else if onpause}
       <Button {size} onclick={onpause}>{m['cooking.timer.pause']()}</Button>
     {/if}
+    <!-- A timer started by mistake (one tap from the step's words) is taken back, not left to ring. -->
+    <IconButton {size} label={m['cooking.timer.cancel']()} onclick={ondismiss}>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="m7 7 10 10M17 7 7 17" stroke-linecap="round" />
+      </svg>
+    </IconButton>
   </div>
 {:else}
   <!-- Assertive: this one cannot wait, the pan is on. -->
@@ -68,6 +74,11 @@
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-2);
+  }
+
+  /* Time left, pause and cancel share a phone's row. */
+  .timer-controls > :global(.button) {
+    padding-inline: var(--space-4);
   }
 
   .running {
