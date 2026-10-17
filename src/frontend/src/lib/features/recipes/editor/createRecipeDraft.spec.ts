@@ -211,7 +211,7 @@ describe('createRecipeDraft', () => {
     const editor = createRecipeDraft(() => 'recipe-1');
 
     editor.takeLoaded();
-    editor.photoWritten('image-1');
+    editor.photoWritten('image-1', false);
 
     expect(editor.recipe).toMatchObject({ imageId: 'image-1', version: 2 });
     editor.dispose();

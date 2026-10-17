@@ -28,6 +28,8 @@ internal sealed record RecipeRow
 
     public Guid? ImageId { get; init; }
 
+    public bool ImageDrawn { get; init; }
+
     public Guid CreatedBy { get; init; }
 
     public DateTimeOffset CreatedAt { get; init; }

@@ -171,12 +171,12 @@ export function createRecipeDraft(recipeId: () => string) {
      * Mirrors a photo saved by its own endpoint, which bumps the version by one.
      * Steps exactly one (never the response's version) so a concurrent write still conflicts instead of being overwritten.
      */
-    photoWritten(imageId: string | null) {
+    photoWritten(imageId: string | null, drawn: boolean) {
       if (!draft) {
         return;
       }
 
-      draft = { ...draft, imageId, version: draft.version + 1 };
+      draft = { ...draft, imageId, imageDrawn: drawn, version: draft.version + 1 };
 
       // The journal is reopened in place of the server copy, so it needs the step too.
       if (unsent && session.user) {

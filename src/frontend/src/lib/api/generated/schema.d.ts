@@ -4606,6 +4606,8 @@ export interface components {
              * @description Its hero image, if it has one.
              */
             imageId?: string | null;
+            /** @description Whether the hero image was drawn by the assistant rather than photographed. */
+            imageDrawn?: boolean;
             /** @description Its ingredient groups, in order. */
             groups: components["schemas"]["RecipesIngredientGroupContract"][];
             /** @description Its steps, in order. */

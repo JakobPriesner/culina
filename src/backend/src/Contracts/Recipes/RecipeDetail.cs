@@ -45,6 +45,9 @@ public sealed record RecipeDetail
     /// <summary>Its hero image, if it has one.</summary>
     public Guid? ImageId { get; init; }
 
+    /// <summary>Whether the hero image was drawn by the assistant rather than photographed.</summary>
+    public bool ImageDrawn { get; init; }
+
     /// <summary>Its ingredient groups, in order.</summary>
     public required IReadOnlyList<IngredientGroupContract> Groups { get; init; }
 

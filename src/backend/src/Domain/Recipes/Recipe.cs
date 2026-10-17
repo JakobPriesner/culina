@@ -80,6 +80,9 @@ public sealed class Recipe
     /// <summary>Its hero image, if it has one.</summary>
     public Guid? ImageId { get; private set; }
 
+    /// <summary>Whether the hero image was drawn by the assistant rather than photographed.</summary>
+    public bool ImageDrawn { get; private set; }
+
     /// <summary>Its ingredient groups, in order.</summary>
     public IReadOnlyList<IngredientGroup> Groups { get; private set; }
 
@@ -289,9 +292,10 @@ public sealed class Recipe
     }
 
     /// <summary>Attaches or clears the hero image.</summary>
-    public void SetImage(Guid? imageId, DateTimeOffset now)
+    public void SetImage(Guid? imageId, bool drawn, DateTimeOffset now)
     {
         ImageId = imageId;
+        ImageDrawn = imageId is not null && drawn;
         UpdatedAt = now;
     }
 

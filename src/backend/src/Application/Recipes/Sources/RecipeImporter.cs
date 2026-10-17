@@ -301,7 +301,7 @@ internal sealed class RecipeImporter(
             await stored.Match(
                 image => unitOfWork.InTransactionAsync(
                     async token => await recipes
-                        .SetImageAsync(recipeId, image, PictureContentType, time.GetUtcNow(), token)
+                        .SetImageAsync(recipeId, image, PictureContentType, drawn: false, time.GetUtcNow(), token)
                         .ConfigureAwait(false),
                     cancellationToken),
                 // A photo this could not decode is one the recipe does without; nothing was written.

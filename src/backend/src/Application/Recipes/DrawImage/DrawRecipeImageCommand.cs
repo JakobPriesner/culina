@@ -175,7 +175,7 @@ internal sealed class DrawRecipeImageCommandHandler(
                 using (picture)
                 {
                     return await images
-                        .AttachAsync(command.RecipeId, picture.Picture, cancellationToken)
+                        .AttachDrawnAsync(command.RecipeId, picture.Picture, cancellationToken)
                         .ConfigureAwait(false);
                 }
             },

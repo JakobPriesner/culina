@@ -13,7 +13,9 @@
   interface Props {
     recipeId: string;
     imageId: string | null;
-    onchange: (imageId: string | null) => void;
+    /** The picture on the recipe was drawn by the assistant. */
+    drawn?: boolean;
+    onchange: (imageId: string | null, drawn: boolean) => void;
   }
 
   /**
@@ -27,7 +29,10 @@
     problem?: { code: string; detail: string } | null;
   }
 
-  let { recipeId, imageId, onchange }: Props = $props();
+  let { recipeId, imageId, drawn = false, onchange }: Props = $props();
+
+  /** Said only beside a drawn picture: with none there, "this picture" points at nothing. */
+  const showsDrawing = $derived(imageId !== null && drawn);
 
   const canDraw = $derived(session.user?.assistance.draw ?? false);
 
@@ -76,7 +81,7 @@
     busy = false;
 
     if (result.ok) {
-      onchange(result.value.imageId ?? null);
+      onchange(result.value.imageId ?? null, false);
     } else {
       failure = m['editor.photoFailed']();
     }
@@ -104,7 +109,7 @@
         drawing = false;
 
         if (event.recipe) {
-          onchange(event.recipe.imageId ?? null);
+          onchange(event.recipe.imageId ?? null, true);
         } else if (event.problem) {
           drawFailure = clientError(event.problem.code, event.problem.detail);
         } else {
@@ -130,7 +135,7 @@
     busy = false;
 
     if (result.ok) {
-      onchange(null);
+      onchange(null, false);
     } else {
       failure = m['editor.photoFailed']();
     }
@@ -178,7 +183,7 @@
   </div>
 {/if}
 
-{#if canDraw && !imageId}
+{#if showsDrawing}
   <p class="note">{m['assist.draw.note']()}</p>
 {/if}
 
