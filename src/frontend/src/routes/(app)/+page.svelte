@@ -1,4 +1,9 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
+
+  import { goto } from '$app/navigation';
+  import { resolve } from '$app/paths';
+  import { page } from '$app/state';
   import { Button, EmptyState, ErrorState } from '$ds';
   import { session } from '$features/auth/session.svelte';
   import TodayMeal from '$features/planning/TodayMeal.svelte';
@@ -29,6 +34,20 @@
 
   /** Empty because of a filter is a mistake to undo; empty because it is new is an invitation. */
   const filtered = $derived(libraryView.filtered);
+
+  // `/?tag=…`, from a tag on a recipe: the library opens filtered by it, and the address is tidied so a reload keeps the toolbar's own state.
+  $effect(() => {
+    const tag = page.url.searchParams.get('tag');
+    const household = householdId;
+
+    if (tag && household) {
+      untrack(() => {
+        libraryView.forHousehold(household);
+        libraryView.assign({ tags: [tag] });
+        void goto(resolve('/(app)'), { replaceState: true });
+      });
+    }
+  });
 
   const lead = useSuggestionLead({ householdId: () => householdId, filtered: () => filtered });
   const list = useLibraryList({ householdId: () => householdId, ranks: () => lead.ranks });

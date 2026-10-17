@@ -7,6 +7,7 @@
   import { createScaling } from './scaled.svelte';
   import CookingAction from './CookingAction.svelte';
   import IngredientsPanel from './IngredientsPanel.svelte';
+  import RecipeTags from './RecipeTags.svelte';
   import StepList from './StepList.svelte';
   import SurfaceHead from './SurfaceHead.svelte';
   import SurfaceHero from './SurfaceHero.svelte';
@@ -153,6 +154,10 @@
   />
 
   <SurfaceServings {recipe} {servings} {scaling} {onservings} onscaleto={scaleByAmount} />
+
+  {#if !cooking}
+    <RecipeTags recipeId={recipe.id} tags={recipe.tags} />
+  {/if}
 
   <!-- After the servings band, not under the title: on a phone that keeps the servings on the first screen. -->
   {#if whereabouts && !cooking}
