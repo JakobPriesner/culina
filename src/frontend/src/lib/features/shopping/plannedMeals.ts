@@ -11,6 +11,8 @@ export interface MealLine {
 }
 
 export interface ListedMeal {
+  /** The planned meal, for taking its lines back off; null from a list cached before the API said. */
+  readonly planEntryId: string | null;
   readonly recipeId: string;
   readonly recipeTitle: string;
   readonly slot: string | null | undefined;
@@ -56,6 +58,7 @@ export function plannedMealsOf(items: readonly ShoppingItem[], today: string): L
         entry = {
           date: source.plannedDate,
           meal: {
+            planEntryId: source.planEntryId ?? null,
             recipeId: source.recipeId,
             recipeTitle: source.recipeTitle,
             slot: source.plannedSlot,

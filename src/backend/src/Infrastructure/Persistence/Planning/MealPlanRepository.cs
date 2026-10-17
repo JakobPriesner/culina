@@ -32,6 +32,8 @@ internal sealed record PlannedRow
     public decimal YieldAmount { get; init; }
 
     public bool IsOnShoppingList { get; init; }
+
+    public DateTimeOffset? CookedAt { get; init; }
 }
 
 /// <summary>Stores what a household means to cook.</summary>
@@ -52,7 +54,15 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
                    r.title, r.image_id, r.prep_minutes, r.cook_minutes, r.yield_amount,
                    exists (
                        select 1 from shopping_list_item_sources s where s.plan_entry_id = p.id
-                   ) as is_on_shopping_list
+                   ) as is_on_shopping_list,
+                   -- A day either side: the server does not know the cook's time zone, so the client compares the day.
+                   (
+                       select max(c.made_at) from cook_log_entries c
+                       where c.household_id = p.household_id
+                         and c.recipe_id = p.recipe_id
+                         and c.made_at >= p.on_date - 1
+                         and c.made_at < p.on_date + 2
+                   ) as cooked_at
             from meal_plan_entries p
             join recipes r on r.id = p.recipe_id
             where p.household_id = @householdId
@@ -218,7 +228,8 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
         // Only when both are known: a guessed total is a number somebody plans an evening around.
         row.PrepMinutes is { } prep && row.CookMinutes is { } cook ? prep + cook : null,
         row.YieldAmount,
-        row.IsOnShoppingList);
+        row.IsOnShoppingList,
+        row.CookedAt);
 }
 
 /// <summary>How a slot is spelled in the database: text, so inserting a slot cannot silently reassign rows.</summary>

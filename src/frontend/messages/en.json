@@ -1923,5 +1923,42 @@
   "shopping.meals.title": "Planned meals on this list: {count}",
   "shopping.meals.pastCount": "{count} already past",
   "shopping.meals.past": "Already past",
-  "shopping.meals.pastNote": "This day has passed, but what it asked for stays on the list until you tick it off or remove it."
+  "shopping.meals.pastNote": "This day has passed, but what it asked for stays on the list until you tick it off or remove it.",
+  "shopping.meals.withdraw": "Take off the list",
+  "shopping.meals.withdraw.label": "Take off the list: {title}",
+  "shopping.meals.withdrawn": "What {title} still needed is off the list.",
+  "recipe.whereabouts.scale": "As planned: {amount}",
+  "plan.recipe.alsoShop": "Put it on the shopping list too",
+  "plan.recipe.doneListed": "Added to {day} and to the shopping list.",
+  "plan.recipe.doneNotListed": "Added to {day}, but it could not go on the shopping list.",
+  "suggestions.plan": "Add to plan: {title}",
+  "plan.today.cooked": "Cooked today",
+  "plan.cooked": "Cooked",
+  "shopping.allBought.tonight": "Up next: {title}",
+  "recipe.ingredientsView.thisStep": "This step",
+  "recipe.ingredientsView.all": "All",
+  "notes.step": "Only for {step}",
+  "notes.step.placeholder": "Take it out at 22 minutes.",
+  "notes.marked": "Your notes (you wrote some)",
+  "notes.peek.edit": "Edit your note",
+  "cooked.title": "Made it. Anything for next time?",
+  "cooked.hint": "Everything here is optional.",
+  "cooked.photo": "Add a photo",
+  "cooked.note": "Note for next time",
+  "cooked.leftover": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Take the unbought line off the list",
+        "countPlural=*": "Take {count} unbought lines off the list"
+      }
+    }
+  ],
+  "cooked.done": "Done",
+  "editor.stepDuration.spotted": "Use {minutes} min",
+  "editor.stepDuration.spotted.label": "Use {minutes} min as the timer of step {number}",
+  "recipe.stub.title": "Only a title so far",
+  "recipe.stub.body": "Add the ingredients and steps to cook from it.",
+  "recipe.stub.finish": "Finish writing"
 }

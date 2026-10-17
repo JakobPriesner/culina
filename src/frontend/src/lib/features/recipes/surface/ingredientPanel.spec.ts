@@ -72,6 +72,30 @@ describe('the ingredient panel', () => {
     expect(names(panel.panel)).toEqual(['butter', 'flour', 'salt']);
   });
 
+  it('lets a cook see every ingredient, to prep ahead, and back to the step', () => {
+    const panel = panelFor([step('a', ['butter']), step('b', ['flour'])], true, 1);
+
+    panel.chooseWhileCooking('all');
+
+    expect(names(panel.panel)).toEqual(['butter', 'flour', 'salt']);
+
+    panel.chooseWhileCooking('step');
+
+    expect(names(panel.panel)).toEqual(['flour']);
+  });
+
+  it('guesses the ingredients of a step its author linked nothing to, even when other steps are linked', () => {
+    const words = (id: string, text: string, uses: string[]) =>
+      ({ id, uses, segments: [{ kind: 'text', text }] }) as unknown as Step;
+    const panel = panelFor(
+      [words('a', 'Melt the butter.', ['butter']), words('b', 'Fold in the flour.', [])],
+      true,
+      1
+    );
+
+    expect(names(panel.panel)).toEqual(['flour']);
+  });
+
   it('remembers the arrangement for the next recipe', () => {
     panelFor([step('a', ['butter'])]).choose('perStep');
 

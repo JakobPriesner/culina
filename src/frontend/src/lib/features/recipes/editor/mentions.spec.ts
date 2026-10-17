@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   insertMention,
   linkMentions,
+  mentionNamed,
   pendingMention,
   suggest,
   toSegments,
@@ -266,5 +267,31 @@ describe('a mention already written, and the sentence after it', () => {
 
   it('is not a word that merely begins like a name', () => {
     expect(writesOn('buttermilk please', list)).toBe(false);
+  });
+});
+
+describe('making a spotted ingredient a mention', () => {
+  it('marks the first place the words spell its name', () => {
+    const melt = step([{ kind: 'text', text: 'Melt the Butter, then more butter.' }]);
+
+    const segments = mentionNamed(melt, butter, list);
+
+    expect(toText(step(segments!), list)).toBe('Melt the @butter, then more butter.');
+  });
+
+  it('leaves another wording alone, and never breaks a mention already there', () => {
+    const buttery = step([{ kind: 'text', text: 'Brush with buttermilk.' }]);
+    const olive = step([
+      { kind: 'text', text: 'Warm the ' },
+      {
+        kind: 'ingredient',
+        ingredientId: oliveOil.id,
+        name: 'olive oil',
+        quantity: oliveOil.quantity
+      }
+    ]);
+
+    expect(mentionNamed(buttery, butter, list)).toBeNull();
+    expect(mentionNamed(olive, oil, list)).toBeNull();
   });
 });

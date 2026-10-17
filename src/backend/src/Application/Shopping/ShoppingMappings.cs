@@ -36,6 +36,7 @@ internal static class ShoppingMappings
                         RecipeTitle = source.RecipeTitle,
                         Quantity = source.Quantity.Amount,
                         Unit = Recipes.RecipeWords.Of(source.Quantity.Unit),
+                        PlanEntryId = source.PlanEntryId,
                         PlannedDate = source.PlannedDate,
                         PlannedSlot = source.PlannedSlot is { } slot
                             ? Planning.PlanningWords.Of(slot)

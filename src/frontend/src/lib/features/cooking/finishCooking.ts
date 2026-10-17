@@ -1,3 +1,4 @@
+import { upcoming } from '$features/planning/upcoming.svelte';
 import { haptics } from '$shell/haptics';
 import { cookLog } from './stores/cookLog.svelte';
 import { cooking } from './stores/cooking.svelte';
@@ -24,6 +25,11 @@ export async function finishCooking(
   const closed = await cooking.end(completed);
 
   const recorded = completed ? await cookLog.record(recipeId, servings, householdId) : null;
+
+  // The week shows a meal cooked once it is; read it again rather than guess which meal this was.
+  if (recorded && householdId) {
+    void upcoming.load(householdId);
+  }
 
   return { closed, recorded };
 }

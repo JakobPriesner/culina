@@ -60,10 +60,12 @@ public interface IMealPlanRepository
 /// <param name="TotalMinutes">Hands-on plus cooking, when both are known.</param>
 /// <param name="RecipeServings">What the recipe itself is written for.</param>
 /// <param name="IsOnShoppingList">Whether its ingredients are on the shopping list.</param>
+/// <param name="CookedAt">The household's latest cook of the recipe within a day of the meal's day, if any.</param>
 public sealed record PlannedRecipe(
     MealPlanEntry Entry,
     string Title,
     Guid? ImageId,
     int? TotalMinutes,
     decimal RecipeServings,
-    bool IsOnShoppingList);
+    bool IsOnShoppingList,
+    DateTimeOffset? CookedAt);

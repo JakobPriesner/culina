@@ -7,15 +7,17 @@
   interface Props {
     open: boolean;
     recipeId: string;
+    /** The step on screen, for a note on just that step. */
+    step?: { readonly id: string; readonly name: string } | null;
     onclose: () => void;
   }
 
-  let { open, recipeId, onclose }: Props = $props();
+  let { open, recipeId, step = null, onclose }: Props = $props();
 </script>
 
 <Sheet {open} title={m['notes.title']()} closeLabel={m['picker.close']()} {onclose}>
   <!-- Keyed so a pending autosave is flushed for the recipe it was typed on, not the next one. -->
   {#key recipeId}
-    <PersonalNotePanel {recipeId} variant="cook" />
+    <PersonalNotePanel {recipeId} variant="cook" {step} />
   {/key}
 </Sheet>

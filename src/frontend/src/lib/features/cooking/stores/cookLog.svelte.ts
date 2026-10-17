@@ -17,6 +17,8 @@ export type CookLogItem = CookLog['items'][number];
 
 class CookLogStore {
   #log = $state<CookLog | null>(null);
+  /** The cook recorded last on this device, until its wrap-up is answered: the recipe page offers a photo and a note for it. */
+  #justRecorded = $state<{ readonly recipeId: string; readonly entryId: string } | null>(null);
 
   /** The recipe the log on screen belongs to, and which read is the latest; plain, since `load()` runs inside effects. */
   #recipeId: string | null = null;
@@ -32,6 +34,15 @@ class CookLogStore {
 
   get items(): readonly CookLogItem[] {
     return this.#log?.items ?? [];
+  }
+
+  get justRecorded(): { readonly recipeId: string; readonly entryId: string } | null {
+    return this.#justRecorded;
+  }
+
+  /** The wrap-up was answered or waved away. */
+  settle(): void {
+    this.#justRecorded = null;
   }
 
   async load(recipeId: string): Promise<void> {
@@ -73,12 +84,18 @@ class CookLogStore {
       return null;
     }
 
+    this.#justRecorded = { recipeId, entryId: result.value.entryId };
+
     await this.load(recipeId);
 
     return { entryId: result.value.entryId, count: result.value.count };
   }
 
   async undo(recipeId: string, entryId: string): Promise<void> {
+    if (this.#justRecorded?.entryId === entryId) {
+      this.#justRecorded = null;
+    }
+
     await request(() =>
       http.DELETE('/api/v1/recipes/{recipeId}/cook-log/{entryId}', {
         params: { path: { recipeId, entryId } }
@@ -129,6 +146,7 @@ class CookLogStore {
 
   reset(): void {
     this.#log = null;
+    this.#justRecorded = null;
     this.#recipeId = null;
     this.#reads.cancel();
   }

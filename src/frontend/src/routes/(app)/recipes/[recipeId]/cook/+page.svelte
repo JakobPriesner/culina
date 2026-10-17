@@ -15,10 +15,12 @@
   import { finishCooking } from '$features/cooking/finishCooking';
   import { cookLog } from '$features/cooking/stores/cookLog.svelte';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
+  import { notes } from '$features/cooking/stores/notes.svelte';
   import { kitchenTimers as timers } from '$features/cooking/kitchen.svelte';
   import KitchenSheet from '$features/cooking/KitchenSheet.svelte';
   import NotesSheet from '$features/cooking/NotesSheet.svelte';
   import { createStepGestures } from '$features/cooking/stepGestures';
+  import { upcoming } from '$features/planning/upcoming.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
@@ -76,6 +78,22 @@
     if (recipeId) {
       void recipes.load(recipeId);
     }
+  });
+
+  // Read with the recipe, not when the sheet opens: the notes button says whether there is one, and steps show theirs.
+  $effect(() => {
+    if (recipeId) {
+      void notes.load(recipeId);
+    }
+  });
+
+  /** The step on screen, which a note can be about; a step not yet saved has no id to hang one on. */
+  const noteStep = $derived.by(() => {
+    const step = recipe?.steps[currentStep];
+
+    return step?.id
+      ? { id: step.id, name: step.title ?? m['recipe.step']({ number: currentStep + 1 }) }
+      : null;
   });
 
   /** Set when cooking ends, never unset: ending clears the session, which the effect below watches and would restart. */
@@ -146,6 +164,14 @@
     }
   }
 
+  async function undoCooked(entryId: string) {
+    await cookLog.undo(recipeId, entryId);
+
+    if (session.activeHouseholdId) {
+      void upcoming.load(session.activeHouseholdId);
+    }
+  }
+
   async function finish(completed: boolean) {
     over = true;
 
@@ -166,7 +192,7 @@
               // Done first, undo offered after: confirming a cheap, one-tap action costs more than it protects.
               action: {
                 label: () => m['cooking.madeIt.undo'](),
-                run: () => void cookLog.undo(recipeId, recorded.entryId)
+                run: () => void undoCooked(recorded.entryId)
               }
             }
           : { message: () => m['cooking.madeIt.failed'](), tone: 'danger' }
@@ -226,6 +252,7 @@
         {currentStep}
         onstep={move}
         onstopcooking={() => finish(false)}
+        stepNote={(id) => notes.stepNote(id)}
       />
 
       <CookingControls
@@ -234,6 +261,7 @@
         {ready}
         {recipeHref}
         {autoScrolling}
+        noted={notes.written}
         bind:height={controlsHeight}
         onmove={move}
         onadvance={advance}
@@ -263,7 +291,7 @@
 </Page>
 
 <KitchenSheet open={kitchenOpen} {recipe} onclose={() => (kitchenOpen = false)} />
-<NotesSheet open={notesOpen} {recipeId} onclose={() => (notesOpen = false)} />
+<NotesSheet open={notesOpen} {recipeId} step={noteStep} onclose={() => (notesOpen = false)} />
 
 <style>
   /* Clearance above the controls: their height, their float gap and as much again. */

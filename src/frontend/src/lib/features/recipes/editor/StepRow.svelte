@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { Field, IconButton, TextInput } from '$ds';
+  import { Button, Field, IconButton, TextInput } from '$ds';
+  import { durationsIn } from '$features/cooking/stepDurations';
   import { m } from '$shell/i18n';
 
   import type { Ingredient, Step } from '../types';
@@ -23,6 +24,9 @@
 
   let { step, index, count, ingredients, onchange, onmove, onremove, onaddingredient }: Props =
     $props();
+
+  /** Waits the words name ("10 Min. köcheln"), offered as the step's timer while it has none; cook mode offers the same ones. */
+  const spotted = $derived(step.durationSeconds === null ? durationsIn(toText(step)) : []);
 </script>
 
 <li class="step">
@@ -109,6 +113,21 @@
         </div>
       {/snippet}
     </Field>
+
+    {#if spotted.length > 0}
+      <div class="spotted">
+        {#each spotted as seconds (seconds)}
+          {@const minutes = Math.round(seconds / 60)}
+          <Button
+            size="sm"
+            label={m['editor.stepDuration.spotted.label']({ number: index + 1, minutes })}
+            onclick={() => onchange({ ...step, durationSeconds: seconds })}
+          >
+            {m['editor.stepDuration.spotted']({ minutes })}
+          </Button>
+        {/each}
+      </div>
+    {/if}
   </div>
 
   <StepIngredients
@@ -116,6 +135,7 @@
     number={index + 1}
     {ingredients}
     onchange={(uses) => onchange({ ...step, uses })}
+    onmention={(segments) => onchange({ ...step, segments })}
   />
 </li>
 
@@ -171,6 +191,13 @@
 
   .timer {
     max-width: 16rem;
+  }
+
+  .spotted {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
   }
 
   .duration-control {

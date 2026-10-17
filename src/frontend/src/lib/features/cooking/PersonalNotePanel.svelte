@@ -16,24 +16,19 @@
    */
   interface Props {
     recipeId: string;
-    /** `cook` reads the note itself; `detail` is shown by the recipe page, which has already asked for it. */
+    /** `cook` is the compact one in cook mode's sheet; either way the page has already asked for the note. */
     variant?: 'detail' | 'cook';
+    /** The step being cooked, which gets a note of its own, shown under it next time. */
+    step?: { readonly id: string; readonly name: string } | null;
   }
 
-  let { recipeId, variant = 'detail' }: Props = $props();
+  let { recipeId, variant = 'detail', step = null }: Props = $props();
 
   const autosave = createAutosave(() => notes.save(recipeId));
 
   onDestroy(() => {
     void autosave.flush();
     autosave.dispose();
-  });
-
-  // The recipe page reads its note, log and related shelf as soon as it knows the id, not when this renders.
-  $effect(() => {
-    if (variant === 'cook') {
-      void notes.load(recipeId);
-    }
   });
 
   const lastMade = $derived(
@@ -88,6 +83,22 @@
         autosave.touch();
       }}
     />
+
+    {#if step}
+      {@const stepId = step.id}
+      <label class="step-label" for="step-note">{m['notes.step']({ step: step.name })}</label>
+      <TextArea
+        id="step-note"
+        value={notes.stepNote(stepId)}
+        readonly={!notes.loaded}
+        rows={2}
+        placeholder={m['notes.step.placeholder']()}
+        oninput={(text) => {
+          notes.setStep(stepId, text);
+          autosave.touch();
+        }}
+      />
+    {/if}
   {/if}
 </section>
 
@@ -126,6 +137,12 @@
     align-items: center;
     gap: var(--space-2) var(--space-4);
     font-size: var(--text-sm);
+  }
+
+  .step-label {
+    margin-top: var(--space-2);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
   }
 
   .status,

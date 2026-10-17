@@ -15,6 +15,9 @@ public sealed record SourceContract
     /// <summary>In what, or null for a bare count.</summary>
     public string? Unit { get; init; }
 
+    /// <summary>The planned meal it is for, or null when added directly.</summary>
+    public Guid? PlanEntryId { get; init; }
+
     /// <summary>Which planned day it is for, or null when added directly.</summary>
     public DateOnly? PlannedDate { get; init; }
 
@@ -106,6 +109,9 @@ public sealed record AddPlannedMealsRequest
 {
     /// <summary>The day the week starts on, as the plan was read.</summary>
     public required DateOnly From { get; init; }
+
+    /// <summary>Only this planned meal of the week, as when it is planned after the shop; null for all of them.</summary>
+    public Guid? EntryId { get; init; }
 }
 
 /// <summary>A change to one line.</summary>

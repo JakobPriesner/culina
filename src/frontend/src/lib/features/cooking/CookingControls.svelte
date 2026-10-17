@@ -15,6 +15,8 @@
     /** The recipe page at the yield being cooked. */
     recipeHref: string;
     autoScrolling: boolean;
+    /** Whether you wrote a note on this recipe, so the notes button says there is something to read. */
+    noted?: boolean;
     height?: number;
     onmove: (index: number) => void;
     /** Forward, or done. */
@@ -30,6 +32,7 @@
     ready,
     recipeHref,
     autoScrolling,
+    noted = false,
     height = $bindable(0),
     onmove,
     onadvance,
@@ -115,12 +118,19 @@
     </div>
 
     <div class="tools">
-      <IconButton label={m['notes.title']()} size="lg" bordered onclick={onnotes}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M5 4.5h14v15H5z" stroke-linejoin="round" />
-          <path d="M8 8h8M8 12h8M8 16h5" stroke-linecap="round" />
-        </svg>
-      </IconButton>
+      <span class="notes" class:noted>
+        <IconButton
+          label={noted ? m['notes.marked']() : m['notes.title']()}
+          size="lg"
+          bordered
+          onclick={onnotes}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 4.5h14v15H5z" stroke-linejoin="round" />
+            <path d="M8 8h8M8 12h8M8 16h5" stroke-linecap="round" />
+          </svg>
+        </IconButton>
+      </span>
 
       <IconButton label={m['kitchen.controls']()} size="lg" bordered onclick={onkitchen}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -183,6 +193,25 @@
 </CookingControlsBar>
 
 <style>
+  /* A dot on the notes button when there is a note: what you wrote last time is worth a look before the step. */
+  .notes {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .noted::after {
+    content: '';
+    position: absolute;
+    top: var(--space-1);
+    right: var(--space-1);
+    width: 0.625rem;
+    height: 0.625rem;
+    border: 2px solid var(--surface);
+    border-radius: var(--radius-full);
+    background: var(--accent);
+    pointer-events: none;
+  }
+
   .control-timer {
     grid-column: 1 / -1;
     min-width: 0;

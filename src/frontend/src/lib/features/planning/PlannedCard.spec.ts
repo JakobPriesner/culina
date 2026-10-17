@@ -32,4 +32,12 @@ describe('a planned meal card', () => {
 
     expect(onedit).toHaveBeenCalledOnce();
   });
+
+  it('opens the recipe for as many as the meal is planned for', () => {
+    renderWithProviders(PlannedCard, {
+      props: { meal: { ...meal, servings: 6 }, onremove: () => {} }
+    });
+
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/recipes/r1?yield=6');
+  });
 });

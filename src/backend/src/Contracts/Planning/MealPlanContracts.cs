@@ -50,6 +50,12 @@ public sealed record PlannedMeal
 
     /// <summary>Whether this meal's ingredients are on the household's shopping list.</summary>
     public required bool IsOnShoppingList { get; init; }
+
+    /// <summary>
+    /// When the household last cooked this recipe within a day either side of the meal's day, or null. The
+    /// client decides whether that was on the meal's day in its own time zone.
+    /// </summary>
+    public DateTimeOffset? CookedAt { get; init; }
 }
 
 /// <summary>Plans a meal.</summary>

@@ -1,7 +1,9 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import { Button, SectionLabel, SegmentedControl, Sheet, Skeleton } from '$ds';
+  import { Button, Checkbox, SectionLabel, SegmentedControl, Sheet, Skeleton, Stepper } from '$ds';
+
+  import { shopping } from '$features/shopping/stores/shopping.svelte';
 
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
@@ -15,7 +17,8 @@
 
   /**
    * Short path from choosing a recipe to the week: the days from today on (this week and the next,
-   * so a Sunday still has a week ahead), and the meal; servings come from the detail page's scaling.
+   * so a Sunday still has a week ahead), the meal, and for how many (the scaling it was opened at).
+   * Once the coming meals have been shopped for, a meal planned now would miss the list; it offers to go on too.
    */
   interface Props {
     open: boolean;
@@ -31,6 +34,12 @@
   let date = $state('');
   let slot = $state<MealSlot>('dinner');
   let saving = $state(false);
+  let count = $state(1);
+  /** The stepper counts whole servings; a page scaled to 2.5 plans 2.5 until somebody says otherwise. */
+  let touched = $state(false);
+  let alsoShop = $state(false);
+
+  const fieldId = $props.id();
 
   const today = asDate(new Date());
   const days = $derived(upcoming.days);
@@ -42,7 +51,20 @@
 
     date = '';
     slot = 'dinner';
+    count = Math.max(1, Math.round(servings));
+    touched = false;
     void upcoming.load(householdId);
+  });
+
+  /** Something coming up is already on the list, so the shop has happened (or is under way) without this meal. */
+  const shopped = $derived(
+    upcoming.days.some((day) => day.meals.some((meal) => meal.isOnShoppingList))
+  );
+
+  $effect(() => {
+    if (open) {
+      alsoShop = shopped;
+    }
   });
 
   // Today, or the first day there is, until the person chooses; their answer stays while the plan reloads.
@@ -73,7 +95,13 @@
     }
 
     saving = true;
-    const ok = await mealPlan.plan(householdId, { date, recipeId, servings, slot });
+    const ok = await mealPlan.plan(householdId, {
+      date,
+      recipeId,
+      servings: touched ? count : servings,
+      slot
+    });
+    const listFailure = ok && alsoShop ? await shopPlanned() : null;
     saving = false;
 
     // The recipe page and the library read what is coming up; tell them.
@@ -93,8 +121,13 @@
     const weekOf = date >= mondayOf(1) ? '?week=1' : '';
 
     toaster.show({
-      message: () => m['plan.recipe.done']({ day }),
-      tone: 'success',
+      message: () =>
+        listFailure
+          ? m['plan.recipe.doneNotListed']({ day })
+          : alsoShop
+            ? m['plan.recipe.doneListed']({ day })
+            : m['plan.recipe.done']({ day }),
+      tone: listFailure ? 'danger' : 'success',
       action: {
         label: () => m['plan.recipe.showWeek'](),
         // eslint-disable-next-line svelte/no-navigation-without-resolve -- The route is resolved; only the week query is appended.
@@ -102,6 +135,15 @@
       }
     });
     onclose();
+  }
+
+  /** The meal just planned is the last of its kind on that day and in that slot: the server appends it. */
+  async function shopPlanned() {
+    const entryId = mealPlan.days
+      .find((day) => day.date === date)
+      ?.meals.findLast((meal) => meal.recipeId === recipeId && meal.slot === slot)?.entryId;
+
+    return entryId ? shopping.addPlannedMeal(householdId, date, entryId) : null;
   }
 </script>
 
@@ -161,6 +203,25 @@
           onselect={(id) => (slot = id as MealSlot)}
         />
       </div>
+
+      <div class="slot">
+        <SectionLabel tone="muted" as="span" spacing="tight">
+          {m['recipe.servings.label']()}
+        </SectionLabel>
+        <Stepper
+          id="{fieldId}-servings"
+          bind:value={count}
+          max={500}
+          label={m['recipe.servings.label']()}
+          decreaseLabel={m['recipe.servings.fewer']()}
+          increaseLabel={m['recipe.servings.more']()}
+          onchange={() => (touched = true)}
+        />
+      </div>
+
+      {#if shopped}
+        <Checkbox bind:checked={alsoShop} label={m['plan.recipe.alsoShop']()} />
+      {/if}
     </div>
   {/if}
 

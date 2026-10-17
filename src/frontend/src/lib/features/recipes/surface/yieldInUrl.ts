@@ -28,3 +28,8 @@ export function urlAtYield(url: URL, value: number, recipe: RecipeReading | null
 
   return `${next.pathname}${next.search}`;
 }
+
+/** A resolved recipe route for that many; a meal with no servings of its own links plain, so the recipe's yield applies. */
+export function hrefAtYield(href: string, servings: number | null | undefined): string {
+  return servings ? `${href}?${key}=${servings}` : href;
+}

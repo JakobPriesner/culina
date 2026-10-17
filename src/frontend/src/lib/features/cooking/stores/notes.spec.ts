@@ -88,6 +88,35 @@ describe('saving a note', () => {
   });
 });
 
+describe('a note on one step', () => {
+  it('is written beside the others, and a blank one is dropped rather than sent', async () => {
+    const saved: unknown[] = [];
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) => {
+        if (input.method === 'PUT') {
+          saved.push(await input.json());
+        }
+
+        return json({ overall: null, steps: [{ stepId: 's1', body: 'Lower the heat' }] });
+      })
+    );
+
+    await notes.load('r1');
+    expect(notes.written).toBe(true);
+
+    notes.setStep('s2', ' Take it out at 22 min ');
+    notes.setStep('s1', '');
+    await notes.save('r1');
+
+    expect(notes.stepNote('s2')).toBe(' Take it out at 22 min ');
+    expect(saved).toEqual([
+      { overall: null, steps: [{ stepId: 's2', body: 'Take it out at 22 min' }] }
+    ]);
+  });
+});
+
 describe('moving from one recipe to the next', () => {
   const answerPerRecipe = () => {
     const answers = new Map<string, (response: Response) => void>();

@@ -1923,5 +1923,42 @@
   "shopping.meals.title": "Geplante Mahlzeiten auf dieser Liste: {count}",
   "shopping.meals.pastCount": "{count} schon vergangen",
   "shopping.meals.past": "Schon vergangen",
-  "shopping.meals.pastNote": "Dieser Tag ist vorbei, doch was er braucht, bleibt auf der Liste, bis du es abhakst oder entfernst."
+  "shopping.meals.pastNote": "Dieser Tag ist vorbei, doch was er braucht, bleibt auf der Liste, bis du es abhakst oder entfernst.",
+  "shopping.meals.withdraw": "Von der Liste nehmen",
+  "shopping.meals.withdraw.label": "Von der Liste nehmen: {title}",
+  "shopping.meals.withdrawn": "Was {title} noch brauchte, ist von der Liste.",
+  "recipe.whereabouts.scale": "Wie geplant: {amount}",
+  "plan.recipe.alsoShop": "Auch auf die Einkaufsliste setzen",
+  "plan.recipe.doneListed": "Für {day} eingeplant und auf der Einkaufsliste.",
+  "plan.recipe.doneNotListed": "Für {day} eingeplant, aber nicht auf die Einkaufsliste gekommen.",
+  "suggestions.plan": "Einplanen: {title}",
+  "plan.today.cooked": "Heute gekocht",
+  "plan.cooked": "Gekocht",
+  "shopping.allBought.tonight": "Als Nächstes: {title}",
+  "recipe.ingredientsView.thisStep": "Dieser Schritt",
+  "recipe.ingredientsView.all": "Alle",
+  "notes.step": "Nur für {step}",
+  "notes.step.placeholder": "Nach 22 Minuten herausnehmen.",
+  "notes.marked": "Deine Notizen (du hast welche geschrieben)",
+  "notes.peek.edit": "Notiz bearbeiten",
+  "cooked.title": "Geschafft. Etwas für nächstes Mal?",
+  "cooked.hint": "Alles hier ist freiwillig.",
+  "cooked.photo": "Foto hinzufügen",
+  "cooked.note": "Notiz für nächstes Mal",
+  "cooked.leftover": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Nicht Gekauftes von der Liste nehmen",
+        "countPlural=*": "{count} nicht gekaufte Posten von der Liste nehmen"
+      }
+    }
+  ],
+  "cooked.done": "Fertig",
+  "editor.stepDuration.spotted": "{minutes} Min. übernehmen",
+  "editor.stepDuration.spotted.label": "{minutes} Min. übernehmen als Timer für Schritt {number}",
+  "recipe.stub.title": "Bisher nur ein Titel",
+  "recipe.stub.body": "Ergänze Zutaten und Schritte, um danach zu kochen.",
+  "recipe.stub.finish": "Weiterschreiben"
 }

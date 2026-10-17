@@ -2,6 +2,8 @@
   import { page } from '$app/state';
   import { Button, ErrorState } from '$ds';
   import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
+  import CookedWrapUp from '$features/cooking/CookedWrapUp.svelte';
+  import NotePeek from '$features/cooking/NotePeek.svelte';
   import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
   import { cookLog } from '$features/cooking/stores/cookLog.svelte';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
@@ -12,6 +14,7 @@
   import DietQuestion from '$features/recipes/DietQuestion.svelte';
   import RecipeBackLink from '$features/recipes/detail/RecipeBackLink.svelte';
   import RecipeSheets, { type RecipeSheet } from '$features/recipes/detail/RecipeSheets.svelte';
+  import RecipeStub from '$features/recipes/detail/RecipeStub.svelte';
   import RecipeWhereabouts from '$features/recipes/detail/RecipeWhereabouts.svelte';
   import { useDietAnswer } from '$features/recipes/detail/useDietAnswer.svelte';
   import { useRecipeActions } from '$features/recipes/detail/useRecipeActions.svelte';
@@ -19,6 +22,7 @@
   import InheritedNote from '$features/recipes/InheritedNote.svelte';
   import SimilarRecipes from '$features/recipes/SimilarRecipes.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
+  import { everyIngredient } from '$features/recipes/types';
   import { related } from '$features/recipes/stores/related.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import { revealNutritionPanel } from '$features/recipes/surface/nutritionLink';
@@ -153,6 +157,12 @@
       />
     {/if}
 
+    <CookedWrapUp {recipeId} householdId={session.activeHouseholdId} />
+
+    {#if !inheritedFrom && recipes.detail.steps.length === 0 && everyIngredient(recipes.detail).length === 0}
+      <RecipeStub {recipeId} />
+    {/if}
+
     <RecipeSurface
       recipe={recipes.detail}
       {servings}
@@ -168,11 +178,19 @@
       ontitleview={(visible) => (titleInView = visible)}
       cookbooks={shelves}
       nutrition={nutritionLink}
+      stepNote={(id) => notes.stepNote(id)}
     >
       {#snippet whereabouts()}
-        {#if session.activeHouseholdId}
-          <RecipeWhereabouts {recipeId} householdId={session.activeHouseholdId} />
+        {#if session.activeHouseholdId && recipes.detail}
+          <RecipeWhereabouts
+            {recipeId}
+            householdId={session.activeHouseholdId}
+            {servings}
+            yields={recipes.detail}
+            onscale={actions.scale}
+          />
         {/if}
+        <NotePeek />
       {/snippet}
     </RecipeSurface>
 
