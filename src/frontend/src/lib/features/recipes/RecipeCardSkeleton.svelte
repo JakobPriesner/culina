@@ -5,9 +5,15 @@
    * A recipe's shape before it arrives, matching the real rhythm and heights (4:3 photo, eyebrow, title,
    * meta), and the same row on a phone, so nothing shifts on landing.
    */
+  interface Props {
+    /** The full-width photo on a phone too, as the card it stands for. */
+    photo?: boolean;
+  }
+
+  let { photo = false }: Props = $props();
 </script>
 
-<div class="recipe" aria-hidden="true">
+<div class="recipe" class:row={!photo} aria-hidden="true">
   <div class="photo"><Skeleton shape="block" /></div>
   <div class="text">
     <div class="eyebrow"><Skeleton width="4.5rem" height="0.75rem" /></div>
@@ -56,21 +62,21 @@
   }
 
   @media (width < 40rem) {
-    .recipe {
+    .row {
       flex-direction: row;
       align-items: flex-start;
       gap: var(--space-4);
       padding-bottom: 0;
     }
-    .photo {
+    .row .photo {
       flex: 0 0 6.5rem;
       margin-bottom: 0;
     }
-    .text {
+    .row .text {
       flex: 1;
       gap: var(--space-1);
     }
-    .open {
+    .row .open {
       display: none;
     }
   }

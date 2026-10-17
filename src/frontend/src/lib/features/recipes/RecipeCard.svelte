@@ -13,7 +13,8 @@
 
   /**
    * One recipe: an editorial title and the few facts that decide tonight, not a bordered box. The whole card is the link.
-   * A phone shows it as a row, thumbnail beside the words, so a screen holds several recipes rather than one photo.
+   * A phone shows it as a row, thumbnail beside the words, so a screen holds several recipes rather than one photo,
+   * unless the reader chose to browse by photo.
    */
   interface Props {
     recipe: RecipeSummary;
@@ -24,9 +25,18 @@
     from?: string | null;
     /** The photo is on screen at first paint: fetched at once and ahead of the rest. */
     priority?: boolean;
+    /** The full-width photo on a phone too, rather than a row. */
+    photo?: boolean;
   }
 
-  let { recipe, pending = false, query = '', from = null, priority = false }: Props = $props();
+  let {
+    recipe,
+    pending = false,
+    query = '',
+    from = null,
+    priority = false,
+    photo = false
+  }: Props = $props();
 
   const meta = $derived(metaLineFor(recipe, { yields: false }));
   const match = $derived(matchLineFor(recipe));
@@ -35,13 +45,13 @@
   const reason = $derived(recipe.matchReason ? reasonLine(recipe.matchReason) : null);
 </script>
 
-<article class="recipe" class:pending aria-busy={pending || undefined}>
+<article class="recipe" class:pending class:row={!photo} aria-busy={pending || undefined}>
   <!-- Same box photographed or not (placeholder), so a mixed grid reads as one. -->
   <div class="photo">
     <Image
       src={recipe.imageId ? imageUrl(recipe.id, 400, recipe.imageId) : undefined}
       srcset={recipe.imageId ? imageSrcset(recipe.id, recipe.imageId) : undefined}
-      sizes="(min-width: 64rem) 20rem, (min-width: 40rem) 45vw, 6.5rem"
+      sizes="(min-width: 64rem) 20rem, (min-width: 40rem) 45vw, {photo ? '90vw' : '6.5rem'}"
       alt=""
       ratio={4 / 3}
       loading={priority ? 'eager' : 'lazy'}
@@ -221,32 +231,32 @@
 
   /* Below the grid's two columns: a row, so the title stays whole beside a thumbnail. */
   @media (width < 40rem) {
-    .recipe {
+    .row {
       flex-direction: row;
       align-items: flex-start;
       gap: var(--space-4);
       padding-bottom: 0;
     }
 
-    .photo {
+    .row .photo {
       flex: 0 0 6.5rem;
       margin-bottom: 0;
     }
 
-    .text {
+    .row .text {
       flex: 1;
       gap: var(--space-1);
     }
 
     /* Beside a thumbnail a long compound has half the width: it hyphenates by the page's language, as on a plan card. */
-    .title {
+    .row .title {
       font-size: var(--text-lg);
       hyphens: auto;
       overflow-wrap: break-word;
     }
 
     /* The whole row is the link; the arrow only takes the width the title needs. */
-    .open {
+    .row .open {
       display: none;
     }
   }
