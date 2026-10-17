@@ -69,7 +69,7 @@ test.describe('background intake @offline', () => {
     await expect(page.getByText('Already saved in your kitchen', { exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Review and edit', exact: true })).toHaveAttribute(
       'href',
-      `/recipes/${recipeId}/edit`
+      `/recipes/${recipeId}/edit?intake=${id}`
     );
     await expectReflow(page);
     expect((await new AxeBuilder({ page }).include('.intake-page').analyze()).violations).toEqual(

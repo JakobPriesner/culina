@@ -86,10 +86,12 @@
         </p>{/if}
     {:else if job.recipeId}
       <div class="actions">
+        <!-- Names the import, so the editor keeps the original beside the recipe and marks it reviewed. -->
         <a
           class="primary"
-          href={resolve('/(app)/recipes/[recipeId]/edit', { recipeId: job.recipeId })}
-          >{m['intake.review']()}</a
+          href="{resolve('/(app)/recipes/[recipeId]/edit', {
+            recipeId: job.recipeId
+          })}?intake={job.id}">{m['intake.review']()}</a
         >
         {#if job.stage === 'ready'}<Button onclick={() => void finish()}
             >{m['intake.finishReview']()}</Button
