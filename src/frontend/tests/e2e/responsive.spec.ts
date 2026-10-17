@@ -463,9 +463,11 @@ test.describe('responsive production layouts @offline', () => {
 
     const title = page.getByRole('heading', { level: 1 });
     const servings = page.locator('article.surface > .servings');
-    const resume = page.getByRole('link', { name: /Gerade am Kochen/ });
+    // The recipe's own cooking action leads back; the floating pill stays off its page.
+    const resume = page.getByRole('button', { name: 'Weiterkochen' });
     await expect(title).toBeVisible();
     await expect(resume).toBeVisible();
+    await expect(page.getByRole('link', { name: /Gerade am Kochen/ })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Kochen starten' })).toHaveCount(0);
     // The shell header gives way to the recipe's own sticky back bar.
     await expect(page.locator('.shell > header.header')).toBeHidden();

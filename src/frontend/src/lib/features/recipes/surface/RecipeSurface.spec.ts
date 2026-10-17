@@ -165,6 +165,13 @@ describe('reading a recipe', () => {
     expect(screen.getByRole('button', { name: 'Start cooking' })).toBeInTheDocument();
   });
 
+  it('leads back to cooking that is already under way instead of starting again', () => {
+    render({ onstartcooking: () => {}, resuming: true });
+
+    expect(screen.getByRole('button', { name: 'Keep cooking' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Start cooking' })).not.toBeInTheDocument();
+  });
+
   it('does not offer to cook a recipe that has no steps', () => {
     const { container } = render({ recipe: { ...recipe, steps: [] }, onstartcooking: () => {} });
 
@@ -420,6 +427,13 @@ describe('how the ingredients are arranged', () => {
 });
 
 describe('cooking a recipe', () => {
+  it('offers to stop without the word the controls use for having made it', () => {
+    render({ emphasis: 'cook', onstopcooking: () => {} });
+
+    expect(screen.getByRole('button', { name: 'Stop cooking' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Done cooking' })).not.toBeInTheDocument();
+  });
+
   it('shows only the ingredients the current step needs', () => {
     render({ emphasis: 'cook', currentStep: 0 });
 
