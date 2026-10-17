@@ -13,7 +13,7 @@
     /** Photos held but no assistant to read them. */
     photosUnreadable: boolean;
     tooLong: boolean;
-    onpreview: () => void;
+    onsave: () => void;
     onassist: () => void;
     oncancel: () => void;
   }
@@ -27,15 +27,15 @@
     assistantDisabled,
     photosUnreadable,
     tooLong,
-    onpreview,
+    onsave,
     onassist,
     oncancel
   }: Props = $props();
 </script>
 
 <div class="actions">
-  <Button variant="primary" loading={busy} disabled={nothingFound || reading} onclick={onpreview}>
-    {m['import.review.preview']()}
+  <Button variant="primary" loading={busy} disabled={nothingFound || reading} onclick={onsave}>
+    {m['import.review.accept']()}
   </Button>
 
   {#if assistantAvailable}

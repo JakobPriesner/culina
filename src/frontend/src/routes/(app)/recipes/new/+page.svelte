@@ -27,6 +27,8 @@
 
   /** The paste box is open and takes over the page. */
   let pasting = $state(false);
+  /** Which door the paste box was opened by; "photo" puts the photos first. */
+  let pasteIntent = $state<'paste' | 'photo'>('paste');
   let describing = $state(false);
 
   let incomingUrl = $state('');
@@ -96,10 +98,11 @@
       incomingUrl = shared.url;
     }
 
-    // `?start=paste` or `?start=idea`: a door opened elsewhere (the empty library) lands in the right form.
+    // `?start=paste`, `?start=photo` or `?start=idea`: a door opened elsewhere (the empty library) lands in the right form.
     const start = page.url.searchParams.get('start');
 
-    pasting = shared.url !== '' || shared.text !== '' || start === 'paste';
+    pasteIntent = start === 'photo' ? 'photo' : 'paste';
+    pasting = shared.url !== '' || shared.text !== '' || start === 'paste' || start === 'photo';
     // Or an idea asked for here before the app was put away or closed, which the form picks up again.
     describing =
       (start === 'idea' || drafts.remembers('idea')) && Boolean(session.user?.assistance.draft);
@@ -145,7 +148,7 @@
         loading={submission.showingProgress}
         onsubmit={() => creating.start(title.trim(), null)}
       />
-    {:else}
+    {:else if !pasting}
       <FormFailure failure={submission.failure} />
     {/if}
 
@@ -159,6 +162,7 @@
           initialUrl={incomingUrl}
           initialText={incomingText}
           initialPhotos={incomingPhotos}
+          intent={pasteIntent}
           onimport={(parsed) => creating.start(parsed.title || title.trim(), parsed)}
           ondraft={(written, sourceUrl) => creating.startFromDraft(written, sourceUrl)}
           onqueued={creating.forgetShare}
@@ -172,7 +176,13 @@
           oncancel={cancelDescribing}
         />
       {:else}
-        <OtherWaysIn onpaste={() => (pasting = true)} ondescribe={() => (describing = true)} />
+        <OtherWaysIn
+          onpaste={(intent) => {
+            pasteIntent = intent;
+            pasting = true;
+          }}
+          ondescribe={() => (describing = true)}
+        />
       {/if}
     {/if}
   </div>

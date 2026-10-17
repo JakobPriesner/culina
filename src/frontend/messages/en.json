@@ -1519,7 +1519,6 @@
   "import.review.transcript": "Spoken captions",
   "import.review.photo": "Shared recipe screenshot",
   "import.review.accept": "Save and edit recipe",
-  "import.review.preview": "Review recipe",
   "import.media.label": "Screenshots or recipe photos",
   "import.media.hint": "Up to 8 JPG, PNG or WebP images. 10 MB per image, 40 MB in total. Keep all pages of one recipe together.",
   "import.media.remove": "Remove images",
@@ -1959,5 +1958,6 @@
   "editor.stepDuration.spotted.label": "Use {minutes} min as the timer of step {number}",
   "recipe.stub.title": "Only a title so far",
   "recipe.stub.body": "Add the ingredients and steps to cook from it.",
-  "recipe.stub.finish": "Finish writing"
+  "recipe.stub.finish": "Finish writing",
+  "import.photo.or": "or a link to the recipe"
 }

@@ -2,11 +2,10 @@
   import { resolve } from '$app/paths';
   import { goto } from '$app/navigation';
   import { intakes } from '$features/import/intakes.svelte';
-  import { onDestroy, onMount } from 'svelte';
-  import DraftReview from '$features/assistance/DraftReview.svelte';
+  import { onDestroy, onMount, tick } from 'svelte';
   import { drafts } from '$features/assistance/stores/drafts.svelte';
   import type { Draft } from '$features/assistance/draftToRecipe';
-  import { intakeBaseline, intakeDraft } from '$features/import/intakeDraft';
+  import FormFailure from '$features/auth/FormFailure.svelte';
   import { sharedAddress, validSharedPhotos } from '$features/import/sharedRecipe';
   import { session } from '$features/auth/session.svelte';
   import { Button, TextArea } from '$ds';
@@ -24,7 +23,10 @@
   import { parseRecipeText, type ParsedRecipe } from './parseRecipeText';
   import { units } from '../stores/units.svelte';
 
-  /** A pasted recipe shown as a preview of what was understood before anything is created; nothing is applied silently. */
+  /**
+   * A pasted recipe shown as a preview of what was understood before anything is created; nothing is
+   * applied silently. The preview is the review: saving opens the editor, not a second read-only copy.
+   */
   interface Props {
     /** Whose kitchen, so a unit it has added is read as a unit. */
     householdId: string;
@@ -37,6 +39,8 @@
     initialUrl?: string;
     initialText?: string;
     initialPhotos?: File[];
+    /** Opened from "photograph a recipe": the photos come first and take the focus. */
+    intent?: 'paste' | 'photo';
     ondraft?: (draft: Draft, sourceUrl: string) => void | Promise<boolean>;
     oncancel?: () => void;
     onqueued?: () => Promise<void>;
@@ -51,6 +55,7 @@
     initialUrl = '',
     initialText = '',
     initialPhotos = [],
+    intent = 'paste',
     ondraft,
     oncancel,
     onqueued
@@ -62,11 +67,6 @@
   let sourceUrl = $state('');
   let transcript = $state('');
   let photos = $state<File[]>([]);
-  let reviewing = $state(false);
-  let assisted = $state(false);
-  let reviewed = $state<ParsedRecipe | null>(null);
-  let reviewDraft = $state<Draft | null>(null);
-  const current = $derived(intakeBaseline(householdId));
 
   const photoUrls = createPhotoUrls(() => photos);
   onDestroy(() => drafts.dismiss());
@@ -92,7 +92,17 @@
       url = initialUrl.trim();
       waiting = true;
     }
+    if (intent === 'photo') void focusPhotos();
   });
+
+  /** The picker cannot be opened without a tap, so the next best thing: in view and focused, one tap away. */
+  async function focusPhotos() {
+    open = true;
+    await tick();
+    const picker = document.getElementById('recipe-screenshots');
+    picker?.scrollIntoView({ block: 'center' });
+    picker?.focus({ preventScroll: true });
+  }
 
   /** A site's structured data, kept apart from the text so it is not re-parsed heuristically; typing in the box overrides it. */
   let published = $state<ParsedRecipe | null>(null);
@@ -140,11 +150,9 @@
     }
   }
 
-  function reviewParsed() {
-    reviewed = { ...parsed, sourceUrl: sourceUrl || sharedAddress(url, text) || undefined };
-    assisted = false;
-    reviewDraft = intakeDraft(reviewed);
-    reviewing = true;
+  function save() {
+    if (busy) return;
+    void onimport({ ...parsed, sourceUrl: sourceUrl || sharedAddress(url, text) || undefined });
   }
 
   async function readWithAssistant() {
@@ -179,16 +187,6 @@
     failure = null;
   }
 
-  async function acceptReviewed() {
-    if (busy) return;
-    const outcome = reviewed
-      ? await onimport(reviewed)
-      : drafts.draft && !drafts.asking && !drafts.error
-        ? await ondraft?.(drafts.draft, sourceUrl || sharedAddress(url, text))
-        : false;
-    if (outcome !== false) reviewing = false;
-  }
-
   async function pasteFromClipboard() {
     const copied = await readClipboardRecipe();
 
@@ -211,11 +209,28 @@
   });
 </script>
 
+{#snippet photoPicker()}
+  {#if ondraft}
+    <PastePhotos
+      {photos}
+      urls={photoUrls.urls}
+      disabled={locked}
+      onpick={pickPhotos}
+      onremove={() => (photos = [])}
+    />
+  {/if}
+{/snippet}
+
 {#if open}
   <section class="paste" aria-labelledby="paste-heading">
     <h2 id="paste-heading" class="heading">{m['import.intake.source']()}</h2>
     <p class="hint">{m['import.intake.hint']()}</p>
     {#if iphoneShareHelp}<p class="hint">{m['import.intake.iphone']()}</p>{/if}
+
+    {#if intent === 'photo'}
+      {@render photoPicker()}
+      <p class="or">{m['import.photo.or']()}</p>
+    {/if}
 
     <PasteUrlField
       bind:url
@@ -265,15 +280,7 @@
       />
     {/if}
 
-    {#if ondraft}
-      <PastePhotos
-        {photos}
-        urls={photoUrls.urls}
-        disabled={locked}
-        onpick={pickPhotos}
-        onremove={() => (photos = [])}
-      />
-    {/if}
+    {#if intent !== 'photo'}{@render photoPicker()}{/if}
 
     {#if text.trim() || published}
       <!-- role=status (polite): must not interrupt someone still reading their paste. -->
@@ -289,6 +296,8 @@
       <PastePreview {parsed} />
     {/if}
 
+    <FormFailure failure={saveError} />
+
     <PasteActions
       {busy}
       nothingFound={found === 0}
@@ -298,7 +307,7 @@
       assistantDisabled={(!text.trim() && !transcript && !photos.length && !url.trim()) || tooLong}
       photosUnreadable={photos.length > 0 && !session.user?.assistance.read}
       {tooLong}
-      onpreview={reviewParsed}
+      onsave={save}
       onassist={() => void readWithAssistant()}
       oncancel={() => {
         open = false;
@@ -313,30 +322,6 @@
   <div>
     <Button onclick={() => (open = true)}>{m['import.paste.open']()}</Button>
   </div>
-{/if}
-
-{#if reviewing}
-  <DraftReview
-    bind:open={reviewing}
-    draft={assisted ? drafts.draft : reviewDraft}
-    {current}
-    writing={assisted && drafts.asking}
-    error={assisted ? drafts.error : null}
-    source={{
-      text,
-      transcript,
-      url: sourceUrl || sharedAddress(url, text),
-      photos: photoUrls.urls,
-      assisted
-    }}
-    saving={busy}
-    {saveError}
-    onaccept={() => void acceptReviewed()}
-    onclose={() => {
-      reviewing = false;
-      drafts.dismiss();
-    }}
-  />
 {/if}
 
 <style>
