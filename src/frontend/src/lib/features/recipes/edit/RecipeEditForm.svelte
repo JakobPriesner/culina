@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { tick } from 'svelte';
+  import { tick, type Snippet } from 'svelte';
 
   import { page } from '$app/state';
   import { Button } from '$ds';
@@ -30,9 +30,11 @@
     back: string;
     ingredients: IngredientEdits;
     improvement: RecipeImprovement;
+    /** The original it was imported from, beside the form; see `EditorLayout`. */
+    source?: Snippet;
   }
 
-  let { editor, recipe, back, ingredients, improvement }: Props = $props();
+  let { editor, recipe, back, ingredients, improvement, source }: Props = $props();
 
   // A link from the nutrition panel names what to look at: `#ingredient-<id>` or `#yield`.
   const wanted = $derived(page.url.hash.slice(1));
@@ -65,7 +67,7 @@
 <!-- Visually hidden: the title field is right there and may be empty, so the heading is a sentence about the page. -->
 <h1 class="ds-clipped">{m['editor.heading']({ title: recipe.title })}</h1>
 
-<EditorLayout>
+<EditorLayout {source}>
   {#snippet rail()}
     <EditorRail
       backHref={back}

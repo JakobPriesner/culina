@@ -8,6 +8,8 @@
   import { drafts } from '$features/assistance/stores/drafts.svelte';
   import { session } from '$features/auth/session.svelte';
   import { tags } from '$features/cookbooks/stores/tags.svelte';
+  import IntakeSourcePanel from '$features/import/IntakeSourcePanel.svelte';
+  import { useIntakeSource } from '$features/import/useIntakeSource.svelte';
   import RecipeEditForm from '$features/recipes/edit/RecipeEditForm.svelte';
   import { useIngredientEdits } from '$features/recipes/edit/useIngredientEdits.svelte';
   import { useRecipeImprovement } from '$features/recipes/edit/useRecipeImprovement.svelte';
@@ -31,6 +33,10 @@
   const editor = createRecipeDraft(() => recipeId);
   const ingredients = useIngredientEdits(editor);
   const improvement = useRecipeImprovement(editor, () => recipeId);
+  const intake = useIntakeSource({
+    recipeId: () => recipeId,
+    intakeId: () => page.url.searchParams.get('intake')
+  });
 
   // Unsaved text on screen is not a moment to offer anybody a reload.
   const release = busy.hold();
@@ -76,11 +82,22 @@
   >
 </svelte:head>
 
+{#snippet intakeSource()}
+  {#if intake.job}<IntakeSourcePanel job={intake.job} />{/if}
+{/snippet}
+
 <Page>
   {#if editor.inheritedFrom}
     <InheritedNotice owner={session.householdName(editor.inheritedFrom)} backHref={back} />
   {:else if draft}
-    <RecipeEditForm {editor} recipe={draft} {back} {ingredients} {improvement} />
+    <RecipeEditForm
+      {editor}
+      recipe={draft}
+      {back}
+      {ingredients}
+      {improvement}
+      source={intake.job ? intakeSource : undefined}
+    />
   {:else if recipes.detailStatus === 'failed' && recipes.detailError?.status === 404}
     <NotFound kind="recipe" level={1} />
   {:else if recipes.detailStatus === 'failed'}
