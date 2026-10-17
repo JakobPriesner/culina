@@ -13,6 +13,7 @@ import {
   type MealSlot,
   type PlannedMeal
 } from './mealPlan.svelte';
+import { upcoming } from './upcoming.svelte';
 import { weekdayName } from './weekDates';
 import type { Held, Landing } from './weekDrag.svelte';
 
@@ -41,6 +42,9 @@ export function usePlanActions(page: Page) {
 
       return;
     }
+
+    // The week on screen already shows the move; a day beyond it (Sunday to next Monday) is only known to a fresh read.
+    void upcoming.load(householdId);
 
     // From the returned week: only the server's answer can anchor an undo, as it decides a day's order.
     const after = placeOf(mealPlan.days, entryId);
