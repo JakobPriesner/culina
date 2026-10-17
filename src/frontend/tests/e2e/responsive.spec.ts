@@ -616,7 +616,8 @@ test.describe('responsive production layouts @offline', () => {
     await expect(page.locator('.shell > header.header')).toBeHidden();
     await expect(page.locator('nav.bottom')).toBeVisible();
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-    await page.getByRole('link', { name: /weiterkochen/i }).click();
+    // The recipe's own cooking action leads back; the floating pill stays off its page.
+    await page.getByRole('button', { name: /weiterkochen/i }).click();
     await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/cook\\?yield=4$`));
     await expect(page.getByText('Schritt 2 von 4', { exact: true })).toBeVisible();
     await expect(page.locator('.shell > header.header')).toBeHidden();
