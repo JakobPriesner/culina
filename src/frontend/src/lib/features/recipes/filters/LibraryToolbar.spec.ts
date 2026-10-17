@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import LibraryToolbar from './LibraryToolbar.svelte';
 import { RecipeQuery } from '../stores/libraryView.svelte';
+import { recipeLayout } from '../stores/recipeLayout.svelte';
 import { savedSearches } from '../stores/savedSearches.svelte';
 import { tags } from '$features/cookbooks/stores/tags.svelte';
 import { renderWithProviders } from '$lib/test/render';
@@ -187,5 +188,24 @@ describe('the library toolbar', () => {
     await settle();
 
     expect(screen.queryByRole('button', { name: 'Schnell' })).not.toBeInTheDocument();
+  });
+
+  it('switches a phone between rows and large photos, and the device remembers which', async () => {
+    serverAnswers();
+    recipeLayout.choose('rows');
+
+    show(new RecipeQuery());
+    await settle();
+
+    // The switch shows only below 40rem, which the test window is not.
+    const photos = screen.getByRole('button', { name: 'With large photos', hidden: true });
+    await userEvent.click(photos);
+
+    expect(photos).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'As a list', hidden: true })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+    expect(localStorage.getItem('culina.recipeLayout')).toBe('photos');
   });
 });

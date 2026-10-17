@@ -5,9 +5,13 @@
   import RecipeCard from './RecipeCard.svelte';
   import RecipeCardSkeleton from './RecipeCardSkeleton.svelte';
   import { inheritedFrom } from './recipeMeta';
+  import { recipeLayout } from './stores/recipeLayout.svelte';
   import type { RecipeSummary } from './types';
 
-  /** The recipes as columns of cards (three wide, more on large screens), and as a list of rows on a phone. */
+  /**
+   * The recipes as columns of cards (three wide, more on large screens), and on a phone as a list of rows or,
+   * when the reader browses by photo, one card under another.
+   */
   interface Props {
     recipes: readonly RecipeSummary[];
     /** Drawn instead of the recipes, when there are none yet to draw. */
@@ -35,17 +39,25 @@
 
   /** One row's worth: the next page is on its way before these are read. */
   const next = [0, 1, 2];
+
+  const photo = $derived(recipeLayout.current === 'photos');
 </script>
 
 {#if loading}
   <!-- role=status: a plain element is generic and may not carry a name, so the label was dropped. -->
-  <div class="grid" role="status" aria-busy="true" aria-label={m['recipes.list.loading']()}>
+  <div
+    class="grid"
+    class:rows={!photo}
+    role="status"
+    aria-busy="true"
+    aria-label={m['recipes.list.loading']()}
+  >
     {#each placeholders as row (row)}
-      <RecipeCardSkeleton />
+      <RecipeCardSkeleton {photo} />
     {/each}
   </div>
 {:else}
-  <ul class="grid">
+  <ul class="grid" class:rows={!photo}>
     {#each recipes as recipe, index (recipe.id)}
       <li class="card">
         <RecipeCard
@@ -54,6 +66,7 @@
           pending={pending.includes(recipe.id)}
           from={inheritedFrom(recipe, inherited)}
           priority={index < firstRow}
+          {photo}
         />
       </li>
     {/each}
@@ -62,7 +75,7 @@
          "finished" look. -->
     {#if onmore}
       {#each next as row (row)}
-        <li aria-hidden="true" {@attach whenVisible(onmore)}><RecipeCardSkeleton /></li>
+        <li aria-hidden="true" {@attach whenVisible(onmore)}><RecipeCardSkeleton {photo} /></li>
       {/each}
     {/if}
   </ul>
@@ -93,11 +106,11 @@
 
   /* Rows on a phone sit closer than cards do, and are shorter while off screen. */
   @media (width < 40rem) {
-    .grid {
+    .rows {
       gap: var(--space-4);
     }
 
-    .card {
+    .rows .card {
       contain-intrinsic-size: auto 5rem;
     }
   }

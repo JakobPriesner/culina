@@ -1,11 +1,12 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  import { FilterChip, SearchField } from '$ds';
+  import { FilterChip, IconButton, SearchField } from '$ds';
   import { tags } from '$features/cookbooks/stores/tags.svelte';
   import { m } from '$shell/i18n';
 
   import { effectiveSort, type RecipeQuery, type SortContext } from '../stores/libraryView.svelte';
+  import { recipeLayout } from '../stores/recipeLayout.svelte';
   import type { SavedSearch } from '../stores/savedSearches.svelte';
   import SearchChips from '../search/SearchChips.svelte';
   import SearchNotice from '../search/SearchNotice.svelte';
@@ -107,6 +108,37 @@
     {#if summary}
       <div class="summary">{@render summary()}</div>
     {/if}
+
+    <!-- Only a phone has two ways to list: rows to find one quickly, photos to browse. -->
+    <div class="layout" role="group" aria-label={m['recipes.list.layout']()}>
+      <IconButton
+        size="sm"
+        label={m['recipes.list.layoutRows']()}
+        pressed={recipeLayout.current === 'rows'}
+        onclick={() => recipeLayout.choose('rows')}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="3" y="4.5" width="6" height="5" rx="1" />
+          <rect x="3" y="14.5" width="6" height="5" rx="1" />
+          <path d="M12 6h9M12 8.5h5M12 16h9M12 18.5h5" stroke-linecap="round" />
+        </svg>
+      </IconButton>
+      <IconButton
+        size="sm"
+        label={m['recipes.list.layoutPhotos']()}
+        pressed={recipeLayout.current === 'photos'}
+        onclick={() => recipeLayout.choose('photos')}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <rect x="3" y="3.5" width="18" height="13" rx="1.5" />
+          <path
+            d="M3 13.5l5-4 4 3 3-2 6 4.5M3 20.5h12"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      </IconButton>
+    </div>
   </div>
 
   {#if interpretation}
@@ -185,6 +217,11 @@
     margin-inline-start: auto;
   }
 
+  /* Wider screens show their cards whichever is chosen. */
+  .layout {
+    display: none;
+  }
+
   @media (max-width: 40rem) {
     .search {
       flex-basis: 100%;
@@ -195,6 +232,14 @@
     .summary {
       flex: 1 1 0;
       margin-inline-start: 0;
+    }
+  }
+
+  /* The grid's own one-column range, so the switch is there exactly when it changes something. */
+  @media (width < 40rem) {
+    .layout {
+      display: flex;
+      gap: var(--space-1);
     }
   }
 </style>
