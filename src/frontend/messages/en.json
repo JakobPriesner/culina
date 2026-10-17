@@ -198,7 +198,6 @@
   "recipe.pieces.fewer": "Fewer",
   "recipe.pieces.more": "More",
   "recipe.startCooking": "Start cooking",
-  "recipe.stopCooking": "Done cooking",
   "recipe.back": "All recipes",
   "recipe.timesWarning": "The times are for {count} — check a little earlier to be safe.",
   "recipe.noSteps": "No steps written down yet.",

@@ -11,16 +11,21 @@
 
   /**
    * The way back into what you are cooking, from any page: a small floating pill, like a live activity,
-   * with two actions (resume or end). Hidden on the cooking screen itself, and for a session that was
-   * only opened and left: on its first step, with no timer, started moments ago.
+   * with two actions (resume or end). Hidden on the cooking screen itself, on the recipe's own page (whose
+   * cooking action says "Resume" instead), and for a session that was only opened and left: on its first
+   * step, with no timer, started moments ago.
    */
   const session = $derived(cooking.session);
 
   /** How long a session on its first step, with no timer, counts as only looked at. */
   const glance = 2 * 60 * 1000;
 
-  const onTheCookingScreen = $derived(
-    session ? page.url.pathname === `/recipes/${session.recipeId}/cook` : false
+  const onTheRecipe = $derived(
+    session
+      ? [`/recipes/${session.recipeId}`, `/recipes/${session.recipeId}/cook`].includes(
+          page.url.pathname
+        )
+      : false
   );
 
   // Read again on every navigation, which is when a glance turns into cooking worth returning to.
@@ -49,7 +54,7 @@
   }
 </script>
 
-{#if session && underWay && !onTheCookingScreen}
+{#if session && underWay && !onTheRecipe}
   <aside class="pill" aria-label={m['cooking.nowCooking']({ title: session.recipeTitle })}>
     <span
       class="dot"

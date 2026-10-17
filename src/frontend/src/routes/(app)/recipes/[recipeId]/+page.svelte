@@ -167,7 +167,8 @@
       recipe={recipes.detail}
       {servings}
       onservings={actions.scale}
-      onstartcooking={alreadyCooking ? undefined : actions.startCooking}
+      onstartcooking={actions.startCooking}
+      resuming={alreadyCooking}
       onaddtolist={actions.addToShoppingList}
       onaddtoplan={() => (sheet = 'plan')}
       onaddtocookbook={() => (sheet = 'cookbook')}

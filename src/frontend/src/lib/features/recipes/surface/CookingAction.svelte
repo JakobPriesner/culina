@@ -4,26 +4,29 @@
   import { m } from '$shell/i18n';
   import { dockCookingAction } from './dockCookingAction';
 
-  /** The one action parked at the bottom of the recipe: start cooking, or stop. */
+  /** The one action parked at the bottom of the recipe: start cooking, go back to it, or stop. */
   interface Props {
     cooking: boolean;
     /** False for a recipe with no steps, which would open cook mode on "Step 1 of 0". */
     canCook: boolean;
+    /** A session for this recipe is already open: the way in is back to it, not a new start. */
+    resuming?: boolean;
     onstartcooking?: () => void;
     onstopcooking?: () => void;
   }
 
-  let { cooking, canCook, onstartcooking, onstopcooking }: Props = $props();
+  let { cooking, canCook, resuming = false, onstartcooking, onstopcooking }: Props = $props();
 </script>
 
 {#snippet action()}
   <footer class="foot">
     {#if cooking}
-      <Button size="lg" onclick={onstopcooking}>{m['recipe.stopCooking']()}</Button>
+      <!-- Ends without a record: "made it" is the controls' last step, and saying it twice in two words confused. -->
+      <Button variant="ghost" size="lg" onclick={onstopcooking}>{m['cooking.abandon']()}</Button>
     {:else if canCook}
       <!-- At the end of the reading, where the decision is made; floats until its own place is in view. -->
       <Button variant="primary" size="lg" onclick={onstartcooking}>
-        {m['recipe.startCooking']()}
+        {resuming ? m['cooking.resume']() : m['recipe.startCooking']()}
       </Button>
     {/if}
   </footer>

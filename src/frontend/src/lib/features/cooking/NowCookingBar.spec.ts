@@ -7,6 +7,10 @@ import NowCookingBar from './NowCookingBar.svelte';
 import { cooking } from './stores/cooking.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
+const page = vi.hoisted(() => ({ url: new URL('http://culina.test/') }));
+
+vi.mock('$app/state', () => ({ page }));
+
 /*
  * The bar leads back to the hob, and it also has to be possible to say the
  * cooking is over from wherever you happen to be standing.
@@ -24,6 +28,7 @@ const session = {
 };
 
 afterEach(() => {
+  page.url = new URL('http://culina.test/');
   cooking.reset();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -107,5 +112,16 @@ describe('the bar for what is on the hob', () => {
     await userEvent.click(link);
 
     expect(select).toHaveBeenCalledWith('h1');
+  });
+
+  it('leaves the recipe’s own page to its cooking action, which says the same thing', async () => {
+    serverAnswers(session);
+    page.url = new URL('http://culina.test/recipes/r1');
+
+    await cooking.start('r1', 4);
+
+    renderWithProviders(NowCookingBar);
+
+    expect(screen.queryByRole('link')).toBeNull();
   });
 });

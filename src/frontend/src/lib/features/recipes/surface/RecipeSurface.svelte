@@ -26,6 +26,8 @@
     servings: number;
     onservings?: (value: number) => void;
     onstartcooking?: () => void;
+    /** A session for this recipe is open, so the cooking action leads back to it. */
+    resuming?: boolean;
     onaddtolist?: () => void;
     onaddtocookbook?: () => void;
     onaddtoplan?: () => void;
@@ -59,6 +61,7 @@
     servings,
     onservings,
     onstartcooking,
+    resuming = false,
     onaddtolist,
     onaddtocookbook,
     onaddtoplan,
@@ -192,7 +195,7 @@
     {/await}
   {/if}
 
-  <CookingAction {cooking} {canCook} {onstartcooking} {onstopcooking} />
+  <CookingAction {cooking} {canCook} {resuming} {onstartcooking} {onstopcooking} />
 </article>
 
 <style>
