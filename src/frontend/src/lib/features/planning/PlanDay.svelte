@@ -3,7 +3,7 @@
 
   import { m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
-  import type { PlannedDay, PlannedMeal } from './mealPlan.svelte';
+  import { cookedOn, type PlannedDay, type PlannedMeal } from './mealPlan.svelte';
   import PlanDayNutrition from './PlanDayNutrition.svelte';
   import PlannedCard from './PlannedCard.svelte';
   import { weekdayName } from './weekDates';
@@ -51,6 +51,7 @@
         <li data-plan-meal>
           <PlannedCard
             {meal}
+            cooked={cookedOn(meal, day.date)}
             lifted={drag.held?.entryId === meal.entryId}
             onpress={(event) =>
               drag.press(

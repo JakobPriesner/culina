@@ -179,6 +179,24 @@ class ShoppingStore {
     return result.ok ? null : result.error;
   }
 
+  /** One planned meal of the week starting `from`, as when it is planned after the week was shopped. */
+  async addPlannedMeal(
+    householdId: string,
+    from: string,
+    entryId: string
+  ): Promise<AppError | null> {
+    const result = await request(() =>
+      http.POST('/api/v1/households/{householdId}/shopping-list/meals', {
+        params: { path: { householdId } },
+        body: { from, entryId }
+      })
+    );
+
+    this.#take(householdId, result.ok ? result.value : null, result.ok ? null : result.error);
+
+    return result.ok ? null : result.error;
+  }
+
   /** Writes one planned meal's share again at what the plan now says (its servings and day); a meal not on the list stays off it. */
   async refreshMeal(householdId: string, entryId: string): Promise<AppError | null> {
     const result = await request(() =>

@@ -312,6 +312,36 @@ public class MealPlanEndpointTests(PostgresFixture postgres)
         Assert.Single(MealsOn(week, Monday));
     }
 
+    [Fact]
+    public async Task Get_ShouldSayWhenTheMealWasCooked_OnlyNearItsDay()
+    {
+        // The week shows a meal as done once it is cooked; a cook on another day is not this meal.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeAsync(client, householdId, "Curry");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        await client.PostAsync($"/api/v1/households/{householdId}/meal-plan", new { date = today, recipeId }, Token);
+        await client.PostAsync(
+            $"/api/v1/households/{householdId}/meal-plan",
+            new { date = today.AddDays(10), recipeId },
+            Token);
+        await client.PostAsync($"/api/v1/recipes/{recipeId}/cook-log", new { householdId }, Token);
+
+        var thisWeek = await client.GetAsync(
+            $"/api/v1/households/{householdId}/meal-plan?from={today:yyyy-MM-dd}",
+            Token);
+        var later = await client.GetAsync(
+            $"/api/v1/households/{householdId}/meal-plan?from={today.AddDays(10):yyyy-MM-dd}",
+            Token);
+
+        var cooked = Assert.Single(MealsOn(thisWeek, today)).GetProperty("cookedAt");
+        Assert.Equal(System.Text.Json.JsonValueKind.String, cooked.ValueKind);
+        Assert.False(
+            Assert.Single(MealsOn(later, today.AddDays(10))).TryGetProperty("cookedAt", out var notYet)
+            && notYet.ValueKind != System.Text.Json.JsonValueKind.Null);
+    }
+
     private static List<System.Text.Json.JsonElement> MealsOn(ApiResponse week, DateOnly date) =>
         [
             .. week.Json!.Value.GetProperty("days")

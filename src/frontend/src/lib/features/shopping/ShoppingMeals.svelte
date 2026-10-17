@@ -1,22 +1,34 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { Disclosure } from '$ds';
+  import { Button, Disclosure } from '$ds';
 
   import type { MealSlot } from '$features/planning/mealPlan.svelte';
   import { slotLabel } from '$features/planning/slots';
+  import { upcoming } from '$features/planning/upcoming.svelte';
+  import { hrefAtYield } from '$features/recipes/surface/yieldInUrl';
   import { formatDate, m } from '$shell/i18n';
   import type { ListedDay } from './plannedMeals';
   import { amountOf } from './shoppingAmount';
 
   /**
    * Which planned meals the list is made of, day by day, so a total can be traced to the meal behind it.
-   * Days already past are named as such and stay on the list: nothing is dropped for being old, a person ticks or removes it.
+   * Days already past are named as such and stay on the list: nothing is dropped for being old, a person ticks or removes it,
+   * here a past meal's lines at once.
    */
   interface Props {
     days: readonly ListedDay[];
+    /** Takes one planned meal's unbought lines off the list. */
+    onwithdraw?: (planEntryId: string, title: string) => void;
   }
 
-  let { days }: Props = $props();
+  let { days, onwithdraw }: Props = $props();
+
+  /** At the servings the meal is planned for, while the plan still holds it (today on). */
+  const recipeHref = (meal: ListedDay['meals'][number]) =>
+    hrefAtYield(
+      resolve('/(app)/recipes/[recipeId]', { recipeId: meal.recipeId }),
+      meal.planEntryId ? upcoming.mealOf(meal.planEntryId)?.servings : null
+    );
 
   const meals = $derived(days.reduce((total, day) => total + day.meals.length, 0));
   const past = $derived(
@@ -54,12 +66,23 @@
           <ul class="day-meals">
             {#each day.meals as meal (`${meal.recipeId}-${meal.slot ?? ''}`)}
               <li class="meal">
-                <p class="meal-name">
-                  <a href={resolve('/(app)/recipes/[recipeId]', { recipeId: meal.recipeId })}
-                    >{meal.recipeTitle}</a
-                  >
-                  {#if slotOf(meal.slot)}<span class="slot">{slotOf(meal.slot)}</span>{/if}
-                </p>
+                <div class="meal-head">
+                  <p class="meal-name">
+                    <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- The route is resolved; only the yield is appended. -->
+                    <a href={recipeHref(meal)}>{meal.recipeTitle}</a>
+                    {#if slotOf(meal.slot)}<span class="slot">{slotOf(meal.slot)}</span>{/if}
+                  </p>
+                  {#if day.isPast && meal.planEntryId && onwithdraw}
+                    {@const entryId = meal.planEntryId}
+                    <Button
+                      size="sm"
+                      label={m['shopping.meals.withdraw.label']({ title: meal.recipeTitle })}
+                      onclick={() => onwithdraw(entryId, meal.recipeTitle)}
+                    >
+                      {m['shopping.meals.withdraw']()}
+                    </Button>
+                  {/if}
+                </div>
                 <ul class="lines">
                   {#each meal.lines as line (line.itemId)}
                     <li>
@@ -126,6 +149,13 @@
   }
   .day-meals {
     gap: var(--space-3);
+  }
+  .meal-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
   }
   .meal-name {
     margin: 0;

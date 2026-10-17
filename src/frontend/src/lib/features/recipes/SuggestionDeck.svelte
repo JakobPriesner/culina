@@ -3,6 +3,7 @@
 
   import { IconButton } from '$ds';
 
+  import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
   import FeaturedRecipe from './FeaturedRecipe.svelte';
   import { inheritedFrom } from './recipeMeta';
@@ -25,6 +26,15 @@
   let { items, ondismiss, inherited = {}, onmore }: Props = $props();
 
   let track = $state<HTMLUListElement>();
+
+  /** The suggestion being planned; the sheet is downloaded the first time one is. */
+  let planning = $state<Suggestion | null>(null);
+  let planned = $state(false);
+
+  function plan(suggestion: Suggestion) {
+    planning = suggestion;
+    planned = true;
+  }
   let scrolled = $state(0);
 
   const reasons = $derived(reasonLinesFor(items));
@@ -72,6 +82,7 @@
           reason={reasons[position]}
           priority={position === 0}
           ondismiss={ondismiss ? () => ondismiss(suggestion.id) : undefined}
+          onplan={session.activeHouseholdId ? () => plan(suggestion) : undefined}
           from={inheritedFrom(suggestion, inherited)}
         />
       </li>
@@ -107,6 +118,19 @@
     </div>
   {/if}
 </div>
+
+{#if planned && session.activeHouseholdId}
+  {#await import('$features/planning/PlanRecipeSheet.svelte') then { default: PlanRecipeSheet }}
+    <PlanRecipeSheet
+      open={planning !== null}
+      householdId={session.activeHouseholdId}
+      recipeId={planning?.id ?? ''}
+      title={planning?.title ?? ''}
+      servings={planning?.yieldAmount ?? 1}
+      onclose={() => (planning = null)}
+    />
+  {/await}
+{/if}
 
 <style>
   .deck {

@@ -160,7 +160,7 @@ describe('opening the library', () => {
     renderWithProviders(LibraryPage);
     await settle();
 
-    await userEvent.click(screen.getByRole('button', { name: /Linsensuppe/ }));
+    await userEvent.click(screen.getByRole('button', { name: /Stop suggesting Linsensuppe/ }));
     await settle();
 
     const dismissals = fetched.mock.calls

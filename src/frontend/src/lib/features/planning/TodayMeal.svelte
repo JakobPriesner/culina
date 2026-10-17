@@ -3,6 +3,7 @@
   import { Chevron } from '$ds';
 
   import { cooking } from '$features/cooking/stores/cooking.svelte';
+  import { hrefAtYield } from '$features/recipes/surface/yieldInUrl';
   import { m } from '$shell/i18n';
   import { slotLabel } from './slots';
   import type { MealSlot } from './mealPlan.svelte';
@@ -10,8 +11,8 @@
 
   /**
    * Today's planned meal, one tap from cooking it: the hand-off from the week to the hob. Shows the
-   * next meal of the day by the clock (breakfast before 11, lunch before 15, then dinner), and nothing
-   * when today has no plan or that meal is already on the hob (the cooking pill covers it).
+   * next meal of the day still to cook (see `upcoming.mealNow`), that the day's cooking is done once it
+   * is, and nothing when today has no plan or that meal is already on the hob (the cooking pill covers it).
    */
   interface Props {
     householdId: string;
@@ -23,25 +24,9 @@
     void upcoming.load(householdId);
   });
 
-  const slotNow = (): MealSlot => {
-    const hour = new Date().getHours();
-
-    return hour < 11 ? 'breakfast' : hour < 15 ? 'lunch' : 'dinner';
-  };
-
-  const order: readonly MealSlot[] = ['breakfast', 'lunch', 'dinner'];
-
-  const meal = $derived.by(() => {
-    const today = upcoming.today;
-    const from = order.indexOf(slotNow());
-
-    // The meal of this part of the day, else the next one still to come, else the last one planned.
-    return (
-      today.find((planned) => order.indexOf(planned.slot as MealSlot) >= from) ??
-      today.at(-1) ??
-      null
-    );
-  });
+  const meal = $derived(upcoming.mealNow);
+  /** Shown once nothing is left to cook today: the day's cooking is done, and it says so calmly. */
+  const cooked = $derived(meal ? null : (upcoming.cookedToday.at(-1) ?? null));
 
   const onTheHob = $derived(meal !== null && cooking.session?.recipeId === meal.recipeId);
 </script>
@@ -50,14 +35,25 @@
   <!-- eslint-disable svelte/no-navigation-without-resolve -- The route is resolved; only the yield is appended. -->
   <a
     class="today"
-    href="{resolve('/(app)/recipes/[recipeId]/cook', { recipeId: meal.recipeId })}{meal.servings
-      ? `?yield=${meal.servings}`
-      : ''}"
+    href={hrefAtYield(
+      resolve('/(app)/recipes/[recipeId]/cook', { recipeId: meal.recipeId }),
+      meal.servings
+    )}
   >
     <!-- eslint-enable svelte/no-navigation-without-resolve -->
     <span class="when">{m['plan.today.meal']({ slot: slotLabel[meal.slot as MealSlot]() })}</span>
     <span class="what">{meal.title}</span>
     <span class="cook">{m['plan.today.cook']()} <Chevron /></span>
+  </a>
+{:else if cooked}
+  <a class="today done" href={resolve('/(app)/recipes/[recipeId]', { recipeId: cooked.recipeId })}>
+    <span class="when">{m['plan.today.cooked']()}</span>
+    <span class="what">{cooked.title}</span>
+    <span class="tick" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="m5 12 5 5 9-10" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </span>
   </a>
 {/if}
 
@@ -120,6 +116,23 @@
     color: var(--accent-contrast);
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
+  }
+
+  /* Done, not a call to action: no filled pill, the accent kept for the tick. */
+  .done {
+    background: var(--surface-sunken);
+  }
+
+  .done .when {
+    color: var(--text-muted);
+  }
+
+  .tick {
+    grid-area: cook;
+    display: inline-flex;
+    width: var(--space-6);
+    height: var(--space-6);
+    color: var(--success);
   }
 
   @media print {

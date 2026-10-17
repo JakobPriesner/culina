@@ -48,6 +48,8 @@
     nutrition?: NutritionLink | null;
     /** Where the recipe is in the loop (planned, on the list), after the servings band; not while cooking. */
     whereabouts?: Snippet;
+    /** Your own note on a step, by step id; see `StepList`. */
+    stepNote?: (stepId: string) => string;
   }
 
   let {
@@ -70,7 +72,8 @@
     onstep,
     ontitleview,
     nutrition = null,
-    whereabouts
+    whereabouts,
+    stepNote
   }: Props = $props();
 
   let highlighted = $state<string | null>(null);
@@ -175,6 +178,7 @@
       {onstep}
       onhighlight={(id) => (highlighted = id)}
       onlocate={locateIngredient}
+      {stepNote}
     />
   </div>
 

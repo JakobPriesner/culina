@@ -5,6 +5,7 @@ import { resolve } from '$app/paths';
 import { page } from '$app/state';
 import { recipes } from '$features/recipes/stores/recipes.svelte';
 import { urlAtYield } from '$features/recipes/surface/yieldInUrl';
+import { openListAction } from '$features/shopping/openList';
 import { shopping } from '$features/shopping/stores/shopping.svelte';
 import { explain } from '$shell/explain';
 import { m } from '$shell/i18n';
@@ -38,10 +39,11 @@ export function useRecipeActions(on: Recipe) {
 
     const failure = await shopping.addRecipe(householdId, on.recipeId(), on.servings());
 
-    toaster.show({
-      message: () => (failure ? explain(failure) : m['shopping.added']()),
-      tone: failure ? 'danger' : 'success'
-    });
+    toaster.show(
+      failure
+        ? { message: () => explain(failure), tone: 'danger' }
+        : { message: () => m['shopping.added'](), tone: 'success', action: openListAction }
+    );
   }
 
   /** Copies an inherited recipe into this household and opens the copy in the editor. */

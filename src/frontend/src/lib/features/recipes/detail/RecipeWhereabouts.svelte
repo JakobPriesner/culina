@@ -7,18 +7,24 @@
   import { shopping } from '$features/shopping/stores/shopping.svelte';
   import { m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
+  import { wordYield, type Yields } from '../yieldWords';
 
   /**
    * Where this recipe is in the loop, under its title: planned for a day, on the shopping list. Each is a
    * link to that place, so the answer to "did I already plan this?" is on the recipe, not a tab away.
    * Nothing at all when neither is true; the cooked count is already in the meta line.
+   * A meal planned for another number than on screen offers that number, so shopping and cooking from here match the plan.
    */
   interface Props {
     recipeId: string;
     householdId: string;
+    /** The yield on screen, and the recipe's words for it. */
+    servings: number;
+    yields: Yields;
+    onscale?: (servings: number) => void;
   }
 
-  let { recipeId, householdId }: Props = $props();
+  let { recipeId, householdId, servings, yields, onscale }: Props = $props();
 
   $effect(() => {
     void upcoming.load(householdId);
@@ -44,6 +50,8 @@
       ? `${new Intl.DateTimeFormat(preferences.locale, { weekday: 'short', day: 'numeric', month: 'short' }).format(dayOf(planned.date))}, ${slotLabel[planned.slot]()}`
       : ''
   );
+
+  const offersPlanned = $derived(Boolean(planned && onscale && planned.servings !== servings));
 
   const planHref = $derived(
     `${resolve('/(app)/plan')}${planned && planned.week > 0 ? `?week=${planned.week}` : ''}`
@@ -71,6 +79,13 @@
           {m['recipe.whereabouts.planned']({ when })}
         </a>
       </li>
+      {#if offersPlanned}
+        <li>
+          <button type="button" class="chip" onclick={() => planned && onscale?.(planned.servings)}>
+            {m['recipe.whereabouts.scale']({ amount: wordYield(planned.servings, yields) })}
+          </button>
+        </li>
+      {/if}
     {/if}
 
     {#if listed}
@@ -107,6 +122,9 @@
 
   /* Quiet capsules: they report, so they are tinted rather than filled with the accent. */
   .chip {
+    font: inherit;
+    border: 0;
+    cursor: pointer;
     display: inline-flex;
     align-items: center;
     gap: var(--space-2);

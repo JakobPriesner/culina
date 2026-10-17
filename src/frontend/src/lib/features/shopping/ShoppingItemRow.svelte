@@ -4,6 +4,8 @@
 
   import type { MealSlot } from '$features/planning/mealPlan.svelte';
   import { slotLabel } from '$features/planning/slots';
+  import { upcoming } from '$features/planning/upcoming.svelte';
+  import { hrefAtYield } from '$features/recipes/surface/yieldInUrl';
   import { haptics } from '$shell/haptics';
   import { formatDate, m } from '$shell/i18n';
   import { amountOf } from './shoppingAmount';
@@ -42,6 +44,13 @@
       // A slot this client does not know is left out rather than guessed at.
       slot: (slot && slotLabel[slot as MealSlot]?.()) || ''
     });
+
+  /** The recipe at the servings its planned meal is for, while the plan still holds it. */
+  const sourceHref = (source: (typeof sources)[number]) =>
+    hrefAtYield(
+      resolve('/(app)/recipes/[recipeId]', { recipeId: source.recipeId }),
+      source.planEntryId ? upcoming.mealOf(source.planEntryId)?.servings : null
+    );
 
   /** Moves the line, but only when the section chosen is a different one. */
   function move(section: Section) {
@@ -132,9 +141,8 @@
     <ul class="sources">
       {#each sources as source, index (`${source.recipeId}-${source.plannedDate ?? 'direct'}-${index}`)}
         <li class="source">
-          <a href={resolve('/(app)/recipes/[recipeId]', { recipeId: source.recipeId })}
-            >{source.recipeTitle}</a
-          >
+          <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- The route is resolved; only the yield is appended. -->
+          <a href={sourceHref(source)}>{source.recipeTitle}</a>
           {#if amountOf(source.quantity, source.unit)}<span class="source-amount"
               >{amountOf(source.quantity, source.unit)}</span
             >{/if}

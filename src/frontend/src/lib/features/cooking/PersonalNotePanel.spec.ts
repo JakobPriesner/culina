@@ -6,7 +6,8 @@ import PersonalNotePanel from './PersonalNotePanel.svelte';
 import { notes } from './stores/notes.svelte';
 import { renderWithProviders } from '$lib/test/render';
 
-/* Typing into a note that has not arrived loses the typing: the answer replaces it and the next save sends the emptiness back. */
+/* Typing into a note that has not arrived loses the typing: the answer replaces it and the next save sends the emptiness back.
+   The page reads the note (the recipe page and cook mode both do), so each test asks for it as the page would. */
 afterEach(() => {
   notes.reset();
   vi.unstubAllGlobals();
@@ -21,7 +22,9 @@ describe('your note on a recipe', () => {
       vi.fn(() => new Promise<Response>((resolve) => (answer = resolve)))
     );
 
+    // The page reads the note, as cook mode does when it opens.
     renderWithProviders(PersonalNotePanel, { props: { recipeId: 'r1', variant: 'cook' } });
+    void notes.load('r1');
 
     const note = screen.getByRole('textbox');
 
@@ -53,7 +56,9 @@ describe('your note on a recipe', () => {
       vi.fn(() => Promise.resolve(answers.shift()?.() ?? new Response(null, { status: 500 })))
     );
 
+    // The page reads the note, as cook mode does when it opens.
     renderWithProviders(PersonalNotePanel, { props: { recipeId: 'r1', variant: 'cook' } });
+    void notes.load('r1');
 
     const alert = await screen.findByRole('alert');
 
@@ -95,6 +100,7 @@ describe('leaving a note nobody typed in', () => {
     const { unmount } = renderWithProviders(PersonalNotePanel, {
       props: { recipeId: 'r1', variant: 'cook' }
     });
+    void notes.load('r1');
 
     await waitFor(() => expect(screen.getByRole('textbox')).toHaveValue('Use the heavy pan'));
     unmount();
@@ -109,11 +115,43 @@ describe('leaving a note nobody typed in', () => {
     const { unmount } = renderWithProviders(PersonalNotePanel, {
       props: { recipeId: 'r1', variant: 'cook' }
     });
+    void notes.load('r1');
 
     await screen.findByRole('alert');
     unmount();
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(sent).toEqual(['GET']);
+  });
+});
+
+describe('a note on the step being cooked', () => {
+  it('is written apart from the recipe note, under its own label', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({ overall: null, steps: [{ stepId: 's2', body: 'Lower the heat' }] }),
+            {
+              headers: { 'Content-Type': 'application/json' }
+            }
+          )
+      )
+    );
+
+    renderWithProviders(PersonalNotePanel, {
+      props: { recipeId: 'r1', variant: 'cook', step: { id: 's2', name: 'Step 2' } }
+    });
+    void notes.load('r1');
+
+    const stepNote = await screen.findByRole('textbox', { name: 'Only for Step 2' });
+
+    await waitFor(() => expect(stepNote).toHaveValue('Lower the heat'));
+
+    await userEvent.type(stepNote, '!');
+
+    expect(notes.stepNote('s2')).toBe('Lower the heat!');
+    expect(notes.overall).toBe('');
   });
 });

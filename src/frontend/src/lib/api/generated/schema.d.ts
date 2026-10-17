@@ -1414,7 +1414,7 @@ export interface paths {
         put?: never;
         /**
          * Add a planned week's ingredients
-         * @description Every meal planned in the seven days from `from`, at its planned servings, merged exactly as a single recipe is. Safe to repeat: a meal already on the list is skipped, and a recipe that was added by itself counts as the shopping for a planned meal of it. Each planned meal's `isOnShoppingList` says which are there.
+         * @description Every meal planned in the seven days from `from`, at its planned servings, merged exactly as a single recipe is. Safe to repeat: a meal already on the list is skipped, and a recipe that was added by itself counts as the shopping for a planned meal of it. Each planned meal's `isOnShoppingList` says which are there. With `entryId`, only that meal of the week is added.
          */
         post: operations["addPlannedMealsToShoppingListV1"];
         delete?: never;
@@ -3578,6 +3578,12 @@ export interface components {
             slot: string;
             /** @description Whether this meal's ingredients are on the household's shopping list. */
             isOnShoppingList: boolean;
+            /**
+             * Format: date-time
+             * @description When the household last cooked this recipe within a day either side of the meal's day, or null. The
+             *     client decides whether that was on the meal's day in its own time zone.
+             */
+            cookedAt?: string | null;
         };
         /** @description An RFC 9457 problem document. Branch on `code`; `detail` is prose and will be reworded. */
         ProblemDetails: {
@@ -5853,6 +5859,11 @@ export interface components {
              * @description The day the week starts on, as the plan was read.
              */
             from: string;
+            /**
+             * Format: uuid
+             * @description Only this planned meal of the week, as when it is planned after the shop; null for all of them.
+             */
+            entryId?: string | null;
         };
         /** @description A recipe's ingredients, at a chosen scaling. */
         ShoppingAddRecipeRequest: {
@@ -5938,6 +5949,11 @@ export interface components {
             quantity?: number | null;
             /** @description In what, or null for a bare count. */
             unit?: string | null;
+            /**
+             * Format: uuid
+             * @description The planned meal it is for, or null when added directly.
+             */
+            planEntryId?: string | null;
             /**
              * Format: date
              * @description Which planned day it is for, or null when added directly.

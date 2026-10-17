@@ -7,8 +7,8 @@ class NotesStore {
   #loaded = $state(false);
   /** The read failed; kept apart from "no note", or saving would overwrite a note never shown. */
   #failed = $state(false);
-  /** Step notes from the read; not shown, but a save replaces the whole note so they go back as they came. */
-  #steps: { stepId: string; body: string }[] = [];
+  /** Notes on single steps, shown under the step; a save replaces the whole note, so every one goes back. */
+  #steps = $state<readonly { stepId: string; body: string }[]>([]);
   /** The save in flight; not `$state` because `load()` reads it before its first await, inside an effect. */
   #saving: Promise<unknown> | null = null;
   /** The recipe the note on screen belongs to, and which read is the latest; plain for the same reason as `#saving`. */
@@ -25,6 +25,15 @@ class NotesStore {
 
   get failed(): boolean {
     return this.#failed;
+  }
+
+  /** Whether there is anything written, overall or on a step: what cook mode marks its notes button for. */
+  get written(): boolean {
+    return this.#overall.trim() !== '' || this.#steps.some((note) => note.body.trim() !== '');
+  }
+
+  stepNote(stepId: string): string {
+    return this.#steps.find((note) => note.stepId === stepId)?.body ?? '';
   }
 
   async load(recipeId: string): Promise<void> {
@@ -63,6 +72,12 @@ class NotesStore {
     this.#overall = text;
   }
 
+  setStep(stepId: string, text: string): void {
+    const others = this.#steps.filter((note) => note.stepId !== stepId);
+
+    this.#steps = text ? [...others, { stepId, body: text }] : others;
+  }
+
   async save(recipeId: string): Promise<AppError | null> {
     // A note that was never read would be saved over the one the server holds, and typing is never sent to another recipe.
     if (!this.#loaded || recipeId !== this.#recipeId) {
@@ -71,7 +86,12 @@ class NotesStore {
 
     // Taken now, not at request build (a retry builds again after a next-recipe read may have emptied it).
     // Blank means no note.
-    const body = { overall: this.#overall.trim() || null, steps: this.#steps };
+    const body = {
+      overall: this.#overall.trim() || null,
+      steps: this.#steps
+        .map((note) => ({ stepId: note.stepId, body: note.body.trim() }))
+        .filter((note) => note.body !== '')
+    };
 
     const saving = request(() =>
       http.PUT('/api/v1/recipes/{recipeId}/notes', { params: { path: { recipeId } }, body })

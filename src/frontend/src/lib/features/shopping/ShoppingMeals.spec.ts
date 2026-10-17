@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { preferences } from '$shell/preferences.svelte';
 
@@ -13,6 +13,7 @@ const days: ListedDay[] = [
     isPast: true,
     meals: [
       {
+        planEntryId: 'e1',
         recipeId: 'r1',
         recipeTitle: 'Waffles',
         slot: 'breakfast',
@@ -25,6 +26,7 @@ const days: ListedDay[] = [
     isPast: false,
     meals: [
       {
+        planEntryId: 'e2',
         recipeId: 'r2',
         recipeTitle: 'Pizza',
         slot: 'dinner',
@@ -57,6 +59,20 @@ describe('the planned meals on the shopping list', () => {
     expect(screen.getByText(/stays on the list until you tick it off or remove it/)).toBeVisible();
     // Only the day that has passed is named so.
     expect(screen.getAllByText('Already past')).toHaveLength(1);
+  });
+
+  it('takes a past meal off the list in one go, and offers it for past meals only', async () => {
+    preferences.adopt({ locale: 'en' }, { signedIn: false });
+    const onwithdraw = vi.fn();
+
+    render(ShoppingMeals, { days, onwithdraw });
+    await userEvent.click(screen.getByText(/Planned meals on this list/));
+
+    expect(screen.queryByRole('button', { name: /Pizza/ })).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Take off the list: Waffles' }));
+
+    expect(onwithdraw).toHaveBeenCalledWith('e1', 'Waffles');
   });
 
   it('shows nothing for a list with no planned meals', () => {

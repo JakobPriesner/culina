@@ -12,7 +12,11 @@ namespace Application.Shopping;
 
 /// <summary>Puts a planned week's shopping on the list — each meal once.</summary>
 /// <remarks>Safe to repeat: a meal already on the list is skipped, and a recipe added by itself counts as shopping for a planned meal of it. Two planned meals of one recipe are two meals.</remarks>
-public sealed record AddPlannedMealsToListCommand(Guid HouseholdId, Guid UserId, DateOnly From);
+/// <param name="HouseholdId">Whose list.</param>
+/// <param name="UserId">Who is asking.</param>
+/// <param name="From">The day the week starts on.</param>
+/// <param name="EntryId">Only this planned meal of the week, or null for all of them.</param>
+public sealed record AddPlannedMealsToListCommand(Guid HouseholdId, Guid UserId, DateOnly From, Guid? EntryId = null);
 
 internal sealed class AddPlannedMealsToListCommandHandler(
     IShoppingListRepository lists,
@@ -54,9 +58,13 @@ internal sealed class AddPlannedMealsToListCommandHandler(
         AddPlannedMealsToListCommand command,
         CancellationToken cancellationToken)
     {
-        var week = await plans
+        var planned = await plans
             .ForWeekAsync(command.HouseholdId, command.From, PlanWeek.Days, cancellationToken)
             .ConfigureAwait(false);
+
+        var week = command.EntryId is { } only
+            ? [.. planned.Where(meal => meal.Entry.Id == only)]
+            : planned;
 
         var cooked = await RecipesOfAsync(week, cancellationToken).ConfigureAwait(false);
 

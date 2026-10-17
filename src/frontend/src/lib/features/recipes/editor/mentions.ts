@@ -114,6 +114,43 @@ export function linkMentions(step: Step, ingredients: readonly Ingredient[]): St
   return linked(segments) === linked(step.segments) ? step : { ...step, segments };
 }
 
+const mentionCount = (segments: readonly StepSegment[]): number =>
+  segments.filter((segment) => segment.kind === 'ingredient').length;
+
+/**
+ * The step with the first place its words spell the ingredient's own name made a mention ("Zwiebeln würfeln" →
+ * "@Zwiebeln würfeln"), so reading scales it in the sentence; null when the words never spell it as a whole word.
+ * The wording stays the author's: an inflected or compound form is left alone.
+ */
+export function mentionNamed(
+  step: Step,
+  ingredient: Ingredient,
+  ingredients: readonly Ingredient[]
+): StepSegment[] | null {
+  const text = toText(step, ingredients);
+  const lower = text.toLowerCase();
+  const name = ingredient.name.toLowerCase();
+
+  for (let at = lower.indexOf(name); name && at >= 0; at = lower.indexOf(name, at + 1)) {
+    if (isWord(text[at - 1]) || text[at - 1] === MARKER || isWord(text[at + name.length])) {
+      continue;
+    }
+
+    const segments = toSegments(
+      `${text.slice(0, at)}${MARKER}${text.slice(at)}`,
+      ingredients,
+      step.segments
+    );
+
+    // Inside another mention ("@rote Zwiebeln") it would break that one instead of adding one.
+    if (mentionCount(segments) === mentionCount(step.segments) + 1) {
+      return segments;
+    }
+  }
+
+  return null;
+}
+
 export interface PendingMention {
   readonly at: number;
   readonly query: string;

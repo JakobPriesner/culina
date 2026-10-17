@@ -21,6 +21,8 @@
     onstep?: (index: number) => void;
     onhighlight: (ingredientId: string | null) => void;
     onlocate: (ingredientId: string) => void;
+    /** Your own note on a step, shown under its words; absent where notes are not yours (a shared link). */
+    stepNote?: (stepId: string) => string;
   }
 
   let {
@@ -35,7 +37,8 @@
     needsOf,
     onstep,
     onhighlight,
-    onlocate
+    onlocate,
+    stepNote
   }: Props = $props();
 
   let list = $state<HTMLOListElement>();
@@ -54,6 +57,7 @@
     <ol class="list" bind:this={list}>
       {#each steps as step, index (step.id ?? index)}
         {@const needs = needsOf(step)}
+        {@const note = step.id ? stepNote?.(step.id).trim() : ''}
 
         <li class="step" class:current={cooking && index === currentStep}>
           {#if perStep && needs.length > 0}
@@ -73,6 +77,7 @@
             >
               <span class="number">{step.title ?? m['recipe.step']({ number: index + 1 })}</span>
               <StepText {step} {scaling} interactive={false} />
+              {#if note}<span class="step-note">{note}</span>{/if}
             </button>
           {:else}
             <div class="step-body">
@@ -92,6 +97,7 @@
                 recipeIngredients={written}
                 {onlocate}
               />
+              {#if note}<p class="step-note">{note}</p>{/if}
             </div>
           {/if}
         </li>
@@ -189,6 +195,19 @@
     font: inherit;
     text-align: start;
     cursor: pointer;
+  }
+
+  /* Yours, beside the author's words: a margin note, never mistaken for the method. */
+  .step-note {
+    display: block;
+    margin: 0;
+    padding-inline-start: var(--space-3);
+    border-inline-start: 2px solid var(--accent);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-style: italic;
+    white-space: pre-wrap;
+    text-align: start;
   }
 
   .number {

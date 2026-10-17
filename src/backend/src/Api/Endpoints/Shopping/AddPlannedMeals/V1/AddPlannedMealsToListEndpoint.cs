@@ -25,7 +25,8 @@ internal sealed class AddPlannedMealsToListEndpoint : IEndpoint
                         new AddPlannedMealsToListCommand(
                             householdId,
                             context.CurrentUser().UserId,
-                            request.From),
+                            request.From,
+                            request.EntryId),
                         cancellationToken)
                     .ConfigureAwait(false);
 
@@ -38,7 +39,8 @@ internal sealed class AddPlannedMealsToListEndpoint : IEndpoint
                 "Every meal planned in the seven days from `from`, at its planned servings, merged "
                 + "exactly as a single recipe is. Safe to repeat: a meal already on the list is "
                 + "skipped, and a recipe that was added by itself counts as the shopping for a "
-                + "planned meal of it. Each planned meal's `isOnShoppingList` says which are there.")
+                + "planned meal of it. Each planned meal's `isOnShoppingList` says which are there. "
+                + "With `entryId`, only that meal of the week is added.")
             .Produces<Response>()
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)

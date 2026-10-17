@@ -22,8 +22,18 @@
 
 <section class="ingredients" class:perStep aria-label={m['recipe.ingredients']()}>
   <SectionHead title={m['recipe.ingredients']()}>
-    <!-- Nothing to choose while cooking or in a recipe with one arrangement. -->
-    {#if !cooking && panel.divisible && panel.written.length > 0}
+    <!-- Nothing to choose in a recipe with one arrangement. Cooking chooses between this step and all, to prep ahead. -->
+    {#if cooking && panel.divisible && panel.written.length > 0}
+      <SegmentedControl
+        label={m['recipe.ingredientsView.label']()}
+        selected={panel.cookingView}
+        segments={[
+          { id: 'step', label: m['recipe.ingredientsView.thisStep']() },
+          { id: 'all', label: m['recipe.ingredientsView.all']() }
+        ]}
+        onselect={panel.chooseWhileCooking}
+      />
+    {:else if !cooking && panel.divisible && panel.written.length > 0}
       <SegmentedControl
         label={m['recipe.ingredientsView.label']()}
         selected={panel.view}
@@ -46,7 +56,9 @@
   {:else if !perStep}
     <!-- While cooking the list is filtered to this step, so "none written" would be wrong. Beside the steps, all ingredients accounted for says nothing. -->
     <p class="empty">
-      {cooking ? m['recipe.noneThisStep']() : m['recipe.noIngredients']()}
+      {cooking && panel.written.length > 0
+        ? m['recipe.noneThisStep']()
+        : m['recipe.noIngredients']()}
     </p>
   {:else if panel.written.length === 0}
     <p class="empty">{m['recipe.noIngredients']()}</p>

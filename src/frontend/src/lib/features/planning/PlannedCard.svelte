@@ -3,6 +3,7 @@
   import { IconButton, Image } from '$ds';
 
   import { imageUrl } from '$features/recipes/recipeImage';
+  import { hrefAtYield } from '$features/recipes/surface/yieldInUrl';
   import { m } from '$shell/i18n';
   import type { MealSlot, PlannedMeal } from './mealPlan.svelte';
   import { slotLabel } from './slots';
@@ -16,9 +17,11 @@
     /** Opens the meal's sheet: its day, meal and servings. */
     onedit?: () => void;
     lifted?: boolean;
+    /** Cooked on its day: said on the card, so the week reads as what happened. */
+    cooked?: boolean;
   }
 
-  let { meal, onremove, onpress, onedit, lifted = false }: Props = $props();
+  let { meal, onremove, onpress, onedit, lifted = false, cooked = false }: Props = $props();
 
   // Joined here, not in markup: Svelte trims the space at the start of an {#if} block, which made "Abendessen· 4 Portionen".
   const meta = $derived(
@@ -55,7 +58,15 @@
     </IconButton>
   {/if}
 
-  <a class="body" href={resolve('/(app)/recipes/[recipeId]', { recipeId: meal.recipeId })}>
+  <!-- eslint-disable svelte/no-navigation-without-resolve -- The route is resolved; only the yield is appended. -->
+  <a
+    class="body"
+    href={hrefAtYield(
+      resolve('/(app)/recipes/[recipeId]', { recipeId: meal.recipeId }),
+      meal.servings
+    )}
+  >
+    <!-- eslint-enable svelte/no-navigation-without-resolve -->
     {#if meal.imageId}
       <div class="thumb">
         <Image src={imageUrl(meal.recipeId, 400, meal.imageId)} alt="" ratio={1} />
@@ -65,7 +76,20 @@
     <div class="words">
       <span class="name">{meal.title}</span>
       <span class="meta">{meta}</span>
-      {#if meal.isOnShoppingList}
+      {#if cooked}
+        <span class="listed">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            aria-hidden="true"
+          >
+            <path d="m5 12 5 5 9-10" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+          {m['plan.cooked']()}
+        </span>
+      {:else if meal.isOnShoppingList}
         <span class="listed">
           <svg
             viewBox="0 0 24 24"

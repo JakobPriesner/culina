@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { urlAtYield, yieldFrom } from './yieldInUrl';
+import { hrefAtYield, urlAtYield, yieldFrom } from './yieldInUrl';
 import type { Recipe } from '../types';
 
 const recipe = { yieldAmount: 4 } as Recipe;
@@ -47,5 +47,16 @@ describe('writing the yield into a URL', () => {
 
   it('keeps whatever else was in the query', () => {
     expect(urlAtYield(at('?from=search'), 6, recipe)).toBe('/recipes/r1?from=search&yield=6');
+  });
+});
+
+describe('linking to a recipe for a planned meal', () => {
+  it('carries the servings it was planned for', () => {
+    expect(hrefAtYield('/recipes/r1', 6)).toBe('/recipes/r1?yield=6');
+  });
+
+  it('links plain when the meal has none of its own', () => {
+    expect(hrefAtYield('/recipes/r1', null)).toBe('/recipes/r1');
+    expect(hrefAtYield('/recipes/r1', undefined)).toBe('/recipes/r1');
   });
 });

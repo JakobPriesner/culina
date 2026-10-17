@@ -45,6 +45,11 @@ export const readWeek = (householdId: string, from: string) =>
 
 const rankOf = (slot: string): number => slotRank[slot as keyof typeof slotRank] ?? slotRank.dinner;
 
+/** Whether the household cooked the meal on its day, by this device's calendar (the server cannot know its time zone). */
+export const cookedOn = (meal: PlannedMeal, date: string): boolean =>
+  // eslint-disable-next-line svelte/prefer-svelte-reactivity -- Read once to name its day, never changed.
+  meal.cookedAt != null && asDate(new Date(meal.cookedAt)) === date;
+
 /** For how many a meal is: what was chosen for it, or what its recipe is written for. */
 export const servingsOf = (meal: PlannedMeal): number => meal.servings ?? meal.recipeServings;
 

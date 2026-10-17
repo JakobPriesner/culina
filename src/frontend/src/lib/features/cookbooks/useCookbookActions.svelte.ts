@@ -1,6 +1,7 @@
 import type { AppError } from '$api';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
+import { openListAction } from '$features/shopping/openList';
 import { restoreCookbook } from '$features/trash/trash';
 import { explain } from '$shell/explain';
 import { m } from '$shell/i18n';
@@ -173,8 +174,12 @@ export function useCookbookActions(page: Page) {
 
     toaster.show(
       done === total
-        ? { message: () => m['cookbooks.shopping.done']({ count: done }) }
-        : { message: () => m['cookbooks.shopping.partial']({ done, total }), tone: 'danger' }
+        ? { message: () => m['cookbooks.shopping.done']({ count: done }), action: openListAction }
+        : {
+            message: () => m['cookbooks.shopping.partial']({ done, total }),
+            tone: 'danger',
+            action: done > 0 ? openListAction : undefined
+          }
     );
   }
 

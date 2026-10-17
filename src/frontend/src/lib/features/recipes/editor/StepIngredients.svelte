@@ -6,8 +6,9 @@
   import { formatQuantity } from '../formatQuantity';
   import { quantityLabels } from '../quantityLabels';
   import { scaleQuantity } from '../scaling';
-  import type { Ingredient, Step } from '../types';
+  import type { Ingredient, Step, StepSegment } from '../types';
   import { inferUses } from '../surface/inferredUses';
+  import { mentionNamed } from './mentions';
   import { namedIn } from './stepUsage';
 
   /**
@@ -20,9 +21,11 @@
     number: number;
     ingredients: readonly Ingredient[];
     onchange: (uses: string[]) => void;
+    /** The step's words with a spotted ingredient made a mention. */
+    onmention: (segments: StepSegment[]) => void;
   }
 
-  let { step, number, ingredients, onchange }: Props = $props();
+  let { step, number, ingredients, onchange, onmention }: Props = $props();
 
   const named = $derived(namedIn(step));
   const needs = (id: string) => step.uses.includes(id);
@@ -40,6 +43,17 @@
   // The base amount, as the ingredient list shows it: a recipe is written at its own yield.
   const amountOf = (ingredient: Ingredient) =>
     formatQuantity(scaleQuantity(ingredient.quantity, 1), preferences.locale, quantityLabels).text;
+
+  /** Where the words spell its name, they mention it (scaled in the sentence when read); else the step just needs it. */
+  function adopt(ingredient: Ingredient) {
+    const mentioned = mentionNamed(step, ingredient, ingredients);
+
+    if (mentioned) {
+      onmention(mentioned);
+    } else {
+      set(ingredient, true);
+    }
+  }
 
   function set(ingredient: Ingredient, wanted: boolean) {
     // Written back in the recipe's order, so the chips don't shuffle as you pick them.
@@ -85,7 +99,7 @@
       class="suggestion"
       title={m['editor.stepIngredientSpotted']()}
       aria-label={m['editor.addSpottedIngredient']({ name: ingredient.name, number })}
-      onclick={() => set(ingredient, true)}
+      onclick={() => adopt(ingredient)}
     >
       <svg
         viewBox="0 0 24 24"

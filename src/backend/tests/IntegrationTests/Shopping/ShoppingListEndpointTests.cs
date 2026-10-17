@@ -141,8 +141,8 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
         var cake = await RecipeWithButterAsync(client, householdId, "Cake", 200);
         var biscuits = await RecipeWithButterAsync(client, householdId, "Biscuits", 50);
 
-        await PlanAsync(client, householdId, cake, Monday);
-        await PlanAsync(client, householdId, biscuits, Monday.AddDays(1));
+        var cakeMeal = await PlanAsync(client, householdId, cake, Monday);
+        var biscuitsMeal = await PlanAsync(client, householdId, biscuits, Monday.AddDays(1));
 
         await AddWeekAsync(client, householdId);
         var response = await client.GetAsync(
@@ -162,6 +162,7 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
                 Assert.Equal("g", source.GetProperty("unit").GetString());
                 Assert.Equal("2026-09-15", source.GetProperty("plannedDate").GetString());
                 Assert.Equal("dinner", source.GetProperty("plannedSlot").GetString());
+                Assert.Equal(biscuitsMeal, source.GetProperty("planEntryId").GetGuid());
             },
             source =>
             {
@@ -170,6 +171,7 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
                 Assert.Equal("g", source.GetProperty("unit").GetString());
                 Assert.Equal("2026-09-14", source.GetProperty("plannedDate").GetString());
                 Assert.Equal("dinner", source.GetProperty("plannedSlot").GetString());
+                Assert.Equal(cakeMeal, source.GetProperty("planEntryId").GetGuid());
             });
     }
 
@@ -508,6 +510,31 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
         var response = await AddWeekAsync(client, householdId);
 
         Assert.Equal(500m, Butter(response).GetProperty("quantity").GetDecimal());
+    }
+
+    [Fact]
+    public async Task AddPlannedMeals_ForOneEntry_ShouldShopForThatMealOnly()
+    {
+        // A meal planned after the shop goes on by itself; the rest of the week stays as it was.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var cake = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+        var biscuits = await RecipeWithButterAsync(client, householdId, "Biscuits", 50);
+
+        await PlanAsync(client, householdId, cake, Monday);
+        var later = await PlanAsync(client, householdId, biscuits, Monday.AddDays(3));
+
+        var response = await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/meals",
+            new { from = Monday, entryId = later },
+            Token);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(50m, Butter(response).GetProperty("quantity").GetDecimal());
+        Assert.Collection(
+            (await WeekAsync(client, householdId)).OrderBy(meal => meal.GetProperty("title").GetString()),
+            meal => Assert.True(meal.GetProperty("isOnShoppingList").GetBoolean()),
+            meal => Assert.False(meal.GetProperty("isOnShoppingList").GetBoolean()));
     }
 
     [Fact]

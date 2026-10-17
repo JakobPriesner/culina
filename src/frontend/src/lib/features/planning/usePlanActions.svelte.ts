@@ -1,4 +1,4 @@
-import { resolve } from '$app/paths';
+import { openListAction } from '$features/shopping/openList';
 import { shopping } from '$features/shopping/stores/shopping.svelte';
 import { explain } from '$shell/explain';
 import { m } from '$shell/i18n';
@@ -20,12 +20,6 @@ interface Page {
   readonly householdId: () => string | null;
   readonly monday: () => string;
 }
-
-const goToList = async () => {
-  const { goto } = await import('$app/navigation');
-
-  await goto(resolve('/(app)/shopping'));
-};
 
 /** Actions on the week on screen; each ends in a toast. */
 export function usePlanActions(page: Page) {
@@ -162,7 +156,7 @@ export function usePlanActions(page: Page) {
         : {
             message: () => m['plan.addedToList'](),
             tone: 'success',
-            action: { label: () => m['plan.openList'](), run: () => void goToList() }
+            action: openListAction
           }
     );
   }

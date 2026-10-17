@@ -18,31 +18,26 @@ interface Source {
   readonly currentStep: () => number;
 }
 
+/** While cooking: the step's own list, or all of them to prep ahead. Not remembered: every cook starts on the step. */
+export type CookingView = 'step' | 'all';
+
 /**
  * The ingredient region: `combined` (whole list) or `perStep` (each step's ingredients beside it).
- * Cooking shows only the current step's list, so it neither offers nor obeys the switch.
+ * Cooking has its own switch: the current step's list, or all of them.
  */
 export function createIngredientPanel(source: Source) {
   let view = $state<IngredientsView>(recallIngredientsView());
+  let cookingView = $state<CookingView>('step');
 
   const written = $derived(everyIngredient(source.recipe()));
 
   const byId = $derived(ingredientsOf(source.recipe()));
 
-  /** A recipe whose author linked nothing gets its links guessed from the steps' words; one with any link is taken as written. */
-  const inferred = $derived.by(() => {
-    const steps = source.recipe().steps;
+  /** Guessed from each step's words; used only for a step its author linked nothing to, so a half-linked recipe still has every step. */
+  const inferred = $derived(inferUses(source.recipe().steps, written));
 
-    return steps.some((step) => step.uses.length > 0) ? null : inferUses(steps, written);
-  });
-
-  const usesOf = (step: Step): readonly string[] => {
-    if (!inferred) {
-      return step.uses;
-    }
-
-    return inferred[source.recipe().steps.indexOf(step)] ?? [];
-  };
+  const usesOf = (step: Step): readonly string[] =>
+    step.uses.length > 0 ? step.uses : (inferred[source.recipe().steps.indexOf(step)] ?? []);
 
   const claimed = (ingredient: Ingredient): boolean =>
     source.recipe().steps.some((step) => usesOf(step).includes(ingredient.id));
@@ -56,11 +51,11 @@ export function createIngredientPanel(source: Source) {
     (step ? usesOf(step) : []).map((id) => byId.get(id)).filter((one) => one !== undefined);
 
   /**
-   * Cooking: the current step's list, or all of them when a lone step is the whole method.
+   * Cooking: the current step's list unless all were asked for, or all of them when a lone step is the whole method.
    * `perStep`: only ingredients no step claims. Otherwise all of them.
    */
   const panel = $derived.by(() => {
-    if (source.cooking() && divisible) {
+    if (source.cooking() && divisible && cookingView === 'step') {
       return needsOf(source.recipe().steps[source.currentStep()]);
     }
 
@@ -80,6 +75,9 @@ export function createIngredientPanel(source: Source) {
     get perStep() {
       return perStep;
     },
+    get cookingView() {
+      return cookingView;
+    },
     get panel() {
       return panel;
     },
@@ -88,6 +86,10 @@ export function createIngredientPanel(source: Source) {
     choose(chosen: string) {
       view = chosen === 'perStep' ? 'perStep' : 'combined';
       rememberIngredientsView(view);
+    },
+
+    chooseWhileCooking(chosen: string) {
+      cookingView = chosen === 'all' ? 'all' : 'step';
     }
   };
 }

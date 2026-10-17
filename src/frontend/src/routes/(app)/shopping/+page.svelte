@@ -16,6 +16,7 @@
   import { trackShopFinished } from '$features/shopping/shopFinished.svelte';
   import { shopping, type ShoppingItem } from '$features/shopping/stores/shopping.svelte';
   import { asDate } from '$features/planning/mealPlan.svelte';
+  import { upcoming } from '$features/planning/upcoming.svelte';
   import { explain } from '$shell/explain';
   import { toaster } from '$shell/toaster.svelte';
   import { m } from '$shell/i18n';
@@ -44,6 +45,28 @@
       void units.load(householdId);
     }
   });
+
+  // Apart from the list's read: the plan says for how many each meal is, and what tonight's is.
+  $effect(() => {
+    if (householdId) {
+      void upcoming.load(householdId);
+    }
+  });
+
+  /** A past meal's unbought lines off in one go; what was ticked stays, it is in the cupboard. */
+  async function withdraw(planEntryId: string, title: string) {
+    if (!householdId) {
+      return;
+    }
+
+    const failure = await shopping.withdrawMeal(householdId, planEntryId);
+
+    toaster.show(
+      failure
+        ? { message: () => explain(failure), tone: 'danger' }
+        : { message: () => m['shopping.meals.withdrawn']({ title }), tone: 'success' }
+    );
+  }
 
   /** Moves a line to its shop section, announced once done since the line leaves for another heading. */
   async function move(item: ShoppingItem, section: Section) {
@@ -124,7 +147,10 @@
     </div>
   {/if}
 
-  <ShoppingMeals days={plannedMeals} />
+  <ShoppingMeals
+    days={plannedMeals}
+    onwithdraw={(entryId, title) => void withdraw(entryId, title)}
+  />
 
   <ShoppingAddLine {householdId} onaddrecipe={() => (picking = true)} />
 

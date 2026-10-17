@@ -49,9 +49,9 @@ const step = (uses: string[], mentions: string[] = []): Step => ({
   durationSeconds: null
 });
 
-const render = (one: Step, ingredients: Ingredient[], onchange = vi.fn()) => {
+const render = (one: Step, ingredients: Ingredient[], onchange = vi.fn(), onmention = vi.fn()) => {
   renderWithProviders(StepIngredients, {
-    props: { step: one, number: 1, ingredients, onchange }
+    props: { step: one, number: 1, ingredients, onchange, onmention }
   });
 
   return onchange;
@@ -121,5 +121,35 @@ describe('a line the server has not seen yet', () => {
 
     expect(picker().option('butter')).toBeInTheDocument();
     expect(picker().missing('yeast')).not.toBeInTheDocument();
+  });
+});
+
+describe('an ingredient spotted in the words', () => {
+  const spoken = (text: string): Step => ({ ...step([]), segments: [{ kind: 'text', text }] });
+
+  it('becomes a mention where the words spell its name, so reading scales it there', async () => {
+    const onchange = vi.fn();
+    const onmention = vi.fn();
+
+    render(spoken('Melt the butter.'), [butter, salt], onchange, onmention);
+    await userEvent.click(screen.getByRole('button', { name: /butter/ }));
+
+    expect(onchange).not.toHaveBeenCalled();
+    expect(onmention).toHaveBeenCalledWith([
+      { kind: 'text', text: 'Melt the ' },
+      { kind: 'ingredient', ingredientId: 'i-butter', name: 'butter', quantity: butter.quantity },
+      { kind: 'text', text: '.' }
+    ]);
+  });
+
+  it('is only added to the step when the words name it another way', async () => {
+    const onchange = vi.fn();
+    const onmention = vi.fn();
+
+    render(spoken('Salt it all.'), [butter, { ...salt, name: 'sea salt' }], onchange, onmention);
+    await userEvent.click(screen.getByRole('button', { name: /sea salt/ }));
+
+    expect(onmention).not.toHaveBeenCalled();
+    expect(onchange).toHaveBeenLastCalledWith(['i-salt']);
   });
 });

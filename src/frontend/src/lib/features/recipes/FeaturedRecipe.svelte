@@ -18,13 +18,15 @@
      * has no meaningful non-click.
      */
     ondismiss?: () => void;
+    /** Plans it for a day, straight from the suggestion: "cooking tonight?" answered with a day. */
+    onplan?: () => void;
     /** True for the leader at first paint: its photograph is the largest image the app fetches, so the rest of the deck loads lazily. */
     priority?: boolean;
     /** The household it comes from, when it is inherited rather than this one's own. */
     from?: string | null;
   }
 
-  let { recipe, reason = null, ondismiss, priority = false, from = null }: Props = $props();
+  let { recipe, reason = null, ondismiss, onplan, priority = false, from = null }: Props = $props();
 
   const headingId = $props.id();
 </script>
@@ -45,6 +47,17 @@
         {m['recipes.featured.open']()}
         <span aria-hidden="true"><Chevron /></span>
       </a>
+
+      {#if onplan}
+        <button
+          type="button"
+          class="feature-link plan"
+          aria-label={m['suggestions.plan']({ title: recipe.title })}
+          onclick={onplan}
+        >
+          {m['plan.recipe.action']()}
+        </button>
+      {/if}
 
       {#if ondismiss}
         <!-- Named for a screen reader: five buttons all reading "Dismiss" are indistinguishable. -->
@@ -170,6 +183,13 @@
       text-decoration: underline;
       text-underline-offset: 0.2em;
     }
+  }
+  .plan {
+    border-inline: 0;
+    border-top: 0;
+    background: none;
+    font-family: inherit;
+    cursor: pointer;
   }
   .feature-link span {
     font-size: var(--text-xl);
