@@ -92,13 +92,6 @@ describe('a link that arrived from outside', () => {
 describe('a page that says what it makes', () => {
   it('hands over "12 Muffins" as pieces with their word, not as 12 servings', async () => {
     serverAnswers({ servings: 12, yieldKind: 'pieces', yieldLabel: 'Muffins' });
-    // jsdom has no modal dialogs.
-    HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
-      this.setAttribute('open', '');
-    };
-    HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
-      this.removeAttribute('open');
-    };
 
     const imported: ParsedRecipe[] = [];
 
@@ -106,9 +99,7 @@ describe('a page that says what it makes', () => {
     await settle();
     await userEvent.click(screen.getByRole('button', { name: 'Import recipe' }));
     await settle();
-    await userEvent.click(screen.getByRole('button', { name: /^Review/ }));
-    await settle();
-
+    // The preview on the page is the review: saving is one tap, with no second read-only copy.
     await userEvent.click(screen.getByRole('button', { name: 'Save and edit recipe' }));
     await settle();
 
@@ -143,5 +134,28 @@ describe('a recipe pasted as text with its yield and time on lines of their own'
 
     expect(screen.getByText('2 servings · 20 min')).toBeInTheDocument();
     expect(screen.getAllByRole('listitem').filter((item) => item.closest('ol'))).toHaveLength(3);
+  });
+});
+
+describe('the door it was opened by', () => {
+  it('puts the photos first and focused when opened to photograph a recipe', async () => {
+    serverAnswers();
+    // jsdom has no layout to scroll.
+    Element.prototype.scrollIntoView = () => {};
+    renderWithProviders(PasteImport, {
+      props: {
+        householdId: 'h1',
+        onimport: () => {},
+        ondraft: () => {},
+        intent: 'photo'
+      }
+    });
+    await settle();
+
+    const picker = screen.getByLabelText('Screenshots or recipe photos');
+    const link = screen.getByRole('textbox', { name: 'A link to a recipe' });
+
+    expect(picker).toHaveFocus();
+    expect(picker.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

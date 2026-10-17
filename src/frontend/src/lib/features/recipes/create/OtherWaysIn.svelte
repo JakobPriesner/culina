@@ -5,7 +5,8 @@
 
   /** Without handlers (somewhere other than the new-recipe page) each door is a link that opens that form there. */
   interface Props {
-    onpaste?: () => void;
+    /** Paste and photograph open the same form; the photo door puts its photos first. */
+    onpaste?: (intent: 'paste' | 'photo') => void;
     ondescribe?: () => void;
   }
 
@@ -62,7 +63,7 @@
   <div class="ways">
     <!-- The whole tile is the control, so there is one label to read. -->
     {#if onpaste}
-      <button type="button" class="way" onclick={onpaste}>
+      <button type="button" class="way" onclick={() => onpaste('paste')}>
         {@render way(icons.paste, m['import.paste.title'](), m['import.paste.hint']())}
       </button>
     {:else}
@@ -75,12 +76,12 @@
     <!-- Second: a link or a page of a book is how most recipes arrive on a phone, which cannot share into the app on iOS. -->
     {#if session.user?.assistance.read}
       {#if onpaste}
-        <button type="button" class="way" onclick={onpaste}>
+        <button type="button" class="way" onclick={() => onpaste('photo')}>
           {@render way(icons.photo, m['assist.photo.title'](), m['assist.photo.hint']())}
         </button>
       {:else}
         <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- The route is resolved; only the form to open is appended. -->
-        <a class="way" href="{newRecipe}?start=paste">
+        <a class="way" href="{newRecipe}?start=photo">
           {@render way(icons.photo, m['assist.photo.title'](), m['assist.photo.hint']())}
         </a>
       {/if}

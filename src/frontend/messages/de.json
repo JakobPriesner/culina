@@ -1519,7 +1519,6 @@
   "import.review.transcript": "Gesprochene Untertitel",
   "import.review.photo": "Geteilter Rezept-Screenshot",
   "import.review.accept": "Rezept speichern und bearbeiten",
-  "import.review.preview": "Rezept prüfen",
   "import.media.label": "Screenshots oder Rezeptfotos",
   "import.media.hint": "Bis zu 8 JPG-, PNG- oder WebP-Bilder. 10 MB pro Bild, insgesamt 40 MB. Alle Seiten eines Rezepts gehören zusammen.",
   "import.media.remove": "Bilder entfernen",
@@ -1959,5 +1958,6 @@
   "editor.stepDuration.spotted.label": "{minutes} Min. übernehmen als Timer für Schritt {number}",
   "recipe.stub.title": "Bisher nur ein Titel",
   "recipe.stub.body": "Ergänze Zutaten und Schritte, um danach zu kochen.",
-  "recipe.stub.finish": "Weiterschreiben"
+  "recipe.stub.finish": "Weiterschreiben",
+  "import.photo.or": "oder ein Link zum Rezept"
 }

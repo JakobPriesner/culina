@@ -36,7 +36,7 @@ test.describe('source review @offline', () => {
     await expect(page.getByText('Fry the beans.', { exact: true })).toBeVisible();
   });
 
-  test('keeps a shared caption with its URL, reviews before saving, and reflows', async ({
+  test('keeps a shared caption with its URL, previews before saving, and reflows', async ({
     page
   }, testInfo) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -68,24 +68,16 @@ test.describe('source review @offline', () => {
     await expect(page.getByRole('button', { name: 'Create recipe', exact: true })).toHaveCount(0);
     // A shared link is filled in, never fetched on arrival: one tap reads it.
     await page.getByRole('button', { name: 'Import recipe', exact: true }).click();
-    await page.getByRole('button', { name: 'Review recipe', exact: true }).click();
-    const dialog = page.getByRole('dialog', { name: 'Review the recipe' });
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByText('120 g beans #ad', { exact: true })).toBeVisible();
-    await expect(dialog.getByText('Fry the beans.', { exact: true })).toBeVisible();
-    await expect(dialog.getByRole('link', { name: 'Open original' })).toHaveAttribute(
-      'href',
-      'https://example.com/beans'
-    );
+    // The preview on the page is the review: what was understood is shown before anything is written.
+    const preview = page.locator('section.paste');
+    await expect(preview.getByText('Fry the beans.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Save and edit recipe' })).toBeEnabled();
     expect(writes).toHaveLength(0);
     await expectReflow(page);
-    const audit = await new AxeBuilder({ page }).include('dialog').analyze();
+    const audit = await new AxeBuilder({ page }).include('section.paste').analyze();
     expect(audit.violations).toEqual([]);
     await page.screenshot({ path: testInfo.outputPath('source-review.png'), fullPage: true });
-    await dialog.getByRole('button', { name: 'Discard', exact: true }).click();
-    await expect(page.getByRole('textbox', { name: 'The recipe, as text' })).toHaveValue(
-      '120 g beans #ad'
-    );
   });
 });
 
@@ -130,12 +122,11 @@ test.describe('saving a reviewed import @offline', () => {
     await page.goto(
       '/recipes/new?text=Beans%0AIngredients%0A120%20g%20beans%0AMethod%0AFry%20the%20beans.'
     );
-    await page.getByRole('button', { name: 'Review recipe', exact: true }).click();
-    const dialog = page.getByRole('dialog');
-    const save = dialog.getByRole('button', { name: 'Save and edit recipe' });
+    const preview = page.locator('section.paste');
+    const save = preview.getByRole('button', { name: 'Save and edit recipe' });
     await save.click();
-    await expect(dialog.getByRole('alert')).toBeVisible();
-    await expect(dialog.getByText('Fry the beans', { exact: true })).toBeVisible();
+    await expect(preview.getByRole('alert')).toBeVisible();
+    await expect(preview.getByText('Fry the beans', { exact: true })).toBeVisible();
     await save.click();
     await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit/);
     expect(creates).toBe(1);
