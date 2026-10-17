@@ -103,6 +103,7 @@ export const toRecipe = (wire: WireRecipe): Recipe => ({
   cookMinutes: wire.cookMinutes ?? null,
   totalMinutes: wire.totalMinutes ?? null,
   imageId: wire.imageId ?? null,
+  imageDrawn: wire.imageDrawn ?? false,
   groups: wire.groups.map(toGroup),
   steps: wire.steps.map(toStep),
   tags: wire.tags,

@@ -57,11 +57,13 @@ public interface IRecipeRepository
 
     /// <summary>
     /// Attaches a stored image to a recipe, replacing any previous one; returns what was replaced.
+    /// Whether the assistant drew it is kept with it, because the editor says so beside it.
     /// </summary>
     Task<Result<ImageReplacement>> SetImageAsync(
         Guid recipeId,
         StoredImage image,
         string contentType,
+        bool drawn,
         DateTimeOffset now,
         CancellationToken cancellationToken);
 

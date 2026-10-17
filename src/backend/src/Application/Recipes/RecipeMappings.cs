@@ -39,6 +39,7 @@ internal static class RecipeMappings
             CookMinutes = recipe.CookMinutes,
             TotalMinutes = recipe.TotalMinutes,
             ImageId = recipe.ImageId,
+            ImageDrawn = recipe.ImageDrawn,
             Groups = [.. recipe.Groups.Select(ToContract)],
             Steps = [.. recipe.Steps.Select(step => step.ToContract(names, order))],
             Tags = recipe.Tags,

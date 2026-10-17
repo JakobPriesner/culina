@@ -24,16 +24,33 @@ public sealed class RecipeImageWriter(
     /// <param name="recipeId">Which recipe.</param>
     /// <param name="content">The bytes. The caller still owns the stream.</param>
     /// <param name="cancellationToken">Cancels the work.</param>
-    public async Task<Result<RecipeDetail>> AttachAsync(
+    public Task<Result<RecipeDetail>> AttachAsync(
         Guid recipeId,
         Stream content,
+        CancellationToken cancellationToken) =>
+        AttachAsync(recipeId, content, drawn: false, cancellationToken);
+
+    /// <summary>Stores a picture the assistant drew and points the recipe at it, remembering who made it.</summary>
+    /// <param name="recipeId">Which recipe.</param>
+    /// <param name="content">The bytes. The caller still owns the stream.</param>
+    /// <param name="cancellationToken">Cancels the work.</param>
+    public Task<Result<RecipeDetail>> AttachDrawnAsync(
+        Guid recipeId,
+        Stream content,
+        CancellationToken cancellationToken) =>
+        AttachAsync(recipeId, content, drawn: true, cancellationToken);
+
+    private async Task<Result<RecipeDetail>> AttachAsync(
+        Guid recipeId,
+        Stream content,
+        bool drawn,
         CancellationToken cancellationToken)
     {
         // File first, then the row: an orphaned file is reclaimable, a row without a file is a broken image.
         var stored = await images.StoreAsync(content, cancellationToken).ConfigureAwait(false);
 
         return await stored.Match(
-            image => WriteAsync(recipeId, image, cancellationToken),
+            image => WriteAsync(recipeId, image, drawn, cancellationToken),
             error => Task.FromResult(Result<RecipeDetail>.Failure(error))).ConfigureAwait(false);
     }
 
@@ -59,10 +76,11 @@ public sealed class RecipeImageWriter(
     private async Task<Result<RecipeDetail>> WriteAsync(
         Guid recipeId,
         StoredImage image,
+        bool drawn,
         CancellationToken cancellationToken)
     {
         var replaced = await unitOfWork.InTransactionAsync(
-            token => SetImageAsync(recipeId, image, token),
+            token => SetImageAsync(recipeId, image, drawn, token),
             cancellationToken).ConfigureAwait(false);
 
         return await replaced.Match(
@@ -82,6 +100,7 @@ public sealed class RecipeImageWriter(
     private async Task<Result<ImageReplacement>> SetImageAsync(
         Guid recipeId,
         StoredImage image,
+        bool drawn,
         CancellationToken cancellationToken)
     {
         await recipes.LockImageAsync(image.ContentHash, cancellationToken).ConfigureAwait(false);
@@ -91,7 +110,7 @@ public sealed class RecipeImageWriter(
             .ConfigureAwait(false);
 
         return await present.Match(
-            () => recipes.SetImageAsync(recipeId, image, WebpContentType, time.GetUtcNow(), cancellationToken),
+            () => recipes.SetImageAsync(recipeId, image, WebpContentType, drawn, time.GetUtcNow(), cancellationToken),
             _ => Task.FromResult(Result<ImageReplacement>.Failure(ImageErrors.Vanished))).ConfigureAwait(false);
     }
 

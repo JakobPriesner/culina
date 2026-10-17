@@ -117,7 +117,12 @@
   </EditorSection>
 
   <EditorSection id="photo" title={m['editor.photo']()}>
-    <PhotoField recipeId={recipe.id} imageId={recipe.imageId} onchange={editor.photoWritten} />
+    <PhotoField
+      recipeId={recipe.id}
+      imageId={recipe.imageId}
+      drawn={recipe.imageDrawn}
+      onchange={editor.photoWritten}
+    />
   </EditorSection>
 
   <EditorSection id="ingredients" title={m['editor.ingredients']()} count={ingredients.all.length}>

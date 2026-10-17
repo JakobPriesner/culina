@@ -118,6 +118,8 @@ internal sealed class RecipeRepository(
             """
             select id, household_id, title, description, language as recipe_language,
                    yield_amount, yield_kind, yield_label, prep_minutes, cook_minutes, image_id,
+                   coalesce((select i.drawn from recipe_images i where i.id = recipes.image_id), false)
+                       as image_drawn,
                    created_by, created_at, updated_at, version
             from recipes where id = any(@recipeIds);
 
@@ -246,6 +248,7 @@ internal sealed class RecipeRepository(
         Guid recipeId,
         StoredImage image,
         string contentType,
+        bool drawn,
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
@@ -260,8 +263,8 @@ internal sealed class RecipeRepository(
             delete from recipe_images where recipe_id = @recipeId;
 
             insert into recipe_images
-                (id, recipe_id, content_hash, width, height, byte_size, content_type, created_at)
-            values (@id, @recipeId, @contentHash, @width, @height, @byteSize, @contentType, @now);
+                (id, recipe_id, content_hash, width, height, byte_size, content_type, drawn, created_at)
+            values (@id, @recipeId, @contentHash, @width, @height, @byteSize, @contentType, @drawn, @now);
 
             update recipes set image_id = @id, updated_at = @now, version = version + 1
             where id = @recipeId;
@@ -275,6 +278,7 @@ internal sealed class RecipeRepository(
                 height = image.Height,
                 byteSize = image.ByteSize,
                 contentType,
+                drawn,
                 now
             },
             cancellationToken).ConfigureAwait(false);
@@ -291,8 +295,8 @@ internal sealed class RecipeRepository(
         executor.ExecuteAsync(
             """
             insert into recipe_images
-                (id, recipe_id, content_hash, width, height, byte_size, content_type, created_at)
-            select @imageId, @toRecipeId, i.content_hash, i.width, i.height, i.byte_size, i.content_type, @now
+                (id, recipe_id, content_hash, width, height, byte_size, content_type, drawn, created_at)
+            select @imageId, @toRecipeId, i.content_hash, i.width, i.height, i.byte_size, i.content_type, i.drawn, @now
             from recipes r
             join recipe_images i on i.id = r.image_id
             where r.id = @fromRecipeId;

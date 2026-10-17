@@ -14126,6 +14126,10 @@
             "format": "uuid",
             "nullable": true
           },
+          "imageDrawn": {
+            "type": "boolean",
+            "description": "Whether the hero image was drawn by the assistant rather than photographed."
+          },
           "groups": {
             "type": "array",
             "items": {

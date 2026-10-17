@@ -59,7 +59,7 @@ internal static class RecipeAssembler
                 row.UpdatedAt),
             "contents");
 
-        recipe.SetImage(row.ImageId, row.UpdatedAt);
+        recipe.SetImage(row.ImageId, row.ImageDrawn, row.UpdatedAt);
         recipe.AcceptVersion(row.Version);
 
         return recipe;

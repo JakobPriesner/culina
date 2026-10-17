@@ -29,6 +29,22 @@ public class RecipeImageTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Recipe_ShouldSayWhetherItsPictureWasDrawn_SoTheEditorOwnsUpOnlyToADrawnOne()
+    {
+        var (client, recipeId) = await SeedAsync();
+
+        var uploaded = await UploadAsync(client, recipeId, TestImages.Png(600, 400), "photo.png", "image/png");
+
+        Assert.False(uploaded.Json!.Value.GetProperty("imageDrawn").GetBoolean());
+
+        // What drawing writes; the drawing itself needs a provider this suite does not run.
+        await postgres.ExecuteAsync($"update recipe_images set drawn = true where recipe_id = '{recipeId}';", Token);
+        var read = await client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
+
+        Assert.True(read.Json!.Value.GetProperty("imageDrawn").GetBoolean());
+    }
+
+    [Fact]
     public async Task Upload_ShouldRejectAFileThatLiesAboutWhatItIs()
     {
         var (client, recipeId) = await SeedAsync();

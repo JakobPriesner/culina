@@ -57,6 +57,18 @@ public class RecipeTests
     }
 
     [Fact]
+    public void SetImage_ShouldForgetItWasDrawn_WhenThePictureIsRemoved()
+    {
+        var recipe = Recipe.Create(Household, RecipeTitle.Create("Bolognese").ShouldBeSuccess(), Author, Language.De, Now);
+
+        recipe.SetImage(Guid.CreateVersion7(), drawn: true, Now);
+        recipe.SetImage(null, drawn: true, Now);
+
+        // No picture, nothing to own up to: the editor would otherwise warn about an image that is not there.
+        Assert.False(recipe.ImageDrawn);
+    }
+
+    [Fact]
     public void TotalMinutes_ShouldBeNull_WhenNeitherTimeIsGiven()
     {
         var recipe = ARecipe();

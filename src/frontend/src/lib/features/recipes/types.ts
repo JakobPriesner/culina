@@ -209,6 +209,8 @@ export interface RecipeReading {
 /** The same recipe, to the household that keeps it. */
 export interface Recipe extends RecipeReading {
   readonly householdId: string;
+  /** The picture was drawn by the assistant, which the editor says beside it; absent in older offline responses. */
+  readonly imageDrawn?: boolean;
   readonly createdBy: string;
   readonly createdAt: string;
   /** Sent back as `If-Match` on a write. */
