@@ -10,7 +10,7 @@
   import { upcoming } from './upcoming.svelte';
 
   /**
-   * Today's planned meal, one tap from cooking it: the hand-off from the week to the hob. Shows the
+   * Today's planned meal, one tap from reading it or cooking it: the hand-off from the week to the hob. Shows the
    * next meal of the day still to cook (see `upcoming.mealNow`), that the day's cooking is done once it
    * is, and nothing when today has no plan or that meal is already on the hob (the cooking pill covers it).
    */
@@ -32,71 +32,81 @@
 </script>
 
 {#if meal && !onTheHob}
-  <!-- eslint-disable svelte/no-navigation-without-resolve -- The route is resolved; only the yield is appended. -->
-  <a
-    class="today"
-    href={hrefAtYield(
-      resolve('/(app)/recipes/[recipeId]/cook', { recipeId: meal.recipeId }),
-      meal.servings
-    )}
-  >
-    <!-- eslint-enable svelte/no-navigation-without-resolve -->
-    <span class="when">{m['plan.today.meal']({ slot: slotLabel[meal.slot as MealSlot]() })}</span>
-    <span class="what">{meal.title}</span>
-    <span class="cook">{m['plan.today.cook']()} <Chevron /></span>
-  </a>
+  <!-- Two ways on from tonight's meal: the recipe to read first, or straight to the hob. -->
+  <!-- eslint-disable svelte/no-navigation-without-resolve -- The routes are resolved; only the yield is appended. -->
+  <div class="today">
+    <a
+      class="about"
+      href={hrefAtYield(
+        resolve('/(app)/recipes/[recipeId]', { recipeId: meal.recipeId }),
+        meal.servings
+      )}
+    >
+      <span class="when">{m['plan.today.meal']({ slot: slotLabel[meal.slot as MealSlot]() })}</span>
+      <span class="what">{meal.title}</span>
+    </a>
+    <a
+      class="cook"
+      href={hrefAtYield(
+        resolve('/(app)/recipes/[recipeId]/cook', { recipeId: meal.recipeId }),
+        meal.servings
+      )}
+    >
+      {m['plan.today.cook']()}
+      <Chevron />
+    </a>
+  </div>
+  <!-- eslint-enable svelte/no-navigation-without-resolve -->
 {:else if cooked}
-  <a class="today done" href={resolve('/(app)/recipes/[recipeId]', { recipeId: cooked.recipeId })}>
-    <span class="when">{m['plan.today.cooked']()}</span>
-    <span class="what">{cooked.title}</span>
+  <div class="today done">
+    <a class="about" href={resolve('/(app)/recipes/[recipeId]', { recipeId: cooked.recipeId })}>
+      <span class="when">{m['plan.today.cooked']()}</span>
+      <span class="what">{cooked.title}</span>
+    </a>
     <span class="tick" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <path d="m5 12 5 5 9-10" stroke-linecap="round" stroke-linejoin="round" />
       </svg>
     </span>
-  </a>
+  </div>
 {/if}
 
 <style>
-  /* A row like a settings cell that leads on: when, what, and the one thing to do with it. */
+  /* A row like a settings cell that leads on: when and what (the recipe), and the one thing to do with it. */
   .today {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      'when cook'
-      'what cook';
+    display: flex;
     align-items: center;
-    gap: 0 var(--space-4);
+    gap: var(--space-4);
     margin-bottom: var(--space-6);
     padding: var(--space-3) var(--space-4);
     border-radius: var(--radius-lg);
     background: var(--surface-accent-subtle);
     color: var(--text);
-    text-decoration: none;
-    transition:
-      background-color var(--duration-fast) var(--ease-out),
-      transform var(--duration-fast) var(--ease-out);
+    transition: background-color var(--duration-fast) var(--ease-out);
   }
 
   @media (hover: hover) {
-    .today:hover {
+    .today:has(.about:hover) {
       background: var(--surface-highlight);
     }
   }
 
-  .today:active {
-    transform: scale(var(--press-scale));
+  .about {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
   }
 
   .when {
-    grid-area: when;
     color: var(--accent);
     font-size: var(--text-sm);
     font-weight: var(--weight-semibold);
   }
 
   .what {
-    grid-area: what;
     overflow: hidden;
     font-family: var(--font-editorial);
     font-size: var(--text-lg);
@@ -105,8 +115,8 @@
   }
 
   .cook {
-    grid-area: cook;
     display: inline-flex;
+    flex: none;
     align-items: center;
     gap: var(--space-1);
     min-height: var(--control-sm);
@@ -116,6 +126,12 @@
     color: var(--accent-contrast);
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
+    text-decoration: none;
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+
+  .cook:active {
+    transform: scale(var(--press-scale));
   }
 
   /* Done, not a call to action: no filled pill, the accent kept for the tick. */
@@ -128,8 +144,8 @@
   }
 
   .tick {
-    grid-area: cook;
     display: inline-flex;
+    flex: none;
     width: var(--space-6);
     height: var(--space-6);
     color: var(--success);

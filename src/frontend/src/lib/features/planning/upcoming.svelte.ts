@@ -4,6 +4,7 @@ import { LatestRead, registerStore, type LoadStatus } from '$shell/stores';
 import {
   asDate,
   cookedOn,
+  mealPlan,
   readWeek,
   servingsOf,
   type MealSlot,
@@ -26,7 +27,9 @@ export interface NextPlanned {
 /**
  * The plan from today on, across this week and the next (so a Sunday still has a week ahead):
  * what the plan sheet offers, what a recipe says it is planned for, and tonight's meal.
- * Separate from `mealPlan`, which is the one week the plan page shows and must not be moved under it.
+ * Separate from `mealPlan`, which is the one week the plan page shows and must not be moved under it;
+ * but where the two hold the same day, that week's copy wins, so an edit on the plan page (servings,
+ * a move, a deletion, even before the server answers) is what tonight's meal shows at once.
  */
 class UpcomingStore {
   #days = $state<readonly PlannedDay[]>([]);
@@ -38,7 +41,13 @@ class UpcomingStore {
   #reads = new LatestRead();
 
   get days(): readonly PlannedDay[] {
-    return this.#days;
+    if (mealPlan.householdId !== this.#householdId || mealPlan.days.length === 0) {
+      return this.#days;
+    }
+
+    const edited = new Map(mealPlan.days.map((day) => [day.date, day]));
+
+    return this.#days.map((day) => edited.get(day.date) ?? day);
   }
 
   get status(): LoadStatus {
@@ -53,7 +62,7 @@ class UpcomingStore {
   get today(): readonly PlannedMeal[] {
     const today = asDate(new Date());
 
-    return this.#days.find((day) => day.date === today)?.meals ?? [];
+    return this.days.find((day) => day.date === today)?.meals ?? [];
   }
 
   /** Today's meals already cooked, so the week can say so instead of offering them again. */
@@ -80,7 +89,7 @@ class UpcomingStore {
   nextFor(recipeId: string): NextPlanned | null {
     const nextMonday = mondayOf(1);
 
-    for (const day of this.#days) {
+    for (const day of this.days) {
       const meal = day.meals.find((planned) => planned.recipeId === recipeId);
 
       if (meal) {
@@ -98,7 +107,7 @@ class UpcomingStore {
 
   /** A meal from today on, by its plan entry: what the shopping list links to at the servings it is for. */
   mealOf(entryId: string): PlannedMeal | undefined {
-    return this.#days.flatMap((day) => day.meals).find((meal) => meal.entryId === entryId);
+    return this.days.flatMap((day) => day.meals).find((meal) => meal.entryId === entryId);
   }
 
   async load(householdId: string): Promise<void> {

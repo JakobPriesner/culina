@@ -126,6 +126,11 @@ class MealPlanStore {
     return this.#week?.days ?? [];
   }
 
+  /** Whose week is held, so a reader of other weeks can tell it is the same kitchen's. */
+  get householdId(): string | null {
+    return this.#householdId;
+  }
+
   /** Monday the week on screen starts on. */
   get from(): string | null {
     return this.#week?.from ?? null;
