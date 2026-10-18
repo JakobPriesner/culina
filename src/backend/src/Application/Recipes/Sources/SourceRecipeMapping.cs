@@ -24,10 +24,10 @@ internal static class SourceRecipeMapping
             .Map(title => new RecipeDetails(
                 title,
                 RecipeFit.Description(source.Description),
-                // The importer's language; guessing from the words would be silently wrong for some
-                // recipes.
-                language,
-                ToYield(source.Servings),
+                // The other app's own record, else the importer's language; guessing from the words would
+                // be silently wrong for some recipes.
+                source.Language ?? language,
+                ToYield(source),
                 Minutes(source.PrepMinutes),
                 Minutes(source.CookMinutes),
                 RecipeFit.Tags(source.Tags)));
@@ -131,8 +131,9 @@ internal static class SourceRecipeMapping
                 id: null,
                 steps.Count,
                 segments,
-                uses: [],
-                Seconds(step.Seconds));
+                Uses(step, landed),
+                Seconds(step.Seconds),
+                RecipeFit.Shorten(step.Title, Step.MaxTitleLength));
 
             var failed = made.Match(
                 value =>
@@ -163,7 +164,8 @@ internal static class SourceRecipeMapping
     /// </remarks>
     internal static IReadOnlyList<SourceStep> Unfold(IReadOnlyList<SourceStep> steps)
     {
-        if (steps is not [{ Seconds: null } only])
+        // A heading or a use belongs to the step as a whole, so a step carrying either is left as it is.
+        if (steps is not [{ Seconds: null, Title: null, Uses.Count: 0 } only])
         {
             return steps;
         }
@@ -242,6 +244,16 @@ internal static class SourceRecipeMapping
         return segments;
     }
 
+    /// <summary>The ingredients a step uses without naming them, where each landed.</summary>
+    private static List<Guid> Uses(SourceStep step, IReadOnlyList<Guid?> landed) =>
+    [
+        .. step.Uses
+            .Where(index => index >= 0 && index < landed.Count)
+            .Select(index => landed[index])
+            .OfType<Guid>()
+            .Distinct()
+    ];
+
     /// <summary>The step's segments with whitespace removed from its two ends only.</summary>
     private static List<StepSegment> Trim(List<StepSegment> segments)
     {
@@ -315,12 +327,16 @@ internal static class SourceRecipeMapping
             RecipeFit.Shorten(note, RecipeIngredient.MaxNoteLength));
     }
 
-    private static Yield ToYield(decimal? servings) =>
-        servings is null or <= 0 or > Yield.MaxAmount
+    private static Yield ToYield(SourceRecipe source) =>
+        source.Servings is not ({ } servings and > 0 and <= Yield.MaxAmount)
             ? Yield.Default
-            // Servings rather than pieces: the other app does not record which, and portions is far
+            // Servings unless the other app says pieces: most apps do not record which, and portions is far
             // more common.
-            : Yield.Create(servings.Value, YieldKind.Servings).Match(value => value, _ => Yield.Default);
+            : Yield.Create(
+                    servings,
+                    source.YieldKind ?? YieldKind.Servings,
+                    RecipeFit.Shorten(source.YieldLabel, Yield.MaxLabelLength))
+                .Match(value => value, _ => Yield.Default);
 
     private static int? Minutes(int? value) =>
         value is null or <= 0 or > Recipe.MaxMinutes ? null : value;

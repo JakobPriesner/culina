@@ -207,7 +207,7 @@ export interface paths {
         put?: never;
         /**
          * Sign in
-         * @description Starts a session. For a browser, sets the session cookie and returns the CSRF token to echo in X-Culina-CSRF on every unsafe request. For an app (client ios or android), returns the session token instead, to send as Authorization: Bearer with no CSRF token. Failure is always auth.invalid_credentials, whether or not the address is registered.
+         * @description Starts a session. For a browser, sets the session cookie and returns the CSRF token to echo in X-Culina-CSRF on every unsafe request. For an app (client ios or android), returns the session token instead, to send as Authorization: Bearer with no CSRF token. Failure is always auth.invalid_credentials, whether or not the address is registered. Another Culina importing this person's recipes signs in as client instance and is answered as an app is.
          */
         post: operations["signInV1"];
         delete?: never;
@@ -4668,7 +4668,7 @@ export interface components {
         };
         /** @description Where an imported recipe came from. Quiet on purpose: an imported recipe is an ordinary recipe. */
         RecipesRecipeProvenance: {
-            /** @description Which sort of place: `tandoor`, `mealie`, `web` or `ai`. */
+            /** @description Which sort of place: `tandoor`, `mealie`, `culina`, `web` or `ai`. */
             kind: string;
             /**
              * Format: uuid
@@ -4748,7 +4748,7 @@ export interface components {
              * @description Which kitchen is connecting it.
              */
             householdId: string;
-            /** @description Which app: `tandoor` or `mealie`. */
+            /** @description Which app: `tandoor`, `mealie`, or `culina` for another Culina instance. */
             kind: string;
             /** @description Where it is, such as `https://recipes.example.com`. Anything after the host is dropped. */
             address: string;
@@ -5124,7 +5124,7 @@ export interface components {
             ipAddress?: string | null;
             /** @description What browser started it. */
             userAgent?: string | null;
-            /** @description What it was started from: `browser`, `ios` or `android`. */
+            /** @description What it was started from: `browser`, `ios`, `android`, or `instance` for another Culina importing recipes. */
             client: string;
             /** @description Whether this is the session making the request. */
             isCurrent: boolean;
@@ -5137,8 +5137,8 @@ export interface components {
             password: string;
             /**
              * @description `browser` (the default) for the session cookie; `ios` or `android` for an app,
-             *             which receives the session token in the response and sends it as
-             *             `Authorization: Bearer`.
+             *             or `instance` for another Culina importing this person's recipes, each of which receives the
+             *             session token in the response and sends it as `Authorization: Bearer`.
              */
             client?: string | null;
         };

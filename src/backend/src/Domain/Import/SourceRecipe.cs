@@ -1,3 +1,6 @@
+using Domain.Recipes;
+using Domain.Shared;
+
 namespace Domain.Import;
 
 /// <summary>A recipe as some other app has it, in the one shape this app reads.</summary>
@@ -24,6 +27,15 @@ public sealed record SourceRecipe
 
     /// <summary>What it says it makes.</summary>
     public decimal? Servings { get; init; }
+
+    /// <summary>Whether <see cref="Servings"/> counts portions or pieces, when the other app records which.</summary>
+    public YieldKind? YieldKind { get; init; }
+
+    /// <summary>The recipe's own word for what it makes, when the other app keeps one.</summary>
+    public string? YieldLabel { get; init; }
+
+    /// <summary>The language it is written in, when the other app records it rather than leaving it to be guessed.</summary>
+    public Language? Language { get; init; }
 
     /// <summary>Hands-on time, in minutes.</summary>
     public int? PrepMinutes { get; init; }
@@ -59,6 +71,15 @@ public sealed record SourceStep(IReadOnlyList<SourceStepSegment> Segments, int? 
         : this([new SourceTextSegment(text)], seconds)
     {
     }
+
+    /// <summary>Its own heading, for an app that keeps one apart from the words.</summary>
+    public string? Title { get; init; }
+
+    /// <summary>
+    /// Ingredients the step uses without naming them in its words, by zero-based position in
+    /// <see cref="SourceRecipe.Ingredients"/>.
+    /// </summary>
+    public IReadOnlyList<int> Uses { get; init; } = [];
 }
 
 /// <summary>One piece of a step's instruction.</summary>

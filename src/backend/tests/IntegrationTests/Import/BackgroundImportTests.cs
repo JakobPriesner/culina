@@ -233,6 +233,52 @@ public class BackgroundImportTests(PostgresFixture postgres)
         Assert.Contains(origin.GetProperty("externalId").GetString(), both);
     }
 
+    /// <summary>Another Culina, through the same import: the same model on both sides, so nothing is lost on the way.</summary>
+    [Fact]
+    public async Task Import_ShouldBringOverAnotherCulinasRecipe_WithItsReferencesYieldAndLanguage()
+    {
+        using var culina = FakeCulina.Start();
+        using var factory = Factory();
+        using var client = await SignedInAsync(factory);
+        var householdId = await HouseholdIdAsync(client);
+
+        var connected = await client.PostAsync(
+            "/api/v1/recipe-sources",
+            new { householdId, kind = "culina", address = culina.Address, username = "ada@example.com", password = "secret" },
+            Token);
+
+        Assert.Equal(HttpStatusCode.Created, connected.StatusCode);
+
+        var sourceId = connected.Json!.Value.GetProperty("sourceId").GetGuid();
+        var started = await client.PostAsync(
+            $"/api/v1/recipe-sources/{sourceId}/imports",
+            new { externalIds = new[] { FakeCulina.IdOf(1).ToString() } },
+            Token);
+        var events = await WatchAsync(client, sourceId, started.Json!.Value.GetProperty("importId").GetGuid());
+
+        var imported = Assert.Single(
+                events,
+                one => one.TryGetProperty("recipe", out var recipe) && recipe.ValueKind != JsonValueKind.Null)
+            .GetProperty("recipe");
+        Assert.Equal("imported", imported.GetProperty("outcome").GetString());
+
+        var read = (await client.GetAsync($"/api/v1/recipes/{imported.GetProperty("recipeId").GetGuid()}", Token)).Json!.Value;
+
+        Assert.Equal("culina", read.GetProperty("origin").GetProperty("kind").GetString());
+        Assert.Equal("de", read.GetProperty("language").GetString());
+        Assert.Equal("pieces", read.GetProperty("yieldKind").GetString());
+        Assert.Equal("Gläser", read.GetProperty("yieldLabel").GetString());
+
+        var cook = read.GetProperty("steps")[0];
+        var pumpkin = read.GetProperty("groups")[0].GetProperty("ingredients")[0].GetProperty("ingredientId").GetGuid();
+        var stock = read.GetProperty("groups")[0].GetProperty("ingredients")[1].GetProperty("ingredientId").GetGuid();
+
+        // The reference still points at the pumpkin, and the stock the step uses without naming it comes along.
+        Assert.Equal("Kochen", cook.GetProperty("title").GetString());
+        Assert.Equal(pumpkin, cook.GetProperty("segments")[0].GetProperty("recipeIngredientId").GetGuid());
+        Assert.Contains(stock, cook.GetProperty("uses").EnumerateArray().Select(used => used.GetGuid()));
+    }
+
     /// <summary>
     /// A recipe the household already has, under the same name, is held back
     /// and named — and brought over after all when somebody says so.

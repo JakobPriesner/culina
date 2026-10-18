@@ -323,6 +323,64 @@ public class SourceRecipeMappingTests
         Assert.All(fitted.Tags, tag => Assert.True(tag.Length <= Domain.Recipes.Recipe.MaxTagLength));
     }
 
+    [Fact]
+    public void ToSteps_ShouldKeepALoneStep_ThatHasATitle()
+    {
+        // The heading belongs to the whole step, like a timer.
+        var theirs = Recipe() with { Steps = [new SourceStep("Anbraten.\nSchmoren.", null) { Title = "Fleisch" }] };
+
+        var step = Assert.Single(Steps(theirs));
+
+        Assert.Equal("Fleisch", step.Title);
+    }
+
+    [Fact]
+    public void ToSteps_ShouldKeepTheIngredientsAStepUses_WithoutNamingThem()
+    {
+        var theirs = Recipe(ingredients:
+        [
+            new SourceIngredient(200m, "g", "Mehl", null),
+            new SourceIngredient(1m, null, "Ei", null)
+        ]) with
+        {
+            Steps = [new SourceStep("Alles verrühren.", null) { Uses = [1, 7, -1] }]
+        };
+
+        var ingredients = SourceRecipeMapping.ToGroups(theirs)
+            .Match(value => value, error => throw Failed(error.Code));
+        var steps = SourceRecipeMapping.ToSteps(theirs, ingredients.Landed)
+            .Match(value => value, error => throw Failed(error.Code));
+
+        var egg = ingredients.Groups.SelectMany(group => group.Ingredients).Last();
+
+        // A position past either end points at nothing, and is dropped rather than guessed.
+        Assert.Equal([egg.Id], steps[0].Uses);
+    }
+
+    [Fact]
+    public void ToDetails_ShouldUseTheLanguageTheOtherAppRecorded_OverTheImportersOwn()
+    {
+        var details = SourceRecipeMapping.ToDetails(
+            Recipe() with { Language = Domain.Shared.Language.De },
+            Domain.Shared.Language.En);
+
+        Assert.Equal(
+            Domain.Shared.Language.De,
+            details.Match(value => value.Language, error => throw Failed(error.Code)));
+    }
+
+    [Fact]
+    public void ToDetails_ShouldKeepPiecesAndTheRecipesOwnWord_WhenTheOtherAppRecordsThem()
+    {
+        var details = SourceRecipeMapping.ToDetails(
+            Recipe() with { Servings = 12m, YieldKind = YieldKind.Pieces, YieldLabel = "Muffins" },
+            Domain.Shared.Language.En);
+
+        var yields = details.Match(value => value.Yield, error => throw Failed(error.Code));
+
+        Assert.Equal((12m, YieldKind.Pieces, "Muffins"), (yields.Amount, yields.Kind, yields.Label));
+    }
+
     private static RecipeIngredient Single(
         Domain.Shared.Result<ImportedIngredients> ingredients) =>
         ingredients.Match(

@@ -21,7 +21,7 @@ namespace Application.Sessions.SignIn;
 /// </param>
 /// <param name="Client">
 /// <c>browser</c> (or null) for a cookie session; <c>ios</c> or <c>android</c> for an app's bearer
-/// token.
+/// token; <c>instance</c> for another Culina reading this person's recipes, also with a bearer token.
 /// </param>
 public sealed record SignInCommand(
     string Email,
@@ -158,6 +158,7 @@ internal sealed class SignInCommandHandler(
         null or "browser" => SessionClient.Browser,
         "ios" => SessionClient.Ios,
         "android" => SessionClient.Android,
+        "instance" => SessionClient.Instance,
         _ => null
     };
 

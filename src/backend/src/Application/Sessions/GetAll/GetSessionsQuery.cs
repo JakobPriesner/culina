@@ -58,6 +58,7 @@ internal static class SessionListMappings
             {
                 SessionClient.Ios => "ios",
                 SessionClient.Android => "android",
+                SessionClient.Instance => "instance",
                 _ => "browser"
             },
             IsCurrent = session.Id == currentSessionId

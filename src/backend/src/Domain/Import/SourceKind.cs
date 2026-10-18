@@ -18,11 +18,14 @@ public sealed record SourceKind
     /// <summary>A Mealie instance, connected with an API token.</summary>
     public static SourceKind Mealie { get; } = new("mealie");
 
+    /// <summary>Another Culina instance, connected by signing in to it.</summary>
+    public static SourceKind Culina { get; } = new("culina");
+
     /// <summary>This instance's assistant wrote it. Here because where a recipe came from is one fact with one shape.</summary>
     public static SourceKind Assistant { get; } = new("ai");
 
     /// <summary>The kinds a household can connect to. <see cref="Web"/> is an origin, not a connectable source.</summary>
-    public static IReadOnlyList<SourceKind> Connectable { get; } = [Tandoor, Mealie];
+    public static IReadOnlyList<SourceKind> Connectable { get; } = [Tandoor, Mealie, Culina];
 
     /// <summary>Reads a kind, or refuses.</summary>
     public static SourceKind? Parse(string? code) => code?.Trim().ToLowerInvariant() switch
@@ -30,6 +33,7 @@ public sealed record SourceKind
         "web" => Web,
         "tandoor" => Tandoor,
         "mealie" => Mealie,
+        "culina" => Culina,
         "ai" => Assistant,
         _ => null
     };

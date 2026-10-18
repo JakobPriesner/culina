@@ -47,7 +47,7 @@ describe('the welcome', () => {
     await next();
     await userEvent.click(screen.getByRole('button', { name: 'From an app' }));
 
-    expect(screen.getByText(/currently Tandoor and Mealie/)).toBeInTheDocument();
+    expect(screen.getByText(/currently Tandoor, Mealie, and Culina/)).toBeInTheDocument();
     expect(screen.getByText('3 recipes')).toBeInTheDocument();
     expect(screen.getByText(/into a cookbook named after the app/)).toBeInTheDocument();
   });

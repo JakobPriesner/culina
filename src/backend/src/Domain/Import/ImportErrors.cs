@@ -104,6 +104,12 @@ public static class ImportErrors
         "That app would not sign in with a name and password. Make an API token there and paste it instead.",
         ErrorType.Validation);
 
+    /// <summary>The other Culina signed in but handed out no token: it is from before another instance could import from it.</summary>
+    public static readonly Error SourceTooOld = new(
+        "import.source_too_old",
+        "That Culina is too old to import from. Update it, then connect again.",
+        ErrorType.Validation);
+
     /// <summary>Exactly one way of getting in has to be given.</summary>
     public static readonly Error AmbiguousCredentials = new(
         "import.ambiguous_credentials",

@@ -42,5 +42,5 @@ export function tokenPageOf(kind: SourceKind, typed: string): string | null {
 
   const app = sourceApps.find((one) => one.kind === kind);
 
-  return origin === null || !app ? null : `${origin}${app.tokenPath}`;
+  return origin === null || !app?.tokenPath ? null : `${origin}${app.tokenPath}`;
 }
