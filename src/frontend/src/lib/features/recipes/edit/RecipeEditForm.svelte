@@ -32,9 +32,15 @@
     improvement: RecipeImprovement;
     /** The original it was imported from, beside the form; see `EditorLayout`. */
     source?: Snippet;
+    /** Your own notes from cooking it, to fold in while editing. */
+    notes?: {
+      readonly overall: string;
+      readonly stepNote: (stepId: string) => string;
+      readonly adopt: (stepId: string) => void;
+    };
   }
 
-  let { editor, recipe, back, ingredients, improvement, source }: Props = $props();
+  let { editor, recipe, back, ingredients, improvement, source, notes }: Props = $props();
 
   // A link from the nutrition panel names what to look at: `#ingredient-<id>` or `#yield`.
   const wanted = $derived(page.url.hash.slice(1));
@@ -145,11 +151,21 @@
   </EditorSection>
 
   <EditorSection id="steps" title={m['editor.steps']()} count={recipe.steps.length}>
+    {#if notes?.overall.trim()}
+      <aside class="personal" aria-label={m['notes.editor.overall']()}>
+        <span class="personal-label">{m['notes.editor.overall']()}</span>
+        <p class="personal-text">{notes.overall}</p>
+        <p class="personal-hint">{m['notes.editor.hint']()}</p>
+      </aside>
+    {/if}
+
     <StepEditor
       steps={recipe.steps}
       ingredients={ingredients.all}
       onchange={(steps: Step[]) => editor.change({ steps })}
       onaddingredient={ingredients.add}
+      stepNote={notes?.stepNote}
+      onadoptnote={notes?.adopt}
     />
   </EditorSection>
 
@@ -171,6 +187,33 @@
   /* Sits inside the section whose header holds the button, next to what failed. */
   .assistFailure {
     margin-bottom: var(--space-4);
+  }
+
+  .personal {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    margin-bottom: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border-inline-start: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--surface-sunken);
+    font-size: var(--text-sm);
+  }
+
+  .personal-label,
+  .personal-hint {
+    color: var(--text-muted);
+  }
+
+  .personal-label {
+    font-weight: var(--weight-medium);
+  }
+
+  .personal-text,
+  .personal-hint {
+    margin: 0;
+    white-space: pre-wrap;
   }
 
   .finish {

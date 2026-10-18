@@ -32,6 +32,11 @@ class NotesStore {
     return this.#overall.trim() !== '' || this.#steps.some((note) => note.body.trim() !== '');
   }
 
+  /** Every step note written, for editing them where the recipe is read. */
+  get steps(): readonly { stepId: string; body: string }[] {
+    return this.#steps;
+  }
+
   stepNote(stepId: string): string {
     return this.#steps.find((note) => note.stepId === stepId)?.body ?? '';
   }

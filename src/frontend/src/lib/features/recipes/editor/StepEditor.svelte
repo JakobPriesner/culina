@@ -19,9 +19,13 @@
     ingredients: readonly Ingredient[];
     onchange: (steps: Step[]) => void;
     onaddingredient: (name: string) => void;
+    /** Your own note on a step, by step id. */
+    stepNote?: (stepId: string) => string;
+    /** Folds a step's note into its words. */
+    onadoptnote?: (stepId: string) => void;
   }
 
-  let { steps, ingredients, onchange, onaddingredient }: Props = $props();
+  let { steps, ingredients, onchange, onaddingredient, stepNote, onadoptnote }: Props = $props();
 
   /** Adds a step and focuses it, after a tick because the field doesn't exist until the list renders. */
   async function add() {
@@ -66,6 +70,8 @@
             onmove={(by) => onchange([...moved(steps, index, by)])}
             onremove={() => remove(index)}
             {onaddingredient}
+            note={step.id ? (stepNote?.(step.id) ?? '') : ''}
+            onadoptnote={step.id && onadoptnote ? () => onadoptnote(step.id ?? '') : undefined}
           />
         {/each}
       </ol>
