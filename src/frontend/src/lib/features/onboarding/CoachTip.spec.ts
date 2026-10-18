@@ -21,14 +21,14 @@ describe('a tip in place', () => {
     tips.own('u1');
 
     renderWithProviders(CoachTip, {
-      props: { id: 'plan', pose: 'thinking', title: 'Your week', children: body }
+      props: { id: 'plan', pose: 'thinking', title: 'Move meals around', children: body }
     });
 
-    expect(screen.getByRole('complementary', { name: 'Your week' })).toBeInTheDocument();
+    expect(screen.getByRole('complementary', { name: 'Move meals around' })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Got it' }));
 
-    expect(screen.queryByRole('complementary', { name: 'Your week' })).toBeNull();
+    expect(screen.queryByRole('complementary', { name: 'Move meals around' })).toBeNull();
     expect(tips.isNew('plan')).toBe(false);
   });
 });

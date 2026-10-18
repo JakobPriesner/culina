@@ -36,7 +36,7 @@ describe('the welcome', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Shop' }));
 
     expect(screen.getByRole('button', { name: 'Shop' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByText(/writes itself from the week/)).toBeInTheDocument();
+    expect(screen.getByText(/puts what the week needs on the list/)).toBeInTheDocument();
     // Olli points at where the stations live in the app.
     expect(screen.getByText(/You’ll find these any time in the bar/)).toBeInTheDocument();
   });

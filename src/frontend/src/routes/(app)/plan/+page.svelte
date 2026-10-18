@@ -118,10 +118,8 @@
   {#if householdId && offset === 0}<TodayMeal {householdId} />{/if}
 
   <CoachTip id="plan" pose="thinking" title={m['tips.plan.title']()}>
-    <ul>
-      <li>{m['tips.plan.drag']()}</li>
-      <li>{m['tips.plan.tick']()}</li>
-    </ul>
+    <p>{m['tips.plan.drag']()}</p>
+    <p>{m['tips.plan.shop']()}</p>
   </CoachTip>
 
   {#if mealPlan.error}

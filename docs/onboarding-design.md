@@ -45,12 +45,29 @@ The household step itself (`/welcome`) is Olli's first line: "Hi, I'm Olli, your
 
 Each tip is Olli (small) with a speech bubble (`OlliSays`), in the page's flow.
 
-| Where | Id | Olli | Tip |
-| --- | --- | --- | --- |
-| Editor, steps | `steps` | writing | The step-writing rules from the welcome's step scene. |
-| Cook mode | `cook` | on duty | Swipe or tap the screen for the next step; start timers from the bar; turn on reading aloud. |
-| Week | `plan` | thinking | Drag meals between days; tick a meal you cooked; the list fills from the week. |
-| Shopping list | `shopping` | peeking | Tap a line to tick it; the meals behind the list are above it and can be taken off whole. |
+| Where | Id | Olli | Title | What it teaches |
+| --- | --- | --- | --- | --- |
+| Editor, steps | `steps` | writing | Add ingredients with @ | `@` and a few letters puts an ingredient in the step, scaled; waits in minutes become timers; short steps. |
+| Cook mode | `cook` | on duty | One step at a time | Swipe left (touch) or the arrow keys (keyboard), whichever the device has; the speaker reads steps aloud, where the browser can. |
+| Week | `plan` | thinking | Move meals around | Hold and drag a meal to another day; the button at the bottom puts the week on the list. |
+| Shopping list | `shopping` | peeking | Meal cancelled? | "Take off the list" in the meals at the top removes a dish and what it needed; a shared household sees one list. |
+
+### How a tip is written
+
+A tip is read once, half-attentively, on the way to something else. So:
+
+- **One thing the screen doesn't say.** A hidden gesture (hold to drag, swipe), a key (`@`), or a consequence
+  (what taking a meal off removes). Never what a visible label already says, like "tap a box to tick it".
+- **The title is the takeaway**, not the page's name: "Move meals around", not "Your week". Read alone, it
+  should already help.
+- **Sentences, not bullets.** Olli is talking. One or two short sentences, at most two paragraphs, no
+  semicolons, no colons that glue two facts together.
+- **Name what is on screen** in its own words ("Take off the list", "the speaker below") and say where it is.
+- **Only what is true here.** A gesture that this device does not have is not offered (`.on-touch` /
+  `.on-keys` in `CoachTip`); a control that may be missing (reading aloud) is only mentioned when it is there.
+- **Olli says "I"** only for what Olli does ("I'll read each step out to you"); everything else is "you".
+- **German first-class**, not translated: du, natural word order, „“ quotes, and words a cook would say
+  ("im Wagen", not "abgehakt markiert").
 
 Seen tips are remembered per person on the device (`localStorage`, `culina.tips.v1.<userId>`): it is a UI
 preference, nothing private, and it is fine for a new phone to show the tips once more.

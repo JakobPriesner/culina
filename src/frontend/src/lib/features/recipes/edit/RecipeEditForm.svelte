@@ -161,14 +161,10 @@
   </EditorSection>
 
   <EditorSection id="steps" title={m['editor.steps']()} count={recipe.steps.length}>
-    <!-- Once, where steps are written: the rules the tour's step card gives, in a line each. -->
+    <!-- Once, where steps are written: the @ first, since nothing on screen gives it away. -->
     <CoachTip id="steps" pose="writing" title={m['tips.steps.title']()}>
-      <ul>
-        <li>{m['tour.steps.one']()}</li>
-        <li>{m['tour.steps.length']()}</li>
-        <li>{m['tour.steps.mention']()}</li>
-        <li>{m['tour.steps.timer']()}</li>
-      </ul>
+      <p>{m['tips.steps.mention']()}</p>
+      <p>{m['tips.steps.more']()}</p>
     </CoachTip>
 
     {#if notes?.overall.trim()}
