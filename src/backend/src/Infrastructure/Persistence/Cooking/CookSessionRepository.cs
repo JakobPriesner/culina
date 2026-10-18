@@ -84,6 +84,21 @@ internal sealed class CookSessionRepository(DbExecutor executor) : ICookSessionR
         return row is null ? CookingErrors.SessionNotFound : row.ToSession();
     }
 
+    public Task<int?> StepSetAsideAsync(
+        Guid userId,
+        Guid recipeId,
+        DateTimeOffset since,
+        CancellationToken cancellationToken) =>
+        executor.ExecuteScalarAsync<int?>(
+            """
+            select current_step_index from cook_sessions
+            where user_id = @userId and recipe_id = @recipeId and set_aside_at >= @since
+            order by set_aside_at desc
+            limit 1;
+            """,
+            new { userId, recipeId, since },
+            cancellationToken);
+
     public async Task<Result> StartAsync(
         CookSession session,
         DateTimeOffset now,
@@ -92,13 +107,15 @@ internal sealed class CookSessionRepository(DbExecutor executor) : ICookSessionR
         ArgumentNullException.ThrowIfNull(session);
 
         // Both statements or neither: the partial unique index refuses a second active session, so the abandonment makes the insert legal.
+        // Another recipe's session is set aside, so returning to it picks up its step (two dishes of one meal).
         await executor.ExecuteAsync(
             """
             update cook_sessions
-            set abandoned_at = @now, last_active_at = @now, version = version + 1
+            set abandoned_at = @now, last_active_at = @now, version = version + 1,
+                set_aside_at = case when recipe_id <> @recipeId then @now end
             where user_id = @userId and completed_at is null and abandoned_at is null;
             """,
-            new { userId = session.UserId, now },
+            new { userId = session.UserId, recipeId = session.RecipeId, now },
             cancellationToken).ConfigureAwait(false);
 
         await executor.ExecuteAsync(

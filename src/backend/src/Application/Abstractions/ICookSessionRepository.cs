@@ -15,6 +15,16 @@ public interface ICookSessionRepository
         Guid userId,
         CancellationToken cancellationToken);
 
+    /// <summary>
+    /// The step a session of this recipe was on when another recipe's start set it aside, since a moment; null
+    /// when there is none (never set aside, ended on purpose, or too long ago).
+    /// </summary>
+    Task<int?> StepSetAsideAsync(
+        Guid userId,
+        Guid recipeId,
+        DateTimeOffset since,
+        CancellationToken cancellationToken);
+
     /// <summary>Starts a session, ending whatever else this person had going, in one transaction (the partial unique index refuses a second active session).</summary>
     /// <param name="session">The session to start.</param>
     /// <param name="now">The injected clock's reading, for the abandonment.</param>

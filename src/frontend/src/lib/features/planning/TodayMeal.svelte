@@ -26,60 +26,71 @@
   });
 
   const meal = $derived(upcoming.mealNow);
+  /** Every dish of that meal still to cook: a curry and its rice are one dinner. */
+  const dishes = $derived(upcoming.dishesNow);
   /** Shown once nothing is left to cook today: the day's cooking is done, and it says so calmly. */
   const cooked = $derived(meal ? null : (upcoming.cookedToday.at(-1) ?? null));
 
-  const onTheHob = $derived(meal !== null && cooking.session?.recipeId === meal.recipeId);
+  const onTheHob = (recipeId: string) => cooking.session?.recipeId === recipeId;
+
+  /** A lone dish already on the hob needs no card: the cooking pill leads back to it. */
+  const shown = $derived(dishes.length > 1 || (meal !== null && !onTheHob(meal.recipeId)));
 </script>
 
-{#if meal && !onTheHob}
-  <!-- Two ways on from tonight's meal: the recipe to read first, or straight to the hob. -->
+{#if meal && shown}
+  <!-- Two ways on from tonight's meal, per dish: the recipe to read first, or straight to the hob. -->
   <!-- eslint-disable svelte/no-navigation-without-resolve -- The routes are resolved; only the yield is appended. -->
   <div class="today">
-    <a
-      class="about"
-      href={hrefAtYield(
-        resolve('/(app)/recipes/[recipeId]', { recipeId: meal.recipeId }),
-        meal.servings
-      )}
-    >
-      <span class="when">{m['plan.today.meal']({ slot: slotLabel[meal.slot as MealSlot]() })}</span>
-      <span class="what">{meal.title}</span>
-    </a>
-    <a
-      class="cook"
-      href={hrefAtYield(
-        resolve('/(app)/recipes/[recipeId]/cook', { recipeId: meal.recipeId }),
-        meal.servings
-      )}
-    >
-      {m['plan.today.cook']()}
-      <Chevron />
-    </a>
-    <!-- Cooked from memory, or already eaten: said in one tap, without going through cook mode. -->
-    <IconButton
-      label={m['cooking.madeIt.named']({ title: meal.title })}
-      size="sm"
-      bordered
-      onclick={() => void madeIt(meal.recipeId, servingsOf(meal), householdId)}
-    >
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-        <path d="m5 12 5 5 9-10" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
-    </IconButton>
+    <span class="when">{m['plan.today.meal']({ slot: slotLabel[meal.slot as MealSlot]() })}</span>
+    {#each dishes as dish (dish.entryId)}
+      <div class="dish">
+        <a
+          class="about"
+          href={hrefAtYield(
+            resolve('/(app)/recipes/[recipeId]', { recipeId: dish.recipeId }),
+            dish.servings
+          )}
+        >
+          <span class="what">{dish.title}</span>
+        </a>
+        <a
+          class="cook"
+          href={hrefAtYield(
+            resolve('/(app)/recipes/[recipeId]/cook', { recipeId: dish.recipeId }),
+            dish.servings
+          )}
+        >
+          {onTheHob(dish.recipeId) ? m['cooking.resume']() : m['plan.today.cook']()}
+          <Chevron />
+        </a>
+        <!-- Cooked from memory, or already eaten: said in one tap, without going through cook mode. -->
+        <IconButton
+          label={m['cooking.madeIt.named']({ title: dish.title })}
+          size="sm"
+          bordered
+          onclick={() => void madeIt(dish.recipeId, servingsOf(dish), householdId)}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="m5 12 5 5 9-10" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </IconButton>
+      </div>
+    {/each}
   </div>
   <!-- eslint-enable svelte/no-navigation-without-resolve -->
 {:else if cooked}
   <div class="today done">
-    <a class="about" href={resolve('/(app)/recipes/[recipeId]', { recipeId: cooked.recipeId })}>
-      <span class="when">{m['plan.today.cooked']()}</span>
-      <span class="what">{cooked.title}</span>
-    </a>
-    <span class="tick" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <path d="m5 12 5 5 9-10" stroke-linecap="round" stroke-linejoin="round" />
-      </svg>
-    </span>
+    <span class="when">{m['plan.today.cooked']()}</span>
+    <div class="dish">
+      <a class="about" href={resolve('/(app)/recipes/[recipeId]', { recipeId: cooked.recipeId })}>
+        <span class="what">{cooked.title}</span>
+      </a>
+      <span class="tick" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="m5 12 5 5 9-10" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </span>
+    </div>
   </div>
 {/if}
 
@@ -87,8 +98,8 @@
   /* A row like a settings cell that leads on: when and what (the recipe), and the one thing to do with it. */
   .today {
     display: flex;
-    align-items: center;
-    gap: var(--space-4);
+    flex-direction: column;
+    gap: var(--space-2);
     margin-bottom: var(--space-6);
     padding: var(--space-3) var(--space-4);
     border-radius: var(--radius-lg);
@@ -97,10 +108,15 @@
     transition: background-color var(--duration-fast) var(--ease-out);
   }
 
-  @media (hover: hover) {
-    .today:has(.about:hover) {
-      background: var(--surface-highlight);
-    }
+  .dish {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .dish + .dish {
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border);
   }
 
   .about {

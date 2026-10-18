@@ -64,6 +64,38 @@ public class CookSessionEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task Start_ShouldPickUpADishSetAsideForAnother_WhereItWas()
+    {
+        // The main simmers on step 3 while the side is cooked; back to the main, it is still on step 3.
+        using var client = await SignedInAsync();
+        var main = await RecipeAsync(client, "Curry", steps: 4);
+        var side = await RecipeAsync(client, "Rice", steps: 2);
+        var started = await client.PostAsync("/api/v1/cook-sessions", new { recipeId = main, servings = 2 }, Token);
+        var sessionId = started.Json!.Value.GetProperty("sessionId").GetGuid();
+
+        await client.PatchAsync($"/api/v1/cook-sessions/{sessionId}", new { currentStepIndex = 2 }, Token);
+        await client.PostAsync("/api/v1/cook-sessions", new { recipeId = side, servings = 2 }, Token);
+        var back = await client.PostAsync("/api/v1/cook-sessions", new { recipeId = main, servings = 2 }, Token);
+
+        Assert.Equal(2, back.Json!.Value.GetProperty("currentStepIndex").GetInt32());
+    }
+
+    [Fact]
+    public async Task Start_ShouldBeginAgain_WhenTheCookEndedItOnPurpose()
+    {
+        using var client = await SignedInAsync();
+        var recipeId = await RecipeAsync(client, "Curry", steps: 4);
+        var started = await client.PostAsync("/api/v1/cook-sessions", new { recipeId, servings = 2 }, Token);
+        var sessionId = started.Json!.Value.GetProperty("sessionId").GetGuid();
+
+        await client.PatchAsync($"/api/v1/cook-sessions/{sessionId}", new { currentStepIndex = 2 }, Token);
+        await client.DeleteAsync($"/api/v1/cook-sessions/{sessionId}?completed=false", Token);
+        var again = await client.PostAsync("/api/v1/cook-sessions", new { recipeId, servings = 2 }, Token);
+
+        Assert.Equal(0, again.Json!.Value.GetProperty("currentStepIndex").GetInt32());
+    }
+
+    [Fact]
     public async Task Update_ShouldMoveTheStep_WithoutBumpingTheVersion()
     {
         using var client = await SignedInAsync();

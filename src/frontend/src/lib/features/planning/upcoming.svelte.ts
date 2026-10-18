@@ -92,6 +92,22 @@ class UpcomingStore {
     );
   }
 
+  /** Every dish of the meal now (curry and rice for dinner), still to cook, in the plan's order. */
+  get dishesNow(): readonly PlannedMeal[] {
+    const now = this.mealNow;
+
+    return now
+      ? this.today.filter((meal) => meal.slot === now.slot && !this.cookedToday.includes(meal))
+      : [];
+  }
+
+  /** The dishes planned with this recipe today, in the same meal, itself included; empty when it is not on today's plan. */
+  dishesWith(recipeId: string): readonly PlannedMeal[] {
+    const own = this.today.find((meal) => meal.recipeId === recipeId);
+
+    return own ? this.today.filter((meal) => meal.slot === own.slot) : [];
+  }
+
   nextFor(recipeId: string): NextPlanned | null {
     const nextMonday = mondayOf(1);
 

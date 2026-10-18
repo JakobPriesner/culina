@@ -128,3 +128,20 @@ describe('tonight, beside the week being edited', () => {
     expect(upcoming.mealNow).toBeNull();
   });
 });
+
+describe('a meal of several dishes', () => {
+  it('names every dish of the meal now, and finds a dish’s companions', async () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date('2026-10-17T18:00:00') });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(weekWith([meal('curry', 'dinner'), meal('rice', 'dinner'), meal('toast', 'breakfast')]))
+    );
+
+    await upcoming.load('h1');
+
+    expect(upcoming.dishesNow.map((one) => one.entryId)).toEqual(['curry', 'rice']);
+    expect(upcoming.dishesWith('r-rice').map((one) => one.entryId)).toEqual(['curry', 'rice']);
+    expect(upcoming.dishesWith('r-nothing')).toEqual([]);
+  });
+});
+
