@@ -2024,5 +2024,11 @@
   "shopping.merge.done": "„{from}“ heißt jetzt „{to}“, hier und in deinen Rezepten.",
   "shopping.merge.apart": "Die Mengen lassen sich nicht zusammenrechnen, darum bleiben es zwei Zeilen.",
   "picker.quick": "Eingrenzen",
-  "picker.quick.minutes": "Bis {count} Min."
+  "picker.quick.minutes": "Bis {count} Min.",
+  "recipe.stub.paste": "Text oder Link einfügen",
+  "recipe.stub.idea": "Aus einer Idee schreiben",
+  "recipe.stub.filled": "Ausgefüllt. Schau es im Editor noch einmal durch.",
+  "recipe.stub.fillHint": "Füllt genau dieses Rezept: Es bleibt eingeplant, deine Notizen bleiben.",
+  "picker.createStub": "„{title}“ als neues Rezept anlegen",
+  "picker.createStub.hint": "Erst nur der Name, ausfüllen kannst du es später."
 }

@@ -17,6 +17,8 @@
   import RecipeBasicsFields from '$features/recipes/editor/RecipeBasicsFields.svelte';
   import StepEditor from '$features/recipes/editor/StepEditor.svelte';
   import TagEditor from '$features/recipes/editor/TagEditor.svelte';
+  import StubFill from '$features/recipes/detail/StubFill.svelte';
+  import { everyIngredient } from '$features/recipes/types';
   import { tagSuggestions } from '$features/recipes/stores/tagSuggestions.svelte';
   import type { Recipe, Step } from '$features/recipes/types';
   import { m } from '$shell/i18n';
@@ -89,6 +91,13 @@
 
   {#if editor.conflicted}
     <ConflictBanner onkeepmine={editor.keepMine} ontaketheirs={editor.takeTheirs} />
+  {/if}
+
+  <!-- Only a title so far (planned before it was written down): fill it from a paste or an idea, in place. -->
+  {#if recipe.steps.length === 0 && everyIngredient(recipe).length === 0}
+    <div class="stub">
+      <StubFill {recipe} onfill={(patch) => editor.change(patch)} />
+    </div>
   {/if}
 
   <EditorSection id="recipe" title={m['editor.section.recipe']()}>
@@ -214,6 +223,15 @@
   .personal-hint {
     margin: 0;
     white-space: pre-wrap;
+  }
+
+  .stub {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    background: var(--surface-sunken);
   }
 
   .finish {

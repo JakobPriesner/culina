@@ -6,6 +6,11 @@
   import { m } from '$shell/i18n';
 
   import SavedSearchChips from './filters/SavedSearchChips.svelte';
+  import { explain } from '$shell/explain';
+  import { toaster } from '$shell/toaster.svelte';
+  import { foldText } from './foldText';
+  import { summaryOf } from './mappers';
+  import { recipes } from './stores/recipes.svelte';
   import PickerResults from './PickerResults.svelte';
   import { createPickerSearch } from './recipePickerSearch.svelte';
   import SearchChips from './search/SearchChips.svelte';
@@ -30,6 +35,8 @@
     notes?: ReadonlyMap<string, string>;
     /** Search only inside one cookbook, when the caller is looking in one. */
     cookbookId?: string;
+    /** Offers a search with no recipe of that name as a new, title-only recipe, picked at once (the week plans one before it is written). */
+    stubs?: boolean;
     /** The meal being picked for, when known: turns the blank state into suggestions instead of "everything, newest first". */
     suggestFor?: 'breakfast' | 'lunch' | 'dinner';
     onpick: (recipe: RecipeSummary) => void;
@@ -50,6 +57,7 @@
     taken = [],
     notes,
     cookbookId,
+    stubs = false,
     suggestFor,
     onpick,
     onremove,
@@ -73,6 +81,35 @@
       void tags.load(householdId);
     }
   });
+
+  /** The words typed, when no recipe is called exactly that: what a new recipe would be named. */
+  const stubTitle = $derived.by(() => {
+    const title = search.query.trim();
+
+    return stubs &&
+      title.length > 1 &&
+      !search.shown.some((one) => foldText(one.title.trim()) === foldText(title))
+      ? title
+      : null;
+  });
+
+  let creating = $state(false);
+
+  async function createStub(title: string) {
+    creating = true;
+
+    const created = await recipes.create(householdId, title);
+
+    creating = false;
+
+    if ('code' in created) {
+      toaster.show({ message: () => explain(created), tone: 'danger' });
+
+      return;
+    }
+
+    onpick(summaryOf(created));
+  }
 
   const search = createPickerSearch({
     open: () => open,
@@ -131,8 +168,20 @@
       {@render controls()}
     {/if}
 
+    {#if stubTitle}
+      <button
+        type="button"
+        class="stub"
+        disabled={creating}
+        onclick={() => void createStub(stubTitle)}
+      >
+        <span class="stub-title">+ {m['picker.createStub']({ title: stubTitle })}</span>
+        <span class="stub-hint">{m['picker.createStub.hint']()}</span>
+      </button>
+    {/if}
+
     {#if search.nothing}
-      <p class="nothing">{m['picker.nothing']()}</p>
+      {#if !stubTitle}<p class="nothing">{m['picker.nothing']()}</p>{/if}
     {:else}
       <PickerResults recipes={search.shown} taken={takenIds} {notes} {onpick} {onremove} />
     {/if}
@@ -166,6 +215,29 @@
     flex: none;
     white-space: nowrap;
     overflow-wrap: normal;
+  }
+
+  .stub {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-3);
+    border: 1px dashed var(--border-strong, var(--border));
+    border-radius: var(--radius-md);
+    background: none;
+    color: var(--text);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+
+  .stub-title {
+    font-weight: var(--weight-medium);
+  }
+
+  .stub-hint {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
 
   .nothing {

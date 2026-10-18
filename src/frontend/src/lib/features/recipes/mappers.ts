@@ -136,3 +136,20 @@ export const toSharedRecipe = (token: string, wire: WireShared): RecipeReading =
   // A visitor cannot see when it last changed and the surface does not draw it, but the type asks: a placeholder.
   updatedAt: ''
 });
+
+/** A recipe as the lists show it: what a picker hands back for one it has just made. */
+export const summaryOf = (recipe: Recipe): RecipeSummary => ({
+  id: recipe.id,
+  householdId: recipe.householdId,
+  title: recipe.title,
+  imageId: recipe.imageId,
+  totalMinutes: recipe.totalMinutes,
+  yieldAmount: recipe.yieldAmount,
+  yieldKind: recipe.yieldKind,
+  yieldLabel: recipe.yieldLabel,
+  tags: recipe.tags,
+  cookCount: 0,
+  lastCookedAt: null,
+  updatedAt: recipe.updatedAt,
+  match: null
+});
