@@ -1,3 +1,4 @@
+import { madeIt as recordMadeIt } from '$features/cooking/finishCooking';
 import { openListAction } from '$features/shopping/openList';
 import { shopping } from '$features/shopping/stores/shopping.svelte';
 import { explain } from '$shell/explain';
@@ -204,5 +205,17 @@ export function usePlanActions(page: Page) {
     });
   }
 
-  return { ui, move, edit, drop, shop, unplan };
+  /** "I made it" from the week: recorded, and the card says cooked once the week is read again. */
+  async function madeIt(meal: PlannedMeal) {
+    const householdId = page.householdId();
+
+    if (!householdId) {
+      return;
+    }
+
+    await recordMadeIt(meal.recipeId, servingsOf(meal), householdId);
+    void mealPlan.load(householdId, mealPlan.from ?? page.monday());
+  }
+
+  return { ui, move, edit, drop, shop, unplan, madeIt };
 }

@@ -2,6 +2,7 @@
   import { resolve } from '$app/paths';
 
   import { m } from '$shell/i18n';
+  import { preferences } from '$shell/preferences.svelte';
   import { metaLineFor } from '../recipeMeta';
   import type { NutritionLink } from './nutritionLink';
   import { sourceLink } from '../sourceLink';
@@ -13,9 +14,44 @@
     cookbooks: readonly { readonly id: string; readonly name: string }[];
     printedYield: string;
     nutrition?: NutritionLink | null;
+    /** How often this person made it, said like on a recipe card ("2× cooked"). */
+    cooked?: { readonly count: number; readonly lastMadeAt: string | null } | null;
   }
 
-  let { recipe, cooking, cookbooks, printedYield, nutrition = null }: Props = $props();
+  let {
+    recipe,
+    cooking,
+    cookbooks,
+    printedYield,
+    nutrition = null,
+    cooked = null
+  }: Props = $props();
+
+  const lastMade = $derived(
+    cooked?.lastMadeAt
+      ? new Intl.DateTimeFormat(preferences.locale, { day: 'numeric', month: 'short' }).format(
+          new Date(cooked.lastMadeAt)
+        )
+      : null
+  );
+
+  /** "2× cooked, last 23 Sept": the count as a recipe card says it, with when. */
+  const cookedLine = $derived(
+    cooked?.count
+      ? [
+          m['recipes.meta.cooked']({ count: cooked.count }),
+          lastMade ? m['recipe.lastCooked']({ when: lastMade }) : ''
+        ]
+          .filter(Boolean)
+          .join(', ')
+      : ''
+  );
+
+  const metaLine = $derived(
+    [metaLineFor(recipe, { yields: false }), printedYield, cookedLine]
+      .filter(Boolean)
+      .join(m['recipes.meta.separator']())
+  );
 
   // Host only, not the full URL; no line at all when the address isn't an ordinary web address.
   const original = $derived(sourceLink(recipe.sourceUrl));
@@ -23,11 +59,7 @@
 
 <p class="meta">
   <!-- The yield on screen, not the written one: "2 servings" above a stepper at 4 contradicts it. -->
-  {[metaLineFor(recipe, { yields: false }), printedYield]
-    .filter(Boolean)
-    .join(m['recipes.meta.separator']())}{#if nutrition && !cooking}{m[
-      'recipes.meta.separator'
-    ]()}<button
+  {metaLine}{#if nutrition && !cooking}{m['recipes.meta.separator']()}<button
       type="button"
       class="nutrition"
       aria-label={nutrition.ariaLabel}

@@ -165,6 +165,16 @@ describe('reading a recipe', () => {
     expect(screen.getByRole('button', { name: 'Start cooking' })).toBeInTheDocument();
   });
 
+  it('records a meal cooked without cook mode in one tap', async () => {
+    const onmadeit = vi.fn();
+
+    render({ onstartcooking: () => {}, onmadeit });
+
+    await userEvent.click(screen.getByRole('button', { name: 'I made it' }));
+
+    expect(onmadeit).toHaveBeenCalledOnce();
+  });
+
   it('leads back to cooking that is already under way instead of starting again', () => {
     render({ onstartcooking: () => {}, resuming: true });
 

@@ -48,6 +48,10 @@
     /** Cookbooks it is on; shown here, edited by the dock. */
     cookbooks?: readonly { readonly id: string; readonly name: string }[];
     onstopcooking?: () => void;
+    /** "I made it" without cook mode; see `CookingAction`. */
+    onmadeit?: () => void;
+    /** How often this person made it and when last, for the meta line like a recipe card's. */
+    cooked?: { readonly count: number; readonly lastMadeAt: string | null } | null;
     onstep?: (index: number) => void;
     /** Reports whether the title is still on screen; see `SurfaceHead`. */
     ontitleview?: (visible: boolean) => void;
@@ -79,6 +83,8 @@
     editable = false,
     cookbooks = [],
     onstopcooking,
+    onmadeit,
+    cooked = null,
     onstep,
     ontitleview,
     nutrition = null,
@@ -161,6 +167,7 @@
     {ondelete}
     {ontitleview}
     {nutrition}
+    {cooked}
   />
 
   <SurfaceServings {recipe} {servings} {scaling} {onservings} onscaleto={() => scaleByAmount()} />
@@ -213,7 +220,7 @@
     {/await}
   {/if}
 
-  <CookingAction {cooking} {canCook} {resuming} {onstartcooking} {onstopcooking} />
+  <CookingAction {cooking} {canCook} {resuming} {onstartcooking} {onstopcooking} {onmadeit} />
 </article>
 
 <style>

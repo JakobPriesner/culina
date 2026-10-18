@@ -40,4 +40,14 @@ describe('a planned meal card', () => {
 
     expect(screen.getByRole('link')).toHaveAttribute('href', '/recipes/r1?yield=6');
   });
+
+  it('says "I made it" in one tap when the week offers it', async () => {
+    const onmadeit = vi.fn();
+
+    renderWithProviders(PlannedCard, { props: { meal, onremove: () => {}, onmadeit } });
+
+    await userEvent.click(screen.getByRole('button', { name: 'I made Tims Chili' }));
+
+    expect(onmadeit).toHaveBeenCalledOnce();
+  });
 });

@@ -70,7 +70,9 @@
             <rect x="3.5" y="5.5" width="17" height="15" rx="2" />
             <path d="M8 3.5v4M16 3.5v4M3.5 10h17" />
           </svg>
-          {m['recipe.whereabouts.planned']({ when })}
+          {planned.cooked
+            ? m['recipe.whereabouts.cookedToday']()
+            : m['recipe.whereabouts.planned']({ when })}
         </a>
       </li>
       {#if offersPlanned}

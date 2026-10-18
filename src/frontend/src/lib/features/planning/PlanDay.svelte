@@ -20,9 +20,12 @@
     onadd: () => void;
     onedit: (meal: PlannedMeal) => void;
     onremove: (meal: PlannedMeal) => void;
+    /** Records a meal of today or earlier as cooked, in one tap. */
+    onmadeit?: (meal: PlannedMeal) => void;
   }
 
-  let { day, today, past, householdId, drag, ondrop, onadd, onedit, onremove }: Props = $props();
+  let { day, today, past, householdId, drag, ondrop, onadd, onedit, onremove, onmadeit }: Props =
+    $props();
 
   const landing = $derived(drag.landing?.date === day.date ? drag.landing : null);
 </script>
@@ -61,6 +64,9 @@
               )}
             onedit={() => onedit(meal)}
             onremove={() => onremove(meal)}
+            onmadeit={onmadeit && (today || past) && !cookedOn(meal, day.date)
+              ? () => onmadeit(meal)
+              : undefined}
           />
         </li>
       {/each}

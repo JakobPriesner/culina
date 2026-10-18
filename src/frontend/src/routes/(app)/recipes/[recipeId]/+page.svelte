@@ -3,6 +3,7 @@
   import { Button, ErrorState } from '$ds';
   import { cookbooks } from '$features/cookbooks/stores/cookbooks.svelte';
   import CookedWrapUp from '$features/cooking/CookedWrapUp.svelte';
+  import { madeIt } from '$features/cooking/finishCooking';
   import NotePeek from '$features/cooking/NotePeek.svelte';
   import PersonalNotePanel from '$features/cooking/PersonalNotePanel.svelte';
   import { cookLog } from '$features/cooking/stores/cookLog.svelte';
@@ -73,6 +74,8 @@
 
   const shelves = $derived(cookbooks.membershipsOf(recipeId));
   const alreadyCooking = $derived(cooking.session?.recipeId === recipeId);
+  /** Just made: the wrap-up is the next thing, so the cooking action steps aside meanwhile. */
+  const wrappingUp = $derived(cookLog.justRecorded?.recipeId === recipeId);
 
   const actions = useRecipeActions({
     recipeId: () => recipeId,
@@ -168,8 +171,12 @@
       recipe={recipes.detail}
       {servings}
       onservings={actions.scale}
-      onstartcooking={actions.startCooking}
+      onstartcooking={wrappingUp ? undefined : actions.startCooking}
       resuming={alreadyCooking}
+      onmadeit={wrappingUp
+        ? undefined
+        : () => void madeIt(recipeId, servings, session.activeHouseholdId)}
+      cooked={{ count: cookLog.count, lastMadeAt: cookLog.lastMadeAt }}
       onaddtolist={() => (sheet = 'list')}
       listed={shopping.householdId === session.activeHouseholdId && shopping.holdsRecipe(recipeId)}
       onTheList={shopping.householdId === session.activeHouseholdId

@@ -82,7 +82,7 @@ test.describe('cooking a recipe', () => {
     await next.click();
     await expect(page.getByText(/step 3 of 3|schritt 3 von 3/i)).toBeVisible();
 
-    await page.getByRole('button', { name: /^(i made it|fertig gekocht)$/i }).click();
+    await page.getByRole('button', { name: /^(i made it|hab ich gekocht)$/i }).click();
 
     await expect(bar).toHaveCount(0);
   });
@@ -151,10 +151,11 @@ test.describe('cooking a recipe', () => {
 
     const sheet = page.getByRole('dialog', { name: /your notes|deine notizen/i });
 
-    await expect(sheet.getByRole('textbox')).toHaveValue(note);
+    // The overall note comes first; the step's own note follows it.
+    await expect(sheet.getByRole('textbox').first()).toHaveValue(note);
 
     await sheet.getByRole('button', { name: /^(close|schließen)$/i }).click();
-    await page.getByRole('button', { name: /^(done cooking|fertig gekocht)$/i }).click();
+    await page.getByRole('button', { name: /^(stop cooking|kochen beenden)$/i }).click();
   });
 
   test('puts the biggest target under the thumb that is pressed most', async () => {

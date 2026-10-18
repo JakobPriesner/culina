@@ -19,9 +19,19 @@
     lifted?: boolean;
     /** Cooked on its day: said on the card, so the week reads as what happened. */
     cooked?: boolean;
+    /** Offered for a meal of today or earlier not yet cooked: "I made it", without opening anything. */
+    onmadeit?: () => void;
   }
 
-  let { meal, onremove, onpress, onedit, lifted = false, cooked = false }: Props = $props();
+  let {
+    meal,
+    onremove,
+    onpress,
+    onedit,
+    lifted = false,
+    cooked = false,
+    onmadeit
+  }: Props = $props();
 
   // Joined here, not in markup: Svelte trims the space at the start of an {#if} block, which made "Abendessen· 4 Portionen".
   const meta = $derived(
@@ -105,6 +115,20 @@
       {/if}
     </div>
   </a>
+
+  {#if onmadeit}
+    <span class="remove" data-no-drag>
+      <IconButton
+        label={m['cooking.madeIt.named']({ title: meal.title })}
+        size="sm"
+        onclick={onmadeit}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="m5 12 5 5 9-10" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </IconButton>
+    </span>
+  {/if}
 
   <span class="remove" data-no-drag>
     <IconButton label={m['plan.remove']({ title: meal.title })} size="sm" onclick={onremove}>
