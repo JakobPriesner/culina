@@ -81,24 +81,27 @@
 
   {#if householdId}<TodayMeal {householdId} />{/if}
 
-  <LibraryToolbar
-    id={searchId}
-    keyShortcuts="Meta+F Control+F"
-    householdId={householdId ?? ''}
-    view={libraryView}
-    context={list.context}
-    searchLabel={m['recipes.list.searchLabel']()}
-    searchPlaceholder={m['recipes.list.searchPlaceholder']()}
-    savable
-    onpromote={(search) => (shelving = search)}
-    interpretation={recipes.status === 'ready' ? recipes.interpretation : null}
-    total={recipes.total}
-    onastyped={list.turnDownCorrection}
-  >
-    {#snippet summary()}
-      <LibrarySummary {filtered} order={list.order} onreset={() => libraryView.clear()} />
-    {/snippet}
-  </LibraryToolbar>
+  <!-- An empty library has nothing to search or filter; it shows its invitation instead. -->
+  {#if !(recipes.status === 'ready' && recipes.total === 0 && !filtered)}
+    <LibraryToolbar
+      id={searchId}
+      keyShortcuts="Meta+F Control+F"
+      householdId={householdId ?? ''}
+      view={libraryView}
+      context={list.context}
+      searchLabel={m['recipes.list.searchLabel']()}
+      searchPlaceholder={m['recipes.list.searchPlaceholder']()}
+      savable
+      onpromote={(search) => (shelving = search)}
+      interpretation={recipes.status === 'ready' ? recipes.interpretation : null}
+      total={recipes.total}
+      onastyped={list.turnDownCorrection}
+    >
+      {#snippet summary()}
+        <LibrarySummary {filtered} order={list.order} onreset={() => libraryView.clear()} />
+      {/snippet}
+    </LibraryToolbar>
+  {/if}
 
   {#if recipes.status === 'failed'}
     <ErrorState

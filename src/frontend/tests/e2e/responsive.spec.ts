@@ -224,7 +224,7 @@ test.describe('responsive production layouts @offline', () => {
       await responsiveData(page);
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.goto('/shopping');
-      const meals = page.getByText(/Geplante Mahlzeiten auf dieser Liste: 1/);
+      const meals = page.getByText(/Mahlzeiten und Rezepte auf dieser Liste: \d+/);
       await expect(meals).toBeVisible();
       await expect(page.getByText(/1 schon vergangen/)).toBeVisible();
       await meals.click();

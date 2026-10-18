@@ -1,6 +1,8 @@
 <script lang="ts">
   import { page } from '$app/state';
 
+  import { session } from '$features/auth/session.svelte';
+
   import Navigation from '../Navigation.svelte';
   import { barAfterScroll, shown, type BarScroll } from './barOnScroll';
 
@@ -20,6 +22,11 @@
     scroll = next;
     hidden = next.hidden;
   }
+
+  // No bar without a household, and nothing for the page to keep clear of.
+  $effect(() => {
+    if (!session.activeHouseholdId) height = 0;
+  });
 
   // A new page starts with the way out in view.
   $effect(() => {
@@ -59,14 +66,16 @@
 
 <svelte:window {onscroll} onwheel={reader} ontouchstart={reader} ontouchmove={reader} {onkeydown} />
 
-<div
-  class="bar"
-  class:hidden
-  bind:clientHeight={height}
-  onfocusin={() => follow({ hidden: false, anchor: window.scrollY })}
->
-  <Navigation placement="bottom" />
-</div>
+{#if session.activeHouseholdId}
+  <div
+    class="bar"
+    class:hidden
+    bind:clientHeight={height}
+    onfocusin={() => follow({ hidden: false, anchor: window.scrollY })}
+  >
+    <Navigation placement="bottom" />
+  </div>
+{/if}
 
 <style>
   .bar {

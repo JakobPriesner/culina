@@ -1,6 +1,7 @@
 <script lang="ts">
   import { selectionIndicator } from '$ds/containment/selectionIndicator';
   import { page } from '$app/state';
+  import { session } from '$features/auth/session.svelte';
   import { destinations } from './navigation';
   import { m } from './i18n';
   import NavIcon from './NavIcon.svelte';
@@ -11,23 +12,26 @@
   const selected = $derived(destinations.find((destination) => destination.match(current))?.href);
 </script>
 
-<nav use:selectionIndicator={{ selected }} class="nav {placement}" aria-label={m['nav.label']()}>
-  {#each destinations as destination (destination.href)}
-    {@const active = destination.match(current)}
-    <a
-      class="destination"
-      data-selection={destination.href}
-      class:active
-      href={destination.href}
-      aria-current={active ? 'page' : undefined}
-    >
-      <span class="icon" aria-hidden="true"
-        ><NavIcon icon={destination.icon} current={active} /></span
+<!-- Every destination is a household's: without one (just signed up, on /welcome) they would only lead back there. -->
+{#if session.activeHouseholdId}
+  <nav use:selectionIndicator={{ selected }} class="nav {placement}" aria-label={m['nav.label']()}>
+    {#each destinations as destination (destination.href)}
+      {@const active = destination.match(current)}
+      <a
+        class="destination"
+        data-selection={destination.href}
+        class:active
+        href={destination.href}
+        aria-current={active ? 'page' : undefined}
       >
-      <span class="label">{destination.label()}</span>
-    </a>
-  {/each}
-</nav>
+        <span class="icon" aria-hidden="true"
+          ><NavIcon icon={destination.icon} current={active} /></span
+        >
+        <span class="label">{destination.label()}</span>
+      </a>
+    {/each}
+  </nav>
+{/if}
 
 <style>
   .nav {
@@ -152,7 +156,8 @@
     font-size: var(--text-xs);
     font-weight: var(--weight-medium);
     line-height: 1.25;
-    overflow-wrap: anywhere;
+    /* Whole words only ("Kochbüche/r" read as broken); the narrow-screen sizes below make every label fit. */
+    overflow-wrap: normal;
   }
 
   .bottom .destination.active .label {
@@ -164,7 +169,7 @@
    * dock inside (its 12px margin to the screen edge stays) and the size of a system tab bar's labels (11px) keep every
    * label whole; mid-word "Kochbüc/her" read as broken.
    */
-  @media (width < 22.5rem) {
+  @media (width < 25rem) {
     .bottom {
       gap: 2px;
       padding: 2px;
