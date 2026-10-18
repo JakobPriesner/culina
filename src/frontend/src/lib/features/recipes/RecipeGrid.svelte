@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { IconButton } from '$ds';
   import { m } from '$shell/i18n';
   import { whenVisible } from '$shell/whenVisible';
 
@@ -27,9 +28,22 @@
     query?: string;
     /** Households this one inherits from, by id with names; a recipe from one says so. */
     inherited?: Readonly<Record<string, string>>;
+    /** Takes a recipe out of the collection on screen (a chosen cookbook), from its card. */
+    onremove?: (recipe: RecipeSummary) => void;
+    /** The remove button's name for one recipe, said by the caller who knows what it is removed from. */
+    removeLabel?: (recipe: RecipeSummary) => string;
   }
 
-  let { recipes, loading = false, pending = [], onmore, query, inherited = {} }: Props = $props();
+  let {
+    recipes,
+    loading = false,
+    pending = [],
+    onmore,
+    query,
+    inherited = {},
+    onremove,
+    removeLabel
+  }: Props = $props();
 
   /** Enough to fill the visible area without pretending to know the count. */
   const placeholders = [0, 1, 2, 3, 4, 5];
@@ -68,6 +82,20 @@
           priority={index < firstRow}
           {photo}
         />
+        {#if onremove}
+          <span class="remove">
+            <IconButton
+              label={removeLabel?.(recipe) ?? recipe.title}
+              size="sm"
+              bordered
+              onclick={() => onremove(recipe)}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
+              </svg>
+            </IconButton>
+          </span>
+        {/if}
       </li>
     {/each}
 
@@ -97,7 +125,18 @@
 
   /* Off-screen cards aren't laid out or painted; that clips to the box, so the padding (given back by
      the negative margin) leaves room for the focus ring. */
+  /* Over the card's corner, on the surface so it reads over a photo too. */
+  .remove {
+    position: absolute;
+    top: var(--space-3);
+    right: var(--space-3);
+    z-index: 1;
+    border-radius: var(--radius-full);
+    background: var(--surface-overlay);
+  }
+
   .card {
+    position: relative;
     content-visibility: auto;
     contain-intrinsic-size: auto 14rem;
     padding: var(--space-2);

@@ -2030,5 +2030,9 @@
   "recipe.stub.filled": "Filled in. Check it over in the editor.",
   "recipe.stub.fillHint": "Fills this recipe in place: it stays on the plan, with your notes.",
   "picker.createStub": "Add “{title}” as a new recipe",
-  "picker.createStub.hint": "Just the name for now; fill it in later."
+  "picker.createStub.hint": "Just the name for now; fill it in later.",
+  "cookbooks.takeOff.label": "Take {title} out of this cookbook",
+  "cookbooks.plan.action": "Plan from it",
+  "cookbooks.plan.title": "Which one for the week?",
+  "cookbooks.back": "All cookbooks"
 }

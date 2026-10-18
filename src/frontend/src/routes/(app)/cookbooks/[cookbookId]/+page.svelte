@@ -15,6 +15,8 @@
   import LibraryToolbar from '$features/recipes/filters/LibraryToolbar.svelte';
   import RecipeGrid from '$features/recipes/RecipeGrid.svelte';
   import RecipePicker from '$features/recipes/RecipePicker.svelte';
+  import PlanRecipeSheet from '$features/planning/PlanRecipeSheet.svelte';
+  import type { RecipeSummary } from '$features/recipes/types';
   import { m } from '$shell/i18n';
   import NotFound from '$shell/NotFound.svelte';
   import Page from '$shell/Page.svelte';
@@ -27,6 +29,9 @@
   const automatic = $derived(cookbook?.kind === 'smart');
 
   let arranging = $state(false);
+  /** Choosing which of the shelf's recipes goes in the week, then when. */
+  let planning = $state(false);
+  let planned = $state<RecipeSummary | null>(null);
 
   /** Every member, loaded when the picker opens; the shelf on screen is only its first page. */
   const taken = $derived(cookbooks.membersOf(cookbookId));
@@ -79,6 +84,7 @@
         onpick={() => (actions.ui.picking = true)}
         onarrange={() => (arranging = true)}
         onaddtolist={() => void actions.addToShoppingList()}
+        onplan={() => (planning = true)}
         ondelete={actions.askToDelete}
       />
 
@@ -130,6 +136,8 @@
         loading={shelf.status === 'loading' && shelf.items.length === 0}
         onmore={list.autoLoads ? list.more : undefined}
         inherited={session.inheritedFrom}
+        onremove={automatic ? undefined : (recipe) => void actions.takeOff(recipe.id, recipe.title)}
+        removeLabel={(recipe) => m['cookbooks.takeOff.label']({ title: recipe.title })}
       />
     {/if}
   {/if}
@@ -152,6 +160,29 @@
   onsave={actions.rename}
   onclose={() => (actions.ui.renaming = false)}
 />
+
+{#if householdId}
+  <RecipePicker
+    open={planning}
+    {householdId}
+    title={m['cookbooks.plan.title']()}
+    {cookbookId}
+    onpick={(recipe) => {
+      planning = false;
+      planned = recipe;
+    }}
+    onclose={() => (planning = false)}
+  />
+
+  <PlanRecipeSheet
+    open={planned !== null}
+    {householdId}
+    recipeId={planned?.id ?? ''}
+    title={planned?.title ?? ''}
+    servings={planned?.yieldAmount ?? 2}
+    onclose={() => (planned = null)}
+  />
+{/if}
 
 {#if householdId && !automatic}
   <ArrangeCookbookSheet

@@ -13,6 +13,8 @@
     onpick: () => void;
     onarrange?: () => void;
     onaddtolist: () => void;
+    /** Choose one of its recipes for a day of the week. */
+    onplan: () => void;
     ondelete: () => void;
   }
 
@@ -24,6 +26,7 @@
     onpick,
     onarrange,
     onaddtolist,
+    onplan,
     ondelete
   }: Props = $props();
 </script>
@@ -72,26 +75,50 @@
     </Button>
   {/if}
 
-  <div class="shopping">
-    <Button loading={addingToList} onclick={onaddtolist}>
-      {#snippet icon()}
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M4 8h16l-1.4 10a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7Z" />
-          <path d="M9 8 12 3l3 5" />
-        </svg>
-      {/snippet}
+  <!-- What a shelf is for in the week: one of its recipes on a day. -->
+  <Button onclick={onplan}>
+    {#snippet icon()}
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <rect x="3.5" y="5.5" width="17" height="15" rx="2" />
+        <path d="M8 3.5v4M16 3.5v4M3.5 10h17" />
+        <path d="m9 15 2 2 4-4" />
+      </svg>
+    {/snippet}
 
-      {m['cookbooks.shopping.add']()}
-    </Button>
-  </div>
+    {m['cookbooks.plan.action']()}
+  </Button>
+
+  <!-- A whole shelf at once only for a chosen one: a self-filling shelf can hold dozens. -->
+  {#if !automatic}
+    <div class="shopping">
+      <Button loading={addingToList} onclick={onaddtolist}>
+        {#snippet icon()}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M4 8h16l-1.4 10a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7Z" />
+            <path d="M9 8 12 3l3 5" />
+          </svg>
+        {/snippet}
+
+        {m['cookbooks.shopping.add']()}
+      </Button>
+    </div>
+  {/if}
 
   <ActionMenu minWidth="13rem">
     {#snippet trigger({ popovertarget })}
