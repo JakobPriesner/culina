@@ -246,6 +246,37 @@ class ShoppingStore {
     return result.ok ? null : result.error;
   }
 
+  /** Takes back exactly what a recipe added by itself (not for a planned meal) put on the list. */
+  async withdrawRecipe(householdId: string, recipeId: string): Promise<AppError | null> {
+    const result = await request(() =>
+      http.DELETE('/api/v1/households/{householdId}/shopping-list/recipes/{recipeId}', {
+        params: { path: { householdId, recipeId } }
+      })
+    );
+
+    this.#take(householdId, result.ok ? result.value : null, result.ok ? null : result.error);
+
+    return result.ok ? null : result.error;
+  }
+
+  /** Sets how much of a line to buy, in its own unit; the server's answer replaces the list. */
+  async setQuantity(
+    householdId: string,
+    itemId: string,
+    quantity: number
+  ): Promise<AppError | null> {
+    const result = await request(() =>
+      http.PATCH('/api/v1/households/{householdId}/shopping-list/items/{itemId}', {
+        params: { path: { householdId, itemId } },
+        body: { quantity }
+      })
+    );
+
+    this.#take(householdId, result.ok ? result.value : null, result.ok ? null : result.error);
+
+    return result.ok ? null : result.error;
+  }
+
   clearError(): void {
     this.#error = null;
   }

@@ -156,4 +156,47 @@ describe('a line on the shopping list', () => {
 
     expect(screen.queryByRole('button', { name: 'Frozen', hidden: true })).not.toBeInTheDocument();
   });
+
+  it('changes how much to buy, in the line’s own unit', async () => {
+    preferences.adopt({ locale: 'en' }, { signedIn: false });
+    const onquantity = vi.fn();
+
+    render(ShoppingItemRow, {
+      item: milk,
+      oncheck: () => {},
+      onremove: () => {},
+      onmove: () => {},
+      onquantity
+    });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Change the amount', hidden: true }));
+
+    const field = screen.getByRole('spinbutton', { name: 'How much Milch' });
+
+    await userEvent.clear(field);
+    await userEvent.type(field, '750');
+    await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(onquantity).toHaveBeenCalledWith(750);
+  });
+
+  it('asks whether a line is the same thing as another one, and merges on a tap', async () => {
+    preferences.adopt({ locale: 'en' }, { signedIn: false });
+    const onmerge = vi.fn();
+
+    render(ShoppingItemRow, {
+      item: milk,
+      oncheck: () => {},
+      onremove: () => {},
+      onmove: () => {},
+      sameAs: 'Vollmilch',
+      onmerge
+    });
+
+    expect(screen.getByText(/Same as “Vollmilch”\?/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Merge' }));
+
+    expect(onmerge).toHaveBeenCalledOnce();
+  });
 });

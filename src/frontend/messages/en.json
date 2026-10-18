@@ -1917,7 +1917,7 @@
   "server.push.relay.hint": "An https:// address, like https://relay.example.com.",
   "problem.push.relay_off": "This server doesn't send notifications to the apps. An administrator can name a relay under Server.",
   "problem.push.invalid_device": "That device couldn't be registered for notifications.",
-  "shopping.meals.title": "Planned meals on this list: {count}",
+  "shopping.meals.title": "Meals and recipes on this list: {count}",
   "shopping.meals.pastCount": "{count} already past",
   "shopping.meals.past": "Already past",
   "shopping.meals.pastNote": "This day has passed, but what it asked for stays on the list until you tick it off or remove it.",
@@ -2011,5 +2011,16 @@
   "notes.editor.step": "Your note on this step",
   "notes.editor.adopt": "Put it in the step",
   "notes.editor.hint": "Only you see your notes. Put one in the step and everyone cooking it sees it.",
-  "notes.stepNotes": "On single steps"
+  "notes.stepNotes": "On single steps",
+  "shopping.meals.direct": "Added without a day",
+  "shopping.meals.progress": "{done} of {total} done",
+  "shopping.quantity.change": "Change the amount",
+  "shopping.quantity.label": "How much {name}",
+  "shopping.quantity.save": "Save",
+  "shopping.quantity.cancel": "Cancel",
+  "shopping.quantity.done": "{name}: now {amount}.",
+  "shopping.merge.ask": "Same as “{other}”?",
+  "shopping.merge.action": "Merge",
+  "shopping.merge.done": "“{from}” is now “{to}”, here and in your recipes.",
+  "shopping.merge.apart": "Their amounts do not add up, so the two lines stay apart."
 }

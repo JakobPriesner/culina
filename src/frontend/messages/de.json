@@ -1917,7 +1917,7 @@
   "server.push.relay.hint": "Eine https://-Adresse wie https://relay.example.com.",
   "problem.push.relay_off": "Dieser Server schickt den Apps keine Benachrichtigungen. Eine Administratorin oder ein Administrator kann unter Server ein Relay eintragen.",
   "problem.push.invalid_device": "Dieses Gerät konnte nicht für Benachrichtigungen angemeldet werden.",
-  "shopping.meals.title": "Geplante Mahlzeiten auf dieser Liste: {count}",
+  "shopping.meals.title": "Mahlzeiten und Rezepte auf dieser Liste: {count}",
   "shopping.meals.pastCount": "{count} schon vergangen",
   "shopping.meals.past": "Schon vergangen",
   "shopping.meals.pastNote": "Dieser Tag ist vorbei, doch was er braucht, bleibt auf der Liste, bis du es abhakst oder entfernst.",
@@ -2011,5 +2011,16 @@
   "notes.editor.step": "Deine Notiz zu diesem Schritt",
   "notes.editor.adopt": "In den Schritt übernehmen",
   "notes.editor.hint": "Deine Notizen siehst nur du. Übernimm eine in den Schritt, dann sehen sie alle, die ihn kochen.",
-  "notes.stepNotes": "Zu einzelnen Schritten"
+  "notes.stepNotes": "Zu einzelnen Schritten",
+  "shopping.meals.direct": "Ohne Tag hinzugefügt",
+  "shopping.meals.progress": "{done} von {total} erledigt",
+  "shopping.quantity.change": "Menge ändern",
+  "shopping.quantity.label": "Wie viel {name}",
+  "shopping.quantity.save": "Speichern",
+  "shopping.quantity.cancel": "Abbrechen",
+  "shopping.quantity.done": "{name}: jetzt {amount}.",
+  "shopping.merge.ask": "Dasselbe wie „{other}“?",
+  "shopping.merge.action": "Zusammenführen",
+  "shopping.merge.done": "„{from}“ heißt jetzt „{to}“, hier und in deinen Rezepten.",
+  "shopping.merge.apart": "Die Mengen lassen sich nicht zusammenrechnen, darum bleiben es zwei Zeilen."
 }

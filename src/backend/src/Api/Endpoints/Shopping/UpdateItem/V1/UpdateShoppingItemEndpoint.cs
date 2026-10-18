@@ -30,7 +30,8 @@ internal sealed class UpdateShoppingItemEndpoint : IEndpoint
                                 itemId,
                                 context.CurrentUser().UserId,
                                 request.IsChecked,
-                                request.Section),
+                                request.Section,
+                                request.Quantity),
                             cancellationToken)
                         .ConfigureAwait(false);
 

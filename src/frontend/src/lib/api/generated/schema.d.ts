@@ -1447,6 +1447,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/households/{householdId}/shopping-list/recipes/{recipeId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a recipe's ingredients
+         * @description Subtracts exactly what the recipe contributed when it was added by itself (not for a planned meal). A planned meal of the same recipe keeps its share, typed lines stay, and ticked lines stay because they have been bought. Repeating it changes nothing.
+         */
+        delete: operations["withdrawRecipeFromShoppingListV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/households/{householdId}/shopping-list/items/{itemId}": {
         parameters: {
             query?: never;
@@ -5977,6 +5997,11 @@ export interface components {
              * @enum {string|null}
              */
             section?: "produce" | "dairy_eggs" | "meat_fish" | "bakery" | "dry_goods" | "canned_jars" | "frozen" | "spices_baking" | "drinks" | "household" | "other" | null;
+            /**
+             * Format: double
+             * @description How much to buy now, in the line's own unit: a person correcting the sum.
+             */
+            quantity?: number | null;
         };
         /**
          * @description A failure after the response had already started (a 200 in flight), so it travels as an event on the stream.
@@ -10759,6 +10784,47 @@ export interface operations {
             path: {
                 householdId: string;
                 entryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    withdrawRecipeFromShoppingListV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                recipeId: string;
             };
             cookie?: never;
         };

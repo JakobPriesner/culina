@@ -8,18 +8,20 @@ using Domain.Shopping;
 
 namespace Application.Shopping;
 
-/// <summary>Ticks a line off, or moves it to where it actually lives.</summary>
+/// <summary>Ticks a line off, moves it to where it actually lives, or changes how much to buy.</summary>
 /// <param name="HouseholdId">Whose list.</param>
 /// <param name="ItemId">Which line.</param>
 /// <param name="UserId">Who is changing it.</param>
 /// <param name="IsChecked">Whether it is now in the trolley.</param>
 /// <param name="Section">Where it actually belongs.</param>
+/// <param name="Quantity">How much to buy now, in the line's unit.</param>
 public sealed record UpdateShoppingItemCommand(
     Guid HouseholdId,
     Guid ItemId,
     Guid UserId,
     bool? IsChecked,
-    string? Section);
+    string? Section,
+    decimal? Quantity = null);
 
 internal sealed class UpdateShoppingItemCommandHandler(
     IShoppingListRepository lists,
@@ -68,6 +70,11 @@ internal sealed class UpdateShoppingItemCommandHandler(
         var changed = command.IsChecked is { } isChecked
             ? list.Check(command.ItemId, isChecked, time.GetUtcNow())
             : Result.Success();
+
+        if (command.Quantity is { } amount)
+        {
+            changed = changed.Bind(() => list.SetAmount(command.ItemId, amount));
+        }
 
         if (command.Section is { } section)
         {

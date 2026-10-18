@@ -7,24 +7,25 @@
   import { upcoming } from '$features/planning/upcoming.svelte';
   import { hrefAtYield } from '$features/recipes/surface/yieldInUrl';
   import { formatDate, m } from '$shell/i18n';
-  import type { ListedDay } from './plannedMeals';
+  import type { ListedDay, ListedMeal } from './listedMeals';
   import { amountOf } from './shoppingAmount';
 
   /**
-   * Which planned meals the list is made of, day by day, so a total can be traced to the meal behind it.
-   * Days already past are named as such and stay on the list: nothing is dropped for being old, a person ticks or removes it,
-   * here a past meal's lines at once.
+   * Which meals and recipes the list is made of, day by day (recipes added by themselves last), so a total can be
+   * traced to what asked for it and any of them taken back off, planned for later or already past. Days already
+   * past are named as such and stay: nothing is dropped for being old. Bought lines stay under their meal, struck
+   * through, and the meal says how far along it is.
    */
   interface Props {
     days: readonly ListedDay[];
-    /** Takes one planned meal's unbought lines off the list. */
-    onwithdraw?: (planEntryId: string, title: string) => void;
+    /** Takes one meal's (or recipe's) unbought lines off the list. */
+    onwithdraw?: (meal: ListedMeal) => void;
   }
 
   let { days, onwithdraw }: Props = $props();
 
   /** At the servings the meal is planned for, while the plan still holds it (today on). */
-  const recipeHref = (meal: ListedDay['meals'][number]) =>
+  const recipeHref = (meal: ListedMeal) =>
     hrefAtYield(
       resolve('/(app)/recipes/[recipeId]', { recipeId: meal.recipeId }),
       meal.planEntryId ? upcoming.mealOf(meal.planEntryId)?.servings : null
@@ -55,10 +56,10 @@
         >
       {/snippet}
 
-      {#each days as day (day.date)}
+      {#each days as day (day.date ?? 'alone')}
         <section class="day">
           <h3 class="date">
-            {dayLabel(day.date)}
+            {day.date ? dayLabel(day.date) : m['shopping.meals.direct']()}
             {#if day.isPast}<span class="past">{m['shopping.meals.past']()}</span>{/if}
           </h3>
           {#if day.isPast}<p class="note">{m['shopping.meals.pastNote']()}</p>{/if}
@@ -72,12 +73,16 @@
                     <a href={recipeHref(meal)}>{meal.recipeTitle}</a>
                     {#if slotOf(meal.slot)}<span class="slot">{slotOf(meal.slot)}</span>{/if}
                   </p>
-                  {#if day.isPast && meal.planEntryId && onwithdraw}
-                    {@const entryId = meal.planEntryId}
+                  {#if meal.done > 0}
+                    <span class="progress">
+                      {m['shopping.meals.progress']({ done: meal.done, total: meal.lines.length })}
+                    </span>
+                  {/if}
+                  {#if onwithdraw && (meal.planEntryId || !day.date)}
                     <Button
                       size="sm"
                       label={m['shopping.meals.withdraw.label']({ title: meal.recipeTitle })}
-                      onclick={() => onwithdraw(entryId, meal.recipeTitle)}
+                      onclick={() => onwithdraw(meal)}
                     >
                       {m['shopping.meals.withdraw']()}
                     </Button>
@@ -85,7 +90,7 @@
                 </div>
                 <ul class="lines">
                   {#each meal.lines as line (line.itemId)}
-                    <li>
+                    <li class:checked={line.checked}>
                       {line.name}
                       {#if amountOf(line.quantity, line.unit)}<span class="amount"
                           >{amountOf(line.quantity, line.unit)}</span
@@ -169,6 +174,16 @@
   }
   .amount {
     font-variant-numeric: tabular-nums;
+  }
+  .progress {
+    margin-inline-start: auto;
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-variant-numeric: tabular-nums;
+  }
+  .checked {
+    color: var(--text-subtle);
+    text-decoration: line-through;
   }
   .lines {
     gap: var(--space-1);
