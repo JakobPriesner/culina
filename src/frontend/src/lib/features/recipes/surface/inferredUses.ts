@@ -13,6 +13,9 @@ import type { Ingredient, Step } from '../types';
  *    ("Zwiebeln" → "Gemüsezwiebel", "Salz" → "Meersalz", "Öl" → "Olivenöl");
  * 3. a compound that starts with it ("Knoblauch" → "Knoblauchzehen"),
  *    so "Tomaten" finds the tomatoes and not the "Tomatenmark" when both are listed.
+ *
+ * Each ingredient goes to the first step that names it: "cook the spaghetti" and later "drain the
+ * spaghetti" are one 250 g, and listing it under both steps read as 500 g.
  */
 
 /** Endings a German or English noun gains in a recipe: plural, case, or a linking -s. */
@@ -61,6 +64,8 @@ export function inferUses(steps: readonly Step[], ingredients: readonly Ingredie
     words: wordsOf(ingredient.name)
   }));
 
+  const placed = new Set<string>();
+
   return steps.map((step) => {
     const found = new Set<string>();
 
@@ -80,8 +85,14 @@ export function inferUses(steps: readonly Step[], ingredients: readonly Ingredie
       }
     }
 
-    return ingredients
-      .filter((ingredient) => found.has(ingredient.id))
-      .map((ingredient) => ingredient.id);
+    const firstHere = ingredients.filter(
+      (ingredient) => found.has(ingredient.id) && !placed.has(ingredient.id)
+    );
+
+    for (const ingredient of firstHere) {
+      placed.add(ingredient.id);
+    }
+
+    return firstHere.map((ingredient) => ingredient.id);
   });
 }

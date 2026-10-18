@@ -57,6 +57,13 @@
     <ol class="list" bind:this={list}>
       {#each steps as step, index (step.id ?? index)}
         {@const needs = needsOf(step)}
+        <!-- What the words already show as an amount pill is not said again above them. -->
+        {@const unsaid = needs.filter(
+          (one) =>
+            !step.segments.some(
+              (segment) => segment.kind === 'ingredient' && segment.ingredientId === one.id
+            )
+        )}
         {@const note = step.id ? stepNote?.(step.id).trim() : ''}
 
         <li class="step" class:current={cooking && index === currentStep}>
@@ -85,8 +92,8 @@
 
               <!-- Planning list goes before the words: get these out, then do this. Per-step and
                    lone-step lists are already shown beside it. -->
-              {#if !perStep && divisible && needs.length > 0}
-                <StepNeeds ingredients={needs} {scaling} />
+              {#if !perStep && divisible && unsaid.length > 0}
+                <StepNeeds ingredients={unsaid} {scaling} />
               {/if}
 
               <StepText

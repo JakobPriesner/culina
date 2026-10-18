@@ -44,6 +44,28 @@ const amount = () => screen.getByRole('textbox', { name: 'Amount' });
 const apply = () => screen.getByRole('button', { name: 'Scale the recipe' });
 
 describe('scaling to what is in the cupboard', () => {
+  it('opens on an ingredient, never a blank choice', () => {
+    const two = {
+      ...recipe,
+      groups: [
+        {
+          id: 'g1',
+          name: null,
+          ingredients: [
+            ...recipe.groups[0]!.ingredients,
+            { id: 'i-onion', name: 'onions', note: null, quantity: { value: 2, unit: null } }
+          ]
+        }
+      ]
+    };
+
+    renderWithProviders(ScaleToAmountSheet, {
+      props: { open: true, recipe: two, startWith: 'i-onion', onapply: () => {} }
+    });
+
+    expect(screen.getByRole('combobox', { name: 'Ingredient' })).toHaveValue('i-onion');
+  });
+
   it('suggests the ingredient’s own amount as the example', () => {
     renderWithProviders(ScaleToAmountSheet, { props: { open: true, recipe, onapply: () => {} } });
 

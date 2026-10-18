@@ -18,9 +18,11 @@
     onhover?: (ingredientId: string | null) => void;
     /** Whether a name is still to buy on the shopping list. */
     onTheList?: (name: string) => boolean;
+    /** Makes each measured amount a way to scale the recipe to what there is of it. */
+    onscaleto?: (ingredientId: string) => void;
   }
 
-  let { ingredients, scaling, highlighted = null, onhover, onTheList }: Props = $props();
+  let { ingredients, scaling, highlighted = null, onhover, onTheList, onscaleto }: Props = $props();
 
   const lines = $derived(combineIngredients(ingredients));
 </script>
@@ -32,6 +34,7 @@
       {scaling}
       highlighted={highlighted !== null && line.ids.includes(highlighted)}
       listed={onTheList?.(line.name) ?? false}
+      {onscaleto}
       onhover={(ids) => onhover?.(ids && ids.length > 0 ? (ids[0] ?? null) : null)}
     />
   {/each}
