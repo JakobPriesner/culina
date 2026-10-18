@@ -164,7 +164,7 @@
     <CookedWrapUp {recipeId} householdId={session.activeHouseholdId} />
 
     {#if !inheritedFrom && recipes.detail.steps.length === 0 && everyIngredient(recipes.detail).length === 0}
-      <RecipeStub {recipeId} />
+      <RecipeStub recipe={recipes.detail} />
     {/if}
 
     <RecipeSurface

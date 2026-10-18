@@ -2024,5 +2024,11 @@
   "shopping.merge.done": "“{from}” is now “{to}”, here and in your recipes.",
   "shopping.merge.apart": "Their amounts do not add up, so the two lines stay apart.",
   "picker.quick": "Narrow it down",
-  "picker.quick.minutes": "Up to {count} min"
+  "picker.quick.minutes": "Up to {count} min",
+  "recipe.stub.paste": "Paste text or a link",
+  "recipe.stub.idea": "Write it from an idea",
+  "recipe.stub.filled": "Filled in. Check it over in the editor.",
+  "recipe.stub.fillHint": "Fills this recipe in place: it stays on the plan, with your notes.",
+  "picker.createStub": "Add “{title}” as a new recipe",
+  "picker.createStub.hint": "Just the name for now; fill it in later."
 }

@@ -79,6 +79,7 @@
   title={date ? m['plan.pick.titleFor']({ day: longDay(date) }) : m['plan.pick.title']()}
   cookbookId={narrowedTo ?? undefined}
   suggestFor={slot}
+  stubs
   {taken}
   {notes}
   {onpick}

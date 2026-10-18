@@ -72,6 +72,49 @@ const props = (over: Record<string, unknown> = {}) => ({
 });
 
 describe('the recipe picker', () => {
+  it('offers a name nothing is called as a new recipe, and picks it at once', async () => {
+    const onpick = vi.fn();
+    const created = {
+      recipeId: 'r9',
+      householdId: 'h1',
+      title: 'Linsen-Dal',
+      language: 'de',
+      yieldAmount: 2,
+      yieldKind: 'servings',
+      groups: [],
+      steps: [],
+      tags: [],
+      createdBy: 'u1',
+      createdAt: '2026-10-18T00:00:00Z',
+      updatedAt: '2026-10-18T00:00:00Z',
+      version: 1
+    };
+    const base = vi.mocked(fetch);
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: Request) =>
+        input.method === 'POST'
+          ? Promise.resolve(new Response(JSON.stringify(created), { status: 201 }))
+          : base(input)
+      )
+    );
+
+    renderWithProviders(RecipePicker, { props: props({ stubs: true, onpick }) });
+
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Find a recipe' }), 'Linsen-Dal');
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: /Add “Linsen-Dal” as a new recipe/ })
+    );
+
+    await vi.waitFor(() =>
+      expect(onpick).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'r9', title: 'Linsen-Dal' })
+      )
+    );
+  });
+
   it('narrows to a weeknight in one tap, where the choosing happens', async () => {
     renderWithProviders(RecipePicker, { props: props() });
 
