@@ -1,4 +1,5 @@
 <script lang="ts">
+  import type { AppError } from '$api';
   import { Button, EmptyState, ErrorState, ProgressBar } from '$ds';
   import { units } from '$features/recipes/stores/units.svelte';
   import { session } from '$features/auth/session.svelte';
@@ -7,7 +8,10 @@
   import ShoppingFinishedNote from '$features/shopping/ShoppingFinishedNote.svelte';
   import ShoppingHeader from '$features/shopping/ShoppingHeader.svelte';
   import ShoppingMeals from '$features/shopping/ShoppingMeals.svelte';
-  import { plannedMealsOf } from '$features/shopping/plannedMeals';
+  import { ingredientNames } from '$features/ingredients/stores/ingredientNames.svelte';
+  import { foldText } from '$features/recipes/foldText';
+  import { amountOf } from '$features/shopping/shoppingAmount';
+  import { listedMealsOf, type ListedMeal } from '$features/shopping/listedMeals';
   import ShoppingListSkeleton from '$features/shopping/ShoppingListSkeleton.svelte';
   import ShoppingRecipePicker from '$features/shopping/ShoppingRecipePicker.svelte';
   import ShoppingSection from '$features/shopping/ShoppingSection.svelte';
@@ -34,7 +38,7 @@
   const shop = trackShopFinished();
 
   /** Which planned meals the lines still to buy come from, so an old one is seen for what it is rather than silently added up. */
-  const plannedMeals = $derived(plannedMealsOf(shopping.items, asDate(new Date())));
+  const plannedMeals = $derived(listedMealsOf(shopping.items, asDate(new Date())));
 
   /** A progress bar needs at least one line: over an empty list it would show nought per cent. */
   const started = $derived(shopping.status === 'ready' && shopping.items.length > 0);
@@ -53,18 +57,107 @@
     }
   });
 
-  /** A past meal's unbought lines off in one go; what was ticked stays, it is in the cupboard. */
-  async function withdraw(planEntryId: string, title: string) {
+  /** A meal's (or a recipe's) unbought lines off in one go; what was ticked stays, it is in the cupboard. */
+  async function withdraw(meal: ListedMeal) {
     if (!householdId) {
       return;
     }
 
-    const failure = await shopping.withdrawMeal(householdId, planEntryId);
+    const title = meal.recipeTitle;
+    const failure = meal.planEntryId
+      ? await shopping.withdrawMeal(householdId, meal.planEntryId)
+      : await shopping.withdrawRecipe(householdId, meal.recipeId);
 
     toaster.show(
       failure
         ? { message: () => explain(failure), tone: 'danger' }
         : { message: () => m['shopping.meals.withdrawn']({ title }), tone: 'success' }
+    );
+  }
+
+  // The name merges the household's recipes suggest, offered on the lines they are about.
+  $effect(() => {
+    if (householdId) {
+      void ingredientNames.load(householdId);
+    }
+  });
+
+  /** The line still to buy whose name a pending merge says this line is the same thing as. */
+  function mergeTarget(item: ShoppingItem) {
+    if (!householdId || item.isChecked) return null;
+
+    const name = foldText(item.name.trim());
+    const suggestion = ingredientNames
+      .suggestions(householdId)
+      .find((one) => foldText(one.from.name) === name);
+    const target =
+      suggestion &&
+      shopping.items.find(
+        (other) => !other.isChecked && foldText(other.name.trim()) === foldText(suggestion.to.name)
+      );
+
+    return suggestion && target ? { suggestion, target } : null;
+  }
+
+  async function changeAmount(item: ShoppingItem, amount: number) {
+    if (!householdId) return;
+
+    const failure = await shopping.setQuantity(householdId, item.itemId, amount);
+
+    toaster.show(
+      failure
+        ? { message: () => explain(failure), tone: 'danger' }
+        : {
+            message: () =>
+              m['shopping.quantity.done']({ name: item.name, amount: amountOf(amount, item.unit) })
+          }
+    );
+  }
+
+  /**
+   * One name from now on (the recipes too), and one line here where the amounts add up: the other line takes
+   * this one's amount and this one goes. Amounts in units that do not add stay two lines, and it says so.
+   */
+  async function merge(item: ShoppingItem) {
+    const found = mergeTarget(item);
+
+    if (!householdId || !found) return;
+
+    const { suggestion, target } = found;
+    const merged = await ingredientNames.merge(
+      householdId,
+      suggestion.from.name,
+      suggestion.to.name
+    );
+
+    if (!merged.ok) {
+      toaster.show({ message: () => explain(merged.error), tone: 'danger' });
+
+      return;
+    }
+
+    const adds = (item.unit ?? null) === (target.unit ?? null);
+    let failure: AppError | null = null;
+
+    if (adds && item.quantity && target.quantity) {
+      failure = await shopping.setQuantity(
+        householdId,
+        target.itemId,
+        target.quantity + item.quantity
+      );
+
+      if (!failure) {
+        await shopping.remove(householdId, item.itemId);
+      }
+    }
+
+    toaster.show(
+      failure
+        ? { message: () => explain(failure), tone: 'danger' }
+        : {
+            message: () =>
+              `${m['shopping.merge.done']({ from: suggestion.from.name, to: suggestion.to.name })}${adds ? '' : ` ${m['shopping.merge.apart']()}`}`
+          }
     );
   }
 
@@ -147,10 +240,7 @@
     </div>
   {/if}
 
-  <ShoppingMeals
-    days={plannedMeals}
-    onwithdraw={(entryId, title) => void withdraw(entryId, title)}
-  />
+  <ShoppingMeals days={plannedMeals} onwithdraw={(meal) => void withdraw(meal)} />
 
   <ShoppingAddLine {householdId} onaddrecipe={() => (picking = true)} />
 
@@ -184,6 +274,9 @@
         oncheck={check}
         onremove={remove}
         onmove={(item, section) => void move(item, section)}
+        onquantity={(item, amount) => void changeAmount(item, amount)}
+        sameAs={(item) => mergeTarget(item)?.suggestion.to.name ?? null}
+        onmerge={(item) => void merge(item)}
       />
     {/each}
 

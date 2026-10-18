@@ -212,15 +212,25 @@ public sealed class ShoppingListItem
         return counted;
     }
 
+    /// <summary>Whether a recipe added by itself (no planned meal) asked for any of it.</summary>
+    public bool IsForRecipeAlone(Guid recipeId) =>
+        sources.Exists(source => source.RecipeId == recipeId && source.PlanEntryId is null);
+
     /// <summary>
     /// Takes back exactly what a planned meal asked for; returns whether anything is still left to
     /// buy (another recipe, typed, or unused amount).
     /// </summary>
-    public bool Withdraw(Guid planEntryId)
+    public bool Withdraw(Guid planEntryId) => Withdraw(source => source.PlanEntryId == planEntryId);
+
+    /// <summary>Takes back exactly what a recipe added by itself asked for; as <see cref="Withdraw(Guid)"/>.</summary>
+    public bool WithdrawRecipeAlone(Guid recipeId) =>
+        Withdraw(source => source.RecipeId == recipeId && source.PlanEntryId is null);
+
+    private bool Withdraw(Func<ShoppingItemSource, bool> asked)
     {
         var usedUp = false;
 
-        foreach (var source in sources.Where(source => source.PlanEntryId == planEntryId).ToList())
+        foreach (var source in sources.Where(asked).ToList())
         {
             sources.Remove(source);
 

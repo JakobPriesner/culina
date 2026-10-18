@@ -15,9 +15,25 @@
     oncheck: (item: ShoppingItem, checked: boolean) => void;
     onremove: (item: ShoppingItem) => void;
     onmove: (item: ShoppingItem, section: Section) => void;
+    onquantity?: (item: ShoppingItem, amount: number) => void;
+    /** The other line's name a pending name merge says this line is, if any. */
+    sameAs?: (item: ShoppingItem) => string | null;
+    onmerge?: (item: ShoppingItem) => void;
   }
 
-  let { label, count, apart = false, items, action, oncheck, onremove, onmove }: Props = $props();
+  let {
+    label,
+    count,
+    apart = false,
+    items,
+    action,
+    oncheck,
+    onremove,
+    onmove,
+    onquantity,
+    sameAs,
+    onmerge
+  }: Props = $props();
 </script>
 
 {#snippet rows()}
@@ -30,6 +46,9 @@
         oncheck={(isChecked) => oncheck(item, isChecked)}
         onremove={() => onremove(item)}
         onmove={(section) => onmove(item, section)}
+        onquantity={onquantity ? (amount) => onquantity(item, amount) : undefined}
+        sameAs={sameAs?.(item) ?? null}
+        onmerge={onmerge ? () => onmerge(item) : undefined}
       />
     {/each}
   </ul>

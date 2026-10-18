@@ -128,4 +128,7 @@ public sealed record UpdateItemRequest
 
     /// <summary>Where it actually belongs, when the guess was wrong.</summary>
     public string? Section { get; init; }
+
+    /// <summary>How much to buy now, in the line's own unit: a person correcting the sum.</summary>
+    public decimal? Quantity { get; init; }
 }

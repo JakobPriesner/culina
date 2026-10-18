@@ -5785,6 +5785,68 @@
         }
       }
     },
+    "/api/v1/households/{householdId}/shopping-list/recipes/{recipeId}": {
+      "delete": {
+        "tags": [
+          "Shopping"
+        ],
+        "summary": "Remove a recipe's ingredients",
+        "description": "Subtracts exactly what the recipe contributed when it was added by itself (not for a planned meal). A planned meal of the same recipe keeps its share, typed lines stay, and ticked lines stay because they have been bought. Repeating it changes nothing.",
+        "operationId": "withdrawRecipeFromShoppingListV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "recipeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/households/{householdId}/shopping-list/items/{itemId}": {
       "patch": {
         "tags": [
@@ -16735,6 +16797,12 @@
             ],
             "type": "string",
             "description": "Where it actually belongs, when the guess was wrong.",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "number",
+            "description": "How much to buy now, in the line's own unit: a person correcting the sum.",
+            "format": "double",
             "nullable": true
           }
         },

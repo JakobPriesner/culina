@@ -200,13 +200,33 @@ public sealed class ShoppingList
     /// <summary>Takes back exactly what a planned meal put on the list.</summary>
     /// <returns>How many lines changed.</returns>
     /// <remarks>Ticked lines stay (already bought); lines other meals still want keep their share.</remarks>
-    public int Withdraw(Guid planEntryId)
+    public int Withdraw(Guid planEntryId) =>
+        Withdraw(item => item.IsFor(planEntryId), item => item.Withdraw(planEntryId));
+
+    /// <summary>Takes back exactly what a recipe added by itself put on the list, as for a planned meal.</summary>
+    /// <returns>How many lines changed.</returns>
+    public int WithdrawRecipeAlone(Guid recipeId) =>
+        Withdraw(item => item.IsForRecipeAlone(recipeId), item => item.WithdrawRecipeAlone(recipeId));
+
+    /// <summary>Sets a line's amount outright, in the unit it already has; a person correcting what to buy.</summary>
+    public Result SetAmount(Guid itemId, decimal amount) =>
+        Find(itemId).Bind(item => amount is <= 0 or > 100_000
+            ? Result.Failure(ShoppingErrors.InvalidQuantity)
+            : Quantity.Create(amount, item.Quantity.Unit).Bind(quantity =>
+            {
+                item.SetQuantity(quantity);
+                Version += 1;
+
+                return Result.Success();
+            }));
+
+    private int Withdraw(Func<ShoppingListItem, bool> asked, Func<ShoppingListItem, bool> keepAfter)
     {
-        var changed = items.Where(item => !item.IsChecked && item.IsFor(planEntryId)).ToList();
+        var changed = items.Where(item => !item.IsChecked && asked(item)).ToList();
 
         foreach (var item in changed)
         {
-            if (!item.Withdraw(planEntryId))
+            if (!keepAfter(item))
             {
                 items.Remove(item);
             }

@@ -1,10 +1,13 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { ActionMenu, Checkbox, IconButton } from '$ds';
+  import { tick } from 'svelte';
+
+  import { ActionMenu, Button, Checkbox, IconButton, TextInput } from '$ds';
 
   import type { MealSlot } from '$features/planning/mealPlan.svelte';
   import { slotLabel } from '$features/planning/slots';
   import { upcoming } from '$features/planning/upcoming.svelte';
+  import { unitLabel } from '$features/recipes/quantityLabels';
   import { hrefAtYield } from '$features/recipes/surface/yieldInUrl';
   import { haptics } from '$shell/haptics';
   import { formatDate, m } from '$shell/i18n';
@@ -23,9 +26,45 @@
     onmove: (section: Section) => void;
     /** Whether this line says why it is listed apart; false for all but the last of several lines of one thing. */
     noted?: boolean;
+    /** Sets how much to buy, in the line's own unit. */
+    onquantity?: (amount: number) => void;
+    /** Another line's name the household's names suggest this is the same thing as. */
+    sameAs?: string | null;
+    /** Accepts that suggestion: one name from now on, and one line where the amounts add up. */
+    onmerge?: () => void;
   }
 
-  let { item, oncheck, onremove, onmove, noted = true }: Props = $props();
+  let {
+    item,
+    oncheck,
+    onremove,
+    onmove,
+    noted = true,
+    onquantity,
+    sameAs = null,
+    onmerge
+  }: Props = $props();
+
+  let changing = $state(false);
+  let typed = $state('');
+
+  async function changeAmount() {
+    typed = item.quantity === null || item.quantity === undefined ? '' : String(item.quantity);
+    changing = true;
+    await tick();
+    document.getElementById(`shopping-quantity-${item.itemId}`)?.focus();
+  }
+
+  function saveAmount(event: SubmitEvent) {
+    event.preventDefault();
+
+    const amount = Number(String(typed).replace(',', '.'));
+
+    if (Number.isFinite(amount) && amount > 0) {
+      onquantity?.(amount);
+      changing = false;
+    }
+  }
 
   let showingSources = $state(false);
 
@@ -102,38 +141,71 @@
             : m['shopping.sources.show']({ count: sources.length })}
         </button>
       {/if}
+      {#if onquantity && !item.isChecked}
+        <button type="button" class="item" onclick={() => void changeAmount()}>
+          {m['shopping.quantity.change']()}
+        </button>
+      {/if}
       <button type="button" class="item danger" onclick={onremove}
         >{m['shopping.remove']({ name: item.name })}</button
       >
       {#if !item.isChecked}
         <hr class="separator" />
         <p class="heading">{m['shopping.move.heading']()}</p>
-        {#each sectionOrder as section (section)}
-          {@const current = section === item.section}
-          <button
-            type="button"
-            class="item"
-            aria-current={current || undefined}
-            onclick={() => move(section)}
-          >
-            <span class="mark" aria-hidden="true">
-              {#if current}
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"><path d="m5 12 5 5 9-10" /></svg
-                >
-              {/if}
-            </span>
-            {nameOf(section)}
-          </button>
-        {/each}
+        <div class="sections">
+          {#each sectionOrder as section (section)}
+            {@const current = section === item.section}
+            <button
+              type="button"
+              class="item"
+              aria-current={current || undefined}
+              onclick={() => move(section)}
+            >
+              <span class="mark" aria-hidden="true">
+                {#if current}
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"><path d="m5 12 5 5 9-10" /></svg
+                  >
+                {/if}
+              </span>
+              {nameOf(section)}
+            </button>
+          {/each}
+        </div>
       {/if}
     </ActionMenu>
   </div>
+  {#if changing}
+    <form class="quantity" onsubmit={saveAmount}>
+      <TextInput
+        id="shopping-quantity-{item.itemId}"
+        label={m['shopping.quantity.label']({ name: item.name })}
+        type="number"
+        inputmode="decimal"
+        min={0}
+        step={0.1}
+        bind:value={typed}
+      />
+      {#if item.unit}<span class="unit">{unitLabel(item.unit)}</span>{/if}
+      <Button size="sm" variant="primary" type="submit">{m['shopping.quantity.save']()}</Button>
+      <Button size="sm" variant="ghost" onclick={() => (changing = false)}>
+        {m['shopping.quantity.cancel']()}
+      </Button>
+    </form>
+  {/if}
+  {#if sameAs && onmerge && !item.isChecked}
+    <p class="merge">
+      {m['shopping.merge.ask']({ other: sameAs })}
+      <button type="button" class="merge-action" onclick={onmerge}>
+        {m['shopping.merge.action']()}
+      </button>
+    </p>
+  {/if}
   {#if item.isListedSeparately && !item.isChecked && noted}
     <p class="separate">{m['shopping.separate']()}</p>
   {/if}
@@ -235,6 +307,43 @@
   .source-name {
     color: var(--text);
     font-weight: var(--weight-medium);
+  }
+  /* Eleven sections as a compact grid rather than a long column of buttons. */
+  .sections {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .quantity {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    grid-column: 1 / -1;
+    padding: 0 0 var(--space-3) calc(var(--space-6) + var(--space-3));
+  }
+  .quantity :global(input) {
+    width: 7rem;
+  }
+  .unit {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+  .merge {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 0 0 var(--space-2) calc(var(--space-6) + var(--space-3));
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+  }
+  .merge-action {
+    margin-inline-start: var(--space-2);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-weight: var(--weight-medium);
+    cursor: pointer;
   }
   .separate {
     grid-column: 1 / -1;

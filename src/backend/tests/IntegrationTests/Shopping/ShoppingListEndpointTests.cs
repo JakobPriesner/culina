@@ -599,6 +599,51 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task WithdrawRecipe_ShouldTakeBackWhatItAddedByItself_AndLeaveAPlannedMealsShare()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var cake = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+        var biscuits = await RecipeWithButterAsync(client, householdId, "Biscuits", 50);
+
+        await PlanAsync(client, householdId, cake, Monday);
+        await AddWeekAsync(client, householdId);
+        await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/recipes",
+            new { recipeId = biscuits, servings = 4 },
+            Token);
+
+        var response = await client.DeleteAsync(
+            $"/api/v1/households/{householdId}/shopping-list/recipes/{biscuits}",
+            Token);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(200m, Butter(response).GetProperty("quantity").GetDecimal());
+    }
+
+    [Fact]
+    public async Task UpdateItem_ShouldSetHowMuchToBuy_InTheLinesOwnUnit()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var cake = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+        var added = await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/recipes",
+            new { recipeId = cake, servings = 4 },
+            Token);
+        var itemId = Butter(added).GetProperty("itemId").GetGuid();
+
+        var response = await client.PatchAsync(
+            $"/api/v1/households/{householdId}/shopping-list/items/{itemId}",
+            new { quantity = 250 },
+            Token);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(250m, Butter(response).GetProperty("quantity").GetDecimal());
+        Assert.Equal("g", Butter(response).GetProperty("unit").GetString());
+    }
+
+    [Fact]
     public async Task WithdrawPlannedMeal_ShouldTakeBackExactlyWhatThatMealAdded()
     {
         using var client = await SignedInAsync();
