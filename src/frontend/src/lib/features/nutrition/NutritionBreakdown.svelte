@@ -9,23 +9,14 @@
   import { preferences } from '$shell/preferences.svelte';
   import { toaster } from '$shell/toaster.svelte';
   import type { Scaling } from '$features/recipes/surface/scaled.svelte';
-  import { everyIngredient, type Ingredient, type RecipeReading } from '$features/recipes/types';
-  import { unitLabel } from '$features/recipes/quantityLabels';
+  import type { Ingredient, RecipeReading } from '$features/recipes/types';
 
   import { wholeOrTenth } from './format';
-  import { gramsWords } from './weights';
   import { perWords } from './headline';
   import { roundForLabel } from './rounding';
-  import { nutrition as store } from './stores/nutrition.svelte';
-  import type {
-    Correction,
-    FoodHit,
-    Nutrition,
-    NutritionFood,
-    NutritionLine,
-    NutritionReason,
-    NutritionStatus
-  } from './types';
+  import { createLineCorrection, foodIn } from './lineCorrection.svelte';
+  import LineCorrectionSheet from './LineCorrectionSheet.svelte';
+  import type { Nutrition, NutritionLine, NutritionReason, NutritionStatus } from './types';
 
   /**
    * What became of each ingredient, so the rows add up to the headline. Amounts and grams follow the
@@ -43,51 +34,7 @@
 
   let { nutrition, recipe, scaling, householdId }: Props = $props();
 
-  interface Row {
-    readonly ingredient: Ingredient;
-    readonly line: NutritionLine;
-  }
-
-  /** In recipe order; a line whose ingredient has just been edited away waits for the next answer. */
-  const rows = $derived.by(() => {
-    const written = new Map(everyIngredient(recipe).map((one) => [one.id, one] as const));
-
-    return nutrition.ingredients.flatMap((line): Row[] => {
-      const ingredient = written.get(line.ingredientId);
-
-      return ingredient ? [{ ingredient, line }] : [];
-    });
-  });
-
-  /** The row whose sheet is open; read from `rows` so the sheet shows what the answer now says. */
   let section = $state<HTMLElement>();
-  let editing = $state<string | null>(null);
-  // The sheet is downloaded the first time a line is corrected, not with the recipe; then it stays to fade out.
-  let corrected = $state(false);
-
-  function edit(id: string) {
-    editing = id;
-    corrected = true;
-  }
-
-  const editedRow = $derived(rows.find((row) => row.ingredient.id === editing) ?? null);
-
-  /** The same name on other lines of this recipe changes with it; the server folds names, this only stands in until it answers. */
-  const sameName = (name: string) =>
-    rows
-      .filter((row) => row.ingredient.name.trim().toLowerCase() === name.trim().toLowerCase())
-      .map((row) => row.ingredient.id);
-
-  /** The word for the unit of a line as the recipe writes it, so the question names what the cook sees ("clove", "tbsp", a household's own word). */
-  const unitWordOf = ({ ingredient, line }: Row) =>
-    line.unitKey ? unitLabel(ingredient.quantity.unit ?? line.unitKey) : null;
-
-  /** What one unit weighs, as far as the line says: its grams at the recipe's own yield over the amount written. */
-  const perUnitOf = ({ ingredient, line }: Row) => {
-    const amount = ingredient.quantity.value;
-
-    return line.grams !== null && amount !== null && amount > 0 ? line.grams / amount : null;
-  };
 
   /** Moves focus back to the row's button and says how it went: the row may have moved between the groups, which makes its button a new element. */
   async function finish(label: string, failure: AppError | null, said: () => string) {
@@ -99,82 +46,19 @@
     toaster.show(failure ? { message: () => explain(failure), tone: 'danger' } : { message: said });
   }
 
-  /** Applies a correction: the sheet closes, the rows change at once, and a refusal puts them back and says why. */
-  async function correct(correction: Correction) {
-    const row = editedRow;
+  const correction = createLineCorrection({
+    recipe: () => recipe,
+    nutrition: () => nutrition,
+    householdId: () => householdId,
+    after: finish
+  });
 
-    editing = null;
-
-    if (!row || !householdId) {
-      return;
-    }
-
-    const label = m['nutrition.change']({ name: row.ingredient.name });
-
-    const { name } = row.ingredient;
-    const failure = await store.correct(recipe.id, householdId, name, sameName(name), correction);
-
-    await finish(label, failure, () => saidAfter(name, correction));
-  }
-
-  /** Says what one unit weighs, or (null) takes it back; it counts for every line of the household with this name in this unit. */
-  async function weigh(grams: number | null) {
-    const row = editedRow;
-    const unit = row ? unitWordOf(row) : null;
-
-    editing = null;
-
-    if (!row || !householdId || !row.line.unitKey || !unit) {
-      return;
-    }
-
-    const label = m['nutrition.change']({ name: row.ingredient.name });
-    const { name } = row.ingredient;
-    const { unitKey } = row.line;
-    const ids = rows
-      .filter((one) => sameName(name).includes(one.ingredient.id) && one.line.unitKey === unitKey)
-      .map((one) => one.ingredient.id);
-    const failure = await store.weigh(recipe.id, householdId, name, unitKey, ids, grams);
-
-    await finish(label, failure, () =>
-      grams === null
-        ? m['nutrition.weight.doneRemoved']({ name, unit })
-        : m['nutrition.weight.done']({ name, unit, grams: gramsWords(grams) })
-    );
-  }
-
-  const saidAfter = (name: string, correction: Correction) => {
-    switch (correction.kind) {
-      case 'food':
-        return m['nutrition.correct.done']({ name, food: foodIn(correction.food) });
-      case 'exclude':
-        return m['nutrition.correct.doneExcluded']({ name });
-      case 'default':
-        // Read after the new answer: an heir that takes its choice back counts what it inherits, if anything.
-        return rows.some((row) => row.ingredient.name === name && row.line.corrected)
-          ? m['nutrition.correct.doneUndone']({ name })
-          : m['nutrition.correct.doneDefault']({ name });
-    }
-  };
-
-  // A food from the search has no label of its own: its label is its name.
-  const choose = (hit: FoodHit) =>
-    correct({
-      kind: 'food',
-      food: {
-        code: hit.code,
-        source: hit.source,
-        nameDe: hit.nameDe,
-        nameEn: hit.nameEn,
-        labelDe: hit.nameDe,
-        labelEn: hit.nameEn
-      }
-    });
+  /** In recipe order; a line whose ingredient has just been edited away waits for the next answer. */
+  const rows = $derived(correction.rows);
+  const edit = (id: string) => correction.edit(id);
 
   const counted = $derived(rows.filter((row) => row.line.status === 'counted'));
   const notCounted = $derived(rows.filter((row) => row.line.status !== 'counted'));
-
-  const foodIn = (one: NutritionFood) => (preferences.locale === 'de' ? one.labelDe : one.labelEn);
 
   const food = (line: NutritionLine) => (line.food ? foodIn(line.food) : '');
 
@@ -350,7 +234,11 @@
             {@render written(ingredient)}
             <span class="detail">{reason(line)}</span>
             {#if householdId && line.unitKey}
-              <button type="button" class="weigh" onclick={() => edit(ingredient.id)}>
+              <button
+                type="button"
+                class="weigh"
+                onclick={() => correction.edit(ingredient.id, true)}
+              >
                 {m['nutrition.weight.set']()}<VisuallyHidden>{ingredient.name}</VisuallyHidden>
               </button>
             {/if}
@@ -363,22 +251,7 @@
   {/if}
 </section>
 
-{#if corrected}
-  {#await import('./NutritionCorrectionSheet.svelte') then { default: NutritionCorrectionSheet }}
-    <NutritionCorrectionSheet
-      name={editedRow?.ingredient.name ?? null}
-      {householdId}
-      line={editedRow?.line ?? null}
-      unit={editedRow ? unitWordOf(editedRow) : null}
-      perUnit={editedRow ? perUnitOf(editedRow) : null}
-      onchoose={choose}
-      onweigh={(grams) => void weigh(grams)}
-      onexclude={() => void correct({ kind: 'exclude' })}
-      onreset={() => void correct({ kind: 'default' })}
-      onclose={() => (editing = null)}
-    />
-  {/await}
-{/if}
+<LineCorrectionSheet {correction} {householdId} />
 
 <style>
   .breakdown {

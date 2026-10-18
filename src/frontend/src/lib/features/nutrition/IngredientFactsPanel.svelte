@@ -135,7 +135,8 @@
     <ul class="facts" aria-label={m['household.ingredients.title']()}>
       {#each facts as fact (fact.name)}
         <li class="fact">
-          <h3 class="name">{fact.name}</h3>
+          <!-- Names are kept as the recipes fold them ("petersilie"); a heading starts with a capital. -->
+          <h3 class="name">{fact.name.charAt(0).toLocaleUpperCase()}{fact.name.slice(1)}</h3>
 
           <ul class="lines">
             {#if fact.corrected}

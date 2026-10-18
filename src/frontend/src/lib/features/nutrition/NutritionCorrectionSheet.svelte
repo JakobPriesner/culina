@@ -38,6 +38,8 @@
     onreset: () => void;
     /** Says what one unit weighs, or (null) forgets what the household said. */
     onweigh?: (grams: number | null) => void;
+    /** Opened to give the weight: that question comes first, focused, rather than below the fold. */
+    weighFirst?: boolean;
     onclose: () => void;
   }
 
@@ -51,6 +53,7 @@
     onexclude,
     onreset,
     onweigh,
+    weighFirst = false,
     onclose
   }: Props = $props();
 
@@ -269,6 +272,20 @@
 
     return null;
   }
+
+  // After the sheet has moved focus to its own first control: the grams are what this opening is for.
+  $effect(() => {
+    if (opening === null || !weighFirst) return;
+
+    const timer = setTimeout(() => {
+      const field = document.querySelector<HTMLInputElement>('.weight input');
+
+      field?.scrollIntoView({ block: 'center' });
+      field?.focus({ preventScroll: true });
+    }, 120);
+
+    return () => clearTimeout(timer);
+  });
 </script>
 
 {#snippet mark(here: boolean)}
@@ -288,6 +305,29 @@
   </span>
 {/snippet}
 
+{#snippet weightQuestion()}
+  {#if weighing && unit && name !== null}
+    <section class="weight" aria-labelledby="nutrition-weight-title">
+      <h3 id="nutrition-weight-title" class="sectionTitle">
+        {m['nutrition.weight.title']({ unit, name })}
+      </h3>
+      <p class="quiet">{m['nutrition.weight.reach']({ unit, name })}</p>
+
+      {#key `${name}:${line?.unitKey}`}
+        <UnitWeightForm
+          label={m['nutrition.weight.field']()}
+          initial={householdWeight || typicalWeight ? perUnit : null}
+          hint={weightHint}
+          saveLabel={m['nutrition.weight.save']()}
+          removeLabel={ownWeight ? m['nutrition.weight.remove']() : undefined}
+          onsave={(grams) => onweigh?.(grams)}
+          onremove={() => onweigh?.(null)}
+        />
+      {/key}
+    </section>
+  {/if}
+{/snippet}
+
 <Sheet
   open={opening !== null}
   title={m['nutrition.correct.title']({ name: name ?? '' })}
@@ -295,6 +335,8 @@
   {onclose}
 >
   <div class="body">
+    {#if weighFirst}{@render weightQuestion()}{/if}
+
     <p class="reach">{m['nutrition.correct.reach']({ name: name ?? '' })}</p>
 
     {#if current || excluded}
@@ -339,26 +381,7 @@
       </ul>
     {/if}
 
-    {#if weighing && unit && name !== null}
-      <section class="weight" aria-labelledby="nutrition-weight-title">
-        <h3 id="nutrition-weight-title" class="sectionTitle">
-          {m['nutrition.weight.title']({ unit, name })}
-        </h3>
-        <p class="quiet">{m['nutrition.weight.reach']({ unit, name })}</p>
-
-        {#key `${name}:${line?.unitKey}`}
-          <UnitWeightForm
-            label={m['nutrition.weight.field']()}
-            initial={householdWeight || typicalWeight ? perUnit : null}
-            hint={weightHint}
-            saveLabel={m['nutrition.weight.save']()}
-            removeLabel={ownWeight ? m['nutrition.weight.remove']() : undefined}
-            onsave={(grams) => onweigh?.(grams)}
-            onremove={() => onweigh?.(null)}
-          />
-        {/key}
-      </section>
-    {/if}
+    {#if !weighFirst}{@render weightQuestion()}{/if}
 
     <SearchField
       id="nutrition-food-search"

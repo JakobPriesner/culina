@@ -123,7 +123,7 @@ describe('the household’s ingredients', () => {
 
     const list = await screen.findByRole('list', { name: 'Ingredients' });
 
-    expect(within(list).getByRole('heading', { name: 'butter' })).toBeInTheDocument();
+    expect(within(list).getByRole('heading', { name: 'Butter' })).toBeInTheDocument();
     expect(within(list).getByText('Counts as Sweet cream butter')).toBeInTheDocument();
     expect(within(list).getByText('1 clove = 4 g')).toBeInTheDocument();
     expect(within(list).getByText('Not counted')).toBeInTheDocument();
