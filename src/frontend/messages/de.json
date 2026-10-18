@@ -2022,5 +2022,7 @@
   "shopping.merge.ask": "Dasselbe wie „{other}“?",
   "shopping.merge.action": "Zusammenführen",
   "shopping.merge.done": "„{from}“ heißt jetzt „{to}“, hier und in deinen Rezepten.",
-  "shopping.merge.apart": "Die Mengen lassen sich nicht zusammenrechnen, darum bleiben es zwei Zeilen."
+  "shopping.merge.apart": "Die Mengen lassen sich nicht zusammenrechnen, darum bleiben es zwei Zeilen.",
+  "picker.quick": "Eingrenzen",
+  "picker.quick.minutes": "Bis {count} Min."
 }

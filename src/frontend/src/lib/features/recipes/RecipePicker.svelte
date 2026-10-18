@@ -1,9 +1,11 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
 
-  import { SearchField, Sheet } from '$ds';
+  import { FilterChip, SearchField, Sheet } from '$ds';
+  import { tags } from '$features/cookbooks/stores/tags.svelte';
   import { m } from '$shell/i18n';
 
+  import SavedSearchChips from './filters/SavedSearchChips.svelte';
   import PickerResults from './PickerResults.svelte';
   import { createPickerSearch } from './recipePickerSearch.svelte';
   import SearchChips from './search/SearchChips.svelte';
@@ -58,6 +60,20 @@
 
   const id = $props.id();
 
+  /** A weeknight's usual question first: how long it may take. */
+  const quickMinutes = 30;
+
+  /** The kitchen's most used tags, as quick chips; the long tail is what search is for. */
+  const quickTags = $derived(
+    [...tags.items].sort((a, b) => b.recipeCount - a.recipeCount).slice(0, 4)
+  );
+
+  $effect(() => {
+    if (open) {
+      void tags.load(householdId);
+    }
+  });
+
   const search = createPickerSearch({
     open: () => open,
     householdId: () => householdId,
@@ -77,6 +93,27 @@
       value={search.typed}
       oninput={search.type}
     />
+
+    <!-- Where the decision is made: saved searches and a few quick filters, as on the library's toolbar. -->
+    <div class="quick" role="group" aria-label={m['picker.quick']()}>
+      <SavedSearchChips {householdId} view={search.filter} onapply={search.applySaved} />
+      <div class="chips">
+        <FilterChip
+          selected={search.filter.maxMinutes === quickMinutes}
+          onclick={() => search.toggleMinutes(quickMinutes)}
+        >
+          {m['picker.quick.minutes']({ count: quickMinutes })}
+        </FilterChip>
+        {#each quickTags as tag (tag.slug)}
+          <FilterChip
+            selected={search.filter.tags.includes(tag.slug)}
+            onclick={() => search.filter.toggleTag(tag.slug)}
+          >
+            {tag.name}
+          </FilterChip>
+        {/each}
+      </div>
+    </div>
 
     {#if search.interpretation}
       <SearchChips chips={search.interpretation.chips} onremove={search.remove} />
@@ -107,6 +144,28 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
+  }
+
+  .quick {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  /* One row that scrolls, like the saved searches above it: results stay in view on a phone. */
+  .chips {
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  /* Whole words: a chip keeps its width and the row scrolls, never "vegetari-sch". */
+  .chips > :global(*) {
+    flex: none;
+    white-space: nowrap;
+    overflow-wrap: normal;
   }
 
   .nothing {
