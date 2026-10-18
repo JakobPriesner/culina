@@ -4,6 +4,7 @@ using Domain.Suggestions;
 using Infrastructure.Assistance;
 using Infrastructure.Identity;
 using Infrastructure.Import;
+using Infrastructure.Import.Culina;
 using Infrastructure.Import.Mealie;
 using Infrastructure.Import.Tandoor;
 using Infrastructure.Nutrition;
@@ -123,6 +124,7 @@ public static class DependencyInjection
                     provider.GetRequiredService<StorageSettings>(), SecretProtector.SourceTokens))
             .AddSingleton<IRecipeLibrary, TandoorLibrary>()
             .AddSingleton<IRecipeLibrary, MealieLibrary>()
+            .AddSingleton<IRecipeLibrary, CulinaLibrary>()
             .AddSingleton<IRecipeLibraries, RecipeLibraries>()
             .AddHostedService<ImportWorker>();
 

@@ -10,5 +10,8 @@ public enum SessionClient
     Ios = 1,
 
     /// <summary>The Android app, which keeps the token in the Keystore.</summary>
-    Android = 2
+    Android = 2,
+
+    /// <summary>Another Culina instance importing this person's recipes, which keeps the token encrypted with its connection.</summary>
+    Instance = 3
 }

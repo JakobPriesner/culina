@@ -162,6 +162,39 @@ describe('connecting another app', () => {
     ).toHaveAttribute('href', 'https://mealie.example.com/user/profile/api-tokens');
   });
 
+  it('signs in to another Culina with its email address, and never asks for a token it does not have', async () => {
+    render();
+
+    await userEvent.click(screen.getByRole('radio', { name: 'Culina' }));
+    await userEvent.type(address(), 'culina.example.com');
+
+    expect(screen.queryByRole('radio', { name: /Use an API token/ })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Username in the app')).not.toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText('Email address in that Culina'), 'ada@example.com');
+    await userEvent.type(screen.getByLabelText('Password in the app'), 'hunter2');
+    await userEvent.click(screen.getByRole('button', { name: 'Connect' }));
+
+    expect(sent[0]).toMatchObject({
+      kind: 'culina',
+      address: 'culina.example.com',
+      username: 'ada@example.com',
+      password: 'hunter2'
+    });
+    expect(sent[0]).not.toHaveProperty('token');
+  });
+
+  it('signs in to Culina even when a token was chosen for another app first', async () => {
+    render();
+
+    await userEvent.type(address(), 'recipes.example.com');
+    await userEvent.click(screen.getByRole('radio', { name: /Use an API token/ }));
+    await userEvent.click(screen.getByRole('radio', { name: 'Culina' }));
+
+    expect(screen.getByLabelText('Email address in that Culina')).toBeInTheDocument();
+    expect(screen.queryByLabelText('API token')).not.toBeInTheDocument();
+  });
+
   it('does not leave the password sitting in the form afterwards', async () => {
     render();
 

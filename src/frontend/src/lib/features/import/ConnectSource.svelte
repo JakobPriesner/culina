@@ -12,7 +12,8 @@
   /**
    * Connects another app. Which app and its address come first and alone: the token-page link and
    * the sign-in both need them. Signing in is the default (a token is a task people give up on), but the token
-   * stays for SSO-only instances and anyone who won't hand over a password.
+   * stays for SSO-only instances and anyone who won't hand over a password. An app with no tokens (another
+   * Culina) is only signed in to, so there is no choice to offer.
    */
   interface Props {
     householdId: string;
@@ -30,12 +31,17 @@
   let password = $state('');
   let token = $state('');
 
+  const app = $derived(sourceApps.find((one) => one.kind === kind) ?? sourceApps[0]);
+
   /** Where the person would go to make a token, once we know which server. */
   const tokenPage = $derived(tokenPageOf(kind, address));
 
+  /** What is asked for: a token only where the app has tokens to paste. */
+  const asked = $derived<Way>(app.tokenPath === null ? 'signIn' : way);
+
   const ready = $derived(
     originOf(address) !== null &&
-      (way === 'token'
+      (asked === 'token'
         ? token.trim().length > 0
         : username.trim().length > 0 && password.length > 0)
   );
@@ -69,7 +75,7 @@
       householdId,
       kind,
       address: address.trim(),
-      ...(way === 'token' ? { token: token.trim() } : { username: username.trim(), password })
+      ...(asked === 'token' ? { token: token.trim() } : { username: username.trim(), password })
     });
 
     if (connected) {
@@ -117,22 +123,33 @@
 
   <!-- Hidden until an address exists: how to sign in to an unnamed server has no answer. -->
   {#if originOf(address)}
-    <Field label={m['import.source.wayLabel']()} group>
-      {#snippet children({ id, describedBy })}
-        <RadioGroup
-          name={id}
-          {describedBy}
-          options={ways}
-          value={way}
-          onchange={(chosen) => (way = chosen === 'token' ? 'token' : 'signIn')}
-        />
-      {/snippet}
-    </Field>
+    {#if app.tokenPath !== null}
+      <Field label={m['import.source.wayLabel']()} group>
+        {#snippet children({ id, describedBy })}
+          <RadioGroup
+            name={id}
+            {describedBy}
+            options={ways}
+            value={way}
+            onchange={(chosen) => (way = chosen === 'token' ? 'token' : 'signIn')}
+          />
+        {/snippet}
+      </Field>
+    {/if}
 
-    {#if way === 'signIn'}
-      <Field label={m['import.source.username']()}>
+    {#if asked === 'signIn'}
+      <Field
+        label={app.account === 'email' ? m['import.source.email']() : m['import.source.username']()}
+      >
         {#snippet children({ id, describedBy, invalid })}
-          <TextInput {id} {describedBy} {invalid} autocomplete="off" bind:value={username} />
+          <TextInput
+            {id}
+            {describedBy}
+            {invalid}
+            type={app.account === 'email' ? 'email' : 'text'}
+            autocomplete="off"
+            bind:value={username}
+          />
         {/snippet}
       </Field>
 

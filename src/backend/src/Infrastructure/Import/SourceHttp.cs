@@ -83,11 +83,11 @@ internal sealed class SourceHttp : IDisposable
             token => PostAsync<TBody>(url, new FormUrlEncodedContent(form), authorization: null, token),
             cancellationToken);
 
-    // A write on the other server, for the one source that makes its long-lived token by API call. Never logged.
+    // A write on the other server: a sign-in that takes JSON, or the call that makes a long-lived token. Never logged.
     internal Task<Result<TBody>> PostJsonAsync<TBody>(
         Uri url,
         object body,
-        AuthenticationHeaderValue authorization,
+        AuthenticationHeaderValue? authorization,
         CancellationToken cancellationToken)
         where TBody : notnull =>
         VagueAsync(

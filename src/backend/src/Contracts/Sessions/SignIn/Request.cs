@@ -11,8 +11,8 @@ public sealed record Request
 
     /// <summary>
     /// <c>browser</c> (the default) for the session cookie; <c>ios</c> or <c>android</c> for an app,
-    /// which receives the session token in the response and sends it as
-    /// <c>Authorization: Bearer</c>.
+    /// or <c>instance</c> for another Culina importing this person's recipes, each of which receives the
+    /// session token in the response and sends it as <c>Authorization: Bearer</c>.
     /// </summary>
     public string? Client { get; init; }
 }

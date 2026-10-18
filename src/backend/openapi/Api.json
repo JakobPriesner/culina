@@ -592,7 +592,7 @@
           "Sessions"
         ],
         "summary": "Sign in",
-        "description": "Starts a session. For a browser, sets the session cookie and returns the CSRF token to echo in X-Culina-CSRF on every unsafe request. For an app (client ios or android), returns the session token instead, to send as Authorization: Bearer with no CSRF token. Failure is always auth.invalid_credentials, whether or not the address is registered.",
+        "description": "Starts a session. For a browser, sets the session cookie and returns the CSRF token to echo in X-Culina-CSRF on every unsafe request. For an app (client ios or android), returns the session token instead, to send as Authorization: Bearer with no CSRF token. Failure is always auth.invalid_credentials, whether or not the address is registered. Another Culina importing this person's recipes signs in as client instance and is answered as an app is.",
         "operationId": "signInV1",
         "requestBody": {
           "content": {
@@ -14271,7 +14271,7 @@
         "properties": {
           "kind": {
             "type": "string",
-            "description": "Which sort of place: `tandoor`, `mealie`, `web` or `ai`."
+            "description": "Which sort of place: `tandoor`, `mealie`, `culina`, `web` or `ai`."
           },
           "sourceId": {
             "type": "string",
@@ -14406,7 +14406,7 @@
           },
           "kind": {
             "type": "string",
-            "description": "Which app: `tandoor` or `mealie`."
+            "description": "Which app: `tandoor`, `mealie`, or `culina` for another Culina instance."
           },
           "address": {
             "type": "string",
@@ -15141,7 +15141,7 @@
           },
           "client": {
             "type": "string",
-            "description": "What it was started from: `browser`, `ios` or `android`."
+            "description": "What it was started from: `browser`, `ios`, `android`, or `instance` for another Culina importing recipes."
           },
           "isCurrent": {
             "type": "boolean",
@@ -15167,7 +15167,7 @@
           },
           "client": {
             "type": "string",
-            "description": "`browser` (the default) for the session cookie; `ios` or `android` for an app,\n        which receives the session token in the response and sends it as\n        `Authorization: Bearer`.",
+            "description": "`browser` (the default) for the session cookie; `ios` or `android` for an app,\n        or `instance` for another Culina importing this person's recipes, each of which receives the\n        session token in the response and sends it as `Authorization: Bearer`.",
             "nullable": true
           }
         },

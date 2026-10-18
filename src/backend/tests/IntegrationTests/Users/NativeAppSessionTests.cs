@@ -34,6 +34,17 @@ public class NativeAppSessionTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task SignIn_ShouldReturnTheTokenInTheBody_ForAnotherCulinaImportingRecipes()
+    {
+        await RegisterAsync();
+        using var instance = await SignedInAppAsync("instance");
+
+        // The token it was given reads recipes, the one thing it signed in for.
+        using var households = await instance.GetAsync(new Uri("/api/v1/households", UriKind.Relative), Token);
+        Assert.Equal(HttpStatusCode.OK, households.StatusCode);
+    }
+
+    [Fact]
     public async Task SignIn_ShouldKeepTheTokenOutOfTheBody_ForABrowser()
     {
         using var browser = await RegisterAsync();
@@ -102,6 +113,7 @@ public class NativeAppSessionTests(PostgresFixture postgres)
         using var browser = await RegisterAsync();
         await browser.PostAsync("/api/v1/sessions", new { email = "ada@example.com", password = Password }, Token);
         using var app = await SignedInAppAsync("ios");
+        using var instance = await SignedInAppAsync("instance");
 
         var devices = await browser.GetAsync("/api/v1/sessions", Token);
 
@@ -109,7 +121,7 @@ public class NativeAppSessionTests(PostgresFixture postgres)
             .Select(item => item.GetProperty("client").GetString())
             .Order(StringComparer.Ordinal)
             .ToList();
-        Assert.Equal(["browser", "ios"], clients);
+        Assert.Equal(["browser", "instance", "ios"], clients);
     }
 
     [Fact]

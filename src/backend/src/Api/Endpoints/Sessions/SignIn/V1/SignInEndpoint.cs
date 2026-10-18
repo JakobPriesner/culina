@@ -32,8 +32,9 @@ internal sealed class SignInEndpoint : IEndpoint
                 return result.Match(
                     outcome =>
                     {
-                        // An app keeps its token in the Keychain or Keystore and sends it as a bearer
-                        // header; it has no cookie jar it could share with this origin.
+                        // An app keeps its token in the Keychain or Keystore, another instance with its
+                        // connection, and either sends it as a bearer header: neither has a cookie jar it
+                        // could share with this origin.
                         if (outcome.Client != SessionClient.Browser)
                         {
                             return Results.Created(
@@ -62,7 +63,8 @@ internal sealed class SignInEndpoint : IEndpoint
                 + "echo in X-Culina-CSRF on every unsafe request. For an app (client ios or android), "
                 + "returns the session token instead, to send as Authorization: Bearer with no CSRF "
                 + "token. Failure is always auth.invalid_credentials, whether or not the address is "
-                + "registered.")
+                + "registered. Another Culina importing this person's recipes signs in as client instance and is "
+                + "answered as an app is.")
             .Produces<Response>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status429TooManyRequests)
