@@ -26,7 +26,8 @@ internal sealed class AddPlannedMealsToListEndpoint : IEndpoint
                             householdId,
                             context.CurrentUser().UserId,
                             request.From,
-                            request.EntryId),
+                            request.EntryId,
+                            request.ExceptIngredientIds ?? []),
                         cancellationToken)
                     .ConfigureAwait(false);
 

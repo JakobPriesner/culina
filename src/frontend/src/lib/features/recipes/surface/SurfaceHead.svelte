@@ -13,6 +13,7 @@
     /** Yield at the servings on screen, for print. */
     printedYield: string;
     onaddtolist?: () => void;
+    listed?: boolean;
     onaddtocookbook?: () => void;
     onaddtoplan?: () => void;
     onshare?: () => void;
@@ -30,6 +31,7 @@
     cookbooks,
     printedYield,
     onaddtolist,
+    listed = false,
     onaddtocookbook,
     onaddtoplan,
     onshare,
@@ -54,6 +56,7 @@
       {cooking}
       {editable}
       {onaddtolist}
+      {listed}
       {onaddtocookbook}
       {onaddtoplan}
       {onshare}

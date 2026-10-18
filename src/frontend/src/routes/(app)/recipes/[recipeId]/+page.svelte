@@ -26,6 +26,7 @@
   import { related } from '$features/recipes/stores/related.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import { revealNutritionPanel } from '$features/recipes/surface/nutritionLink';
+  import { shopping } from '$features/shopping/stores/shopping.svelte';
   import RecipeSurfaceSkeleton from '$features/recipes/surface/RecipeSurfaceSkeleton.svelte';
   import { yieldFrom } from '$features/recipes/surface/yieldInUrl';
   import { session } from '$features/auth/session.svelte';
@@ -169,7 +170,11 @@
       onservings={actions.scale}
       onstartcooking={actions.startCooking}
       resuming={alreadyCooking}
-      onaddtolist={actions.addToShoppingList}
+      onaddtolist={() => (sheet = 'list')}
+      listed={shopping.householdId === session.activeHouseholdId && shopping.holdsRecipe(recipeId)}
+      onTheList={shopping.householdId === session.activeHouseholdId
+        ? (name) => shopping.onTheList(name)
+        : undefined}
       onaddtoplan={() => (sheet = 'plan')}
       onaddtocookbook={() => (sheet = 'cookbook')}
       onshare={inheritedFrom ? undefined : () => (sheet = 'share')}
@@ -223,6 +228,7 @@
   title={recipes.detail?.title ?? ''}
   householdId={session.activeHouseholdId}
   {servings}
+  recipe={recipes.detail?.id === recipeId ? recipes.detail : null}
   bind:open={sheet}
   {deletion}
 />

@@ -13,8 +13,9 @@ namespace Application.Shopping;
 internal static class RecipeContribution
 {
     /// <summary>
-    /// Adds every ingredient, each remembering which recipe and meal asked for it; a null
-    /// <c>planEntryId</c> means the recipe by itself.
+    /// Adds every ingredient but the ones left out, each remembering which recipe and meal asked for
+    /// it; a null <c>planEntryId</c> means the recipe by itself. Left out (<c>except</c>) are the ones
+    /// the cook already has, in the cupboard or on the list.
     /// </summary>
     internal static Result Add(
         ShoppingList list,
@@ -23,7 +24,8 @@ internal static class RecipeContribution
         Guid? planEntryId,
         DateOnly? plannedDate,
         MealSlot? plannedSlot,
-        IReadOnlyDictionary<string, ShoppingSection> overrides)
+        IReadOnlyDictionary<string, ShoppingSection> overrides,
+        IReadOnlyCollection<Guid>? except = null)
     {
         servings = Amounts.Round(servings);
 
@@ -38,6 +40,7 @@ internal static class RecipeContribution
         // `Bind` short-circuits: half a recipe on the list is worse than none.
         return recipe.Groups
             .SelectMany(group => group.Ingredients)
+            .Where(ingredient => except is null || !except.Contains(ingredient.Id))
             .Aggregate(
                 Result.Success(),
                 (outcome, ingredient) => outcome.Bind(() => ItemName

@@ -16,7 +16,13 @@ namespace Application.Shopping;
 /// <param name="UserId">Who is asking.</param>
 /// <param name="From">The day the week starts on.</param>
 /// <param name="EntryId">Only this planned meal of the week, or null for all of them.</param>
-public sealed record AddPlannedMealsToListCommand(Guid HouseholdId, Guid UserId, DateOnly From, Guid? EntryId = null);
+/// <param name="Except">With an entry: its recipe's ingredients to leave off.</param>
+public sealed record AddPlannedMealsToListCommand(
+    Guid HouseholdId,
+    Guid UserId,
+    DateOnly From,
+    Guid? EntryId = null,
+    IReadOnlyCollection<Guid>? Except = null);
 
 internal sealed class AddPlannedMealsToListCommandHandler(
     IShoppingListRepository lists,
@@ -72,14 +78,15 @@ internal sealed class AddPlannedMealsToListCommandHandler(
             .SectionOverridesAsync(command.HouseholdId, cancellationToken)
             .ConfigureAwait(false);
 
-        return Shop(list, week, cooked, overrides);
+        return Shop(list, week, cooked, overrides, command.EntryId is null ? [] : command.Except ?? []);
     }
 
     private static Result Shop(
         ShoppingList list,
         IReadOnlyList<PlannedRecipe> week,
         IReadOnlyDictionary<Guid, Recipe> cooked,
-        IReadOnlyDictionary<string, ShoppingSection> overrides)
+        IReadOnlyDictionary<string, ShoppingSection> overrides,
+        IReadOnlyCollection<Guid> except)
     {
         var outcome = Result.Success();
 
@@ -106,7 +113,8 @@ internal sealed class AddPlannedMealsToListCommandHandler(
                 entry.Id,
                 entry.Date,
                 entry.Slot,
-                overrides));
+                overrides,
+                except));
         }
 
         return outcome;

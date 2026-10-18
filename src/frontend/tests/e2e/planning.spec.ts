@@ -92,9 +92,7 @@ test.describe('planning a week', () => {
       ingredients: [{ quantity: 250, unit: 'g', name: flour }]
     });
 
-    await page.goto(`/recipes/${recipeId}`);
-    await page.getByRole('button', { name: /shopping list|einkaufsliste/i }).click();
-    await expect(page.getByText(/added to|hinzugefügt/i)).toBeVisible();
+    await addToList(page, recipeId);
 
     await page.goto('/plan');
     await page
@@ -108,8 +106,9 @@ test.describe('planning a week', () => {
     await sheet.getByRole('button', { name: waffles }).click();
     await expect(sheet).toBeHidden();
 
-    await page.getByRole('button', { name: weekToList }).click();
+    // Planning it makes the listing this meal's shopping: the week has nothing left to offer for it.
     await expect(cardOf(page, waffles)).toContainText(onTheList);
+    await expect(page.getByRole('button', { name: weekToList })).toHaveCount(0);
 
     // Doubling here used to be silent.
     await page.goto('/shopping');
@@ -272,6 +271,16 @@ const everythingOnTheList =
   /everything planned this week is on|alles, was diese woche geplant ist/i;
 
 /** A meal's card on the week; tonight's row above the days links the same title to cooking it. */
+/** The recipe's whole ingredient list onto the shopping list, through its sheet. */
+async function addToList(page: Page, recipeId: string) {
+  await page.goto(`/recipes/${recipeId}`);
+  await page.getByRole('button', { name: /shopping list|einkaufsliste/i }).click();
+  await page
+    .getByRole('button', { name: /^(add \d+ ingredients?|\d+ zutat(en)? hinzufügen)$/i })
+    .click();
+  await expect(page.getByText(/added to|hinzugefügt/i)).toBeVisible();
+}
+
 function cardOf(page: Page, title: string | RegExp): Locator {
   return page.locator('[data-plan-day]').getByRole('link', { name: title });
 }

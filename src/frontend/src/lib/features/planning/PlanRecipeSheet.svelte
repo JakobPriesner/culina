@@ -51,7 +51,11 @@
     count = Math.max(1, Math.round(servings));
     touched = false;
     void upcoming.load(householdId);
+    void shopping.load(householdId);
   });
+
+  /** Already on the list by itself: planning makes it this meal's shopping (the server links it), so nothing to offer. */
+  const listed = $derived(shopping.householdId === householdId && shopping.holdsRecipe(recipeId));
 
   /** Something coming up is already on the list, so the shop has happened (or is under way) without this meal. */
   const shopped = $derived(
@@ -87,7 +91,7 @@
       servings: touched ? count : servings,
       slot
     });
-    const listFailure = ok && alsoShop ? await shopPlanned() : null;
+    const listFailure = ok && alsoShop && !listed ? await shopPlanned() : null;
     saving = false;
 
     // The recipe page and the library read what is coming up; tell them.
@@ -110,7 +114,7 @@
       message: () =>
         listFailure
           ? m['plan.recipe.doneNotListed']({ day })
-          : alsoShop
+          : alsoShop || listed
             ? m['plan.recipe.doneListed']({ day })
             : m['plan.recipe.done']({ day }),
       tone: listFailure ? 'danger' : 'success',
@@ -155,7 +159,10 @@
       bind:servings={count}
       onservings={() => (touched = true)}
     >
-      {#if shopped}
+      <!-- Offered every time, ticked once the coming meals are shopped: a meal planned now would miss that shop. -->
+      {#if listed}
+        <p class="hint">{m['plan.recipe.alreadyListed']()}</p>
+      {:else}
         <Checkbox bind:checked={alsoShop} label={m['plan.recipe.alsoShop']()} />
       {/if}
     </MealFields>
@@ -178,5 +185,11 @@
 
   .failure {
     color: var(--text-danger);
+  }
+
+  .hint {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
 </style>

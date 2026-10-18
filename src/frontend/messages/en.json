@@ -1959,5 +1959,24 @@
   "recipe.stub.title": "Only a title so far",
   "recipe.stub.body": "Add the ingredients and steps to cook from it.",
   "recipe.stub.finish": "Finish writing",
-  "import.photo.or": "or a link to the recipe"
+  "import.photo.or": "or a link to the recipe",
+  "shopping.sheet.hint": "Untick what you already have.",
+  "shopping.sheet.onList": "already on the list for this recipe",
+  "shopping.sheet.forMeal": "Planned for {when}: the ingredients go on for that meal, for {servings}.",
+  "shopping.sheet.confirm": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Add {count} ingredient",
+        "countPlural=*": "Add {count} ingredients"
+      }
+    }
+  ],
+  "shopping.sheet.cancel": "Cancel",
+  "shopping.onList": "On the list",
+  "shopping.row.listed": "on the shopping list",
+  "shopping.addedForMeal": "Added for {when}.",
+  "plan.recipe.alreadyListed": "Its ingredients are already on the shopping list; they now count for this meal.",
+  "shopping.sheet.addsUp": "already on the list; this adds to it"
 }

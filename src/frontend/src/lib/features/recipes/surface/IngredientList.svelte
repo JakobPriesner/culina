@@ -16,9 +16,11 @@
     highlighted?: string | null;
     /** Forwarded when an ingredient row is hovered, for bidirectional highlighting */
     onhover?: (ingredientId: string | null) => void;
+    /** Whether a name is still to buy on the shopping list. */
+    onTheList?: (name: string) => boolean;
   }
 
-  let { ingredients, scaling, highlighted = null, onhover }: Props = $props();
+  let { ingredients, scaling, highlighted = null, onhover, onTheList }: Props = $props();
 
   const lines = $derived(combineIngredients(ingredients));
 </script>
@@ -29,6 +31,7 @@
       {line}
       {scaling}
       highlighted={highlighted !== null && line.ids.includes(highlighted)}
+      listed={onTheList?.(line.name) ?? false}
       onhover={(ids) => onhover?.(ids && ids.length > 0 ? (ids[0] ?? null) : null)}
     />
   {/each}

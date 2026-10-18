@@ -16518,6 +16518,15 @@
             "description": "Only this planned meal of the week, as when it is planned after the shop; null for all of them.",
             "format": "uuid",
             "nullable": true
+          },
+          "exceptIngredientIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "With Guid? AddPlannedMealsRequest.EntryId: that recipe's ingredients to leave off, already in the cupboard or on the list.",
+            "nullable": true
           }
         },
         "description": "A planned week's shopping."
@@ -16538,6 +16547,15 @@
             "type": "number",
             "description": "How many it is being made for, so the amounts are the real ones.",
             "format": "double"
+          },
+          "exceptIngredientIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The recipe's ingredients to leave off: already in the cupboard, or already on the list.",
+            "nullable": true
           }
         },
         "description": "A recipe's ingredients, at a chosen scaling."

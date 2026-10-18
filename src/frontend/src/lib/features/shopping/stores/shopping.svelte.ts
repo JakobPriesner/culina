@@ -1,6 +1,7 @@
 import { http, request, type AppError } from '$api';
 import { LatestRead, registerStore, type LoadStatus } from '$shell/stores';
 
+import { foldText } from '$features/recipes/foldText';
 import type { Unit } from '$features/recipes/units';
 
 import { groupsToBuy } from '../lineRuns';
@@ -59,6 +60,26 @@ class ShoppingStore {
   /** Already in the trolley; kept visible because putting one back is common. */
   get bought(): readonly ShoppingItem[] {
     return this.items.filter((item) => item.isChecked);
+  }
+
+  /** The line of this name still to buy, whichever recipe (or nobody) put it there. */
+  itemNamed(name: string): ShoppingItem | undefined {
+    const folded = foldText(name.trim());
+
+    return this.items.find((item) => !item.isChecked && foldText(item.name.trim()) === folded);
+  }
+
+  /** Whether something of this name is still to buy. */
+  onTheList(name: string): boolean {
+    return this.itemNamed(name) !== undefined;
+  }
+
+  /** Whether a recipe still has lines to buy. `sources` can be missing from a list cached before it existed. */
+  holdsRecipe(recipeId: string): boolean {
+    return this.items.some(
+      (item) =>
+        !item.isChecked && (item.sources ?? []).some((source) => source.recipeId === recipeId)
+    );
   }
 
   async load(householdId: string): Promise<void> {
@@ -147,16 +168,17 @@ class ShoppingStore {
     this.#take(householdId, result.ok ? result.value : null, result.ok ? null : result.error);
   }
 
-  /** Puts a recipe's ingredients on, at the scaling being cooked. */
+  /** Puts a recipe's ingredients on, at the scaling being cooked, but for the ones already in the cupboard (`except`). */
   async addRecipe(
     householdId: string,
     recipeId: string,
-    servings: number
+    servings: number,
+    except: readonly string[] = []
   ): Promise<AppError | null> {
     const result = await request(() =>
       http.POST('/api/v1/households/{householdId}/shopping-list/recipes', {
         params: { path: { householdId } },
-        body: { recipeId, servings }
+        body: { recipeId, servings, exceptIngredientIds: except.length ? [...except] : undefined }
       })
     );
 
@@ -179,16 +201,17 @@ class ShoppingStore {
     return result.ok ? null : result.error;
   }
 
-  /** One planned meal of the week starting `from`, as when it is planned after the week was shopped. */
+  /** One planned meal of the week starting `from`, as when it is planned after the week was shopped; `except` as for a recipe. */
   async addPlannedMeal(
     householdId: string,
     from: string,
-    entryId: string
+    entryId: string,
+    except: readonly string[] = []
   ): Promise<AppError | null> {
     const result = await request(() =>
       http.POST('/api/v1/households/{householdId}/shopping-list/meals', {
         params: { path: { householdId } },
-        body: { from, entryId }
+        body: { from, entryId, exceptIngredientIds: except.length ? [...except] : undefined }
       })
     );
 

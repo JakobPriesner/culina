@@ -26,7 +26,8 @@ internal sealed class AddRecipeToListEndpoint : IEndpoint
                             householdId,
                             request.RecipeId,
                             context.CurrentUser().UserId,
-                            request.Servings),
+                            request.Servings,
+                            request.ExceptIngredientIds ?? []),
                         cancellationToken)
                     .ConfigureAwait(false);
 
