@@ -203,7 +203,7 @@
             onscale={actions.scale}
           />
         {/if}
-        <NotePeek />
+        <NotePeek {recipeId} />
       {/snippet}
     </RecipeSurface>
 
@@ -217,7 +217,7 @@
 
     <!-- Keyed so a pending autosave is flushed for the recipe it was typed on, not the next one. -->
     {#key recipeId}
-      <PersonalNotePanel {recipeId} />
+      <PersonalNotePanel {recipeId} steps={recipes.detail.steps} />
     {/key}
 
     <SimilarRecipes

@@ -20,9 +20,23 @@
     variant?: 'detail' | 'cook';
     /** The step being cooked, which gets a note of its own, shown under it next time. */
     step?: { readonly id: string; readonly name: string } | null;
+    /** The recipe's steps, to name the step notes edited here (`detail` only). */
+    steps?: readonly { readonly id: string | null; readonly title: string | null }[];
   }
 
-  let { recipeId, variant = 'detail', step = null }: Props = $props();
+  let { recipeId, variant = 'detail', step = null, steps = [] }: Props = $props();
+
+  /** The step notes there are, by step, named as the method names the step. */
+  const stepNotes = $derived(
+    steps
+      .map((one, index) => ({
+        id: one.id,
+        name: one.title ?? m['recipe.step']({ number: index + 1 })
+      }))
+      .filter((one): one is { id: string; name: string } =>
+        Boolean(one.id && notes.stepNote(one.id).trim())
+      )
+  );
 
   const autosave = createAutosave(() => notes.save(recipeId));
 
@@ -71,6 +85,25 @@
         {m['error.retry']()}
       </Button>
     </div>
+  {:else if variant === 'detail'}
+    <!-- The overall note is read and written near the top (NotePeek); here only the step notes, which have no other place on this page. -->
+    {#if stepNotes.length > 0}
+      <SectionLabel tone="muted" as="h3">{m['notes.stepNotes']()}</SectionLabel>
+      {#each stepNotes as one (one.id)}
+        <label class="step-label" for="step-note-{one.id}"
+          >{m['notes.step']({ step: one.name })}</label
+        >
+        <TextArea
+          id="step-note-{one.id}"
+          value={notes.stepNote(one.id)}
+          rows={2}
+          oninput={(text) => {
+            notes.setStep(one.id, text);
+            autosave.touch();
+          }}
+        />
+      {/each}
+    {/if}
   {:else}
     <TextArea
       id="overall-note"

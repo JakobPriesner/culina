@@ -20,10 +20,24 @@
     onmove: (by: number) => void;
     onremove: () => void;
     onaddingredient: (name: string) => void;
+    /** Your own note on this step, from cooking it: shown here so it can be folded into the recipe. */
+    note?: string;
+    /** Puts the note into the step's words, for everyone who cooks it. */
+    onadoptnote?: () => void;
   }
 
-  let { step, index, count, ingredients, onchange, onmove, onremove, onaddingredient }: Props =
-    $props();
+  let {
+    step,
+    index,
+    count,
+    ingredients,
+    onchange,
+    onmove,
+    onremove,
+    onaddingredient,
+    note = '',
+    onadoptnote
+  }: Props = $props();
 
   /** Somewhere in this step has focus: its hints show here as well as on the first step. */
   let focused = $state(false);
@@ -81,6 +95,16 @@
       </IconButton>
     </div>
   </div>
+
+  {#if note.trim()}
+    <aside class="personal" aria-label={m['notes.editor.step']()}>
+      <span class="personal-label">{m['notes.editor.step']()}</span>
+      <p class="personal-text">{note}</p>
+      {#if onadoptnote}
+        <Button size="sm" onclick={onadoptnote}>{m['notes.editor.adopt']()}</Button>
+      {/if}
+    </aside>
+  {/if}
 
   <MentionField
     id="step-{index}"
@@ -225,5 +249,29 @@
     .step:focus-within .controls {
       opacity: 1;
     }
+  }
+
+  /* Yours, beside the author's words, as on the recipe page: a margin note to fold in or leave. */
+  .personal {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-1);
+    margin-block: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-inline-start: 3px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: var(--surface-sunken);
+    font-size: var(--text-sm);
+  }
+
+  .personal-label {
+    color: var(--text-muted);
+    font-weight: var(--weight-medium);
+  }
+
+  .personal-text {
+    margin: 0;
+    white-space: pre-wrap;
   }
 </style>

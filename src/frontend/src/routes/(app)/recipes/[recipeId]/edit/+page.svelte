@@ -8,6 +8,7 @@
   import { drafts } from '$features/assistance/stores/drafts.svelte';
   import { session } from '$features/auth/session.svelte';
   import { tags } from '$features/cookbooks/stores/tags.svelte';
+  import { notes } from '$features/cooking/stores/notes.svelte';
   import IntakeSourcePanel from '$features/import/IntakeSourcePanel.svelte';
   import { useIntakeSource } from '$features/import/useIntakeSource.svelte';
   import RecipeEditForm from '$features/recipes/edit/RecipeEditForm.svelte';
@@ -54,6 +55,31 @@
 
   $effect(() => editor.takeLoaded());
 
+  // Your notes from cooking it, shown beside the steps they are about.
+  $effect(() => {
+    if (recipeId) {
+      void notes.load(recipeId);
+    }
+  });
+
+  /** A step's note into its words (for everyone who cooks it), and out of your notes, where it would now repeat. */
+  function adoptNote(stepId: string) {
+    const written = notes.stepNote(stepId).trim();
+    const steps = draft?.steps ?? [];
+
+    if (!written || !draft) return;
+
+    editor.change({
+      steps: steps.map((step) =>
+        step.id === stepId
+          ? { ...step, segments: [...step.segments, { kind: 'text', text: ` ${written}` }] }
+          : step
+      )
+    });
+    notes.setStep(stepId, '');
+    void notes.save(recipeId);
+  }
+
   const draft = $derived(editor.recipe);
 
   // The units this kitchen uses, so "1 Schuss Milch" reads as a Schuss of milk, not an ingredient "Schuss Milch".
@@ -97,6 +123,13 @@
       {ingredients}
       {improvement}
       source={intake.job ? intakeSource : undefined}
+      notes={notes.loaded
+        ? {
+            overall: notes.overall,
+            stepNote: (stepId) => notes.stepNote(stepId),
+            adopt: adoptNote
+          }
+        : undefined}
     />
   {:else if recipes.detailStatus === 'failed' && recipes.detailError?.status === 404}
     <NotFound kind="recipe" level={1} />

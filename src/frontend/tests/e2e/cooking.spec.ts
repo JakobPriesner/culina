@@ -141,10 +141,12 @@ test.describe('cooking a recipe', () => {
 
     await page.goto(`/recipes/${recipeId}`);
 
-    const notes = page.getByRole('region', { name: /your notes|deine notizen/i });
-
-    await notes.getByRole('textbox').fill(note);
-    await expect(notes.getByRole('status')).toContainText(/saved|gespeichert/i);
+    // Written near the top of the recipe, where it is read before cooking.
+    await page
+      .getByRole('button', { name: /add a note for next time|notiz für nächstes mal/i })
+      .click();
+    await page.getByRole('textbox', { name: /your notes|deine notizen/i }).fill(note);
+    await expect(page.getByRole('status').filter({ hasText: /saved|gespeichert/i })).toBeVisible();
 
     await page.getByRole('button', { name: /^(start cooking|kochen starten)$/i }).click();
     await page.getByRole('button', { name: /your notes|deine notizen/i }).click();

@@ -2004,5 +2004,12 @@
         "countPlural=*": "In steps"
       }
     }
-  ]
+  ],
+  "notes.peek.add": "Add a note for next time",
+  "notes.peek.done": "Done",
+  "notes.editor.overall": "Your note on this recipe",
+  "notes.editor.step": "Your note on this step",
+  "notes.editor.adopt": "Put it in the step",
+  "notes.editor.hint": "Only you see your notes. Put one in the step and everyone cooking it sees it.",
+  "notes.stepNotes": "On single steps"
 }

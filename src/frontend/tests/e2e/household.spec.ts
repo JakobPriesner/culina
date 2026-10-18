@@ -86,7 +86,8 @@ test.describe('sharing a kitchen', () => {
 
     const secret = unique('Halve the sugar');
 
-    await owner.goto(`/recipes/${recipeId}`);
+    // `#overall-note` opens the note for writing, as the cooked wrap-up's link does.
+    await owner.goto(`/recipes/${recipeId}#overall-note`);
     await owner.locator('#overall-note').fill(secret);
 
     await expect(owner.getByText(/saved|gespeichert/i)).toBeVisible();

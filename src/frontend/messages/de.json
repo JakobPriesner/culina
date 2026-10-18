@@ -2004,5 +2004,12 @@
         "countPlural=*": "In Schritten"
       }
     }
-  ]
+  ],
+  "notes.peek.add": "Notiz für nächstes Mal",
+  "notes.peek.done": "Fertig",
+  "notes.editor.overall": "Deine Notiz zu diesem Rezept",
+  "notes.editor.step": "Deine Notiz zu diesem Schritt",
+  "notes.editor.adopt": "In den Schritt übernehmen",
+  "notes.editor.hint": "Deine Notizen siehst nur du. Übernimm eine in den Schritt, dann sehen sie alle, die ihn kochen.",
+  "notes.stepNotes": "Zu einzelnen Schritten"
 }

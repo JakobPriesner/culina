@@ -94,4 +94,23 @@ describe('the step editor', () => {
 
     expect(hints.filter((hint) => !hint.classList.contains('quiet'))).toHaveLength(1);
   });
+
+  it('shows your note beside its step, to fold into the recipe', async () => {
+    const onadoptnote = vi.fn();
+
+    render(StepEditor, {
+      steps: [step],
+      ingredients: [],
+      onchange: () => {},
+      onaddingredient: () => {},
+      stepNote: (id: string) => (id === 's1' ? 'Salt the water well.' : ''),
+      onadoptnote
+    });
+
+    expect(screen.getByText('Salt the water well.')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Put it in the step' }));
+
+    expect(onadoptnote).toHaveBeenCalledWith('s1');
+  });
 });
