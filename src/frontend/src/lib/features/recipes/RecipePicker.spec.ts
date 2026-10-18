@@ -26,6 +26,11 @@ function serverHas(...items: ReturnType<typeof summary>[]) {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: Request) => {
+      // The quick filters' own reads (saved searches, tags) answer empty and are not the search being counted.
+      if (!new URL(input.url).pathname.endsWith('/recipes')) {
+        return Promise.resolve(new Response(JSON.stringify({ items: [] }), { status: 200 }));
+      }
+
       asked.push(input.url);
 
       return Promise.resolve(
@@ -67,6 +72,15 @@ const props = (over: Record<string, unknown> = {}) => ({
 });
 
 describe('the recipe picker', () => {
+  it('narrows to a weeknight in one tap, where the choosing happens', async () => {
+    renderWithProviders(RecipePicker, { props: props() });
+
+    await screen.findByRole('button', { name: /Orzo/ });
+    await userEvent.click(screen.getByRole('button', { name: 'Up to 30 min' }));
+
+    await vi.waitFor(() => expect(asked.at(-1)).toContain('maxMinutes=30'));
+  });
+
   it('lists the household recipes once it is open', async () => {
     renderWithProviders(RecipePicker, { props: props() });
 

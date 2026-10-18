@@ -1,4 +1,6 @@
+import { RecipeQuery } from './stores/libraryView.svelte';
 import { createRecipeStore } from './stores/recipes.svelte';
+import type { SavedSearch } from './stores/savedSearches.svelte';
 import { suggestions } from './stores/suggestions.svelte';
 import { withoutChip } from './search/wording';
 import type { SearchChip } from './types';
@@ -18,6 +20,9 @@ export function createPickerSearch(source: Source) {
 
   let typed = $state('');
   let query = $state('');
+  /** Tags and a time limit chosen in the picker (a saved search, a quick chip); its own, not the library's. */
+  const filter = new RecipeQuery();
+  const narrowed = $derived(filter.tags.length > 0 || filter.maxMinutes !== null);
   /** The query whose server correction the reader declined. */
   let asTypedFor = $state<string | null>(null);
 
@@ -27,6 +32,7 @@ export function createPickerSearch(source: Source) {
   const suggesting = $derived(
     source.suggestFor() !== undefined &&
       query.trim().length === 0 &&
+      !narrowed &&
       source.cookbookId() === undefined
   );
 
@@ -41,6 +47,8 @@ export function createPickerSearch(source: Source) {
     if (source.open() && !suggesting) {
       void recipes.list(source.householdId(), {
         query,
+        tags: filter.tags,
+        maxMinutes: filter.maxMinutes ?? undefined,
         cookbookId: source.cookbookId(),
         asTyped: asTypedFor !== null && asTypedFor === query
       });
@@ -60,6 +68,7 @@ export function createPickerSearch(source: Source) {
       typed = '';
       query = '';
       asTypedFor = null;
+      filter.clear();
     }
   });
 
@@ -97,6 +106,20 @@ export function createPickerSearch(source: Source) {
     },
     get total() {
       return recipes.total;
+    },
+    filter,
+
+    /** A saved search, as in the library: its words in the box, its tags and time as the picker's filter. */
+    applySaved(search: SavedSearch) {
+      clearTimeout(debounce);
+      filter.assign({ tags: search.tags, maxMinutes: search.maxMinutes });
+      typed = search.query;
+      query = search.query;
+    },
+
+    /** One quick chip on or off. */
+    toggleMinutes(minutes: number) {
+      filter.maxMinutes = filter.maxMinutes === minutes ? null : minutes;
     },
 
     type(value: string) {

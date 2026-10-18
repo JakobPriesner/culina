@@ -2022,5 +2022,7 @@
   "shopping.merge.ask": "Same as “{other}”?",
   "shopping.merge.action": "Merge",
   "shopping.merge.done": "“{from}” is now “{to}”, here and in your recipes.",
-  "shopping.merge.apart": "Their amounts do not add up, so the two lines stay apart."
+  "shopping.merge.apart": "Their amounts do not add up, so the two lines stay apart.",
+  "picker.quick": "Narrow it down",
+  "picker.quick.minutes": "Up to {count} min"
 }
