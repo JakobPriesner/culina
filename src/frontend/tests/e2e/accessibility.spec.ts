@@ -386,6 +386,6 @@ test.describe('reaching everything with a keyboard', () => {
 
     // Focus follows the cook to the new step so a screen reader reads it.
     await expect(page.locator('[aria-current="step"]')).toBeFocused();
-    await expect(page.getByRole('button', { name: /^(i made it|fertig gekocht)$/i })).toBeEnabled();
+    await expect(page.getByRole('button', { name: /^(i made it|hab ich gekocht)$/i })).toBeEnabled();
   });
 });

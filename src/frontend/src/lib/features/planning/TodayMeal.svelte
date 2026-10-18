@@ -1,12 +1,13 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { Chevron } from '$ds';
+  import { Chevron, IconButton } from '$ds';
 
+  import { madeIt } from '$features/cooking/finishCooking';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
   import { hrefAtYield } from '$features/recipes/surface/yieldInUrl';
   import { m } from '$shell/i18n';
   import { slotLabel } from './slots';
-  import type { MealSlot } from './mealPlan.svelte';
+  import { servingsOf, type MealSlot } from './mealPlan.svelte';
   import { upcoming } from './upcoming.svelte';
 
   /**
@@ -55,6 +56,17 @@
       {m['plan.today.cook']()}
       <Chevron />
     </a>
+    <!-- Cooked from memory, or already eaten: said in one tap, without going through cook mode. -->
+    <IconButton
+      label={m['cooking.madeIt.named']({ title: meal.title })}
+      size="sm"
+      bordered
+      onclick={() => void madeIt(meal.recipeId, servingsOf(meal), householdId)}
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <path d="m5 12 5 5 9-10" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </IconButton>
   </div>
   <!-- eslint-enable svelte/no-navigation-without-resolve -->
 {:else if cooked}

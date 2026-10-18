@@ -138,6 +138,7 @@
       onadd={addOn}
       onedit={(meal) => (editing = meal)}
       onremove={(meal) => void actions.unplan(meal)}
+      onmadeit={(meal) => void actions.madeIt(meal)}
     />
 
     {#if mealPlan.meals.length > 0}

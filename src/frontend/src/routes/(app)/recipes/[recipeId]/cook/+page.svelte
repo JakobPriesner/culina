@@ -12,24 +12,20 @@
   import { autoScrollStep } from '$features/cooking/autoScrollStep';
   import CookingControls from '$features/cooking/CookingControls.svelte';
   import CookSkeleton from '$features/cooking/CookSkeleton.svelte';
-  import { finishCooking } from '$features/cooking/finishCooking';
-  import { cookLog } from '$features/cooking/stores/cookLog.svelte';
+  import { finishCooking, madeIt } from '$features/cooking/finishCooking';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
   import { notes } from '$features/cooking/stores/notes.svelte';
   import { kitchenTimers as timers } from '$features/cooking/kitchen.svelte';
   import KitchenSheet from '$features/cooking/KitchenSheet.svelte';
   import NotesSheet from '$features/cooking/NotesSheet.svelte';
   import { createStepGestures } from '$features/cooking/stepGestures';
-  import { upcoming } from '$features/planning/upcoming.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
   import { m } from '$shell/i18n';
   import { haptics } from '$shell/haptics';
   import NotFound from '$shell/NotFound.svelte';
-  import Olli from '$shell/olli/Olli.svelte';
   import Page from '$shell/Page.svelte';
-  import { toaster } from '$shell/toaster.svelte';
 
   /** Cooking is a route, not a flag, so it has a URL: it survives a reload and back behaves. */
   const recipeId = $derived(page.params.recipeId ?? '');
@@ -164,39 +160,14 @@
     }
   }
 
-  async function undoCooked(entryId: string) {
-    await cookLog.undo(recipeId, entryId);
-
-    if (session.activeHouseholdId) {
-      void upcoming.load(session.activeHouseholdId);
-    }
-  }
-
   async function finish(completed: boolean) {
     over = true;
 
-    const { closed, recorded } = await finishCooking(
-      recipeId,
-      servings,
-      session.activeHouseholdId,
-      completed
-    );
-
+    // Done first, undo offered after: confirming a cheap, one-tap action costs more than it protects.
     if (completed) {
-      toaster.show(
-        recorded && closed
-          ? {
-              message: () => m['cooking.madeIt.toast'](),
-              tone: 'success',
-              art: cookedArt,
-              // Done first, undo offered after: confirming a cheap, one-tap action costs more than it protects.
-              action: {
-                label: () => m['cooking.madeIt.undo'](),
-                run: () => void undoCooked(recorded.entryId)
-              }
-            }
-          : { message: () => m['cooking.madeIt.failed'](), tone: 'danger' }
-      );
+      await madeIt(recipeId, servings, session.activeHouseholdId);
+    } else {
+      await finishCooking(recipeId, servings, session.activeHouseholdId, false);
     }
 
     await goto(recipeHref);
@@ -208,10 +179,6 @@
   let notesOpen = $state(false);
   let kitchenOpen = $state(false);
 </script>
-
-{#snippet cookedArt()}
-  <Olli pose="celebrating" size="sm" still />
-{/snippet}
 
 <svelte:head>
   <title>{recipes.detail?.title ?? m['recipes.title']()}</title>

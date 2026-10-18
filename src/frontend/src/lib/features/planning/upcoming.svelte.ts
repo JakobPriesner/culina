@@ -21,6 +21,8 @@ export interface NextPlanned {
   readonly entryId: string;
   /** Whether its shopping is already on the list. */
   readonly isOnShoppingList: boolean;
+  /** Cooked on its day already (today's meal, made). */
+  readonly cooked: boolean;
   readonly date: string;
   readonly slot: MealSlot;
   readonly week: 0 | 1;
@@ -100,6 +102,7 @@ class UpcomingStore {
         return {
           entryId: meal.entryId,
           isOnShoppingList: meal.isOnShoppingList,
+          cooked: cookedOn(meal, day.date),
           date: day.date,
           slot: meal.slot as MealSlot,
           week: day.date >= nextMonday ? 1 : 0,

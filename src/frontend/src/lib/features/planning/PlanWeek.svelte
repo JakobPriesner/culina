@@ -11,9 +11,10 @@
     onadd: (date: string) => void;
     onedit: (meal: PlannedMeal) => void;
     onremove: (meal: PlannedMeal) => void;
+    onmadeit?: (meal: PlannedMeal) => void;
   }
 
-  let { days, householdId, drag, ondrop, onadd, onedit, onremove }: Props = $props();
+  let { days, householdId, drag, ondrop, onadd, onedit, onremove, onmadeit }: Props = $props();
 
   const today = asDate(new Date());
 
@@ -50,6 +51,7 @@
       onadd={() => onadd(day.date)}
       {onedit}
       {onremove}
+      {onmadeit}
     />
   {/each}
 </ol>

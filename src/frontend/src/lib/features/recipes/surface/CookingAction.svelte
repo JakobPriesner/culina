@@ -13,9 +13,18 @@
     resuming?: boolean;
     onstartcooking?: () => void;
     onstopcooking?: () => void;
+    /** Cooked without cook mode (from the page, from memory): one tap records it. */
+    onmadeit?: () => void;
   }
 
-  let { cooking, canCook, resuming = false, onstartcooking, onstopcooking }: Props = $props();
+  let {
+    cooking,
+    canCook,
+    resuming = false,
+    onstartcooking,
+    onstopcooking,
+    onmadeit
+  }: Props = $props();
 </script>
 
 {#snippet action()}
@@ -28,6 +37,9 @@
       <Button variant="primary" size="lg" onclick={onstartcooking}>
         {resuming ? m['cooking.resume']() : m['recipe.startCooking']()}
       </Button>
+      {#if onmadeit}
+        <Button size="lg" onclick={onmadeit}>{m['cooking.madeIt']()}</Button>
+      {/if}
     {/if}
   </footer>
 {/snippet}
@@ -49,6 +61,7 @@
     margin-block-end: var(--space-8);
     display: flex;
     justify-content: center;
+    gap: var(--space-3);
     align-self: center;
   }
 

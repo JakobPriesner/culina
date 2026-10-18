@@ -14,6 +14,7 @@
     printedYield: string;
     onaddtolist?: () => void;
     listed?: boolean;
+    cooked?: { readonly count: number; readonly lastMadeAt: string | null } | null;
     onaddtocookbook?: () => void;
     onaddtoplan?: () => void;
     onshare?: () => void;
@@ -32,6 +33,7 @@
     printedYield,
     onaddtolist,
     listed = false,
+    cooked = null,
     onaddtocookbook,
     onaddtoplan,
     onshare,
@@ -65,7 +67,7 @@
     />
   </div>
 
-  <RecipeHeadMeta {recipe} {cooking} {cookbooks} {printedYield} {nutrition} />
+  <RecipeHeadMeta {recipe} {cooking} {cookbooks} {printedYield} {nutrition} {cooked} />
 </header>
 
 <style>

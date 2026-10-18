@@ -1980,5 +1980,9 @@
   "plan.recipe.alreadyListed": "Die Zutaten stehen schon auf der Einkaufsliste und zählen jetzt für diese Mahlzeit.",
   "shopping.sheet.addsUp": "steht schon auf der Liste, wird dazugerechnet",
   "recipe.timesWarning.up": "Die Zeiten gelten für {count} – mehr in Topf oder Form braucht oft länger.",
-  "recipe.scaleFrom": "Auf deine Menge {name} anpassen"
+  "recipe.scaleFrom": "Auf deine Menge {name} anpassen",
+  "cooking.madeIt": "Hab ich gekocht",
+  "cooking.madeIt.named": "{title} gekocht",
+  "recipe.whereabouts.cookedToday": "Heute gekocht",
+  "recipe.lastCooked": "zuletzt {when}"
 }
