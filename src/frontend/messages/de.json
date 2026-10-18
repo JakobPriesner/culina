@@ -2034,5 +2034,7 @@
   "cookbooks.takeOff.label": "{title} aus diesem Kochbuch nehmen",
   "cookbooks.plan.action": "Daraus einplanen",
   "cookbooks.plan.title": "Welches kommt in die Woche?",
-  "cookbooks.back": "Alle Kochbücher"
+  "cookbooks.back": "Alle Kochbücher",
+  "plan.dishes.label": "Gerichte dieser Mahlzeit",
+  "plan.dishes.hint": "Wechsle ruhig hin und her: Jedes behält seinen Schritt."
 }

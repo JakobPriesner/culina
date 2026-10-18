@@ -2034,5 +2034,7 @@
   "cookbooks.takeOff.label": "Take {title} out of this cookbook",
   "cookbooks.plan.action": "Plan from it",
   "cookbooks.plan.title": "Which one for the week?",
-  "cookbooks.back": "All cookbooks"
+  "cookbooks.back": "All cookbooks",
+  "plan.dishes.label": "Dishes of this meal",
+  "plan.dishes.hint": "Switch freely: each keeps its step."
 }

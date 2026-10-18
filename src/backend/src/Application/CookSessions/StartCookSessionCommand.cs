@@ -21,6 +21,9 @@ internal sealed class StartCookSessionCommandHandler(
     TimeProvider time)
     : ICommandHandler<StartCookSessionCommand, Response>
 {
+    /// <summary>How long a dish set aside for another keeps its place: one evening's cooking.</summary>
+    private static readonly TimeSpan SetAsideFor = TimeSpan.FromHours(6);
+
     public async Task<Result<Response>> Handle(
         StartCookSessionCommand command,
         CancellationToken cancellationToken)
@@ -35,13 +38,22 @@ internal sealed class StartCookSessionCommandHandler(
             .VisibleInAsync(recipes, households, command.RecipeId, command.HouseholdId, command.UserId, cancellationToken)
             .ConfigureAwait(false);
 
+        var now = time.GetUtcNow();
+
+        // A dish set aside for another (the side while the main simmers) picks up where it was.
+        var left = await sessions
+            .StepSetAsideAsync(command.UserId, command.RecipeId, now - SetAsideFor, cancellationToken)
+            .ConfigureAwait(false);
+
         var started = recipe.Bind(found => CookSession
             .Start(
                 found.Id,
                 command.UserId,
                 command.HouseholdId ?? found.HouseholdId,
                 command.Servings,
-                time.GetUtcNow())
+                now)
+            .Bind(session => (left is { } step ? session.MoveTo(step, found.Steps.Count, now) : Result.Success())
+                .Map(() => session))
             .Map(session => (Session: session, Title: found.Title.Value)));
 
         var result = await started.Match(

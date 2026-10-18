@@ -19,6 +19,8 @@
   import KitchenSheet from '$features/cooking/KitchenSheet.svelte';
   import NotesSheet from '$features/cooking/NotesSheet.svelte';
   import { createStepGestures } from '$features/cooking/stepGestures';
+  import MealDishes from '$features/planning/MealDishes.svelte';
+  import { upcoming } from '$features/planning/upcoming.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
@@ -73,6 +75,13 @@
   $effect(() => {
     if (recipeId) {
       void recipes.load(recipeId);
+    }
+  });
+
+  // Today's plan, for the other dishes of this meal.
+  $effect(() => {
+    if (session.activeHouseholdId) {
+      void upcoming.load(session.activeHouseholdId);
     }
   });
 
@@ -210,6 +219,8 @@
           <Button variant="primary" onclick={retryStart}>{m['error.retry']()}</Button>
         </div>
       {/if}
+
+      <MealDishes {recipeId} />
 
       <RecipeSurface
         {recipe}
