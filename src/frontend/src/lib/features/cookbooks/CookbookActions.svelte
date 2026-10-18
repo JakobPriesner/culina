@@ -76,30 +76,32 @@
   {/if}
 
   <!-- What a shelf is for in the week: one of its recipes on a day. -->
-  <Button onclick={onplan}>
-    {#snippet icon()}
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.8"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <rect x="3.5" y="5.5" width="17" height="15" rx="2" />
-        <path d="M8 3.5v4M16 3.5v4M3.5 10h17" />
-        <path d="m9 15 2 2 4-4" />
-      </svg>
-    {/snippet}
+  <div class="compact">
+    <Button label={m['cookbooks.plan.action']()} onclick={onplan}>
+      {#snippet icon()}
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <rect x="3.5" y="5.5" width="17" height="15" rx="2" />
+          <path d="M8 3.5v4M16 3.5v4M3.5 10h17" />
+          <path d="m9 15 2 2 4-4" />
+        </svg>
+      {/snippet}
 
-    {m['cookbooks.plan.action']()}
-  </Button>
+      {m['cookbooks.plan.action']()}
+    </Button>
+  </div>
 
   <!-- A whole shelf at once only for a chosen one: a self-filling shelf can hold dozens. -->
   {#if !automatic}
-    <div class="shopping">
-      <Button loading={addingToList} onclick={onaddtolist}>
+    <div class="shopping compact">
+      <Button label={m['cookbooks.shopping.add']()} loading={addingToList} onclick={onaddtolist}>
         {#snippet icon()}
           <svg
             viewBox="0 0 24 24"
@@ -210,9 +212,14 @@
       justify-content: flex-start;
     }
 
-    /* The menu joins the primary action on the first row; shopping takes the row below. */
-    .shopping {
-      order: 1;
+    /* One row on a phone: the secondary actions become circles, as on a recipe, each still named in full. */
+    .compact :global(.button) {
+      width: var(--control-md);
+      padding-inline: 0;
+    }
+
+    .compact :global(.button .label) {
+      display: none;
     }
   }
 </style>

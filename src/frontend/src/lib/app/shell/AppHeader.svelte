@@ -57,7 +57,8 @@
       <!-- Without a household too: the account menu is the one way to settings. -->
       {#if session.user}
         <div class="tools">
-          {#if searchable}<SearchButton />{/if}
+          <!-- Nothing to search in an empty library; its invitation is the way on. -->
+          {#if searchable && !emptyLibrary}<SearchButton />{/if}
           <AccountMenu onswitch={switched} />
         </div>
       {/if}
