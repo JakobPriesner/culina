@@ -21,6 +21,8 @@ internal sealed record PlannedRow
 
     public int SortOrder { get; init; }
 
+    public Guid? LeftoverOf { get; init; }
+
     public string Title { get; init; } = string.Empty;
 
     public Guid? ImageId { get; init; }
@@ -51,7 +53,7 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
         var rows = await executor.QueryAsync<PlannedRow>(
             """
             select p.id, p.household_id, p.on_date, p.recipe_id, p.servings, p.slot, p.sort_order,
-                   r.title, r.image_id, r.prep_minutes, r.cook_minutes, r.yield_amount,
+                   p.leftover_of, r.title, r.image_id, r.prep_minutes, r.cook_minutes, r.yield_amount,
                    exists (
                        select 1 from shopping_list_item_sources s where s.plan_entry_id = p.id
                    ) as is_on_shopping_list,
@@ -97,8 +99,8 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
         await executor.ExecuteAsync(
             """
             insert into meal_plan_entries
-                (id, household_id, on_date, recipe_id, servings, slot, sort_order)
-            values (@id, @householdId, @date, @recipeId, @servings, @slot, @sortOrder);
+                (id, household_id, on_date, recipe_id, servings, slot, sort_order, leftover_of)
+            values (@id, @householdId, @date, @recipeId, @servings, @slot, @sortOrder, @leftoverOf);
             """,
             new
             {
@@ -108,7 +110,8 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
                 recipeId = entry.RecipeId,
                 servings = entry.Servings,
                 slot = PlanningCodes.Of(entry.Slot),
-                sortOrder = entry.SortOrder
+                sortOrder = entry.SortOrder,
+                leftoverOf = entry.LeftoverOf
             },
             cancellationToken).ConfigureAwait(false);
 
@@ -123,7 +126,7 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
         // The household is in the where clause: "not yours" and "not there" must answer alike or entry ids leak.
         var row = await executor.QuerySingleOrDefaultAsync<PlannedRow>(
             """
-            select id, household_id, on_date, recipe_id, servings, slot, sort_order
+            select id, household_id, on_date, recipe_id, servings, slot, sort_order, leftover_of
             from meal_plan_entries
             where id = @entryId and household_id = @householdId;
             """,
@@ -139,7 +142,8 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
                 row.RecipeId,
                 row.Servings,
                 PlanningCodes.ToSlot(row.Slot),
-                row.SortOrder);
+                row.SortOrder,
+                row.LeftoverOf);
     }
 
     public async Task<Result> MoveAsync(MealPlanEntry moved, CancellationToken cancellationToken)
@@ -222,7 +226,8 @@ internal sealed class MealPlanRepository(DbExecutor executor) : IMealPlanReposit
             row.RecipeId,
             row.Servings,
             PlanningCodes.ToSlot(row.Slot),
-            row.SortOrder),
+            row.SortOrder,
+            row.LeftoverOf),
         row.Title,
         row.ImageId,
         // Only when both are known: a guessed total is a number somebody plans an evening around.

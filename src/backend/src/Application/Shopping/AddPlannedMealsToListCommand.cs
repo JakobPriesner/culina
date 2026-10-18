@@ -94,7 +94,9 @@ internal sealed class AddPlannedMealsToListCommandHandler(
         {
             var entry = planned.Entry;
 
-            if (list.IsShoppedFor(entry.Id) ||
+            // Leftovers were bought with the meal they are the rest of.
+            if (entry.LeftoverOf is not null ||
+                list.IsShoppedFor(entry.Id) ||
                 list.CountFor(entry.RecipeId, entry.Id, entry.Date, entry.Slot))
             {
                 continue;

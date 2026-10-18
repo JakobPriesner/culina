@@ -3549,6 +3549,11 @@ export interface components {
             servings?: number | null;
             /** @description `breakfast`, `lunch` or `dinner`. Defaults to dinner. */
             slot?: string | null;
+            /**
+             * Format: uuid
+             * @description The planned meal of the same recipe whose rest this is; it then adds nothing to the shopping list.
+             */
+            leftoverOf?: string | null;
         };
         /** @description One day of the week. */
         PlanningPlannedDay: {
@@ -3598,6 +3603,11 @@ export interface components {
             slot: string;
             /** @description Whether this meal's ingredients are on the household's shopping list. */
             isOnShoppingList: boolean;
+            /**
+             * Format: uuid
+             * @description The planned meal whose rest this is, or null: leftovers are cooked and bought with that one.
+             */
+            leftoverOf?: string | null;
             /**
              * Format: date-time
              * @description When the household last cooked this recipe within a day either side of the meal's day, or null. The

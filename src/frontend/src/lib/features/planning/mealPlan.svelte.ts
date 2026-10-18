@@ -149,9 +149,9 @@ class MealPlanStore {
     return this.days.flatMap((day) => day.meals);
   }
 
-  /** Meals whose ingredients are not on the shopping list yet. */
+  /** Meals whose ingredients are not on the shopping list yet; leftovers are bought with their original. */
   get unshopped(): readonly PlannedMeal[] {
-    return this.meals.filter((meal) => !meal.isOnShoppingList);
+    return this.meals.filter((meal) => !meal.isOnShoppingList && !meal.leftoverOf);
   }
 
   async load(householdId: string, from?: string): Promise<void> {
@@ -189,7 +189,14 @@ class MealPlanStore {
 
   async plan(
     householdId: string,
-    meal: { date: string; recipeId: string; servings?: number; slot?: MealSlot }
+    meal: {
+      date: string;
+      recipeId: string;
+      servings?: number;
+      slot?: MealSlot;
+      /** The planned meal of the same recipe whose rest this is. */
+      leftoverOf?: string;
+    }
   ): Promise<boolean> {
     const result = await request(() =>
       http.POST('/api/v1/households/{householdId}/meal-plan', {

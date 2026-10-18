@@ -127,6 +127,7 @@
       recipeId={planning?.id ?? ''}
       title={planning?.title ?? ''}
       servings={planning?.yieldAmount ?? 1}
+      recipeServings={planning?.yieldKind === 'servings' ? planning.yieldAmount : undefined}
       onclose={() => (planning = null)}
     />
   {/await}

@@ -12008,6 +12008,12 @@
             "type": "string",
             "description": "`breakfast`, `lunch` or `dinner`. Defaults to dinner.",
             "nullable": true
+          },
+          "leftoverOf": {
+            "type": "string",
+            "description": "The planned meal of the same recipe whose rest this is; it then adds nothing to the shopping list.",
+            "format": "uuid",
+            "nullable": true
           }
         },
         "description": "Plans a meal."
@@ -12089,6 +12095,12 @@
           "isOnShoppingList": {
             "type": "boolean",
             "description": "Whether this meal's ingredients are on the household's shopping list."
+          },
+          "leftoverOf": {
+            "type": "string",
+            "description": "The planned meal whose rest this is, or null: leftovers are cooked and bought with that one.",
+            "format": "uuid",
+            "nullable": true
           },
           "cookedAt": {
             "type": "string",

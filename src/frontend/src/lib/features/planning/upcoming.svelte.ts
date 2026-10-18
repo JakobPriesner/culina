@@ -92,6 +92,26 @@ class UpcomingStore {
     );
   }
 
+  /**
+   * For how many this kitchen usually plans: the servings most of its coming meals are for, once two agree.
+   * What the plan sheet starts on, so a household of two is not asked to cook for six every time.
+   */
+  get usualServings(): number | null {
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity -- Counted and read within one call.
+    const counts = new Map<number, number>();
+
+    for (const meal of this.days.flatMap((day) => day.meals)) {
+      if (meal.leftoverOf) continue;
+
+      const servings = servingsOf(meal);
+      counts.set(servings, (counts.get(servings) ?? 0) + 1);
+    }
+
+    const [servings, times] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [null, 0];
+
+    return times >= 2 ? servings : null;
+  }
+
   /** Every dish of the meal now (curry and rice for dinner), still to cook, in the plan's order. */
   get dishesNow(): readonly PlannedMeal[] {
     const now = this.mealNow;

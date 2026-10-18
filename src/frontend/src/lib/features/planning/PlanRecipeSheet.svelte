@@ -1,7 +1,7 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
-  import { Button, Checkbox, Sheet, Skeleton } from '$ds';
+  import { Button, Checkbox, Field, Select, Sheet, Skeleton } from '$ds';
 
   import { shopping } from '$features/shopping/stores/shopping.svelte';
 
@@ -26,10 +26,12 @@
     recipeId: string;
     title: string;
     servings: number;
+    /** What the recipe is written for: planning fewer leaves a rest, which can go on the plan as leftovers. */
+    recipeServings?: number;
     onclose: () => void;
   }
 
-  let { open, householdId, recipeId, title, servings, onclose }: Props = $props();
+  let { open, householdId, recipeId, title, servings, recipeServings, onclose }: Props = $props();
 
   let date = $state('');
   let slot = $state<MealSlot>('dinner');
@@ -38,6 +40,10 @@
   /** The stepper counts whole servings; a page scaled to 2.5 plans 2.5 until somebody says otherwise. */
   let touched = $state(false);
   let alsoShop = $state(false);
+  /** The kitchen's usual servings stood in for the recipe's own when the sheet opened. */
+  let usual = $state<number | null>(null);
+  let leftovers = $state(false);
+  let leftoverDate = $state('');
 
   const days = $derived(upcoming.days);
 
@@ -50,6 +56,9 @@
     slot = 'dinner';
     count = Math.max(1, Math.round(servings));
     touched = false;
+    usual = null;
+    leftovers = false;
+    leftoverDate = '';
     void upcoming.load(householdId);
     void shopping.load(householdId);
   });
@@ -65,6 +74,39 @@
   $effect(() => {
     if (open) {
       alsoShop = shopped;
+    }
+  });
+
+  // A page at the recipe's own yield says nothing about this kitchen; its usual number does, once the plan has one.
+  $effect(() => {
+    const kitchen = upcoming.usualServings;
+
+    if (
+      open &&
+      !touched &&
+      kitchen !== null &&
+      recipeServings !== undefined &&
+      Math.round(servings) === recipeServings &&
+      kitchen !== recipeServings
+    ) {
+      count = kitchen;
+      touched = true;
+      usual = kitchen;
+    }
+  });
+
+  /** For how many this meal is, as it will be saved. */
+  const planned = $derived(touched ? count : servings);
+  /** What the recipe makes beyond that: a rest to eat another day. */
+  const rest = $derived(
+    recipeServings !== undefined && planned < recipeServings ? recipeServings - planned : 0
+  );
+  /** The days after the chosen one, for eating the rest. */
+  const later = $derived(days.filter((day) => day.date > date).slice(0, 4));
+
+  $effect(() => {
+    if (open && !later.some((day) => day.date === leftoverDate)) {
+      leftoverDate = later[0]?.date ?? '';
     }
   });
 
@@ -85,13 +127,26 @@
     }
 
     saving = true;
+    const withRest = leftovers && rest > 0 && leftoverDate !== '';
+    // With leftovers the batch is cooked (and bought) once, for everything the recipe makes.
     const ok = await mealPlan.plan(householdId, {
       date,
       recipeId,
-      servings: touched ? count : servings,
+      servings: withRest ? recipeServings : planned,
       slot
     });
-    const listFailure = ok && alsoShop && !listed ? await shopPlanned() : null;
+    const original = ok ? plannedEntry() : undefined;
+    const restOk =
+      withRest && original
+        ? await mealPlan.plan(householdId, {
+            date: leftoverDate,
+            recipeId,
+            servings: rest,
+            slot: 'lunch',
+            leftoverOf: original
+          })
+        : true;
+    const listFailure = ok && alsoShop && !listed ? await shopPlanned(original) : null;
     saving = false;
 
     // The recipe page and the library read what is coming up; tell them.
@@ -110,14 +165,18 @@
     // The week page opens on this week; a day in the next one needs saying.
     const weekOf = date >= mondayOf(1) ? '?week=1' : '';
 
+    const restDay = withRest && restOk ? longDay.format(dayOf(leftoverDate)) : null;
+
     toaster.show({
       message: () =>
         listFailure
           ? m['plan.recipe.doneNotListed']({ day })
-          : alsoShop || listed
-            ? m['plan.recipe.doneListed']({ day })
-            : m['plan.recipe.done']({ day }),
-      tone: listFailure ? 'danger' : 'success',
+          : restDay
+            ? m['plan.recipe.doneLeftovers']({ day, rest: restDay })
+            : alsoShop || listed
+              ? m['plan.recipe.doneListed']({ day })
+              : m['plan.recipe.done']({ day }),
+      tone: listFailure || !restOk ? 'danger' : 'success',
       action: {
         label: () => m['plan.recipe.showWeek'](),
         // eslint-disable-next-line svelte/no-navigation-without-resolve -- The route is resolved; only the week query is appended.
@@ -128,11 +187,14 @@
   }
 
   /** The meal just planned is the last of its kind on that day and in that slot: the server appends it. */
-  async function shopPlanned() {
-    const entryId = mealPlan.days
+  const plannedEntry = () =>
+    mealPlan.days
       .find((day) => day.date === date)
-      ?.meals.findLast((meal) => meal.recipeId === recipeId && meal.slot === slot)?.entryId;
+      ?.meals.findLast(
+        (meal) => meal.recipeId === recipeId && meal.slot === slot && !meal.leftoverOf
+      )?.entryId;
 
+  async function shopPlanned(entryId = plannedEntry()) {
     return entryId ? shopping.addPlannedMeal(householdId, date, entryId) : null;
   }
 </script>
@@ -158,7 +220,30 @@
       bind:slot
       bind:servings={count}
       onservings={() => (touched = true)}
+      servingsHint={usual !== null && count === usual
+        ? m['plan.recipe.usual']({ servings: m['recipes.meta.servings']({ count: usual }) })
+        : undefined}
     >
+      {#if rest > 0 && later.length > 0}
+        <div class="rest">
+          <Checkbox bind:checked={leftovers} label={m['plan.recipe.leftovers']({ count: rest })} />
+          <p class="hint">{m['plan.recipe.leftoversHint']()}</p>
+          {#if leftovers}
+            <Field label={m['plan.recipe.leftoversDay']()}>
+              {#snippet children({ id })}
+                <Select
+                  {id}
+                  bind:value={leftoverDate}
+                  options={later.map((day) => ({
+                    value: day.date,
+                    label: longDay.format(dayOf(day.date))
+                  }))}
+                />
+              {/snippet}
+            </Field>
+          {/if}
+        </div>
+      {/if}
       <!-- Offered every time, ticked once the coming meals are shopped: a meal planned now would miss that shop. -->
       {#if listed}
         <p class="hint">{m['plan.recipe.alreadyListed']()}</p>
@@ -185,6 +270,13 @@
 
   .failure {
     color: var(--text-danger);
+  }
+
+  .rest {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
   }
 
   .hint {

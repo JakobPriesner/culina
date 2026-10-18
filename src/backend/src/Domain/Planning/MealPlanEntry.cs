@@ -12,7 +12,8 @@ public sealed class MealPlanEntry
         Guid recipeId,
         decimal? servings,
         MealSlot slot,
-        int sortOrder)
+        int sortOrder,
+        Guid? leftoverOf)
     {
         Id = id;
         HouseholdId = householdId;
@@ -21,6 +22,7 @@ public sealed class MealPlanEntry
         Servings = servings;
         Slot = slot;
         SortOrder = sortOrder;
+        LeftoverOf = leftoverOf;
     }
 
     /// <summary>The entry's id.</summary>
@@ -44,6 +46,9 @@ public sealed class MealPlanEntry
     /// <summary>Where it sits among that day's entries.</summary>
     public int SortOrder { get; }
 
+    /// <summary>The meal this one eats the rest of, or null: leftovers are cooked once and bought once, with the original.</summary>
+    public Guid? LeftoverOf { get; }
+
     /// <summary>Plans a meal.</summary>
     /// <param name="householdId">Whose plan.</param>
     /// <param name="date">Which day.</param>
@@ -51,13 +56,15 @@ public sealed class MealPlanEntry
     /// <param name="servings">For how many, or null.</param>
     /// <param name="slot">Which meal of the day.</param>
     /// <param name="sortOrder">Where it sits among that day's entries.</param>
+    /// <param name="leftoverOf">The meal it is the rest of, or null for a meal cooked on its day.</param>
     public static Result<MealPlanEntry> Plan(
         Guid householdId,
         DateOnly date,
         Guid recipeId,
         decimal? servings,
         MealSlot slot,
-        int sortOrder)
+        int sortOrder,
+        Guid? leftoverOf = null)
     {
         servings = Amounts.Round(servings);
 
@@ -73,7 +80,8 @@ public sealed class MealPlanEntry
             recipeId,
             servings,
             slot,
-            sortOrder);
+            sortOrder,
+            leftoverOf);
     }
 
     /// <summary>The same meal on another day, as a copy: what is cooked and for how many does not move with the date.</summary>
@@ -81,7 +89,7 @@ public sealed class MealPlanEntry
     /// <param name="slot">Which meal of that day.</param>
     /// <param name="sortOrder">Where it asks to sit among that day's entries.</param>
     public MealPlanEntry MoveTo(DateOnly date, MealSlot slot, int sortOrder) =>
-        new(Id, HouseholdId, date, RecipeId, Servings, slot, sortOrder);
+        new(Id, HouseholdId, date, RecipeId, Servings, slot, sortOrder, LeftoverOf);
 
     /// <summary>The same meal for another number of people; the recipe it is of keeps its own servings.</summary>
     /// <param name="servings">For how many.</param>
@@ -91,7 +99,7 @@ public sealed class MealPlanEntry
 
         return servings is <= 0 or > 1000
             ? PlanningErrors.InvalidServings
-            : new MealPlanEntry(Id, HouseholdId, Date, RecipeId, servings, Slot, SortOrder);
+            : new MealPlanEntry(Id, HouseholdId, Date, RecipeId, servings, Slot, SortOrder, LeftoverOf);
     }
 
     /// <summary>Rebuilds an entry from storage.</summary>
@@ -102,6 +110,7 @@ public sealed class MealPlanEntry
     /// <param name="servings">For how many.</param>
     /// <param name="slot">Which meal.</param>
     /// <param name="sortOrder">Where it sits.</param>
+    /// <param name="leftoverOf">The meal it is the rest of, if any.</param>
     public static MealPlanEntry Restore(
         Guid id,
         Guid householdId,
@@ -109,8 +118,9 @@ public sealed class MealPlanEntry
         Guid recipeId,
         decimal? servings,
         MealSlot slot,
-        int sortOrder) =>
-        new(id, householdId, date, recipeId, servings, slot, sortOrder);
+        int sortOrder,
+        Guid? leftoverOf = null) =>
+        new(id, householdId, date, recipeId, servings, slot, sortOrder, leftoverOf);
 }
 
 /// <summary>Which meal of the day something is for. Three only: a slot earns its place by changing what you buy.</summary>

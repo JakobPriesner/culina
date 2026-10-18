@@ -51,6 +51,9 @@ public sealed record PlannedMeal
     /// <summary>Whether this meal's ingredients are on the household's shopping list.</summary>
     public required bool IsOnShoppingList { get; init; }
 
+    /// <summary>The planned meal whose rest this is, or null: leftovers are cooked and bought with that one.</summary>
+    public Guid? LeftoverOf { get; init; }
+
     /// <summary>
     /// When the household last cooked this recipe within a day either side of the meal's day, or null. The
     /// client decides whether that was on the meal's day in its own time zone.
@@ -72,6 +75,9 @@ public sealed record PlanMealRequest
 
     /// <summary><c>breakfast</c>, <c>lunch</c> or <c>dinner</c>. Defaults to dinner.</summary>
     public string? Slot { get; init; }
+
+    /// <summary>The planned meal of the same recipe whose rest this is; it then adds nothing to the shopping list.</summary>
+    public Guid? LeftoverOf { get; init; }
 }
 
 /// <summary>Moves a planned meal to another day, and says for how many it is.</summary>
