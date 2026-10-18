@@ -2036,5 +2036,20 @@
   "cookbooks.plan.title": "Welches kommt in die Woche?",
   "cookbooks.back": "Alle Kochbücher",
   "plan.dishes.label": "Gerichte dieser Mahlzeit",
-  "plan.dishes.hint": "Wechsle ruhig hin und her: Jedes behält seinen Schritt."
+  "plan.dishes.hint": "Wechsle ruhig hin und her: Jedes behält seinen Schritt.",
+  "plan.recipe.usual": "Wie meistens bei euch: {servings}.",
+  "plan.recipe.leftovers": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Den Rest später essen: {count} Portion",
+        "countPlural=*": "Den Rest später essen: {count} Portionen"
+      }
+    }
+  ],
+  "plan.recipe.leftoversHint": "Das Rezept ergibt mehr. Gekocht und eingekauft wird einmal für alles, der Rest kommt als Mittagessen in die Woche und nichts extra auf die Liste.",
+  "plan.recipe.leftoversDay": "Rest essen am",
+  "plan.recipe.doneLeftovers": "Für {day} eingeplant, der Rest für {rest}.",
+  "plan.leftover": "Rest"
 }

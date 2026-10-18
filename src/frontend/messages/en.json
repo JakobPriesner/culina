@@ -2036,5 +2036,20 @@
   "cookbooks.plan.title": "Which one for the week?",
   "cookbooks.back": "All cookbooks",
   "plan.dishes.label": "Dishes of this meal",
-  "plan.dishes.hint": "Switch freely: each keeps its step."
+  "plan.dishes.hint": "Switch freely: each keeps its step.",
+  "plan.recipe.usual": "As usual in your kitchen: {servings}.",
+  "plan.recipe.leftovers": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Plan the rest for later: {count} serving",
+        "countPlural=*": "Plan the rest for later: {count} servings"
+      }
+    }
+  ],
+  "plan.recipe.leftoversHint": "The recipe makes more. It is cooked and bought once, for everything; the rest goes on the plan for lunch and adds nothing to the list.",
+  "plan.recipe.leftoversDay": "Eat the rest on",
+  "plan.recipe.doneLeftovers": "Planned for {day}, the rest for {rest}.",
+  "plan.leftover": "Leftovers"
 }

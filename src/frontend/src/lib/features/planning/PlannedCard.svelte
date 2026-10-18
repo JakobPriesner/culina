@@ -86,7 +86,9 @@
     <div class="words">
       <span class="name">{meal.title}</span>
       <span class="meta">{meta}</span>
-      {#if cooked}
+      {#if meal.leftoverOf}
+        <span class="listed">{m['plan.leftover']()}</span>
+      {:else if cooked}
         <span class="listed">
           <svg
             viewBox="0 0 24 24"

@@ -292,7 +292,7 @@ function cardOf(page: Page, title: string | RegExp): Locator {
  */
 async function openWeek(page: Page): Promise<void> {
   await page.goto('/plan');
-  await expect(page.getByRole('link', { name: /^(today|heute) · /i })).toBeVisible();
+  await expect(page.getByText(/^(today|heute) · /i)).toBeVisible();
 }
 
 async function dayHolding(page: Page, title: string): Promise<string> {

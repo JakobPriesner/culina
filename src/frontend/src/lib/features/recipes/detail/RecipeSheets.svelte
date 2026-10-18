@@ -83,6 +83,7 @@
         {recipeId}
         {title}
         {servings}
+        recipeServings={recipe?.yieldKind === 'servings' ? recipe.yieldAmount : undefined}
         onclose={close}
       />
     {/await}

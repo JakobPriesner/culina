@@ -644,6 +644,46 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task AddPlannedMeals_ShouldBuyLeftoversWithTheirOriginal_AndNothingForThem()
+    {
+        // Cooked once for four on Monday, half of it eaten again on Tuesday: bought once, for four.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var stew = await RecipeWithButterAsync(client, householdId, "Stew", 200);
+        var monday = await PlanAsync(client, householdId, stew, Monday, servings: 4);
+
+        var planned = await client.PostAsync(
+            $"/api/v1/households/{householdId}/meal-plan",
+            new { date = Monday.AddDays(1), recipeId = stew, servings = 2, leftoverOf = monday },
+            Token);
+
+        var response = await AddWeekAsync(client, householdId);
+        var week = await WeekAsync(client, householdId);
+
+        Assert.Equal(HttpStatusCode.OK, planned.StatusCode);
+        Assert.Equal(200m, Butter(response).GetProperty("quantity").GetDecimal());
+        Assert.Equal(monday, Assert.Single(week, meal => meal.TryGetProperty("leftoverOf", out var of)
+            && of.ValueKind == JsonValueKind.String).GetProperty("leftoverOf").GetGuid());
+    }
+
+    [Fact]
+    public async Task PlanMeal_ShouldRefuseLeftoversOfAnotherRecipe()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var stew = await RecipeWithButterAsync(client, householdId, "Stew", 200);
+        var cake = await RecipeWithButterAsync(client, householdId, "Cake", 100);
+        var monday = await PlanAsync(client, householdId, stew, Monday);
+
+        var response = await client.PostAsync(
+            $"/api/v1/households/{householdId}/meal-plan",
+            new { date = Monday.AddDays(1), recipeId = cake, leftoverOf = monday },
+            Token);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
     public async Task WithdrawPlannedMeal_ShouldTakeBackExactlyWhatThatMealAdded()
     {
         using var client = await SignedInAsync();

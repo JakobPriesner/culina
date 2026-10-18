@@ -118,7 +118,11 @@ internal sealed class PlanMealCommandHandler(
         var result = await planned.Match(
             async entry =>
             {
-                await LinkListedAsync(entry, cancellationToken).ConfigureAwait(false);
+                // Leftovers are bought with their original, so nothing on the list is theirs.
+                if (entry.LeftoverOf is null)
+                {
+                    await LinkListedAsync(entry, cancellationToken).ConfigureAwait(false);
+                }
 
                 return await ReadWeekAsync(plans, command.HouseholdId, entry.Date, cancellationToken)
                     .ConfigureAwait(false);
@@ -138,6 +142,17 @@ internal sealed class PlanMealCommandHandler(
         return await slot.Match(
             async which =>
             {
+                // Leftovers are of a meal of the same recipe on this household's plan, or of nothing.
+                if (command.Draft.LeftoverOf is { } original)
+                {
+                    var of = await plans.FindAsync(original, command.HouseholdId, cancellationToken).ConfigureAwait(false);
+
+                    if (!of.Match(found => found.RecipeId == command.Draft.RecipeId, _ => false))
+                    {
+                        return PlanningErrors.EntryNotFound;
+                    }
+                }
+
                 var sortOrder = await plans
                     .NextSortOrderAsync(command.HouseholdId, command.Draft.Date, cancellationToken)
                     .ConfigureAwait(false);
@@ -148,7 +163,8 @@ internal sealed class PlanMealCommandHandler(
                     command.Draft.RecipeId,
                     command.Draft.Servings,
                     which,
-                    sortOrder);
+                    sortOrder,
+                    command.Draft.LeftoverOf);
 
                 return await entry.Match(
                     async made =>

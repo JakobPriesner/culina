@@ -180,6 +180,7 @@
     recipeId={planned?.id ?? ''}
     title={planned?.title ?? ''}
     servings={planned?.yieldAmount ?? 2}
+    recipeServings={planned?.yieldKind === 'servings' ? planned.yieldAmount : undefined}
     onclose={() => (planned = null)}
   />
 {/if}
