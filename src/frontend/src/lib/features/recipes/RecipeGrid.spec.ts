@@ -1,3 +1,4 @@
+import userEvent from '@testing-library/user-event';
 import { screen } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -133,5 +134,21 @@ describe('the photos of the list', () => {
       'lazy',
       'lazy'
     ]);
+  });
+
+  it('takes a recipe out of the collection from its card, named for what it leaves', async () => {
+    const onremove = vi.fn();
+
+    renderWithProviders(RecipeGrid, {
+      props: {
+        recipes: [recipe('r1')],
+        onremove,
+        removeLabel: (one: RecipeSummary) => `Take ${one.title} out`
+      }
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: `Take ${recipe('r1').title} out` }));
+
+    expect(onremove).toHaveBeenCalledWith(expect.objectContaining({ id: 'r1' }));
   });
 });

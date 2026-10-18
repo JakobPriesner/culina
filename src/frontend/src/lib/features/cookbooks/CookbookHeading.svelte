@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { SectionLabel, Skeleton } from '$ds';
+  import { resolve } from '$app/paths';
+  import { Chevron, Skeleton } from '$ds';
   import { m } from '$shell/i18n';
   import type { CookbookDetail } from './types';
 
@@ -15,7 +16,11 @@
 </script>
 
 <div class="heading">
-  <SectionLabel tone="muted">{m['cookbooks.title']()}</SectionLabel>
+  <!-- The way back up, like "All recipes" above a recipe: a link, not a label. -->
+  <a class="up" href={resolve('/(app)/cookbooks')} aria-label={m['cookbooks.back']()}>
+    <Chevron direction="back" />
+    {m['cookbooks.title']()}
+  </a>
   {#if !cookbook && loading}
     <Skeleton width="16rem" height="2.25rem" />
     <Skeleton width="24rem" height="1.25rem" />
@@ -45,6 +50,22 @@
   .heading {
     flex: 1 1 24rem;
     min-width: 0;
+  }
+
+  .up {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+  }
+
+  @media (hover: hover) {
+    .up:hover {
+      color: var(--text);
+    }
   }
 
   .title {

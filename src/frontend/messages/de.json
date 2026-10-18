@@ -2030,5 +2030,9 @@
   "recipe.stub.filled": "Ausgefüllt. Schau es im Editor noch einmal durch.",
   "recipe.stub.fillHint": "Füllt genau dieses Rezept: Es bleibt eingeplant, deine Notizen bleiben.",
   "picker.createStub": "„{title}“ als neues Rezept anlegen",
-  "picker.createStub.hint": "Erst nur der Name, ausfüllen kannst du es später."
+  "picker.createStub.hint": "Erst nur der Name, ausfüllen kannst du es später.",
+  "cookbooks.takeOff.label": "{title} aus diesem Kochbuch nehmen",
+  "cookbooks.plan.action": "Daraus einplanen",
+  "cookbooks.plan.title": "Welches kommt in die Woche?",
+  "cookbooks.back": "Alle Kochbücher"
 }
