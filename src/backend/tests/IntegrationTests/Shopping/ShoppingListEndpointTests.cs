@@ -557,6 +557,48 @@ public class ShoppingListEndpointTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task PlanMeal_ShouldCountARecipeAlreadyListedByItself_AsThatMealsShopping()
+    {
+        // "Add to plan" beside "Add to the list": the second press must not leave the week offering to buy it again.
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+
+        await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/recipes",
+            new { recipeId, servings = 4 },
+            Token);
+        var entryId = await PlanAsync(client, householdId, recipeId, Monday);
+
+        var meal = Assert.Single(await WeekAsync(client, householdId));
+        var list = await client.GetAsync($"/api/v1/households/{householdId}/shopping-list", Token);
+        var source = Assert.Single(Butter(list).GetProperty("sources").EnumerateArray());
+
+        Assert.True(meal.GetProperty("isOnShoppingList").GetBoolean());
+        Assert.Equal(entryId, source.GetProperty("planEntryId").GetGuid());
+        Assert.Equal(200m, Butter(list).GetProperty("quantity").GetDecimal());
+    }
+
+    [Fact]
+    public async Task AddRecipe_ShouldLeaveOffTheIngredientsTheCookAlreadyHas()
+    {
+        using var client = await SignedInAsync();
+        var householdId = await HouseholdAsync(client);
+        var recipeId = await RecipeWithButterAsync(client, householdId, "Cake", 200);
+        var recipe = await client.GetAsync($"/api/v1/recipes/{recipeId}", Token);
+        var butter = recipe.Json!.Value.GetProperty("groups")[0].GetProperty("ingredients")[0]
+            .GetProperty("ingredientId").GetGuid();
+
+        var response = await client.PostAsync(
+            $"/api/v1/households/{householdId}/shopping-list/recipes",
+            new { recipeId, servings = 4, exceptIngredientIds = new[] { butter } },
+            Token);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Empty(response.Json!.Value.GetProperty("items").EnumerateArray());
+    }
+
+    [Fact]
     public async Task WithdrawPlannedMeal_ShouldTakeBackExactlyWhatThatMealAdded()
     {
         using var client = await SignedInAsync();

@@ -13,9 +13,11 @@
     scaling: Scaling;
     highlighted: string | null;
     onhighlight: (ingredientId: string | null) => void;
+    /** Whether a name is still to buy on the shopping list; see `IngredientRow`. */
+    onTheList?: (name: string) => boolean;
   }
 
-  let { panel, cooking, scaling, highlighted, onhighlight }: Props = $props();
+  let { panel, cooking, scaling, highlighted, onhighlight, onTheList }: Props = $props();
 
   const perStep = $derived(panel.perStep);
 </script>
@@ -52,7 +54,13 @@
       <SectionLabel spacing="tight">{m['recipe.notInAnyStep']()}</SectionLabel>
     {/if}
 
-    <IngredientList ingredients={panel.panel} {scaling} {highlighted} onhover={onhighlight} />
+    <IngredientList
+      ingredients={panel.panel}
+      {scaling}
+      {highlighted}
+      onhover={onhighlight}
+      {onTheList}
+    />
   {:else if !perStep}
     <!-- While cooking the list is filtered to this step, so "none written" would be wrong. Beside the steps, all ingredients accounted for says nothing. -->
     <p class="empty">

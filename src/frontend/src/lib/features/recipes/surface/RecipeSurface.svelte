@@ -30,6 +30,10 @@
     /** A session for this recipe is open, so the cooking action leads back to it. */
     resuming?: boolean;
     onaddtolist?: () => void;
+    /** The recipe still has lines on the shopping list, which its action says. */
+    listed?: boolean;
+    /** Whether an ingredient of this name is still to buy, marked in the list; absent where there is no list. */
+    onTheList?: (name: string) => boolean;
     onaddtocookbook?: () => void;
     onaddtoplan?: () => void;
     onshare?: () => void;
@@ -64,6 +68,8 @@
     onstartcooking,
     resuming = false,
     onaddtolist,
+    listed = false,
+    onTheList,
     onaddtocookbook,
     onaddtoplan,
     onshare,
@@ -144,6 +150,7 @@
     {cookbooks}
     printedYield={scaling.currentYieldLabel}
     {onaddtolist}
+    {listed}
     {onaddtocookbook}
     {onaddtoplan}
     {onshare}
@@ -171,6 +178,7 @@
       {scaling}
       {highlighted}
       onhighlight={(id) => (highlighted = id)}
+      onTheList={cooking ? undefined : onTheList}
     />
 
     <StepList

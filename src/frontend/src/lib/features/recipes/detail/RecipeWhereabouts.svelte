@@ -37,13 +37,7 @@
   const planned = $derived(upcoming.nextFor(recipeId));
 
   /** Still to buy for this recipe; a line already in the trolley is done with. `sources` can be missing from a list cached before it existed, as the list row also allows. */
-  const listed = $derived(
-    shopping.householdId === householdId &&
-      shopping.items.some(
-        (item) =>
-          !item.isChecked && (item.sources ?? []).some((source) => source.recipeId === recipeId)
-      )
-  );
+  const listed = $derived(shopping.householdId === householdId && shopping.holdsRecipe(recipeId));
 
   const when = $derived(
     planned

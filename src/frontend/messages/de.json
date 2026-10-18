@@ -1959,5 +1959,24 @@
   "recipe.stub.title": "Bisher nur ein Titel",
   "recipe.stub.body": "Ergänze Zutaten und Schritte, um danach zu kochen.",
   "recipe.stub.finish": "Weiterschreiben",
-  "import.photo.or": "oder ein Link zum Rezept"
+  "import.photo.or": "oder ein Link zum Rezept",
+  "shopping.sheet.hint": "Nimm raus, was du schon da hast.",
+  "shopping.sheet.onList": "für dieses Rezept schon auf der Liste",
+  "shopping.sheet.forMeal": "Eingeplant für {when}: Die Zutaten kommen für diese Mahlzeit dazu, für {servings}.",
+  "shopping.sheet.confirm": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} Zutat hinzufügen",
+        "countPlural=*": "{count} Zutaten hinzufügen"
+      }
+    }
+  ],
+  "shopping.sheet.cancel": "Abbrechen",
+  "shopping.onList": "Auf der Liste",
+  "shopping.row.listed": "auf der Einkaufsliste",
+  "shopping.addedForMeal": "Für {when} hinzugefügt.",
+  "plan.recipe.alreadyListed": "Die Zutaten stehen schon auf der Einkaufsliste und zählen jetzt für diese Mahlzeit.",
+  "shopping.sheet.addsUp": "steht schon auf der Liste, wird dazugerechnet"
 }

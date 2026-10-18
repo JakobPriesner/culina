@@ -102,6 +102,9 @@ public sealed record AddRecipeRequest
 
     /// <summary>How many it is being made for, so the amounts are the real ones.</summary>
     public required decimal Servings { get; init; }
+
+    /// <summary>The recipe's ingredients to leave off: already in the cupboard, or already on the list.</summary>
+    public IReadOnlyList<Guid>? ExceptIngredientIds { get; init; }
 }
 
 /// <summary>A planned week's shopping.</summary>
@@ -112,6 +115,9 @@ public sealed record AddPlannedMealsRequest
 
     /// <summary>Only this planned meal of the week, as when it is planned after the shop; null for all of them.</summary>
     public Guid? EntryId { get; init; }
+
+    /// <summary>With <see cref="EntryId"/>: that recipe's ingredients to leave off, already in the cupboard or on the list.</summary>
+    public IReadOnlyList<Guid>? ExceptIngredientIds { get; init; }
 }
 
 /// <summary>A change to one line.</summary>

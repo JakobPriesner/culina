@@ -17,6 +17,10 @@ const slotOrder: readonly MealSlot[] = ['breakfast', 'lunch', 'dinner'];
 
 /** Where a recipe is next on the plan, and which week that is from this one (for `/plan?week=`). */
 export interface NextPlanned {
+  /** The plan entry, for shopping with its provenance. */
+  readonly entryId: string;
+  /** Whether its shopping is already on the list. */
+  readonly isOnShoppingList: boolean;
   readonly date: string;
   readonly slot: MealSlot;
   readonly week: 0 | 1;
@@ -94,6 +98,8 @@ class UpcomingStore {
 
       if (meal) {
         return {
+          entryId: meal.entryId,
+          isOnShoppingList: meal.isOnShoppingList,
           date: day.date,
           slot: meal.slot as MealSlot,
           week: day.date >= nextMonday ? 1 : 0,

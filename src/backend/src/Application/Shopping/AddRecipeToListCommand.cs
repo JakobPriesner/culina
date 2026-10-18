@@ -12,11 +12,13 @@ namespace Application.Shopping;
 /// <param name="RecipeId">Which recipe.</param>
 /// <param name="UserId">Who is adding it.</param>
 /// <param name="Servings">How many it is being made for.</param>
+/// <param name="Except">Its ingredients to leave off.</param>
 public sealed record AddRecipeToListCommand(
     Guid HouseholdId,
     Guid RecipeId,
     Guid UserId,
-    decimal Servings);
+    decimal Servings,
+    IReadOnlyCollection<Guid> Except);
 
 internal sealed class AddRecipeToListCommandHandler(
     IShoppingListRepository lists,
@@ -59,7 +61,8 @@ internal sealed class AddRecipeToListCommandHandler(
                             planEntryId: null,
                             plannedDate: null,
                             plannedSlot: null,
-                            overrides)),
+                            overrides,
+                            command.Except)),
                     cancellationToken),
                 error => Task.FromResult(Result<Response>.Failure(error)))
             .ConfigureAwait(false);

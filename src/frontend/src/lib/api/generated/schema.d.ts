@@ -5866,6 +5866,8 @@ export interface components {
              * @description Only this planned meal of the week, as when it is planned after the shop; null for all of them.
              */
             entryId?: string | null;
+            /** @description With Guid? AddPlannedMealsRequest.EntryId: that recipe's ingredients to leave off, already in the cupboard or on the list. */
+            exceptIngredientIds?: string[] | null;
         };
         /** @description A recipe's ingredients, at a chosen scaling. */
         ShoppingAddRecipeRequest: {
@@ -5879,6 +5881,8 @@ export interface components {
              * @description How many it is being made for, so the amounts are the real ones.
              */
             servings: number;
+            /** @description The recipe's ingredients to leave off: already in the cupboard, or already on the list. */
+            exceptIngredientIds?: string[] | null;
         };
         /** @description One line on the list. */
         ShoppingItemContract: {

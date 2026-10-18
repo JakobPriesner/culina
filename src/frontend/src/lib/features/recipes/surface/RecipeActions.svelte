@@ -11,6 +11,8 @@
     cooking: boolean;
     editable: boolean;
     onaddtolist?: () => void;
+    /** Already on the list: the button says so, and still opens the list sheet to add more. */
+    listed?: boolean;
     onaddtocookbook?: () => void;
     onaddtoplan?: () => void;
     onshare?: () => void;
@@ -23,6 +25,7 @@
     cooking,
     editable,
     onaddtolist,
+    listed = false,
     onaddtocookbook,
     onaddtoplan,
     onshare,
@@ -61,7 +64,10 @@
     {/if}
 
     {#if onaddtolist}
-      <Button label={m['shopping.addToList']()} onclick={onaddtolist}>
+      <Button
+        label={listed ? m['shopping.onList']() : m['shopping.addToList']()}
+        onclick={onaddtolist}
+      >
         {#snippet icon()}
           <svg
             viewBox="0 0 24 24"
@@ -72,11 +78,15 @@
             stroke-linejoin="round"
           >
             <path d="M4 8h16l-1.4 10a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7Z" />
-            <path d="M9 8 12 3l3 5" />
+            {#if listed}
+              <path d="m9 13.5 2 2 4-4" />
+            {:else}
+              <path d="M9 8 12 3l3 5" />
+            {/if}
           </svg>
         {/snippet}
 
-        {m['shopping.addToList']()}
+        {listed ? m['shopping.onList']() : m['shopping.addToList']()}
       </Button>
     {/if}
 

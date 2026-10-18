@@ -5,8 +5,6 @@ import { resolve } from '$app/paths';
 import { page } from '$app/state';
 import { recipes } from '$features/recipes/stores/recipes.svelte';
 import { urlAtYield } from '$features/recipes/surface/yieldInUrl';
-import { openListAction } from '$features/shopping/openList';
-import { shopping } from '$features/shopping/stores/shopping.svelte';
 import { explain } from '$shell/explain';
 import { m } from '$shell/i18n';
 import { toaster } from '$shell/toaster.svelte';
@@ -27,23 +25,6 @@ export function useRecipeActions(on: Recipe) {
       keepFocus: true,
       noScroll: true
     });
-  }
-
-  /** Adds the ingredients at the scaling on screen, not the recipe's own yield. */
-  async function addToShoppingList() {
-    const householdId = on.householdId();
-
-    if (!householdId) {
-      return;
-    }
-
-    const failure = await shopping.addRecipe(householdId, on.recipeId(), on.servings());
-
-    toaster.show(
-      failure
-        ? { message: () => explain(failure), tone: 'danger' }
-        : { message: () => m['shopping.added'](), tone: 'success', action: openListAction }
-    );
   }
 
   /** Copies an inherited recipe into this household and opens the copy in the editor. */
@@ -77,5 +58,5 @@ export function useRecipeActions(on: Recipe) {
     void goto(urlAtYield(target, on.servings(), recipes.detail));
   }
 
-  return { scale, addToShoppingList, copy, startCooking };
+  return { scale, copy, startCooking };
 }

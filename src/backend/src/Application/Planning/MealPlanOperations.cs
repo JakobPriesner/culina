@@ -2,6 +2,7 @@ using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Households;
 using Application.Recipes;
+using Application.Shopping;
 using Application.Telemetry;
 using Contracts.Planning;
 using Domain.Planning;
@@ -86,6 +87,8 @@ internal sealed class PlanMealCommandHandler(
     IMealPlanRepository plans,
     IRecipeRepository recipes,
     IHouseholdRepository households,
+    IShoppingListRepository lists,
+    IIngredientNameRepository names,
     IUnitOfWork unitOfWork)
     : ICommandHandler<PlanMealCommand, MealPlanResponse>
 {
@@ -108,53 +111,80 @@ internal sealed class PlanMealCommandHandler(
                 cancellationToken)
             .ConfigureAwait(false);
 
-        var result = await recipe.Match(
-            _ => AddAsync(command, cancellationToken),
+        var planned = await recipe.Match(
+            _ => unitOfWork.InTransactionAsync(token => AddAsync(command, token), cancellationToken),
+            error => Task.FromResult(Result<MealPlanEntry>.Failure(error))).ConfigureAwait(false);
+
+        var result = await planned.Match(
+            async entry =>
+            {
+                await LinkListedAsync(entry, cancellationToken).ConfigureAwait(false);
+
+                return await ReadWeekAsync(plans, command.HouseholdId, entry.Date, cancellationToken)
+                    .ConfigureAwait(false);
+            },
             error => Task.FromResult(Result<MealPlanResponse>.Failure(error))).ConfigureAwait(false);
 
         return tracked.Record(result);
     }
 
-    private Task<Result<MealPlanResponse>> AddAsync(
+    private async Task<Result<MealPlanEntry>> AddAsync(
         PlanMealCommand command,
-        CancellationToken cancellationToken) =>
-        unitOfWork.InTransactionAsync(
-            async token =>
+        CancellationToken cancellationToken)
+    {
+        var slot = PlanningWords.Plannable(command.Draft.Date)
+            .Bind(() => PlanningWords.ToSlot(command.Draft.Slot));
+
+        return await slot.Match(
+            async which =>
             {
-                var slot = PlanningWords.Plannable(command.Draft.Date)
-                    .Bind(() => PlanningWords.ToSlot(command.Draft.Slot));
+                var sortOrder = await plans
+                    .NextSortOrderAsync(command.HouseholdId, command.Draft.Date, cancellationToken)
+                    .ConfigureAwait(false);
 
-                return await slot.Match(
-                    async which =>
+                var entry = MealPlanEntry.Plan(
+                    command.HouseholdId,
+                    command.Draft.Date,
+                    command.Draft.RecipeId,
+                    command.Draft.Servings,
+                    which,
+                    sortOrder);
+
+                return await entry.Match(
+                    async made =>
                     {
-                        var sortOrder = await plans
-                            .NextSortOrderAsync(command.HouseholdId, command.Draft.Date, token)
-                            .ConfigureAwait(false);
+                        await plans.AddAsync(made, cancellationToken).ConfigureAwait(false);
 
-                        var entry = MealPlanEntry.Plan(
-                            command.HouseholdId,
-                            command.Draft.Date,
-                            command.Draft.RecipeId,
-                            command.Draft.Servings,
-                            which,
-                            sortOrder);
-
-                        return await entry.Match(
-                            async planned =>
-                            {
-                                await plans.AddAsync(planned, token).ConfigureAwait(false);
-
-                                return await ReadWeekAsync(
-                                    plans, command.HouseholdId, command.Draft.Date, token)
-                                    .ConfigureAwait(false);
-                            },
-                            error => Task.FromResult(Result<MealPlanResponse>.Failure(error)))
-                            .ConfigureAwait(false);
+                        return Result<MealPlanEntry>.Success(made);
                     },
-                    error => Task.FromResult(Result<MealPlanResponse>.Failure(error)))
+                    error => Task.FromResult(Result<MealPlanEntry>.Failure(error)))
                     .ConfigureAwait(false);
             },
-            cancellationToken);
+            error => Task.FromResult(Result<MealPlanEntry>.Failure(error))).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// A recipe already put on the list by itself becomes the shopping for the meal just planned, so the
+    /// week does not offer to buy it again (it never doubled, but it looked unshopped) and the list says
+    /// which meal it is for. Best effort, after the plan is saved: a lost race leaves it as it was.
+    /// </summary>
+    private async Task LinkListedAsync(MealPlanEntry entry, CancellationToken cancellationToken)
+    {
+        var linked = await ShoppingListWrites.ApplyAsync(
+            lists,
+            names,
+            unitOfWork,
+            entry.HouseholdId,
+            (list, _) =>
+            {
+                list.CountFor(entry.RecipeId, entry.Id, entry.Date, entry.Slot);
+
+                return Task.FromResult(Result.Success());
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        linked.Match(_ => { }, _ => { });
+    }
 
     /// <summary>The week containing the changed day, so the client needs no refetch.</summary>
     internal static async Task<Result<MealPlanResponse>> ReadWeekAsync(

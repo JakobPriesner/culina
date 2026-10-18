@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { m } from '$shell/i18n';
+
   import type { Scaling } from './scaled.svelte';
   import type { IngredientLine } from '../ingredientLines';
 
@@ -10,10 +12,12 @@
     line: IngredientLine;
     scaling: Scaling;
     highlighted?: boolean;
+    /** Still to buy on the shopping list: a small basket, so what is already there is seen before adding again. */
+    listed?: boolean;
     onhover?: (ids: readonly string[] | null) => void;
   }
 
-  let { line, scaling, highlighted = false, onhover }: Props = $props();
+  let { line, scaling, highlighted = false, listed = false, onhover }: Props = $props();
 
   const amount = $derived(scaling.amountFor(line));
 </script>
@@ -28,7 +32,19 @@
   <span class="amount">{amount.text}</span>
 
   <span class="name">
-    {scaling.nameFor(line)}{#if line.note}<span class="note">, {line.note}</span>{/if}
+    {scaling.nameFor(line)}{#if line.note}<span class="note">, {line.note}</span
+      >{/if}{#if listed}<span
+        class="listed"
+        role="img"
+        aria-label={m['shopping.row.listed']()}
+        title={m['shopping.row.listed']()}
+        ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+          ><path
+            d="M4 8h16l-1.4 10a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7Z"
+            stroke-linejoin="round"
+          /><path d="m9 13.5 2 2 4-4" stroke-linecap="round" stroke-linejoin="round" /></svg
+        ></span
+      >{/if}
   </span>
 </li>
 
@@ -115,5 +131,25 @@
 
   .note {
     color: var(--text-muted);
+  }
+
+  .listed {
+    display: inline-flex;
+    width: 1em;
+    height: 1em;
+    margin-inline-start: var(--space-2);
+    vertical-align: -0.125em;
+    color: var(--text-success, var(--success));
+  }
+
+  .listed svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  @media print {
+    .listed {
+      display: none;
+    }
   }
 </style>
