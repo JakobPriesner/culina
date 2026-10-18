@@ -55,6 +55,7 @@ internal static class SessionRowMappings
         SessionClient.Ios => "ios",
         SessionClient.Android => "android",
         SessionClient.Instance => "instance",
+        SessionClient.Agent => "agent",
         _ => "browser"
     };
 
@@ -63,6 +64,7 @@ internal static class SessionRowMappings
         "ios" => SessionClient.Ios,
         "android" => SessionClient.Android,
         "instance" => SessionClient.Instance,
+        "agent" => SessionClient.Agent,
         _ => SessionClient.Browser
     };
 }

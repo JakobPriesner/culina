@@ -11,8 +11,9 @@ public sealed record Request
 
     /// <summary>
     /// <c>browser</c> (the default) for the session cookie; <c>ios</c> or <c>android</c> for an app,
-    /// or <c>instance</c> for another Culina importing this person's recipes, each of which receives the
-    /// session token in the response and sends it as <c>Authorization: Bearer</c>.
+    /// <c>instance</c> for another Culina importing this person's recipes, or <c>agent</c> for an AI agent using
+    /// the MCP server at <c>/api/mcp</c>, each of which receives the session token in the response and sends it as
+    /// <c>Authorization: Bearer</c>. An agent's token works only there.
     /// </summary>
     public string? Client { get; init; }
 }

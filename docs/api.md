@@ -28,6 +28,10 @@ The apps call from fixed origins (`capacitor://app.culina.localhost`,
 `X-Request-Id` exposed. `GET /setup` reports `apiVersion`, so an app can tell
 whether it understands the server before signing in.
 
+An AI agent signs in with `client: "agent"` and uses the MCP server at
+`/api/mcp` (see [AI agents (MCP)](#ai-agents-mcp)). Its token works there and
+on the operations offered as tools, and nowhere else.
+
 `me` is the alias for the authenticated user.
 
 ## Identity
@@ -39,9 +43,9 @@ whether it understands the server before signing in.
 | `PATCH` | `/users/me` | Display name. `If-Match` required. |
 | `GET` | `/users/me/settings` | locale, theme, mode, measurement system. |
 | `PUT` | `/users/me/settings` | |
-| `POST` | `/sessions` | Log in. `201`. Returns the CSRF token and the user; with `client` `ios`/`android`, also `sessionToken` and no cookie. Rate limited per IP **and** per account. Failure is always `auth.invalid_credentials` — never "no such user". |
+| `POST` | `/sessions` | Log in. `201`. Returns the CSRF token and the user; with `client` `ios`/`android`/`instance`/`agent`, also `sessionToken` and no cookie. Signing in an `agent` never ends the session that asked. Rate limited per IP **and** per account. Failure is always `auth.invalid_credentials` — never "no such user". |
 | `DELETE` | `/sessions/current` | Log out. Deletes the server-side session, then expires the cookie. `204`. |
-| `GET` | `/sessions` | Your active sessions — device (`client`: browser, ios, android), IP, last seen. Powers "sign out everywhere". |
+| `GET` | `/sessions` | Your active sessions — device (`client`: browser, ios, android, instance, agent), IP, last seen. Powers "sign out everywhere". |
 | `DELETE` | `/sessions/{sessionId}` | Revoke one. `204`. |
 | `PUT` | `/users/me/password` | Change password. Needs `currentPassword`; a wrong one is `400 users.incorrect_password`, never a `401` (which would sign the caller out). Revokes every other session; this one stays. `204`. |
 | `GET` | `/users/me/recovery-codes` | How many saved recovery codes are left, and when they were made. Never the codes. |
@@ -545,6 +549,59 @@ month's budget is spent, or the per-person hourly limit was reached.
 `GET /health/live` — the process is up. `GET /health/ready` — the database
 answers. Neither is under `/api`, neither requires auth, both are excluded from
 tracing (`dotnet-observability`).
+
+## AI agents (MCP)
+
+The API also serves a [Model Context Protocol](https://modelcontextprotocol.io)
+server at `/api/mcp` (Streamable HTTP, stateless), so an AI agent can read and
+write a household's recipes, cookbooks, meal plan and shopping list. It starts
+with the API; there is nothing to run beside it.
+
+**Connecting.** Sign in as an agent, which needs the account's password:
+
+```bash
+curl -s https://culina.example/api/v1/sessions \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"ada@example.com","password":"…","client":"agent"}'
+```
+
+and give the agent the `sessionToken` from the answer as a bearer token, e.g.
+for Claude Code:
+
+```bash
+claude mcp add --transport http culina https://culina.example/api/mcp \
+  --header "Authorization: Bearer <sessionToken>"
+```
+
+The agent's session appears in `GET /sessions` as `client: "agent"` and is
+revoked like any other (`DELETE /sessions/{sessionId}`); it lapses when unused,
+like an app's.
+
+**Tools.** One tool per API operation in `Api/Agents/AgentOperations.cs`, named
+after its `operationId` (`getRecipesV1`, `createRecipeV1`, …) and described
+from this API's own OpenAPI document. A tool's arguments are the operation's
+path and query parameters, `body` for its JSON body, and `ifMatch` for an
+operation that checks `If-Match`. Its answer is what the API said:
+`{status, etag, location, body}`, a failure's `body` being the usual problem
+document. A call is sent through the same middleware pipeline as any request,
+in memory and as the agent, so validation, authorization, rate limits and
+`If-Match` behave exactly as documented above.
+
+**What an agent cannot do.** The allow-list withholds the account and its
+credentials (sign-in, sessions, password, recovery codes, preferences), push
+devices, household membership and invitations, creating, renaming, deleting or
+restoring a household, instance settings, share links, connected libraries,
+archives, the assistant, and every binary, multipart or streaming endpoint. An
+agent token authenticates none of them: they answer as they would an anonymous
+caller (`401` wherever a session is needed), and each refusal is counted on
+`culina.agent.refusals` and logged as `auth.agent_scope`. The other way round,
+no browser cookie or app token opens `/api/mcp`, so a page that can make a
+browser send its cookie cannot drive an agent's tools. A new endpoint is
+withheld until it is added to the allow-list or to the withheld list in
+`AgentOperationsTests`, which fails until one of the two is chosen.
+
+Recipe text is written by people and imported from the web; the server's
+instructions tell the agent to treat it as data, never as instructions.
 
 ## Cross-cutting guarantees
 

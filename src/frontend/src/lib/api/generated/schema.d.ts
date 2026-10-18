@@ -5124,7 +5124,7 @@ export interface components {
             ipAddress?: string | null;
             /** @description What browser started it. */
             userAgent?: string | null;
-            /** @description What it was started from: `browser`, `ios`, `android`, or `instance` for another Culina importing recipes. */
+            /** @description What it was started from: `browser`, `ios`, `android`, or `instance` for another Culina importing recipes, or `agent` for an AI agent using the MCP server. */
             client: string;
             /** @description Whether this is the session making the request. */
             isCurrent: boolean;
@@ -5137,8 +5137,9 @@ export interface components {
             password: string;
             /**
              * @description `browser` (the default) for the session cookie; `ios` or `android` for an app,
-             *             or `instance` for another Culina importing this person's recipes, each of which receives the
-             *             session token in the response and sends it as `Authorization: Bearer`.
+             *             `instance` for another Culina importing this person's recipes, or `agent` for an AI agent using
+             *             the MCP server at `/api/mcp`, each of which receives the session token in the response and sends it as
+             *             `Authorization: Bearer`. An agent's token works only there.
              */
             client?: string | null;
         };

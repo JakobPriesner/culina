@@ -1,4 +1,5 @@
 using Api;
+using Api.Agents;
 using Api.Endpoints.Health;
 using Api.Endpoints.Setup;
 using Api.Endpoints.WellKnown;
@@ -59,6 +60,7 @@ static WebApplication BuildCulina(WebApplicationBuilder builder)
         .AddApplication()
         .AddInfrastructure(builder.Configuration, builder.Environment)
         .AddPresentation()
+        .AddAgentServer()
         .AddEndpoints();
 
     ValidateScopesInDevelopment(builder);
@@ -94,6 +96,7 @@ static WebApplication BuildCulina(WebApplicationBuilder builder)
     app.MapHealthEndpoints();
     app.MapSecurityTxt();
     app.MapEndpoints();
+    app.MapAgentServer();             // MCP for AI agents; its tool calls run through this same pipeline.
     app.MapSinglePageAppFallback();
 
     LogStarting(app);

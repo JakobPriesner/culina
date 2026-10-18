@@ -13,5 +13,11 @@ public enum SessionClient
     Android = 2,
 
     /// <summary>Another Culina instance importing this person's recipes, which keeps the token encrypted with its connection.</summary>
-    Instance = 3
+    Instance = 3,
+
+    /// <summary>
+    /// An AI agent using the MCP server, which keeps the token in its own configuration. It reaches only the MCP
+    /// endpoint and the operations offered there as tools, never the rest of the account.
+    /// </summary>
+    Agent = 4
 }
