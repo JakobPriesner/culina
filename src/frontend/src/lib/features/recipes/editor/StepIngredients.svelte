@@ -7,8 +7,7 @@
   import { quantityLabels } from '../quantityLabels';
   import { scaleQuantity } from '../scaling';
   import type { Ingredient, Step, StepSegment } from '../types';
-  import { inferUses } from '../surface/inferredUses';
-  import { mentionNamed } from './mentions';
+  import { adopt as adoptInto, spottedIn } from './spottedIngredients';
   import { namedIn } from './stepUsage';
 
   /**
@@ -34,11 +33,7 @@
   const chips = $derived(choosable.filter((one) => needs(one.id)));
 
   /** Ingredients the step's words name but it doesn't list yet: offered, never added on their own. */
-  const suggested = $derived.by(() => {
-    const guessed = new Set(inferUses([step], choosable)[0]);
-
-    return choosable.filter((one) => guessed.has(one.id) && !needs(one.id) && !named.has(one.id));
-  });
+  const suggested = $derived(spottedIn(step, choosable));
 
   // The base amount, as the ingredient list shows it: a recipe is written at its own yield.
   const amountOf = (ingredient: Ingredient) =>
@@ -46,10 +41,10 @@
 
   /** Where the words spell its name, they mention it (scaled in the sentence when read); else the step just needs it. */
   function adopt(ingredient: Ingredient) {
-    const mentioned = mentionNamed(step, ingredient, ingredients);
+    const taken = adoptInto(step, ingredient, ingredients);
 
-    if (mentioned) {
-      onmention(mentioned);
+    if (taken.segments !== step.segments) {
+      onmention([...taken.segments]);
     } else {
       set(ingredient, true);
     }

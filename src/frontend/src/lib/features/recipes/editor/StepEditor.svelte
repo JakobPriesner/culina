@@ -2,6 +2,9 @@
   import { tick } from 'svelte';
 
   import { m } from '$shell/i18n';
+  import { Button } from '$ds';
+
+  import { adoptAllSpotted, spottedIn } from './spottedIngredients';
   import { moved } from './stepEdits';
   import StepRow from './StepRow.svelte';
   import type { Ingredient, Step } from '../types';
@@ -30,12 +33,26 @@
     document.getElementById(`step-${at}`)?.focus();
   }
 
+  /** Ingredients the steps' words name but nobody linked, across the method: an import's usual state. */
+  const spotted = $derived(
+    steps.reduce((sum, step) => sum + spottedIn(step, ingredients).length, 0)
+  );
+
   function remove(index: number) {
     onchange(steps.filter((_, candidate) => candidate !== index));
   }
 </script>
 
 <div class="editor">
+  {#if spotted > 0}
+    <div class="spotted">
+      <Button size="sm" onclick={() => onchange(adoptAllSpotted(steps, ingredients))}>
+        {m['editor.linkSpotted']({ count: spotted })}
+      </Button>
+      <p class="hint">{m['editor.linkSpotted.hint']()}</p>
+    </div>
+  {/if}
+
   <div class="panel">
     {#if steps.length > 0}
       <ol class="list">
@@ -70,6 +87,21 @@
 <style>
   .editor {
     min-width: 0;
+  }
+
+  .spotted {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+
+  .spotted .hint {
+    flex: 1 1 16rem;
+    margin: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
   }
 
   /* Same enclosure as the ingredients: steps and the add row are one thing. */
