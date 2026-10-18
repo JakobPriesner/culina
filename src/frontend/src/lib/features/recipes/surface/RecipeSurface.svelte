@@ -90,8 +90,11 @@
   let scalingByAmount = $state(false);
   // Downloaded the first time it is asked for, not with the recipe; then it stays to animate closed.
   let scaledByAmount = $state(false);
+  /** The ingredient a tap on its amount asked to scale from. */
+  let scaleFrom = $state<string | null>(null);
 
-  function scaleByAmount() {
+  function scaleByAmount(ingredientId: string | null = null) {
+    scaleFrom = ingredientId;
     scalingByAmount = true;
     scaledByAmount = true;
   }
@@ -160,7 +163,7 @@
     {nutrition}
   />
 
-  <SurfaceServings {recipe} {servings} {scaling} {onservings} onscaleto={scaleByAmount} />
+  <SurfaceServings {recipe} {servings} {scaling} {onservings} onscaleto={() => scaleByAmount()} />
 
   {#if !cooking}
     <RecipeTags recipeId={recipe.id} tags={recipe.tags} />
@@ -179,6 +182,7 @@
       {highlighted}
       onhighlight={(id) => (highlighted = id)}
       onTheList={cooking ? undefined : onTheList}
+      onscaleto={!cooking && onservings ? scaleByAmount : undefined}
     />
 
     <StepList
@@ -203,6 +207,7 @@
       <ScaleToAmountSheet
         bind:open={scalingByAmount}
         {recipe}
+        startWith={scaleFrom}
         onapply={(value) => onservings?.(value)}
       />
     {/await}

@@ -290,8 +290,8 @@ describe('what a step needs', () => {
 
     const stepTwo = steps().getAllByRole('listitem')[1]!;
 
-    // The amount uses a non-breaking space; twice: in the step's needs list and where the sentence names it.
-    expect(within(stepTwo).getAllByText('600 g')).toHaveLength(2);
+    // The amount uses a non-breaking space; once, where the sentence names it: the needs line leaves out what the words show.
+    expect(within(stepTwo).getAllByText('600 g')).toHaveLength(1);
   });
 
   it('says nothing for a step that needs nothing', () => {

@@ -1978,5 +1978,7 @@
   "shopping.row.listed": "auf der Einkaufsliste",
   "shopping.addedForMeal": "Für {when} hinzugefügt.",
   "plan.recipe.alreadyListed": "Die Zutaten stehen schon auf der Einkaufsliste und zählen jetzt für diese Mahlzeit.",
-  "shopping.sheet.addsUp": "steht schon auf der Liste, wird dazugerechnet"
+  "shopping.sheet.addsUp": "steht schon auf der Liste, wird dazugerechnet",
+  "recipe.timesWarning.up": "Die Zeiten gelten für {count} – mehr in Topf oder Form braucht oft länger.",
+  "recipe.scaleFrom": "Auf deine Menge {name} anpassen"
 }

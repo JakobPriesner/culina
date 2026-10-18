@@ -1978,5 +1978,7 @@
   "shopping.row.listed": "on the shopping list",
   "shopping.addedForMeal": "Added for {when}.",
   "plan.recipe.alreadyListed": "Its ingredients are already on the shopping list; they now count for this meal.",
-  "shopping.sheet.addsUp": "already on the list; this adds to it"
+  "shopping.sheet.addsUp": "already on the list; this adds to it",
+  "recipe.timesWarning.up": "The times are for {count} — a fuller pan or tin may need longer.",
+  "recipe.scaleFrom": "Scale to the {name} you have"
 }

@@ -33,7 +33,9 @@
   {#if scaling.timesAreDoubtful}
     <!-- Baking time follows thickness and oven temperature does not scale, so warn rather than invent a formula. -->
     <p class="warning">
-      {m['recipe.timesWarning']({ count: scaling.baseYieldLabel })}
+      {scaling.factor > 1
+        ? m['recipe.timesWarning.up']({ count: scaling.baseYieldLabel })
+        : m['recipe.timesWarning']({ count: scaling.baseYieldLabel })}
     </p>
   {/if}
 </div>

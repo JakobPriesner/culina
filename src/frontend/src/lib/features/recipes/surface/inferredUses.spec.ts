@@ -28,6 +28,14 @@ const bolognese = [
 ];
 
 describe('inferring what a step needs from its words', () => {
+  it('gives an ingredient to the first step naming it, so its amount is not listed twice', () => {
+    const pasta = [ingredient('spaghetti', 'Spaghetti')];
+
+    expect(
+      inferUses([step('Spaghetti kochen.'), step('Soße rühren.'), step('Spaghetti abgießen.')], pasta)
+    ).toEqual([['spaghetti'], [], []]);
+  });
+
   it('finds an ingredient named with another ending', () => {
     expect(inferUses([step('Die Zwiebeln fein würfeln.')], bolognese)).toEqual([['onion']]);
   });

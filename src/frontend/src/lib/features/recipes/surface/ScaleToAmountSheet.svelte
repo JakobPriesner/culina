@@ -15,10 +15,12 @@
   interface Props {
     open: boolean;
     recipe: RecipeReading;
+    /** The ingredient to start from, when a tap on its amount opened this. */
+    startWith?: string | null;
     onapply: (targetYield: number) => void;
   }
 
-  let { open = $bindable(), recipe, onapply }: Props = $props();
+  let { open = $bindable(), recipe, startWith = null, onapply }: Props = $props();
 
   const choices = $derived(
     recipe.groups
@@ -30,6 +32,16 @@
 
   let chosen = $state('');
   let typed = $state('');
+
+  // Each opening starts on a named ingredient, so the picker never shows blank.
+  $effect(() => {
+    if (open) {
+      chosen = choices.some((one) => one.value === startWith)
+        ? (startWith ?? '')
+        : (choices[0]?.value ?? '');
+      typed = '';
+    }
+  });
 
   const ingredient = $derived(
     recipe.groups

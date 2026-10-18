@@ -22,7 +22,12 @@
 </script>
 
 <p class="meta">
-  {metaLineFor(recipe)}{#if nutrition && !cooking}{m['recipes.meta.separator']()}<button
+  <!-- The yield on screen, not the written one: "2 servings" above a stepper at 4 contradicts it. -->
+  {[metaLineFor(recipe, { yields: false }), printedYield]
+    .filter(Boolean)
+    .join(m['recipes.meta.separator']())}{#if nutrition && !cooking}{m[
+      'recipes.meta.separator'
+    ]()}<button
       type="button"
       class="nutrition"
       aria-label={nutrition.ariaLabel}

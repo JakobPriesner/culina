@@ -15,14 +15,33 @@
     onhighlight: (ingredientId: string | null) => void;
     /** Whether a name is still to buy on the shopping list; see `IngredientRow`. */
     onTheList?: (name: string) => boolean;
+    /** Scales the recipe to what there is of one ingredient, from a tap on its amount. */
+    onscaleto?: (ingredientId: string) => void;
   }
 
-  let { panel, cooking, scaling, highlighted, onhighlight, onTheList }: Props = $props();
+  let { panel, cooking, scaling, highlighted, onhighlight, onTheList, onscaleto }: Props = $props();
 
   const perStep = $derived(panel.perStep);
+
+  let height = $state(0);
+  let viewport = $state(0);
+
+  /**
+   * Pinned beside the steps only while it fits under the header with room for the cooking action:
+   * a taller list pinned in place hides its last lines (the salt) behind that action for good.
+   */
+  const pinned = $derived(height > 0 && height + 220 <= viewport);
 </script>
 
-<section class="ingredients" class:perStep aria-label={m['recipe.ingredients']()}>
+<svelte:window bind:innerHeight={viewport} />
+
+<section
+  class="ingredients"
+  class:perStep
+  class:pinned
+  aria-label={m['recipe.ingredients']()}
+  bind:clientHeight={height}
+>
   <SectionHead title={m['recipe.ingredients']()}>
     <!-- Nothing to choose in a recipe with one arrangement. Cooking chooses between this step and all, to prep ahead. -->
     {#if cooking && panel.divisible && panel.written.length > 0}
@@ -50,17 +69,20 @@
 
   {#if panel.panel.length > 0}
     <!-- Beside the steps this is only the ingredients no step named, so say so. -->
-    {#if perStep}
-      <SectionLabel spacing="tight">{m['recipe.notInAnyStep']()}</SectionLabel>
-    {/if}
+    <div class="unclaimed">
+      {#if perStep}
+        <SectionLabel spacing="tight">{m['recipe.notInAnyStep']()}</SectionLabel>
+      {/if}
 
-    <IngredientList
-      ingredients={panel.panel}
-      {scaling}
-      {highlighted}
-      onhover={onhighlight}
-      {onTheList}
-    />
+      <IngredientList
+        ingredients={panel.panel}
+        {scaling}
+        {highlighted}
+        onhover={onhighlight}
+        {onTheList}
+        {onscaleto}
+      />
+    </div>
   {:else if !perStep}
     <!-- While cooking the list is filtered to this step, so "none written" would be wrong. Beside the steps, all ingredients accounted for says nothing. -->
     <p class="empty">
@@ -81,18 +103,39 @@
    * hides, so a clipped card reads as broken.
    */
   .ingredients {
-    position: sticky;
-    top: var(--space-24);
     padding: var(--card-padding);
     background: var(--surface-sunken);
     border-radius: var(--radius-lg);
   }
 
-  /* Beside the steps there is nothing to follow, so it stays put; see `StepList`. */
-  .perStep {
-    grid-column: 1;
-    grid-row: 1;
-    position: static;
+  .pinned {
+    position: sticky;
+    top: var(--space-24);
+  }
+
+  /*
+   * Beside the steps there is nothing to follow, so it stays put; see `StepList`. Its heading (and the
+   * view switch) keeps the first row, and what no step claims comes after the last step, rather than
+   * a tall card beside a lone heading leaving a void.
+   */
+  @media screen and (width >= 64rem) {
+    .perStep {
+      display: contents;
+    }
+
+    .perStep > :global(.section-head) {
+      grid-column: 1;
+      grid-row: 1;
+      padding: var(--card-padding) var(--card-padding) 0;
+    }
+
+    .perStep .unclaimed {
+      grid-column: 1;
+      grid-row: 3;
+      padding: var(--card-padding);
+      background: var(--surface-sunken);
+      border-radius: var(--radius-lg);
+    }
   }
 
   .empty {
@@ -101,7 +144,7 @@
 
   /* One column: a pinned list above the steps would cover them. */
   @media screen and (width < 64rem) {
-    .ingredients {
+    .pinned {
       position: static;
     }
   }

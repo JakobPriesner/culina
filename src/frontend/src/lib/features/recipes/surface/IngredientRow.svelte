@@ -2,6 +2,7 @@
   import { m } from '$shell/i18n';
 
   import type { Scaling } from './scaled.svelte';
+  import { scales } from '../units';
   import type { IngredientLine } from '../ingredientLines';
 
   /**
@@ -14,12 +15,18 @@
     highlighted?: boolean;
     /** Still to buy on the shopping list: a small basket, so what is already there is seen before adding again. */
     listed?: boolean;
+    /** Offered on a measured amount: "I have 600 g of this", scaled from here. */
+    onscaleto?: (ingredientId: string) => void;
     onhover?: (ids: readonly string[] | null) => void;
   }
 
-  let { line, scaling, highlighted = false, listed = false, onhover }: Props = $props();
+  let { line, scaling, highlighted = false, listed = false, onscaleto, onhover }: Props = $props();
 
   const amount = $derived(scaling.amountFor(line));
+  /** A pinch scales nothing, so nothing can be scaled from it either. */
+  const scalable = $derived(
+    Boolean(onscaleto) && line.quantity.value !== null && scales(line.quantity.unit)
+  );
 </script>
 
 <li
@@ -29,7 +36,17 @@
   onmouseenter={() => onhover?.(line.ids)}
   onmouseleave={() => onhover?.(null)}
 >
-  <span class="amount">{amount.text}</span>
+  {#if scalable && amount.text}
+    <button
+      type="button"
+      class="amount scale"
+      aria-label={m['recipe.scaleFrom']({ name: line.name })}
+      title={m['recipe.scaleFrom']({ name: line.name })}
+      onclick={() => onscaleto?.(line.ids[0] ?? '')}>{amount.text}</button
+    >
+  {:else}
+    <span class="amount">{amount.text}</span>
+  {/if}
 
   <span class="name">
     {scaling.nameFor(line)}{#if line.note}<span class="note">, {line.note}</span
@@ -150,6 +167,26 @@
   @media print {
     .listed {
       display: none;
+    }
+  }
+
+  /* The amount, quietly a control: dotted until pointed at, so the list still reads as a list. */
+  .scale {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: inherit;
+    text-decoration: underline dotted;
+    text-decoration-color: var(--border-strong, currentColor);
+    text-underline-offset: 0.2em;
+    cursor: pointer;
+  }
+
+  @media (hover: hover) {
+    .scale:hover {
+      text-decoration-style: solid;
     }
   }
 </style>
