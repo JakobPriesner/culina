@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { sourceAppNames } from '$features/import/sourceApps';
   import { resolve } from '$app/paths';
   import { Button, Card, Divider, ErrorState } from '$ds';
 
@@ -145,7 +146,7 @@
 
         <section class="adding" aria-labelledby="adding-heading">
           <h2 id="adding-heading" class="subheading">{m['import.source.title']()}</h2>
-          <p class="hint">{m['import.source.hint']()}</p>
+          <p class="hint">{m['import.source.hint']({ apps: sourceAppNames() })}</p>
 
           {#if householdId}
             <ConnectSource {householdId} onconnected={connected} />

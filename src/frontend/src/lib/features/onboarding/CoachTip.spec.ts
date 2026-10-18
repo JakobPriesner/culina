@@ -20,7 +20,9 @@ describe('a tip in place', () => {
   it('is shown the first time and gone for good after “Got it”', async () => {
     tips.own('u1');
 
-    renderWithProviders(CoachTip, { props: { id: 'plan', title: 'Your week', children: body } });
+    renderWithProviders(CoachTip, {
+      props: { id: 'plan', pose: 'thinking', title: 'Your week', children: body }
+    });
 
     expect(screen.getByRole('complementary', { name: 'Your week' })).toBeInTheDocument();
 

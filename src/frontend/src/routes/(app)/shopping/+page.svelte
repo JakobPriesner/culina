@@ -282,7 +282,7 @@
     {/each}
 
     <!-- Under the list, not above it: the list arrives after the page, and a tip above it would push it down. -->
-    <CoachTip id="shopping" title={m['tips.shopping.title']()}>
+    <CoachTip id="shopping" pose="peeking" title={m['tips.shopping.title']()}>
       <ul>
         <li>{m['tips.shopping.tick']()}</li>
         <li>{m['tips.shopping.meals']()}</li>

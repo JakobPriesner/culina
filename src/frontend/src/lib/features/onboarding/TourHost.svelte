@@ -23,7 +23,7 @@
 
 <!-- Downloaded only when it opens: every signed-in page carries this shell. -->
 {#if open}
-  {#await import('./KitchenTour.svelte') then { default: KitchenTour }}
-    <KitchenTour open onclose={() => tips.endTour()} />
+  {#await import('./Welcome.svelte') then { default: Welcome }}
+    <Welcome open onclose={() => tips.endTour()} />
   {/await}
 {/if}

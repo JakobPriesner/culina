@@ -16,7 +16,8 @@
     children: Snippet;
     footer?: Snippet;
     closeLabel: string;
-    placement?: 'centre' | 'sheet';
+    /** `stage` takes the whole phone screen and a large centred panel elsewhere: a moment, not a task (a welcome). */
+    placement?: 'centre' | 'sheet' | 'stage';
     wide?: boolean;
     /** `top` holds a sheet near the top on wide screens, so a panel that grows (search results) grows downward instead of jumping. */
     anchor?: 'centre' | 'top';
@@ -278,6 +279,36 @@
     border-start-end-radius: var(--radius-xl);
     padding-bottom: env(safe-area-inset-bottom, 0);
     padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
+  }
+
+  .stage {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    margin: 0;
+  }
+
+  .stage .panel {
+    height: 100%;
+    padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0)
+      env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+  }
+
+  .stage .body {
+    flex: 1;
+  }
+
+  @media (min-width: 48rem) and (min-height: 36rem) {
+    .stage {
+      width: min(56rem, calc(100vw - var(--space-16)));
+      height: min(46rem, calc(100dvh - var(--space-16)));
+      margin: auto;
+    }
+
+    .stage .panel {
+      border-radius: var(--radius-xl);
+      padding: 0;
+    }
   }
 
   .centre.wide {

@@ -20,7 +20,7 @@
   import { tips } from '$features/onboarding/tips.svelte';
   import { createSubmission } from '$features/auth/submission.svelte';
   import { m } from '$shell/i18n';
-  import Olli from '$shell/olli/Olli.svelte';
+  import OlliSays from '$features/onboarding/OlliSays.svelte';
 
   /** An account with nowhere to cook: an instance allowing invitation-free accounts, or an owner who deleted their only household. Never a dead end. */
   // An invitation link arrives with its code, so the second tab opens prefilled.
@@ -67,9 +67,11 @@
 <svelte:head><title>{m['welcome.title']()}</title></svelte:head>
 
 <div class="page">
-  <Olli pose="hello" />
   <h1 class="title">{m['welcome.title']()}</h1>
-  <p class="body">{m['welcome.body']()}</p>
+  <OlliSays pose="hello" layout="stacked">
+    <p><strong>{m['welcome.olli']()}</strong></p>
+    <p>{m['welcome.body']()}</p>
+  </OlliSays>
 
   <FormFailure failure={submission.failure} />
 
@@ -141,6 +143,7 @@
 
   .title {
     font-size: var(--text-2xl);
+    text-align: center;
   }
 
   .body {

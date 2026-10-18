@@ -240,7 +240,7 @@
         </div>
       {/if}
 
-      <CoachTip id="cook" title={m['tips.cook.title']()}>
+      <CoachTip id="cook" pose="onDuty" title={m['tips.cook.title']()}>
         <ul>
           <li>{m['tips.cook.swipe']()}</li>
           <li>{m['tips.cook.tools']()}</li>
