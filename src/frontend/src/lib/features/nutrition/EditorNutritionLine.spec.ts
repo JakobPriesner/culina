@@ -86,9 +86,10 @@ describe('the editor line about what counts', () => {
     vi.stubGlobal('fetch', reply(answer({})));
     show();
 
-    expect(
-      await screen.findByText('Nutrition: 1 of 3 lines count · onion: a count · salt: no amount')
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Nutrition: 1 of 3 lines count/)).toBeInTheDocument();
+    // Each line that does not count is a way to fix it, right in the editor.
+    expect(screen.getByRole('button', { name: /onion/ })).toHaveTextContent('onion: a count');
+    expect(screen.getByRole('button', { name: /salt/ })).toHaveTextContent('salt: no amount');
     expect(screen.queryByText('as last saved', { exact: false })).not.toBeInTheDocument();
   });
 

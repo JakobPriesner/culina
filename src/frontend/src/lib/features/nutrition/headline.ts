@@ -145,40 +145,9 @@ const shortUnitReasons: Record<NutritionReason, () => string> = {
   householdUnit: m['nutrition.short.unit']
 };
 
-const shortReason = (line: NutritionLine): string =>
+export const shortReason = (line: NutritionLine): string =>
   line.status === 'amountNotInGrams' && line.reason
     ? shortUnitReasons[line.reason]()
     : line.status === 'counted'
       ? ''
       : shortReasons[line.status]();
-
-/**
- * What counts of the lines written, for the editor: "7 of 9 lines count · Onion: a count · Salt: no amount".
- * At most three lines are named, in the recipe's order, then how many more; null when there is nothing to say.
- */
-export function coverageWords(nutrition: Nutrition, recipe: RecipeReading): string | null {
-  if (nutrition.lines === 0) {
-    return null;
-  }
-
-  if (nutrition.counted === nutrition.lines) {
-    return m['nutrition.coverage.all']();
-  }
-
-  const left = writtenLines(nutrition, recipe).filter(({ line }) => line.status !== 'counted');
-  const named = left
-    .slice(0, 3)
-    .map(({ ingredient, line }) =>
-      m['nutrition.coverage.line']({ name: ingredient.name, why: shortReason(line) })
-    );
-  const more = left.length - named.length;
-
-  return [
-    m['nutrition.coverage.some']({
-      counted: formatNumber(nutrition.counted),
-      lines: formatNumber(nutrition.lines)
-    }),
-    ...named,
-    ...(more > 0 ? [m['nutrition.coverage.more']({ count: formatNumber(more) })] : [])
-  ].join(' · ');
-}

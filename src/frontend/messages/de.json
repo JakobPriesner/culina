@@ -1795,7 +1795,7 @@
   "ingredients.names.clear": "Filter löschen",
   "ingredients.names.empty": "Deine Rezepte haben noch keine Zutaten.",
   "ingredients.names.none": "Keine Zutat passt zu „{query}“.",
-  "ingredients.names.change": "Umbenennen",
+  "ingredients.names.change": "Umbenennen / Zusammenführen",
   "ingredients.names.changeLabel": "„{name}“ umbenennen oder zusammenführen",
   "ingredients.names.into": "Neuer Name für „{name}“",
   "ingredients.names.intoHint": "Ein neuer Name benennt sie um. Ein Name, den du schon verwendest, führt beide zusammen.",

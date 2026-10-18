@@ -1795,7 +1795,7 @@
   "ingredients.names.clear": "Clear filter",
   "ingredients.names.empty": "Your recipes have no ingredients yet.",
   "ingredients.names.none": "No ingredient matches “{query}”.",
-  "ingredients.names.change": "Rename",
+  "ingredients.names.change": "Rename / merge",
   "ingredients.names.changeLabel": "Rename or merge “{name}”",
   "ingredients.names.into": "New name for “{name}”",
   "ingredients.names.intoHint": "A new name renames it. A name you already use merges the two.",
