@@ -28,9 +28,11 @@
     oninput: (value: string) => void;
     /** Puts a new ingredient on the list, under exactly this name. */
     onadd: (name: string) => void;
+    /** Said on the first step and the one being written in, not on every card. */
+    showHint?: boolean;
   }
 
-  let { id, label, value, ingredients, oninput, onadd }: Props = $props();
+  let { id, label, value, ingredients, oninput, onadd, showHint = true }: Props = $props();
 
   let field = $state<HTMLTextAreaElement>();
   let pending = $state<PendingMention | null>(null);
@@ -207,7 +209,8 @@
     />
   </div>
 
-  <p id={hintId} class="hint">{m['editor.mentionHint']()}</p>
+  <!-- Kept for screen readers when hidden: it stays the field's description. -->
+  <p id={hintId} class="hint" class:quiet={!showHint}>{m['editor.mentionHint']()}</p>
 
   {#if tooLong}
     <p id={longId} class="hint long">{m['editor.stepLong']()}</p>
@@ -281,5 +284,14 @@
   .long {
     /* Muted, not amber: the warning tone is a fill colour and fails contrast as small text. */
     color: var(--text-muted);
+  }
+
+  .hint.quiet {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 </style>

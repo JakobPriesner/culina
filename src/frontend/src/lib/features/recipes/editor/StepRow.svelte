@@ -25,11 +25,15 @@
   let { step, index, count, ingredients, onchange, onmove, onremove, onaddingredient }: Props =
     $props();
 
+  /** Somewhere in this step has focus: its hints show here as well as on the first step. */
+  let focused = $state(false);
+  const hinted = $derived(index === 0 || focused);
+
   /** Waits the words name ("10 Min. köcheln"), offered as the step's timer while it has none; cook mode offers the same ones. */
   const spotted = $derived(step.durationSeconds === null ? durationsIn(toText(step)) : []);
 </script>
 
-<li class="step">
+<li class="step" onfocusin={() => (focused = true)} onfocusout={() => (focused = false)}>
   <div class="head">
     <div class="name">
       <TextInput
@@ -86,13 +90,14 @@
     oninput={(text) =>
       onchange({ ...step, segments: toSegments(text, ingredients, step.segments) })}
     onadd={onaddingredient}
+    showHint={hinted}
   />
 
   <div class="timer">
     <Field
       id="step-{index}-duration"
       label={m['editor.stepDuration']({ number: index + 1 })}
-      hint={m['editor.stepDuration.hint']()}
+      hint={hinted ? m['editor.stepDuration.hint']() : undefined}
       optionalText={m['editor.optional']()}
     >
       {#snippet children({ id, describedBy, invalid })}

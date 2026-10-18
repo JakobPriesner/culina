@@ -551,7 +551,6 @@
   "editor.newIngredient": "Neue Zutat",
   "editor.addIngredient": "Hinzufügen",
   "editor.unitListLabel": "Vorschläge für Einheiten",
-  "editor.usedInSteps": "In",
   "editor.notUsedInAStep": "In keinem Schritt",
   "editor.goToStep": "Zu Schritt {number}",
   "editor.stepIngredients": "Zutaten für Schritt {number}",
@@ -1984,5 +1983,26 @@
   "cooking.madeIt": "Hab ich gekocht",
   "cooking.madeIt.named": "{title} gekocht",
   "recipe.whereabouts.cookedToday": "Heute gekocht",
-  "recipe.lastCooked": "zuletzt {when}"
+  "recipe.lastCooked": "zuletzt {when}",
+  "editor.linkSpotted": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "{count} erkannte Zutat verknüpfen",
+        "countPlural=*": "{count} erkannte Zutaten verknüpfen"
+      }
+    }
+  ],
+  "editor.linkSpotted.hint": "Die Schritte nennen sie. Verknüpft erscheinen sie im Kochmodus beim Schritt, passend zu den Portionen.",
+  "editor.inSteps": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "In Schritt",
+        "countPlural=*": "In Schritten"
+      }
+    }
+  ]
 }

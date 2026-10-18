@@ -72,7 +72,8 @@
       {#if ingredient.id}
         <span class="where">
           {#if usedIn.length > 0}
-            {m['editor.usedInSteps']()}
+            <!-- Reads "In Schritt 2"; the number is the link, named for where it goes. -->
+            {m['editor.inSteps']({ count: usedIn.length })}
             {#each usedIn as number, at (number)}
               {#if at > 0},
               {/if}<button

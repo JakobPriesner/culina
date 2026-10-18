@@ -551,7 +551,6 @@
   "editor.newIngredient": "New ingredient",
   "editor.addIngredient": "Add",
   "editor.unitListLabel": "Unit suggestions",
-  "editor.usedInSteps": "In",
   "editor.notUsedInAStep": "Not in a step",
   "editor.goToStep": "Go to step {number}",
   "editor.stepIngredients": "Ingredients for step {number}",
@@ -1984,5 +1983,26 @@
   "cooking.madeIt": "I made it",
   "cooking.madeIt.named": "I made {title}",
   "recipe.whereabouts.cookedToday": "Cooked today",
-  "recipe.lastCooked": "last {when}"
+  "recipe.lastCooked": "last {when}",
+  "editor.linkSpotted": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "Link {count} spotted ingredient",
+        "countPlural=*": "Link {count} spotted ingredients"
+      }
+    }
+  ],
+  "editor.linkSpotted.hint": "The steps name them. Linked, they show up in cook mode with the step, at the servings you cook.",
+  "editor.inSteps": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "In step",
+        "countPlural=*": "In steps"
+      }
+    }
+  ]
 }
