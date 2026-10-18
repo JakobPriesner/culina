@@ -77,6 +77,8 @@
         <PackageVersion Include="OpenTelemetry.Resources.Process" Version="1.19.1-rc.1" />
         <PackageVersion Include="OpenTelemetry.Resources.ProcessRuntime" Version="1.19.1-beta.1" />
         <PackageVersion Include="Npgsql.OpenTelemetry" Version="10.0.3" />
+        <!-- The MCP server agents connect to (/api/mcp); the protocol's official C# SDK, maintained with Microsoft. -->
+        <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
     </ItemGroup>
 
     <ItemGroup Label="Tests">

@@ -39,6 +39,7 @@
     <PackageReference Include="OpenTelemetry.Resources.Process" />
     <PackageReference Include="OpenTelemetry.Resources.ProcessRuntime" />
     <PackageReference Include="Npgsql.OpenTelemetry" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
   </ItemGroup>
 
 </Project>

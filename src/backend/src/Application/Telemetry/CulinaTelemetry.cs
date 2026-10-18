@@ -53,4 +53,12 @@ public static class CulinaTelemetry
     public static readonly Counter<long> ForeignOriginRejections = Meter.CreateCounter<long>(
         "culina.origin.rejections",
         description: "Unsafe cookie-authenticated requests from an origin that is not ours.");
+
+    /// <summary>
+    /// Sessions refused at an endpoint outside their reach: an agent's token anywhere but the MCP endpoint and its
+    /// operations, or any other session at the MCP endpoint. Worth alerting on.
+    /// </summary>
+    public static readonly Counter<long> AgentRefusals = Meter.CreateCounter<long>(
+        "culina.agent.refusals",
+        description: "Requests whose session was refused because it is, or is not, an AI agent's.");
 }

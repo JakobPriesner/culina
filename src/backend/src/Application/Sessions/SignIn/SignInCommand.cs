@@ -21,7 +21,8 @@ namespace Application.Sessions.SignIn;
 /// </param>
 /// <param name="Client">
 /// <c>browser</c> (or null) for a cookie session; <c>ios</c> or <c>android</c> for an app's bearer
-/// token; <c>instance</c> for another Culina reading this person's recipes, also with a bearer token.
+/// token; <c>instance</c> for another Culina reading this person's recipes, also with a bearer token;
+/// <c>agent</c> for an AI agent using the MCP server, with a bearer token that reaches nothing else.
 /// </param>
 public sealed record SignInCommand(
     string Email,
@@ -91,9 +92,14 @@ internal sealed class SignInCommandHandler(
 
         var outcome = await StartSessionAsync(user, command, client, now, cancellationToken).ConfigureAwait(false);
 
-        await outcome.Match(
-            _ => EndReplacedSessionAsync(command.PreviousSessionToken, now, cancellationToken),
-            _ => Task.CompletedTask).ConfigureAwait(false);
+        // An agent is connected from a signed-in browser or a terminal, and is a second device beside it, not the
+        // asking device signing in again: the session that asked stays signed in.
+        if (client != SessionClient.Agent)
+        {
+            await outcome.Match(
+                _ => EndReplacedSessionAsync(command.PreviousSessionToken, now, cancellationToken),
+                _ => Task.CompletedTask).ConfigureAwait(false);
+        }
 
         tracked.Tag("culina.user_id", user.Id);
 
@@ -159,6 +165,7 @@ internal sealed class SignInCommandHandler(
         "ios" => SessionClient.Ios,
         "android" => SessionClient.Android,
         "instance" => SessionClient.Instance,
+        "agent" => SessionClient.Agent,
         _ => null
     };
 

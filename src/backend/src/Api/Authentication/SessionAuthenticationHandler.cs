@@ -1,8 +1,10 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using Api.Agents;
 using Api.Infrastructure;
 using Application.Abstractions;
 using Application.Abstractions.Settings;
+using Application.Telemetry;
 using Domain.Sessions;
 using Domain.Shared;
 using Microsoft.AspNetCore.Authentication;
@@ -44,15 +46,25 @@ internal sealed class SessionAuthenticationHandler(
             .ConfigureAwait(false);
 
         return await found.Match(
-            session => AdmitAsync(session, now),
+            session => AdmitAsync(session, bearer is not null, now),
             _ => Task.FromResult(AuthenticateResult.NoResult())).ConfigureAwait(false);
     }
 
     /// <summary>Admits the session and keeps it from lapsing while used.</summary>
-    private async Task<AuthenticateResult> AdmitAsync(Session session, DateTimeOffset now)
+    private async Task<AuthenticateResult> AdmitAsync(Session session, bool bearer, DateTimeOffset now)
     {
         if (!session.IsActive(now))
         {
+            return AuthenticateResult.NoResult();
+        }
+
+        // Routing has run, so the endpoint is known: an agent's token stays within the agent's operations, and only
+        // an agent's token opens the MCP endpoint.
+        if (!AgentAccess.Admits(session.Client, bearer, Context.GetEndpoint()))
+        {
+            CulinaTelemetry.AgentRefusals.Add(1);
+            Logger.Rejected(Request, AgentAccess.Refused);
+
             return AuthenticateResult.NoResult();
         }
 

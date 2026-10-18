@@ -25,7 +25,7 @@ public sealed record SessionSummary
     /// <summary>What browser started it.</summary>
     public string? UserAgent { get; init; }
 
-    /// <summary>What it was started from: <c>browser</c>, <c>ios</c>, <c>android</c>, or <c>instance</c> for another Culina importing recipes.</summary>
+    /// <summary>What it was started from: <c>browser</c>, <c>ios</c>, <c>android</c>, or <c>instance</c> for another Culina importing recipes, or <c>agent</c> for an AI agent using the MCP server.</summary>
     public required string Client { get; init; }
 
     /// <summary>Whether this is the session making the request.</summary>

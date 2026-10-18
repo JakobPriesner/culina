@@ -8,13 +8,16 @@ namespace Api.Extensions;
 /// <summary>The OpenAPI document the frontend client is generated from, exported to <c>openapi/Api.json</c> and committed.</summary>
 internal static class OpenApiExtensions
 {
+    /// <summary>The one document's name, which is also the key its provider is registered under.</summary>
+    internal const string DocumentName = "v1";
+
     private const string ContractsPrefix = "Contracts.";
 
     internal static IServiceCollection AddCulinaOpenApi(this IServiceCollection services)
     {
         ArgumentNullException.ThrowIfNull(services);
 
-        return services.AddOpenApi("v1", options =>
+        return services.AddOpenApi(DocumentName, options =>
         {
             // Every operation has its own Request and Response, so names collide; the namespace distinguishes them.
             options.CreateSchemaReferenceId = type => SchemaName(type)

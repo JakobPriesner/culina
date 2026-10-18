@@ -12,8 +12,6 @@ internal static class OpenApiExport
 {
     internal const string Flag = "--export-openapi";
 
-    private const string DocumentName = "v1";
-
     internal static bool Requested(string[] args) => args.Contains(Flag, StringComparer.Ordinal);
 
     internal static async Task WriteAsync(WebApplication app, string[] args)
@@ -25,7 +23,7 @@ internal static class OpenApiExport
         await app.StartAsync().ConfigureAwait(false);
 
         // Registered per document name; the key is the exposed version.
-        var provider = app.Services.GetRequiredKeyedService<IOpenApiDocumentProvider>(DocumentName);
+        var provider = app.Services.GetRequiredKeyedService<IOpenApiDocumentProvider>(Extensions.OpenApiExtensions.DocumentName);
         var document = await provider.GetOpenApiDocumentAsync().ConfigureAwait(false);
 
         await app.StopAsync().ConfigureAwait(false);
