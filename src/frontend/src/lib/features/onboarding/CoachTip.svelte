@@ -53,6 +53,11 @@
     top: 1.4rem;
   }
 
+  /* A line short enough to take in at a glance; across a wide page the eye loses its way back. */
+  .tip :global(.bubble) {
+    max-width: 34rem;
+  }
+
   .title {
     font-weight: var(--weight-semibold);
   }
@@ -62,13 +67,23 @@
     line-height: var(--leading-normal);
   }
 
-  .body :global(ul) {
-    margin: 0;
-    padding-inline-start: var(--space-4);
+  .body :global(p + p) {
+    margin-top: var(--space-2);
   }
 
-  .body :global(li + li) {
-    margin-top: var(--space-1);
+  /* Said for the device in hand: a tip can offer a swipe and the arrow keys, and only one of them shows. */
+  .body :global(.on-touch) {
+    display: none;
+  }
+
+  @media (pointer: coarse) {
+    .body :global(.on-touch) {
+      display: inline;
+    }
+
+    .body :global(.on-keys) {
+      display: none;
+    }
   }
 
   .actions {

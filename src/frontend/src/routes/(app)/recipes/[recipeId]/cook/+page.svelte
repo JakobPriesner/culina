@@ -241,10 +241,13 @@
       {/if}
 
       <CoachTip id="cook" pose="onDuty" title={m['tips.cook.title']()}>
-        <ul>
-          <li>{m['tips.cook.swipe']()}</li>
-          <li>{m['tips.cook.tools']()}</li>
-        </ul>
+        <!-- The way forward this device has: a swipe on a touch screen, the arrow keys elsewhere. -->
+        <p>
+          <span class="on-touch">{m['tips.cook.swipe']()}</span><span class="on-keys"
+            >{m['tips.cook.keys']()}</span
+          >
+        </p>
+        {#if readAloud.supported}<p>{m['tips.cook.read']()}</p>{/if}
       </CoachTip>
 
       <MealDishes {recipeId} />
