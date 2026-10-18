@@ -18,6 +18,7 @@
   import StepEditor from '$features/recipes/editor/StepEditor.svelte';
   import TagEditor from '$features/recipes/editor/TagEditor.svelte';
   import StubFill from '$features/recipes/detail/StubFill.svelte';
+  import CoachTip from '$features/onboarding/CoachTip.svelte';
   import { everyIngredient } from '$features/recipes/types';
   import { tagSuggestions } from '$features/recipes/stores/tagSuggestions.svelte';
   import type { Recipe, Step } from '$features/recipes/types';
@@ -160,6 +161,16 @@
   </EditorSection>
 
   <EditorSection id="steps" title={m['editor.steps']()} count={recipe.steps.length}>
+    <!-- Once, where steps are written: the rules the tour's step card gives, in a line each. -->
+    <CoachTip id="steps" title={m['tips.steps.title']()}>
+      <ul>
+        <li>{m['tour.steps.one']()}</li>
+        <li>{m['tour.steps.length']()}</li>
+        <li>{m['tour.steps.mention']()}</li>
+        <li>{m['tour.steps.timer']()}</li>
+      </ul>
+    </CoachTip>
+
     {#if notes?.overall.trim()}
       <aside class="personal" aria-label={m['notes.editor.overall']()}>
         <span class="personal-label">{m['notes.editor.overall']()}</span>

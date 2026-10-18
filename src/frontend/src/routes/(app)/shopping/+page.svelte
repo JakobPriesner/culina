@@ -8,6 +8,7 @@
   import ShoppingFinishedNote from '$features/shopping/ShoppingFinishedNote.svelte';
   import ShoppingHeader from '$features/shopping/ShoppingHeader.svelte';
   import ShoppingMeals from '$features/shopping/ShoppingMeals.svelte';
+  import CoachTip from '$features/onboarding/CoachTip.svelte';
   import { ingredientNames } from '$features/ingredients/stores/ingredientNames.svelte';
   import { foldText } from '$features/recipes/foldText';
   import { amountOf } from '$features/shopping/shoppingAmount';
@@ -279,6 +280,14 @@
         onmerge={(item) => void merge(item)}
       />
     {/each}
+
+    <!-- Under the list, not above it: the list arrives after the page, and a tip above it would push it down. -->
+    <CoachTip id="shopping" title={m['tips.shopping.title']()}>
+      <ul>
+        <li>{m['tips.shopping.tick']()}</li>
+        <li>{m['tips.shopping.meals']()}</li>
+      </ul>
+    </CoachTip>
 
     {#if shop.finished}
       <ShoppingFinishedNote celebrate={shop.justFinished} />

@@ -30,6 +30,12 @@ test.describe('the first-run path', () => {
 
     await expect(page).toHaveURL(/\/$/);
 
+    // The tour of the new kitchen opens at once; it can be skipped.
+    await page
+      .getByRole('button', { name: /skip the tour|rundgang überspringen/i })
+      .first()
+      .click();
+
     await page.goto('/me');
     await page.getByRole('button', { name: /sign out|abmelden/i }).click();
 

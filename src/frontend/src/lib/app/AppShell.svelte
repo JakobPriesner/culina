@@ -6,6 +6,7 @@
 
   import { session } from '$features/auth/session.svelte';
   import KitchenRuntime from '$features/cooking/KitchenRuntime.svelte';
+  import TourHost from '$features/onboarding/TourHost.svelte';
 
   import { m } from './i18n';
   import { offersSearch } from './navigation';
@@ -61,6 +62,7 @@
 </script>
 
 <KitchenRuntime />
+<TourHost />
 
 <svelte:window bind:innerHeight={viewportHeight} />
 

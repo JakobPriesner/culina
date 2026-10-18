@@ -364,10 +364,11 @@ test.describe('reaching everything with a keyboard', () => {
     expect(reached.join('\n')).toMatch(/start cooking|kochen starten/i);
 
     // A focusable div is a control a screen reader describes as nothing. A summary is the native
-    // control of a disclosure (the nutrition panel's), announced as one.
+    // control of a disclosure (the nutrition panel's), announced as one. Your note is a button until
+    // it is opened for writing, so no text area is reached on the way.
     const tags = new Set(reached.map((entry) => entry.split(':')[0]));
 
-    expect([...tags].sort()).toEqual(['a', 'button', 'input', 'summary', 'textarea']);
+    expect([...tags].sort()).toEqual(['a', 'button', 'input', 'summary']);
   });
 
   test('cooking can be driven without touching the screen', async () => {
@@ -386,6 +387,8 @@ test.describe('reaching everything with a keyboard', () => {
 
     // Focus follows the cook to the new step so a screen reader reads it.
     await expect(page.locator('[aria-current="step"]')).toBeFocused();
-    await expect(page.getByRole('button', { name: /^(i made it|hab ich gekocht)$/i })).toBeEnabled();
+    await expect(
+      page.getByRole('button', { name: /^(i made it|hab ich gekocht)$/i })
+    ).toBeEnabled();
   });
 });

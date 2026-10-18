@@ -3,6 +3,8 @@
   import { Avatar, Badge, Button } from '$ds';
 
   import { session } from '$features/auth/session.svelte';
+  import { tips } from '$features/onboarding/tips.svelte';
+  import { toaster } from '$shell/toaster.svelte';
   import { signOut, switchServer } from '$features/auth/signOut';
   import { formatDate, m } from '$shell/i18n';
   import { update } from '$shell/updates.svelte';
@@ -45,6 +47,23 @@
     </SettingsRow>
   </SettingsSection>
 {/if}
+
+<!-- Help where it is looked for: the tour and the tips, either again. -->
+<SettingsSection title={m['me.help']()}>
+  <SettingsRow label={m['me.help.tour']()} description={m['me.help.tourBody']()}>
+    <Button onclick={() => tips.startTour()}>{m['tour.offer.start']()}</Button>
+  </SettingsRow>
+  <SettingsRow label={m['me.help.tips']()} description={m['me.help.tipsBody']()}>
+    <Button
+      onclick={() => {
+        tips.showAgain();
+        toaster.show({ message: () => m['me.help.tipsDone'](), tone: 'success' });
+      }}
+    >
+      {m['me.help.tipsAgain']()}
+    </Button>
+  </SettingsRow>
+</SettingsSection>
 
 <!-- The app talks to one self-hosted server; the website is that server. -->
 {#if native}
