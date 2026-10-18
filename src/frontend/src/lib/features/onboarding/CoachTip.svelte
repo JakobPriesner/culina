@@ -3,56 +3,62 @@
 
   import { Button } from '$ds';
   import { m } from '$shell/i18n';
+  import type { Pose } from '$shell/olli/poses';
 
+  import OlliSays from './OlliSays.svelte';
   import { tips, type TipId } from './tips.svelte';
 
   /**
-   * A tip beside the thing it explains, the first time it is used, and never again after "Got it". Quiet on
-   * purpose: a tinted card in the flow, never over a control.
+   * Olli beside the thing it explains, the first time it is used, and never again after "Got it". In the
+   * flow and never over a control; the pose says what kind of moment it is (writing, cooking, planning).
    */
   interface Props {
     id: TipId;
+    pose: Pose;
     title: string;
     children: Snippet;
     /** Something to do about it, besides putting it away. */
     action?: Snippet;
   }
 
-  let { id, title, children, action }: Props = $props();
+  let { id, pose, title, children, action }: Props = $props();
 </script>
 
 {#if tips.isNew(id)}
   <aside class="tip" aria-label={title}>
-    <p class="title">{title}</p>
-    <div class="body">{@render children()}</div>
-    <div class="actions">
-      {@render action?.()}
-      <Button size="sm" variant="ghost" onclick={() => tips.dismiss(id)}>{m['tips.gotIt']()}</Button
-      >
-    </div>
+    <OlliSays {pose} size="sm">
+      <p class="title">{title}</p>
+      <div class="body">{@render children()}</div>
+      <div class="actions">
+        {@render action?.()}
+        <Button size="sm" variant="ghost" onclick={() => tips.dismiss(id)}
+          >{m['tips.gotIt']()}</Button
+        >
+      </div>
+    </OlliSays>
   </aside>
 {/if}
 
 <style>
   .tip {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
     margin-bottom: var(--space-4);
-    padding: var(--space-3) var(--space-4);
-    border-inline-start: 3px solid var(--accent);
-    border-radius: var(--radius-md);
-    background: var(--surface-accent-subtle);
-    font-size: var(--text-sm);
+  }
+
+  /* Olli at the bubble's top, not its middle: a tall bubble would leave Olli floating beside nothing. */
+  .tip :global(.says) {
+    align-items: flex-start;
+  }
+
+  .tip :global(.bubble::before) {
+    top: 1.4rem;
   }
 
   .title {
-    margin: 0;
     font-weight: var(--weight-semibold);
   }
 
   .body {
-    color: var(--text);
+    margin-top: var(--space-1);
     line-height: var(--leading-normal);
   }
 
@@ -69,7 +75,9 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-end;
     gap: var(--space-2);
+    margin-top: var(--space-2);
   }
 
   @media print {

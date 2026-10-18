@@ -162,7 +162,7 @@
 
   <EditorSection id="steps" title={m['editor.steps']()} count={recipe.steps.length}>
     <!-- Once, where steps are written: the rules the tour's step card gives, in a line each. -->
-    <CoachTip id="steps" title={m['tips.steps.title']()}>
+    <CoachTip id="steps" pose="writing" title={m['tips.steps.title']()}>
       <ul>
         <li>{m['tour.steps.one']()}</li>
         <li>{m['tour.steps.length']()}</li>

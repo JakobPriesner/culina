@@ -20,6 +20,7 @@ export { default as ActionMenu } from './overlay/ActionMenu.svelte';
 export { default as Modal } from './overlay/Modal.svelte';
 export { default as Popover } from './overlay/Popover.svelte';
 export { default as Sheet } from './overlay/Sheet.svelte';
+export { default as Stage } from './overlay/Stage.svelte';
 
 export { default as BusyRegion } from './feedback/BusyRegion.svelte';
 export { default as ProgressBar } from './feedback/ProgressBar.svelte';

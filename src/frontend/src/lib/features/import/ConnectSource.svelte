@@ -5,6 +5,7 @@
   import { m } from '$shell/i18n';
 
   import { originOf, tokenPageOf } from './sourceAddress';
+  import { isSourceKind, sourceApps } from './sourceApps';
   import { sources } from './stores/sources.svelte';
   import type { ConnectedSource, SourceKind } from './types';
 
@@ -39,11 +40,10 @@
         : username.trim().length > 0 && password.length > 0)
   );
 
-  // Product names, the same in every language.
-  const kinds: readonly RadioOption[] = [
-    { value: 'tandoor', label: 'Tandoor' },
-    { value: 'mealie', label: 'Mealie' }
-  ];
+  const kinds: readonly RadioOption[] = sourceApps.map((app) => ({
+    value: app.kind,
+    label: app.name
+  }));
 
   const ways: readonly RadioOption[] = $derived([
     {
@@ -93,7 +93,9 @@
         {describedBy}
         options={kinds}
         value={kind}
-        onchange={(chosen) => (kind = chosen === 'mealie' ? 'mealie' : 'tandoor')}
+        onchange={(chosen) => {
+          if (isSourceKind(chosen)) kind = chosen;
+        }}
       />
     {/snippet}
   </Field>

@@ -161,6 +161,28 @@ test.describe('what a machine can check, signed in', () => {
     });
   }
 
+  test('the welcome tour has no violations, scene by scene', async () => {
+    await page.goto('/me');
+    await page.getByRole('button', { name: /^(take the tour|rundgang starten)$/i }).click();
+
+    const tour = page.getByRole('dialog', { name: /tour of culina|rundgang durch culina/i });
+    await expect(tour).toBeVisible();
+
+    for (let scene = 1; scene <= 6; scene += 1) {
+      await expect(tour.getByRole('heading', { level: 3 })).toContainText(String(scene));
+      expect(await violations(page)).toEqual([]);
+
+      if (scene < 6)
+        await tour
+          .getByRole('button', { name: /^(next|weiter)$/i })
+          .last()
+          .click();
+    }
+
+    await tour.getByRole('button', { name: /^(look around first|erst mal umschauen)$/i }).click();
+    await expect(tour).toBeHidden();
+  });
+
   /*
    * The loading state on purpose rather than by luck: the run above used to land on the ingredient skeleton now and then,
    * which named a plain element (aria-prohibited-attr). Held until axe has looked, then let through.

@@ -1,11 +1,13 @@
 import type { AppError } from '$api';
 
+import type { SourceKind } from './sourceApps';
+
 /**
  * Importing a library from another app; kept apart from `$features/recipes` so an "imported recipe"
  * never becomes a second kind of recipe.
  */
 
-export type SourceKind = 'tandoor' | 'mealie';
+export type { SourceKind };
 
 export interface ConnectedSource {
   readonly sourceId: string;

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { sourceAppNames } from '$features/import/sourceApps';
   import { resolve } from '$app/paths';
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
@@ -87,7 +88,11 @@
       {/if}
     {/if}
     <a class="way" href={resolve('/(app)/recipes/import')}>
-      {@render way(icons.source, m['import.source.title'](), m['import.source.hint']())}
+      {@render way(
+        icons.source,
+        m['import.source.title'](),
+        m['import.source.hint']({ apps: sourceAppNames() })
+      )}
     </a>
 
     <!-- Only where an assistant is connected. -->
