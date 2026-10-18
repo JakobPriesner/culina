@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tips } from '$features/onboarding/tips.svelte';
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
@@ -102,6 +103,24 @@
         <span class="mark" aria-hidden="true"><span class="pending"></span></span>
         <span class="grow">{m['app.update.available']()}</span>
         <span class="reload">{m['app.update.reload']()}</span>
+      </button>
+    {/if}
+
+    {#if session.activeHouseholdId}
+      <button type="button" class="item" onclick={() => tips.startTour()}>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="9" />
+          <path d="m15.5 8.5-2 5-5 2 2-5z" />
+        </svg>
+        <span class="grow">{m['me.help.tour']()}</span>
       </button>
     {/if}
 

@@ -24,6 +24,9 @@
     onautoscroll: () => void;
     onnotes: () => void;
     onkitchen: () => void;
+    /** Steps read aloud, where the device can speak; absent where it cannot. */
+    readingAloud?: boolean;
+    onreadaloud?: () => void;
   }
 
   let {
@@ -38,7 +41,9 @@
     onadvance,
     onautoscroll,
     onnotes,
-    onkitchen
+    onkitchen,
+    readingAloud = false,
+    onreadaloud
   }: Props = $props();
 
   const totalSteps = $derived(recipe.steps.length);
@@ -131,6 +136,27 @@
           </svg>
         </IconButton>
       </span>
+
+      {#if onreadaloud}
+        <!-- Hands busy, eyes on the pan: the step said out loud, each time it changes. -->
+        <div class="auto-scroll" class:running={readingAloud}>
+          <IconButton
+            label={readingAloud ? m['cooking.readAloud.stop']() : m['cooking.readAloud.start']()}
+            size="lg"
+            bordered
+            onclick={onreadaloud}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 9.5h3.5L12 6v12l-4.5-3.5H4z" stroke-linejoin="round" />
+              {#if readingAloud}
+                <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" stroke-linecap="round" />
+              {:else}
+                <path d="m16 10 4 4m0-4-4 4" stroke-linecap="round" />
+              {/if}
+            </svg>
+          </IconButton>
+        </div>
+      {/if}
 
       <IconButton label={m['kitchen.controls']()} size="lg" bordered onclick={onkitchen}>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

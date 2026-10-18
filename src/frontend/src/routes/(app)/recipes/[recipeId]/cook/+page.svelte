@@ -18,8 +18,11 @@
   import { kitchenTimers as timers } from '$features/cooking/kitchen.svelte';
   import KitchenSheet from '$features/cooking/KitchenSheet.svelte';
   import NotesSheet from '$features/cooking/NotesSheet.svelte';
+  import { readAloud, spokenStep } from '$features/cooking/readAloud.svelte';
   import { createStepGestures } from '$features/cooking/stepGestures';
+  import { createScaling } from '$features/recipes/surface/scaled.svelte';
   import MealDishes from '$features/planning/MealDishes.svelte';
+  import CoachTip from '$features/onboarding/CoachTip.svelte';
   import { upcoming } from '$features/planning/upcoming.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
@@ -69,7 +72,24 @@
 
     return () => {
       release();
+      readAloud.stop();
     };
+  });
+
+  /** The amounts as the screen shows them, for the voice to say the same. */
+  const spoken = createScaling(
+    () => recipe,
+    () => servings
+  );
+
+  // Each step said once as it comes up, while reading aloud is on; turning it on says the step on screen.
+  $effect(() => {
+    const step = recipe?.steps[currentStep];
+    const language = recipe?.language ?? 'en';
+
+    if (!readAloud.on || !ready || over || !step) return;
+
+    untrack(() => readAloud.speak(spokenStep(step, currentStep + 1, spoken), language));
   });
 
   $effect(() => {
@@ -220,6 +240,13 @@
         </div>
       {/if}
 
+      <CoachTip id="cook" title={m['tips.cook.title']()}>
+        <ul>
+          <li>{m['tips.cook.swipe']()}</li>
+          <li>{m['tips.cook.tools']()}</li>
+        </ul>
+      </CoachTip>
+
       <MealDishes {recipeId} />
 
       <RecipeSurface
@@ -246,6 +273,8 @@
         onautoscroll={() => (autoScrolling = !autoScrolling)}
         onnotes={() => (notesOpen = true)}
         onkitchen={() => (kitchenOpen = true)}
+        readingAloud={readAloud.on}
+        onreadaloud={readAloud.supported ? () => readAloud.toggle() : undefined}
       />
     </div>
   {:else if recipes.detailStatus === 'failed' && recipes.detailError?.status === 404}

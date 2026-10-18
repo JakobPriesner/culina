@@ -6,6 +6,7 @@
   import { Button, EmptyState, ErrorState } from '$ds';
 
   import CarriedMeal from '$features/planning/CarriedMeal.svelte';
+  import CoachTip from '$features/onboarding/CoachTip.svelte';
   import {
     mealPlan,
     placeOf,
@@ -115,6 +116,13 @@
   <PlanHeader {range} {offset} onstep={(weeks) => (offset += weeks)} onreset={() => (offset = 0)} />
 
   {#if householdId && offset === 0}<TodayMeal {householdId} />{/if}
+
+  <CoachTip id="plan" title={m['tips.plan.title']()}>
+    <ul>
+      <li>{m['tips.plan.drag']()}</li>
+      <li>{m['tips.plan.tick']()}</li>
+    </ul>
+  </CoachTip>
 
   {#if mealPlan.error}
     <ErrorState title={m['error.unexpected.title']()} body={m['error.unexpected.body']()}>

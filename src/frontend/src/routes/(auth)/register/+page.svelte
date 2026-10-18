@@ -11,6 +11,7 @@
   import { safeRedirect } from '$features/auth/redirectTarget';
   import { register } from '$features/auth/registration.svelte';
   import { session } from '$features/auth/session.svelte';
+  import { tips } from '$features/onboarding/tips.svelte';
   import { createSubmission } from '$features/auth/submission.svelte';
   import { m } from '$shell/i18n';
 
@@ -61,6 +62,9 @@
     if (!succeeded) {
       return;
     }
+
+    // Invited straight into a household: the tour starts there. Without one, the welcome screen comes first.
+    if (landedIn) tips.startTour();
 
     // No household yet: the welcome screen offers the two ways out.
     await goto(landedIn ? destination : resolve('/(app)/welcome'), { replaceState: true });

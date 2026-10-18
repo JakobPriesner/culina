@@ -17,6 +17,7 @@
     type DeletedHousehold
   } from '$features/auth/households.svelte';
   import { session } from '$features/auth/session.svelte';
+  import { tips } from '$features/onboarding/tips.svelte';
   import { createSubmission } from '$features/auth/submission.svelte';
   import { m } from '$shell/i18n';
   import Olli from '$shell/olli/Olli.svelte';
@@ -56,6 +57,8 @@
     });
 
     if (succeeded) {
+      // A kitchen to cook in, so the tour of it starts there.
+      tips.startTour();
       await goto(resolve('/(app)'), { replaceState: true });
     }
   }
