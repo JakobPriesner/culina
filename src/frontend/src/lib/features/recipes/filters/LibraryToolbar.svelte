@@ -16,6 +16,7 @@
   import { createQueryBox } from './queryBox.svelte';
   import SavedSearchChips from './SavedSearchChips.svelte';
   import SavedSearchSheet from './SavedSearchSheet.svelte';
+  import { pageSearch } from './pageSearch.svelte';
 
   /** One toolbar for every recipe list, so a shelf is sorted and narrowed exactly like the library and neither gains a filter the other lacks. */
   interface Props {
@@ -28,6 +29,8 @@
     keyShortcuts?: string;
     /** Whether a search here can be saved; false in a cookbook, where reapplying it from the library would find something else. */
     savable?: boolean;
+    /** The page's own search: the header's search button leads here instead of opening the overlay. */
+    primary?: boolean;
     /** Whatever the page says about its own list (count, order note). */
     summary?: Snippet;
     /** What the server read the query to mean and how many it found: the chips and notices under the box. Absent where nothing searches. */
@@ -49,6 +52,7 @@
     searchPlaceholder,
     keyShortcuts,
     savable = false,
+    primary = false,
     summary,
     interpretation = null,
     total = 0,
@@ -70,9 +74,34 @@
   function apply(search: SavedSearch) {
     view.assign(search);
   }
+
+  let toolbar = $state<HTMLElement>();
+
+  /** Up to the field (no scroll when it is in view already) with the caret after the words; inside the tap, so a phone opens its keyboard. */
+  function reveal() {
+    const field = document.getElementById(id) as HTMLInputElement | null;
+    const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+    field?.focus({ preventScroll: true });
+    field?.setSelectionRange(field.value.length, field.value.length);
+    toolbar?.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'nearest' });
+  }
+
+  // Lends the header's search button to this field while the toolbar is on the page.
+  $effect(() => {
+    if (!primary) {
+      return;
+    }
+
+    pageSearch.reveal = reveal;
+
+    return () => {
+      pageSearch.reveal = null;
+    };
+  });
 </script>
 
-<div class="toolbar">
+<div class="toolbar" bind:this={toolbar}>
   <div class="tools">
     <div class="search">
       <SearchField
@@ -196,6 +225,8 @@
     padding-block: var(--space-4);
     margin-bottom: var(--space-6);
     border-block: 1px solid var(--border);
+    /* Clear of the header and the fade below it, where the header's search button lands. */
+    scroll-margin-top: calc(var(--header-inset) + var(--space-4));
   }
 
   .tools {

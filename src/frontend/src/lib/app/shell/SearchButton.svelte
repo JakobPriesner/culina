@@ -1,15 +1,25 @@
 <script lang="ts">
   import { m } from '$shell/i18n';
+  import { pageSearch } from '$features/recipes/filters/pageSearch.svelte';
   import { searchOverlay } from '$features/recipes/search/overlayState.svelte';
+
+  /** A page with a search field of its own is searched there; elsewhere the overlay opens. */
+  function find() {
+    if (pageSearch.reveal) {
+      pageSearch.reveal();
+    } else {
+      searchOverlay.show();
+    }
+  }
 </script>
 
 <button
   type="button"
   class="search"
   aria-label={m['search.open']()}
-  title="{m['search.open']()} (⌘K)"
-  aria-keyshortcuts="Meta+K Control+K /"
-  onclick={() => searchOverlay.show()}
+  title={pageSearch.reveal ? m['search.open']() : `${m['search.open']()} (⌘K)`}
+  aria-keyshortcuts={pageSearch.reveal ? undefined : 'Meta+K Control+K /'}
+  onclick={find}
 >
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
     <circle cx="10.5" cy="10.5" r="6.5" />

@@ -185,4 +185,20 @@ test.describe('search @offline', () => {
     await page.keyboard.press('ControlOrMeta+f');
     await expect(searchField).toBeFocused();
   });
+
+  test('the header search button leads back up to the library search field', async ({ page }) => {
+    await responsiveData(page);
+
+    await page.goto('/');
+    const searchField = page.getByRole('searchbox', { name: 'Rezepte durchsuchen' });
+    await expect(searchField).toBeVisible();
+
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await expect(searchField).not.toBeInViewport();
+    await page.getByRole('banner').getByRole('button', { name: 'Rezepte durchsuchen' }).click();
+
+    await expect(searchField).toBeFocused();
+    await expect(searchField).toBeInViewport();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
 });

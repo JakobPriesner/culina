@@ -92,6 +92,7 @@
       searchLabel={m['recipes.list.searchLabel']()}
       searchPlaceholder={m['recipes.list.searchPlaceholder']()}
       savable
+      primary
       onpromote={(search) => (shelving = search)}
       interpretation={recipes.status === 'ready' ? recipes.interpretation : null}
       total={recipes.total}
