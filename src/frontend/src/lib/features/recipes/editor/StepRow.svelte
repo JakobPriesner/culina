@@ -43,11 +43,29 @@
   let focused = $state(false);
   const hinted = $derived(index === 0 || focused);
 
+  /**
+   * The ingredients sit below the hints, so focus moving onto them leaves the hints as they are: a click there
+   * focuses on mousedown, and hints appearing or going would move the button before mouseup and lose the click.
+   */
+  let ingredientArea: HTMLDivElement;
+
+  function focusIn(event: FocusEvent) {
+    if (!ingredientArea.contains(event.target as Node)) {
+      focused = true;
+    }
+  }
+
+  function focusOut(event: FocusEvent) {
+    if (!(event.currentTarget as HTMLElement).contains(event.relatedTarget as Node | null)) {
+      focused = false;
+    }
+  }
+
   /** Waits the words name ("10 Min. köcheln"), offered as the step's timer while it has none; cook mode offers the same ones. */
   const spotted = $derived(step.durationSeconds === null ? durationsIn(toText(step)) : []);
 </script>
 
-<li class="step" onfocusin={() => (focused = true)} onfocusout={() => (focused = false)}>
+<li class="step" onfocusin={focusIn} onfocusout={focusOut}>
   <div class="head">
     <div class="name">
       <TextInput
@@ -159,13 +177,15 @@
     {/if}
   </div>
 
-  <StepIngredients
-    {step}
-    number={index + 1}
-    {ingredients}
-    onchange={(uses) => onchange({ ...step, uses })}
-    onmention={(segments) => onchange({ ...step, segments })}
-  />
+  <div bind:this={ingredientArea}>
+    <StepIngredients
+      {step}
+      number={index + 1}
+      {ingredients}
+      onchange={(uses) => onchange({ ...step, uses })}
+      onmention={(segments) => onchange({ ...step, segments })}
+    />
+  </div>
 </li>
 
 <style>
