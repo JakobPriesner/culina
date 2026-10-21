@@ -86,8 +86,8 @@ test.describe('writing a recipe', () => {
 
     await write(page, { amount: '2', name: 'Zwiebeln', note: 'fein gehackt' });
 
-    await expect(page.getByText('Zwiebeln')).toBeVisible();
-    await expect(page.getByText(/fein gehackt/)).toBeVisible();
+    await expect(ingredientsOf(page).getByText('Zwiebeln')).toBeVisible();
+    await expect(ingredientsOf(page).getByText(/fein gehackt/)).toBeVisible();
 
     await expect(newIngredient(page).getByLabel(/^\s*(amount|menge)\s*$/i)).toHaveValue('');
 

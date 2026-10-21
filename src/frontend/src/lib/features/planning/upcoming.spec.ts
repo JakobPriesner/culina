@@ -144,4 +144,3 @@ describe('a meal of several dishes', () => {
     expect(upcoming.dishesWith('r-nothing')).toEqual([]);
   });
 });
-

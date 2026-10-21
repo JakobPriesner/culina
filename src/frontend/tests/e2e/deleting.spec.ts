@@ -95,11 +95,12 @@ test.describe('deleting a recipe', () => {
 
     expect(moved.ok(), await moved.text()).toBe(true);
 
+    // The recipe's own page leads back to cooking with its own action, so the bar shows on the library.
     const bar = page.getByRole('link', { name: /keep cooking|weiterkochen/i });
-    const dialog = await askToDelete();
-
+    await page.goto('/');
     await expect(bar).toBeVisible();
 
+    const dialog = await askToDelete();
     await dialog.getByRole('button', { name: /^(delete|löschen)$/i }).click();
 
     await expect(page).toHaveURL(/\/$/);
