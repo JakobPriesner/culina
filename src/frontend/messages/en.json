@@ -2252,5 +2252,9 @@
         "countPlural=*": "Ingredients for {count} servings:"
       }
     }
-  ]
+  ],
+  "problem.agent.unknown_tool": "The AI agent asked for something Culina can't do.",
+  "problem.agent.unknown_argument": "The AI agent sent a detail Culina doesn't understand.",
+  "problem.agent.missing_argument": "The AI agent left out a detail Culina needs.",
+  "problem.agent.invalid_argument": "The AI agent sent a detail Culina can't use."
 }

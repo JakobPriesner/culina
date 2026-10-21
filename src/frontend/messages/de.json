@@ -2252,5 +2252,9 @@
         "countPlural=*": "Zutaten für {count} Portionen:"
       }
     }
-  ]
+  ],
+  "problem.agent.unknown_tool": "Der KI-Agent hat nach etwas gefragt, das Culina nicht kann.",
+  "problem.agent.unknown_argument": "Der KI-Agent hat eine Angabe geschickt, die Culina nicht versteht.",
+  "problem.agent.missing_argument": "Dem KI-Agenten fehlt eine Angabe, die Culina braucht.",
+  "problem.agent.invalid_argument": "Der KI-Agent hat eine Angabe geschickt, mit der Culina nichts anfangen kann."
 }
