@@ -108,6 +108,12 @@ public class AgentOperationsTests(PostgresFixture postgres)
         "getRecipeIntakePhotoV1",
         "reviewRecipeIntakeV1",
 
+        // What a household says a barcode is: it serves the scanner, and is not yet decided on for agents.
+        "getHouseholdProductV1",
+        "listHouseholdProductsV1",
+        "setHouseholdProductV1",
+        "removeHouseholdProductV1",
+
         // What the web app reports about itself and what it showed.
         "recordSuggestionImpressionsV1",
         "createLogRecordsV1"
