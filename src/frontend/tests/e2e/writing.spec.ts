@@ -287,9 +287,8 @@ test.describe('writing a recipe', () => {
     // A range reads as its lower bound; \s because the amount-unit space doesn't break; the browser is German.
     await expect(page.getByText(/^1\s(tbsp|EL)$/)).toBeVisible();
 
-    await page.getByRole('button', { name: /^(review recipe|rezept prüfen)$/i }).click();
+    // The preview is the review: it saves from where it stands.
     await page
-      .getByRole('dialog')
       .getByRole('button', { name: /save and edit recipe|rezept speichern und bearbeiten/i })
       .click();
     await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit/);
@@ -344,9 +343,8 @@ test.describe('writing a recipe', () => {
     await expect(page.getByRole('status')).toContainText(/2/);
     await expect(page.getByText('200 g', { exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: /^(review recipe|rezept prüfen)$/i }).click();
+    // The preview is the review: it saves from where it stands.
     await page
-      .getByRole('dialog')
       .getByRole('button', { name: /save and edit recipe|rezept speichern und bearbeiten/i })
       .click();
     await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]+\/edit/);
