@@ -7,10 +7,10 @@ import type { KitchenTimer } from './timerState';
 /** How much of a step the lock screen has room for. */
 const excerptLength = 180;
 
-type AmountOf = (of: { readonly quantity: Quantity }) => { readonly text: string };
+export type AmountOf = (of: { readonly quantity: Quantity }) => { readonly text: string };
 
 /** The name at the current scale: "2 Zwiebeln" once one is doubled. */
-type NameOf = (of: { readonly name: string; readonly quantity: Quantity }) => string;
+export type NameOf = (of: { readonly name: string; readonly quantity: Quantity }) => string;
 
 const asWritten: NameOf = (of) => of.name;
 
@@ -41,7 +41,7 @@ export function selectTimer(
   );
 }
 
-function inlineText(nodes: readonly Inline[], amountFor: AmountOf, nameFor: NameOf): string {
+export function inlineText(nodes: readonly Inline[], amountFor: AmountOf, nameFor: NameOf): string {
   return nodes
     .map((node) => {
       if (node.kind === 'ingredient') {

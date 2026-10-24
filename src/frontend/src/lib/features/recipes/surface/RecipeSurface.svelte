@@ -61,6 +61,8 @@
     whereabouts?: Snippet;
     /** Your own note on a step, by step id; see `StepList`. */
     stepNote?: (stepId: string) => string;
+    /** Controls under the step being cooked; only the cook route supplies them. */
+    stepaction?: Snippet;
   }
 
   let {
@@ -89,7 +91,8 @@
     ontitleview,
     nutrition = null,
     whereabouts,
-    stepNote
+    stepNote,
+    stepaction
   }: Props = $props();
 
   let highlighted = $state<string | null>(null);
@@ -202,6 +205,7 @@
       {highlighted}
       written={ingredients.written}
       needsOf={ingredients.needsOf}
+      {stepaction}
       {onstep}
       onhighlight={(id) => (highlighted = id)}
       onlocate={locateIngredient}

@@ -2558,5 +2558,7 @@
   "problem.mail.password_required": "Enter the password again: it is only sent to the server it was saved for.",
   "problem.mail.invalid_value": "That isn't a value the mail account accepts.",
   "problem.mail.off": "This Culina doesn't send mail.",
-  "problem.mail.send_failed": "The mail couldn't be sent. Check the server, port, security and password, then try again."
+  "problem.mail.send_failed": "The mail couldn't be sent. Check the server, port, security and password, then try again.",
+  "cooking.speech.read": "Read step aloud",
+  "cooking.speech.stop": "Stop reading"
 }

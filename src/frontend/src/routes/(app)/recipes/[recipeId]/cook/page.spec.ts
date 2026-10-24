@@ -7,6 +7,7 @@ import { clientError, ErrorCodes } from '$api';
 import { session } from '$features/auth/session.svelte';
 import { cooking } from '$features/cooking/stores/cooking.svelte';
 import { kitchenTimers } from '$features/cooking/kitchen.svelte';
+import { readAloud } from '$features/cooking/readAloud.svelte';
 import { recipes } from '$features/recipes/stores/recipes.svelte';
 import type { Recipe } from '$features/recipes/types';
 import { renderWithProviders } from '$lib/test/render';
@@ -93,5 +94,148 @@ describe('a cook session that could not be started', () => {
 
     await waitFor(() => expect(cooking.start).toHaveBeenCalled());
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+});
+
+describe('reading a step aloud', () => {
+  const spoken: Recipe = {
+    ...recipe,
+    steps: [
+      {
+        ...step('s-1'),
+        segments: [{ kind: 'text', text: 'Stir in 2 tbsp butter and ½ tsp salt.' }]
+      },
+      { ...step('s-2'), segments: [{ kind: 'text', text: 'Serve at 60°C.' }] }
+    ]
+  };
+
+  let said: string[];
+  let cancelled: number;
+
+  const engine = () => ({
+    speak: vi.fn((utterance: { text: string }) => void said.push(utterance.text)),
+    cancel: vi.fn(() => void (cancelled += 1)),
+    getVoices: () => []
+  });
+
+  async function cookStep(index: number) {
+    const session = {
+      sessionId: 'session-1',
+      recipeId: 'recipe-1',
+      recipeTitle: 'Risotto',
+      servings: 4,
+      currentStepIndex: index,
+      startedAt: '2026-09-20T12:00:00Z',
+      lastActiveAt: '2026-09-20T12:00:00Z',
+      version: 1
+    };
+    // The session being cooked; the page's other reads (the week's meals, lists) find nothing.
+    const answer = (input: RequestInfo | URL) => {
+      const url = String(input instanceof Request ? input.url : input);
+
+      return url.includes('cook-session')
+        ? session
+        : url.includes('meal-plan')
+          ? { from: '2026-09-20', days: [] }
+          : url.includes('/notes')
+            ? { overall: null, steps: [] }
+            : { items: [] };
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) =>
+        Promise.resolve(
+          new Response(JSON.stringify(answer(input)), {
+            headers: { 'Content-Type': 'application/json' }
+          })
+        )
+      )
+    );
+    await cooking.resume();
+  }
+
+  beforeEach(() => {
+    said = [];
+    cancelled = 0;
+    localStorage.clear();
+    readAloud.stop();
+    readAloud.on = false;
+    vi.stubGlobal(
+      'SpeechSynthesisUtterance',
+      class {
+        lang = '';
+        voice = null;
+        constructor(readonly text: string) {}
+      }
+    );
+    vi.stubGlobal('speechSynthesis', engine());
+    vi.spyOn(recipes, 'detail', 'get').mockReturnValue(spoken);
+    vi.spyOn(cooking, 'start').mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    cooking.reset();
+    readAloud.stop();
+    readAloud.on = false;
+  });
+
+  it('says the current step in words when the speaker is pressed, and stops on a second press', async () => {
+    await cookStep(0);
+    renderWithProviders(CookPage);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Read step aloud' }));
+
+    // The step's name, then its words as a voice says them.
+    expect(said.join(' ')).toContain('Stir in 2 tablespoons butter and one half teaspoon salt.');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Stop reading' }));
+
+    expect(screen.getByRole('button', { name: 'Read step aloud' })).toBeTruthy();
+  });
+
+  it('stops reading when the step is changed by hand, and does not start the next', async () => {
+    await cookStep(0);
+    renderWithProviders(CookPage);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Read step aloud' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Next step' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Read step aloud' })).toBeTruthy()
+    );
+    expect(said).toHaveLength(1);
+  });
+
+  it('reads each step as it comes up while reading aloud is on, the one it opens at too', async () => {
+    readAloud.on = true;
+    await cookStep(0);
+    renderWithProviders(CookPage);
+
+    await waitFor(() => expect(said.join(' ')).toContain('one half teaspoon salt'));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Next step' }));
+
+    await waitFor(() => expect(said.join(' ')).toContain('Serve at 60 degrees Celsius.'));
+  });
+
+  it('gives way to a timer alarm', async () => {
+    await cookStep(0);
+    renderWithProviders(CookPage);
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Read step aloud' }));
+    readAloud.interrupt();
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Read step aloud' })).toBeTruthy()
+    );
+  });
+
+  it('offers no speaker where the browser cannot speak', async () => {
+    vi.stubGlobal('speechSynthesis', undefined);
+    await cookStep(0);
+    renderWithProviders(CookPage);
+
+    await screen.findByRole('button', { name: 'Next step' });
+    expect(screen.queryByRole('button', { name: 'Read step aloud' })).toBeNull();
   });
 });
