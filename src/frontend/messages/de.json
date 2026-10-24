@@ -2091,7 +2091,6 @@
   "cookbooks.cover.hint": "Ein Foto für das ganze Titelbild oder die ersten Fotos im Regal.",
   "cookbooks.cover.automatic": "Erste Fotos",
   "problem.auth.invalid_client": "Diese Art von Gerät kennt Culina nicht.",
-  "problem.auth.invalid_client": "Diese Art von Gerät kennt Culina nicht.",
   "connect.eyebrow": "Culina-App",
   "connect.title": "Mit deiner Küche verbinden",
   "connect.intro": "Culina läuft auf deinem eigenen Server. Gib die Adresse ein, unter der du Culina im Browser öffnest.",

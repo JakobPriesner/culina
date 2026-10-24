@@ -15,6 +15,15 @@ import {
  */
 test.describe.configure({ mode: 'serial' });
 
+/**
+ * Picks a recipe in the plan sheet by its title. Until the search answers, the sheet offers to add the words as a
+ * new recipe, whose button names them too: clicking that planned an empty recipe of the same name.
+ */
+async function pick(sheet: Locator, title: string) {
+  await sheet.getByRole('searchbox').fill(title);
+  await sheet.getByRole('button', { name: title }).and(sheet.locator(':not(.stub)')).click();
+}
+
 test.describe('planning a week', () => {
   test.skip(needsBackend, skipReason);
 
@@ -67,8 +76,7 @@ test.describe('planning a week', () => {
     const sheet = page.getByRole('dialog');
 
     await expect(sheet).toBeVisible();
-    await sheet.getByRole('searchbox').fill(title);
-    await sheet.getByRole('button', { name: title }).click();
+    await pick(sheet, title);
 
     await expect(sheet).toBeHidden();
     await expect(cardOf(page, title)).toBeVisible();
@@ -102,8 +110,7 @@ test.describe('planning a week', () => {
 
     const sheet = page.getByRole('dialog');
 
-    await sheet.getByRole('searchbox').fill(waffles);
-    await sheet.getByRole('button', { name: waffles }).click();
+    await pick(sheet, waffles);
     await expect(sheet).toBeHidden();
 
     // Planning it makes the listing this meal's shopping: the week has nothing left to offer for it.

@@ -201,6 +201,10 @@ const toggle = async () => {
 
 beforeEach(() => preferences.setLocale('en'));
 
+// jsdom has no scrollIntoView, and the correction sheet scrolls to its weight field on a timer that can
+// outlive the test, so it stays stubbed for the whole file (each spec file gets a fresh jsdom).
+Element.prototype.scrollIntoView = vi.fn();
+
 afterEach(() => {
   nutrition.reset();
   preferences.setLocale('en');
