@@ -34,6 +34,9 @@
   const left = $derived(correction.rows.filter(({ line }) => line.status !== 'counted'));
   const named = $derived(left.slice(0, 3));
 
+  /** Spaced in an expression: Svelte drops the whitespace at a block's edge, which glued "·" to the word before. */
+  const dot = ' · ';
+
   // A save changes the version, and with it what counts.
   $effect(() => {
     void recipe.version;
@@ -51,7 +54,7 @@
         lines: formatNumber(answer.lines)
       })}
       {#each named as { ingredient, line } (ingredient.id)}
-        <span class="dot" aria-hidden="true">·</span>
+        <span aria-hidden="true">{dot}</span>
         <button
           type="button"
           class="fix"
@@ -61,7 +64,7 @@
         >
       {/each}
       {#if left.length > named.length}
-        <span class="dot" aria-hidden="true">·</span>
+        <span aria-hidden="true">{dot}</span>
         {m['nutrition.coverage.more']({ count: formatNumber(left.length - named.length) })}
       {/if}
     {/if}
@@ -97,11 +100,6 @@
     .fix:hover {
       color: var(--text);
     }
-  }
-
-  /* Spaced here: Svelte drops the space at the edge of a block, which glued "·" to the word before. */
-  .dot {
-    margin-inline: 0.35em;
   }
 
   .stale {

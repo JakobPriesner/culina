@@ -21,9 +21,9 @@ env:
 - tapOn:
     text: 'Sign in'
     index: 1
-# A new account has no household yet: the app read /users/me from the server with its token.
-- assertVisible: 'You are not in a household yet'
+# A new account has no household yet, so it lands on /welcome: the app read /users/me from the server with its token.
+- assertVisible: 'Welcome to Culina'
 # Relaunch: the server and the token were remembered, so no connect screen and no sign-in.
 - stopApp
 - launchApp
-- assertVisible: 'You are not in a household yet'
+- assertVisible: 'Welcome to Culina'

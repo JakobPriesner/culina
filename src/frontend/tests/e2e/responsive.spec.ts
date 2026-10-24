@@ -404,7 +404,8 @@ test.describe('responsive production layouts @offline', () => {
         expect(filterBox.y).toBeGreaterThanOrEqual(searchBox.y + searchBox.height);
         expect(filterBox.height).toBeGreaterThanOrEqual(44);
         expect(searchBox.width).toBeGreaterThanOrEqual(width - 48);
-        expect((await toolbar.boundingBox())!.height).toBeLessThan(150);
+        // The search, then one row; beside the rows/photos toggle the sort note may take two lines at 320px.
+        expect((await toolbar.boundingBox())!.height).toBeLessThan(170);
         await expectReflow(page);
       });
     }

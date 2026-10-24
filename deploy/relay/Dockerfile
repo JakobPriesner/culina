@@ -1,7 +1,7 @@
 # The push relay (docs/native-app-design.md, part 7): run by whoever publishes
 # the iOS and Android apps, never part of Culina's own image. Build from the
 # repository root:  docker build -f deploy/relay/Dockerfile .
-FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:747cbade5bfd918a175ac32f8f1d931edec2c7d0d5397a3de72eaef1ac1f66d2 AS build
 
 WORKDIR /src
 
@@ -22,7 +22,7 @@ RUN dotnet publish src/Relay/Relay.csproj --configuration Release --no-restore -
 # because the chiseled image has no shell to make it in.
 RUN mkdir -p /data
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled@sha256:84def277556c2843a44fdeefbd3145d0a2e32d8f736d0c1a7b0a96b2880b0187
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled@sha256:5165aeeb688df15e869a56a7584bb94bf16a14e0b3ba77b49fcdbe350f6b8020
 
 WORKDIR /app
 

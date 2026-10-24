@@ -2091,7 +2091,6 @@
   "cookbooks.cover.hint": "One photo for the whole cover, or the first photos on the shelf.",
   "cookbooks.cover.automatic": "First photos",
   "problem.auth.invalid_client": "Culina does not know that kind of device.",
-  "problem.auth.invalid_client": "Culina does not know that kind of device.",
   "connect.eyebrow": "Culina app",
   "connect.title": "Connect to your kitchen",
   "connect.intro": "Culina runs on your own server. Enter the address you open it at in a browser.",

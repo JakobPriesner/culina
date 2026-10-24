@@ -188,6 +188,8 @@ test.describe('search @offline', () => {
 
   test('the header search button leads back up to the library search field', async ({ page }) => {
     await responsiveData(page);
+    // Short enough that the library scrolls its search field away on a phone too: at Pixel 7 height it stayed in view.
+    await page.setViewportSize({ width: page.viewportSize()!.width, height: 600 });
 
     await page.goto('/');
     const searchField = page.getByRole('searchbox', { name: 'Rezepte durchsuchen' });

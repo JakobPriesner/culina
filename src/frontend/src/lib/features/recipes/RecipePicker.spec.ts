@@ -89,7 +89,7 @@ describe('the recipe picker', () => {
       updatedAt: '2026-10-18T00:00:00Z',
       version: 1
     };
-    const base = vi.mocked(fetch);
+    const base = vi.mocked(globalThis.fetch);
 
     vi.stubGlobal(
       'fetch',

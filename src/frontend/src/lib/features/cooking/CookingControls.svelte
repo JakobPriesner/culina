@@ -334,13 +334,20 @@
       justify-content: center;
     }
 
-    .tools {
-      gap: var(--space-1);
+    /* Four 56px tools leave the counter no room beside them: it keeps a line with the back chevron, the tools the row below. */
+    .control-summary {
+      flex-wrap: wrap;
+      row-gap: var(--space-1);
     }
 
-    /* The tools keep their 56px, so the counter takes what is left, over two lines if "Schritt 12 von 12" does not fit one. */
-    .progress {
-      white-space: normal;
+    .control-place {
+      flex: 1 0 100%;
+      flex-wrap: nowrap;
+    }
+
+    .tools {
+      flex: 1 0 100%;
+      justify-content: space-between;
     }
   }
 </style>
