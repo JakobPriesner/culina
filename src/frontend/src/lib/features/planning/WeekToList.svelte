@@ -71,7 +71,6 @@
     font-weight: var(--weight-semibold);
     text-decoration: underline;
     text-underline-offset: 0.2em;
-    white-space: nowrap;
     cursor: pointer;
   }
 

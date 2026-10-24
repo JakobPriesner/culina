@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Status | Accepted 22 October 2026, with the decisions in §0. MVP built 22 October 2026 for structure W, with its placement kept switchable. §15 says what was built and where it differs. |
+| Status | Accepted 22 October 2026, with the decisions in §0. MVP built 22 October 2026; §15 says what was built. Its name (Ernährung) and its page were redesigned 24 October 2026: `food-log-redesign.md`, `glossary.md`. |
 | Written | 21 October 2026 |
 | Decides | Whether and how a person tracks what they eat (kcal and macros) in Culina, without breaking the nutrition stance |
 | Bead | `culina-v2-b3hl` (epic) and its children `.1`–`.20` |

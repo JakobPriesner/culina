@@ -3,16 +3,14 @@
   /** What is left says how the shop is going; done-of-total is the progress bar's to show, not a second line of numbers. */
   interface Props {
     remaining: number;
-    /** `h2` where the list is the pane beside the week: named as the place's second half, never above the page's own heading. */
+    /** `h2` where the list is the pane beside the week, never above the page's own heading; one name either way. */
     heading?: 'h1' | 'h2';
   }
   let { remaining, heading = 'h1' }: Props = $props();
 </script>
 
 <header class="head">
-  <svelte:element this={heading} class="title"
-    >{heading === 'h2' ? m['nav.shopping']() : m['shopping.title']()}</svelte:element
-  >
+  <svelte:element this={heading} class="title">{m['shopping.title']()}</svelte:element>
   <div class="status">
     <p>
       {remaining > 0 ? m['shopping.remaining']({ count: remaining }) : m['shopping.subtitle']()}

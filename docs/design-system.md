@@ -100,8 +100,9 @@ explains the release scope and quality contracts.
 
 The recipe and cookbook libraries share `PageHeader`: an editorial title,
 a short supporting line, and contextual creation actions. One shared navigation
-exposes Recipes, Cookbooks, Week and Diary directly; Week holds the plan and the
-shopping list (a Plan | List switch, and the list beside the week from 80rem).
+exposes Recipes, Cookbooks, Week and Nutrition directly; Week holds the meal plan and the
+shopping list (a Meal plan | Shopping list switch, and the list beside the week from 80rem).
+Every label follows the glossary, `glossary.md`: one name per thing, in German and English.
 The same order and route selection appear in the desktop top bar and, below
 64rem, the bottom bar.
 There is no collection submenu or secondary sidebar. Cookbook detail uses the
@@ -289,10 +290,13 @@ If it knows what a recipe is, it is in the wrong folder.
 | | |
 | --- | --- |
 | Actions | `Button` (primary/secondary/ghost/danger × sm/md/lg, `loading`, `iconOnly`), `IconButton`, `Menu`, `Switch` |
-| Input | `TextInput`, `TextArea`, `Select`, `Checkbox`, `RadioGroup`, `Stepper`, `SearchField`, `Field` (label + hint + error + a11y wiring), `FilePicker` (the clipped file input, opened by a control beside it), `ImageField` (preview when set, template of the same size when not) |
-| Containment | `Card`, `Sheet` (mobile bottom sheet, desktop dialog), `Modal`, `Popover`, `Tabs`, `Disclosure` |
+| Input | `TextInput`, `TextArea`, `Select`, `Checkbox`, `RadioGroup`, `Stepper`, `SearchField`, `Field` (label + hint + error + a11y wiring), `FilePicker` (the clipped file input, opened by a control beside it), `ImageField` (preview when set, template of the same size when not), `SegmentedControl`, `WeekStrip` (seven days as a calendar shows them: chosen day filled, today in the accent, a neutral dot where something is) |
+| Containment | `Card`, `Sheet` (mobile bottom sheet, desktop dialog), `Modal`, `Popover`, `Tabs`, `Disclosure`, `ListSection` + `ListRow` (a grouped list: a heading with a trailing value, rows on one raised surface, a leading control, one right column of figures, the section's own verb as its last row) |
 | Feedback | `Toast` + `toaster`, `Skeleton`, `EmptyState`, `ErrorState`, `ProgressBar`, `Spinner` (first boot only) |
-| Display | `Badge`, `Avatar`, `Icon`, `Image` (aspect-ratio box, lazy, blur-up), `Divider`, `SectionLabel`, `VisuallyHidden` |
+| Display | `Badge`, `Avatar`, `Icon`, `Image` (aspect-ratio box, lazy, blur-up), `Divider`, `SectionLabel`, `VisuallyHidden`, `Meter` (one amount against one reference: one thin accent track, a mark for the reference, the same hue past it, the sentence as its label) |
+
+Figures in a column (kcal, grams, amounts) are tabular, right-aligned, and carry
+their precision as a light mark read aloud as a word (`glossary.md`).
 
 Every one of them: driven entirely by props, no store import, no `fetch`, real
 semantic elements, visible focus, `prefers-reduced-motion` respected.

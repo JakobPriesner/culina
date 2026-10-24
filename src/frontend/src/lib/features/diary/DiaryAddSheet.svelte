@@ -53,7 +53,7 @@
 
   type Way = 'recent' | 'foods' | 'own';
 
-  const recent = $derived(diary.recent());
+  const recent = $derived(diary.recent(8, meal));
   let way = $state<Way>('recent');
   let query = $state('');
   let found = $state<FoodChoice[]>([]);

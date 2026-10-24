@@ -355,3 +355,33 @@ children, `.2` to `.9` in this order, wait on it (`.8` also waits on `.4` and
    and "Gestern wiederholen".
 7. **Desktop:** the summary sticky beside the meals from 64rem.
 8. **`amountText`:** never "ca. 0 g".
+
+---
+
+## 7. Built, and where it differs (24 October 2026)
+
+All of `culina-v2-6dt0` is built. A second look at the result, and Jakob's
+"the hover effects are not right", changed four things from §4:
+
+- **No add row per meal.** Five "＋ Eintragen" rows (one at the top, one per
+  meal) repeated exactly what L7 criticised. Each meal's heading carries a
+  quiet "＋" beside its subtotal instead. An empty meal is its heading alone,
+  with no white box holding nothing (Hara: emptiness as an invitation, not a
+  gap).
+- **No floating "＋" on phones.** It covered the column of figures. "＋
+  Eintragen" sits beside the day's title instead, where Apple Health puts its
+  add action, and opens for the meal the clock suggests.
+- **Hover:**
+  - A row's button spans the row edge to edge, so the whole row lights up and
+    is the target. The separator is drawn as an image so it still starts at
+    the text.
+  - The big number, which turns over between eaten and left, has a hover
+    state, a press state and a small up-down mark. A control that does not
+    look like one is a missing signifier (Norman).
+- **Loading:** until the day arrives, the summary and the meals show
+  skeletons in their own shape, not "0 kcal".
+
+Not done, and worth a look on a real phone:
+- swiping the week strip;
+- the planned meal's energy in its row;
+- dark mode (built only from tokens, but not looked at).

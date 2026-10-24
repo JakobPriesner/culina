@@ -209,7 +209,7 @@ test.describe('Woche @offline', () => {
         const links = nav.getByRole('link');
         await expect(links).toHaveCount(4);
         await expect(
-          nav.getByRole('link', { name: locale === 'de' ? 'Tagebuch' : 'Diary' })
+          nav.getByRole('link', { name: locale === 'de' ? 'Ernährung' : 'Nutrition' })
         ).toBeVisible();
         await expectWholeWords(links);
         await page.screenshot({ path: test.info().outputPath(`home-${locale}-${width}.png`) });
@@ -224,8 +224,10 @@ test.describe('Woche @offline', () => {
         // returns there.
         const listSegment = page
           .getByRole('group', { name: locale === 'de' ? 'Woche' : 'Week' })
-          .getByRole('button', { name: locale === 'de' ? 'Liste' : 'List' });
-        await expect(listSegment).toHaveText(locale === 'de' ? 'Liste · 1' : 'List · 1');
+          .getByRole('button', { name: locale === 'de' ? 'Einkaufsliste' : 'Shopping list' });
+        await expect(listSegment).toHaveText(
+          locale === 'de' ? 'Einkaufsliste · 1' : 'Shopping list · 1'
+        );
         await expectWholeWords(listSegment);
         await listSegment.click();
         await expect(page).toHaveURL(/\/shopping/);
@@ -251,7 +253,11 @@ test.describe('Woche @offline', () => {
       await page.goto('/plan');
       await settled(page);
       const pane = page.getByRole('complementary', { name: 'Einkauf' });
-      const paneHeading = pane.getByRole('heading', { level: 2, name: 'Einkauf', exact: true });
+      const paneHeading = pane.getByRole('heading', {
+        level: 2,
+        name: 'Einkaufsliste',
+        exact: true
+      });
       await expect(paneHeading).toBeVisible();
       // One place: the pane's heading is the page heading's size, on its line, never larger.
       const size = (heading: typeof paneHeading) =>
@@ -280,14 +286,14 @@ test.describe('Woche @offline', () => {
     await unfolded(page);
 
     const pane = page.getByRole('complementary', { name: 'Einkauf' });
-    const seam = pane.getByText('Diese Woche: 2 Mahlzeiten noch nicht auf der Liste');
+    const seam = pane.getByText('Diese Woche: 2 Mahlzeiten noch nicht auf der Einkaufsliste');
     await expect(seam).toBeInViewport();
     // The week's own bar is not drawn beside the pane: the seam does its job, where the lines arrive.
     await expect(
       page.getByRole('button', { name: '2 Mahlzeiten auf die Einkaufsliste' })
     ).toHaveCount(0);
 
-    await pane.getByRole('button', { name: 'Auf die Liste' }).click();
+    await pane.getByRole('button', { name: 'Auf die Einkaufsliste' }).click();
     await expect(pane.locator('li.row.arrived', { hasText: 'Paprika' })).toBeVisible();
     await expect(seam).toHaveCount(0);
     expect(asked).toHaveLength(1);
@@ -297,7 +303,7 @@ test.describe('Woche @offline', () => {
 
     // Next week has nothing planned, so nothing is missing.
     await page.getByRole('button', { name: 'Eine Woche weiter', exact: true }).click();
-    await expect(pane.getByText(/noch nicht auf der Liste/)).toHaveCount(0);
+    await expect(pane.getByText(/noch nicht auf der Einkaufsliste/)).toHaveCount(0);
   });
 
   test('beside the week, a meal leads to its lines and a line back to its day', async ({
@@ -500,19 +506,19 @@ test.describe('Woche @offline', () => {
 
     await page.evaluate(() => window.scrollTo({ top: 500 }));
     await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(500);
-    await switchTo('Liste');
+    await switchTo('Einkaufsliste');
     await expect(page).toHaveURL(/\/shopping$/);
     // A first visit to the list starts at its top.
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     await page.evaluate(() => window.scrollTo({ top: 120 }));
     await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(120);
 
-    await switchTo('Plan');
+    await switchTo('Essensplan');
     await expect(page).toHaveURL(/\/plan$/);
     await settled(page);
     await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(500);
 
-    await switchTo('Liste');
+    await switchTo('Einkaufsliste');
     await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(120);
   });
 
@@ -541,7 +547,7 @@ test.describe('Woche @offline', () => {
     await page.goto('/shopping');
     await settled(page);
     await expect(
-      page.getByText('Diese Woche: 2 Mahlzeiten noch nicht auf der Liste')
+      page.getByText('Diese Woche: 2 Mahlzeiten noch nicht auf der Einkaufsliste')
     ).toBeVisible();
     await expectReflow(page);
   });

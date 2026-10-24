@@ -1,15 +1,16 @@
 <script lang="ts">
-  import { Band } from '$ds';
+  import { Meter } from '$ds';
   import { formatNumber, m } from '$shell/i18n';
-  import { nbsp } from '$features/nutrition/format';
 
-  import { gramsText, kcalText } from './format';
+  import Figure from './Figure.svelte';
+  import { gramsText, kcalNumber, kcalText } from './format';
   import type { DiaryDay } from './types';
 
   /**
-   * The day as a page's margin note (docs/diary-design.md §9.1): one number and one sentence that describes, never
-   * judges; the band against the person's own Richtwert, if they set one; and protein, carbohydrate and fat as rows.
-   * A day over the Richtwert looks like a day under it, and "remaining" never goes below zero.
+   * What the day adds up to (docs/food-log-redesign.md §4.1): one number that dominates, one track against the
+   * person's own Richtwert if they set one, one sentence that says it in words, and protein, carbohydrate and fat in
+   * three columns. A day over the Richtwert looks like a day under it; nothing here judges. Tapping the number
+   * switches between eaten and left for the moment; the setting says which it opens on.
    */
   interface Props {
     day: DiaryDay | null;
@@ -20,22 +21,44 @@
 
   let { day, kcalTarget, proteinTarget, headline }: Props = $props();
 
+  // The setting is where it starts; a tap changes it until the page is left.
+  let mode = $derived<'eaten' | 'remaining'>(headline);
+
   const kcal = $derived(day?.totals.kcal ?? 0);
   const flags = $derived({ atLeast: day?.atLeast ?? false, estimated: day?.estimated ?? false });
-  const remaining = $derived(headline === 'remaining' && kcalTarget !== null);
-  const left = $derived(kcalTarget === null ? 0 : Math.max(0, kcalTarget - kcal));
+  const partly = $derived(flags.atLeast || flags.estimated);
+  const showsLeft = $derived(mode === 'remaining' && kcalTarget !== null);
+  const left = $derived(kcalTarget === null ? 0 : Math.max(0, Math.round(kcalTarget - kcal)));
+  const over = $derived(kcalTarget === null ? 0 : Math.max(0, Math.round(kcal - kcalTarget)));
 
+  const capitalized = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
+
+  /** The one sentence: what is left or over as a plain number, or what was eaten when the number shows what is left. */
   const sentence = $derived.by(() => {
-    if (kcalTarget === null) return null;
-    if (kcal === 0) return m['diary.summary.target']({ kcal: formatNumber(kcalTarget) });
+    const parts: string[] = [];
 
-    const share = kcal / kcalTarget;
+    if (kcalTarget !== null && kcal === 0) {
+      parts.push(m['diary.summary.target']({ kcal: formatNumber(kcalTarget) }));
+    } else if (kcalTarget !== null && showsLeft) {
+      parts.push(
+        m['diary.summary.eatenOf']({
+          eaten: kcalNumber(kcal, flags.atLeast),
+          target: formatNumber(kcalTarget)
+        })
+      );
+    } else if (kcalTarget !== null) {
+      parts.push(
+        left > 0
+          ? m['diary.summary.toTarget']({ kcal: formatNumber(left) })
+          : over > 0
+            ? m['diary.summary.over']({ kcal: formatNumber(over) })
+            : m['diary.summary.at']()
+      );
+    }
 
-    return share < 0.9
-      ? m['diary.summary.below']({ kcal: formatNumber(kcalTarget) })
-      : share <= 1.1
-        ? m['diary.summary.near']()
-        : m['diary.summary.above']();
+    if (partly && kcal > 0) parts.push(m['diary.summary.partly']());
+
+    return parts.length ? capitalized(parts.join(' · ')) : null;
   });
 
   const macros = $derived([
@@ -45,49 +68,73 @@
   ]);
 </script>
 
-<section class="summary" aria-label={m['diary.summary.label']()}>
-  <p class="hero">
-    {#if remaining}
-      <span class="number">{formatNumber(Math.round(left))}{nbsp}kcal</span>
-      <span class="word">{m['diary.summary.left']()}</span>
-    {:else}
-      <span class="number">{kcalText(kcal, flags)}</span>
-      <span class="word">{m['diary.summary.eaten']()}</span>
-    {/if}
-  </p>
+{#snippet hero()}
+  <span class="number">
+    {#if showsLeft}{formatNumber(left)}{:else}<Figure {kcal} {...flags} unit={false} />{/if}
+  </span>
+  <span class="unit">kcal</span>
+  <span class="word"
+    >{showsLeft ? m['diary.summary.left']() : m['diary.summary.eaten']()}{#if kcalTarget !== null}
+      <!-- Says the number can be turned over: eaten, left. -->
+      <svg
+        class="swap"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        aria-hidden="true"
+        ><path d="m8 9 4-4 4 4M8 15l4 4 4-4" stroke-linecap="round" stroke-linejoin="round" /></svg
+      >{/if}</span
+  >
+{/snippet}
 
-  {#if sentence}<p class="sentence">{sentence}</p>{/if}
-  {#if (day?.typedKcal ?? 0) > 0}
-    <p class="sentence">
-      {m['diary.summary.typed']({
-        kcal: kcalText(day?.typedKcal ?? 0, { atLeast: false, estimated: false })
-      })}
-    </p>
-  {/if}
+<section class="summary" aria-label={m['diary.summary.label']()}>
+  <div class="top">
+    {#if kcalTarget !== null}
+      <button
+        class="hero"
+        type="button"
+        title={m['diary.summary.switch']()}
+        onclick={() => (mode = mode === 'eaten' ? 'remaining' : 'eaten')}>{@render hero()}</button
+      >
+      <span class="of">{m['diary.summary.ofTarget']({ kcal: formatNumber(kcalTarget) })}</span>
+    {:else}
+      <p class="hero">{@render hero()}</p>
+    {/if}
+  </div>
 
   {#if kcalTarget !== null}
-    <Band
+    <Meter
       value={kcal}
       reference={kcalTarget}
-      atLeast={flags.atLeast}
-      estimated={flags.estimated}
-      label={m['diary.summary.band']({
-        kcal: kcalText(kcal, flags),
-        target: formatNumber(kcalTarget)
-      })}
+      label={`${m['diary.summary.band']({ kcal: kcalText(kcal, flags), target: formatNumber(kcalTarget) })}. ${sentence ?? ''}`}
     />
   {/if}
+
+  {#if sentence}<p class="sentence">{sentence}</p>{/if}
 
   <dl class="macros">
     {#each macros as macro (macro.name)}
       <div class="macro">
         <dt>{macro.name}</dt>
         <dd>
-          {macro.value == null ? '–' : gramsText(macro.value, flags.atLeast)}
-          {#if macro.target}<span class="of"
+          <span class="value"
+            >{macro.value == null ? '–' : gramsText(macro.value, flags.atLeast)}</span
+          >
+          {#if macro.target}<span class="target"
               >{m['diary.summary.of']({ grams: gramsText(macro.target) })}</span
             >{/if}
         </dd>
+        {#if macro.target}
+          <dd class="track">
+            <Meter
+              size="thin"
+              value={macro.value ?? 0}
+              reference={macro.target}
+              label={`${macro.name}: ${macro.value == null ? '–' : gramsText(macro.value)} ${m['diary.summary.of']({ grams: gramsText(macro.target) })}`}
+            />
+          </dd>
+        {/if}
       </div>
     {/each}
   </dl>
@@ -98,15 +145,65 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-3);
-    margin-block-end: var(--space-8);
   }
 
-  .hero {
+  .top {
     display: flex;
     flex-wrap: wrap;
     align-items: baseline;
-    gap: var(--space-2);
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+  }
+
+  /* The one number on the page. */
+  .hero {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-1);
     margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    text-align: start;
+  }
+
+  /* A control, so it looks touchable on hover and press, without moving the number from its edge. */
+  button.hero {
+    margin: calc(var(--space-1) * -1) calc(var(--space-2) * -1);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  @media (hover: hover) {
+    button.hero:hover {
+      background: var(--surface-hover);
+    }
+  }
+
+  button.hero:active {
+    background: var(--surface-selected);
+  }
+
+  .swap {
+    inline-size: 0.9em;
+    block-size: 0.9em;
+    margin-inline-start: 0.2em;
+    vertical-align: -0.1em;
+  }
+
+  button.hero:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 4px;
+  }
+
+  /* The mark stays light beside the one big number: a hint, not a second number. */
+  .number :global(.mark) {
+    font-size: 0.6em;
+    vertical-align: 0.2em;
   }
 
   .number {
@@ -114,12 +211,28 @@
     font-weight: var(--weight-semibold);
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .unit {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-medium);
   }
 
   .word,
+  .of,
   .sentence,
-  .of {
+  dt,
+  .target {
     color: var(--text-muted);
+  }
+
+  .word {
+    margin-inline-start: var(--space-1);
+  }
+
+  .of {
+    font-variant-numeric: tabular-nums;
   }
 
   .sentence {
@@ -127,22 +240,23 @@
     font-size: var(--text-sm);
   }
 
+  /* Three columns, one figure each, under a short label. */
   .macros {
-    display: flex;
-    flex-direction: column;
-    margin: var(--space-2) 0 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-4);
+    margin: var(--space-3) 0 0;
   }
 
   .macro {
     display: flex;
-    justify-content: space-between;
-    gap: var(--space-4);
-    padding-block: var(--space-2);
-    border-block-end: 1px solid var(--border);
+    flex-direction: column;
+    gap: var(--space-1);
+    min-inline-size: 0;
   }
 
   dt {
-    color: var(--text-muted);
+    font-size: var(--text-xs);
   }
 
   dd {
@@ -150,8 +264,18 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .of {
-    margin-inline-start: var(--space-1);
-    font-size: var(--text-sm);
+  .value {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-medium);
+  }
+
+  /* Its own line: "von 110 g" beside the value breaks in a column a third of a phone wide. */
+  .target {
+    display: block;
+    font-size: var(--text-xs);
+  }
+
+  .track {
+    margin-block-start: var(--space-1);
   }
 </style>

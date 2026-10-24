@@ -823,7 +823,9 @@ export async function openShoppingFromCooking(page: Page) {
   }
   // Woche holds the list: its List view on a phone, the pane beside the week from 80rem.
   await nav.getByRole('link', { name: 'Week', exact: true }).click();
-  const list = page.getByRole('group', { name: 'Week' }).getByRole('button', { name: 'List' });
+  const list = page
+    .getByRole('group', { name: 'Week' })
+    .getByRole('button', { name: 'Shopping list' });
   const pane = page.getByRole('complementary', { name: 'Shopping' });
   await expect(list.or(pane).first()).toBeVisible();
   if (await list.isVisible()) {
