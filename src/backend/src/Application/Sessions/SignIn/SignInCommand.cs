@@ -1,6 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
-using Application.Abstractions.Settings;
+using Application.Mail;
 using Application.Telemetry;
 using Domain.Sessions;
 using Domain.Shared;
@@ -34,11 +34,13 @@ public sealed record SignInCommand(
 
 internal sealed class SignInCommandHandler(
     IUserRepository users,
-    ISessionStore sessions,
-    ISecretTokens tokens,
+    SessionStarter starter,
+    AccountMail mail,
+    MailThrottle throttle,
+    NewDeviceNotice notice,
     IPasswordHasher passwordHasher,
     ILoginAttempts attempts,
-    SignInDependencies dependencies,
+    TimeProvider time,
     ILogger<SignInCommandHandler> logger)
     : ICommandHandler<SignInCommand, SignInOutcome>
 {
@@ -57,7 +59,7 @@ internal sealed class SignInCommandHandler(
                 new FieldError("client", SessionErrors.InvalidClient.Code, SessionErrors.InvalidClient.Description)));
         }
 
-        var now = dependencies.Time.GetUtcNow();
+        var now = time.GetUtcNow();
         var accountKey = AccountKey.For(command.Email);
 
         // Counted before the password is checked, so simultaneous guesses cannot all pass before
@@ -90,6 +92,18 @@ internal sealed class SignInCommandHandler(
             await UpgradeHashAsync(user, command.Password, cancellationToken).ConfigureAwait(false);
         }
 
+        // Said only now the password matched, so it tells a guesser nothing. The link goes out again, so the way
+        // forward from this answer is the inbox, not a second button.
+        if (mail.Sends && !user.HasConfirmedEmail)
+        {
+            if (throttle.TryTake("confirmation", user.Id))
+            {
+                await mail.SendConfirmationAsync(user, cancellationToken).ConfigureAwait(false);
+            }
+
+            return tracked.Record(Result<SignInOutcome>.Failure(SessionErrors.EmailUnconfirmed));
+        }
+
         var outcome = await StartSessionAsync(user, command, client, now, cancellationToken).ConfigureAwait(false);
 
         // An agent is connected from a signed-in browser or a terminal, and is a second device beside it, not the
@@ -97,9 +111,13 @@ internal sealed class SignInCommandHandler(
         if (client != SessionClient.Agent)
         {
             await outcome.Match(
-                _ => EndReplacedSessionAsync(command.PreviousSessionToken, now, cancellationToken),
+                _ => starter.EndReplacedAsync(command.PreviousSessionToken, now, cancellationToken),
                 _ => Task.CompletedTask).ConfigureAwait(false);
         }
+
+        await outcome.Match(
+            _ => notice.RecordAsync(user, client, command.UserAgent, now, cancellationToken),
+            _ => Task.CompletedTask).ConfigureAwait(false);
 
         tracked.Tag("culina.user_id", user.Id);
 
@@ -125,29 +143,6 @@ internal sealed class SignInCommandHandler(
         AuthenticationLogs.SignInRefused(logger);
 
         return SessionErrors.InvalidCredentials;
-    }
-
-    /// <summary>
-    /// Ends the session this browser held before signing in again; the new cookie overwrites the
-    /// old one, which would otherwise live on while somebody still used it.
-    /// </summary>
-    private async Task EndReplacedSessionAsync(
-        string? previousToken,
-        DateTimeOffset now,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrEmpty(previousToken))
-        {
-            return;
-        }
-
-        var previous = await sessions.FindActiveByTokenAsync(previousToken, now, cancellationToken)
-            .ConfigureAwait(false);
-
-        // Nothing to report either way: a session that is already gone is what this wants.
-        await previous.Match(
-            session => sessions.RevokeAsync(session.Id, session.UserId, now, cancellationToken),
-            _ => Task.FromResult(Result.Success())).ConfigureAwait(false);
     }
 
     private async Task UpgradeHashAsync(User user, string password, CancellationToken cancellationToken)
@@ -176,23 +171,12 @@ internal sealed class SignInCommandHandler(
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        var sessionToken = tokens.NewToken();
-        var csrfToken = tokens.NewToken();
-
-        var session = Session.Start(
-            user.Id,
-            tokens.Digest(sessionToken),
-            tokens.Digest(csrfToken),
-            now,
-            dependencies.Cookies.SessionLifetime,
-            command.IpAddress,
-            command.UserAgent,
-            client);
-
-        var stored = await sessions.AddAsync(session, cancellationToken).ConfigureAwait(false);
+        var started = await starter
+            .StartAsync(user.Id, client, command.IpAddress, command.UserAgent, now, cancellationToken)
+            .ConfigureAwait(false);
         var isAdmin = await users.IsAdminAsync(user.Id, cancellationToken).ConfigureAwait(false);
 
-        return stored.Bind(() => Result<SignInOutcome>.Success(
-            new SignInOutcome(user.ToSignInResponse(isAdmin, csrfToken), sessionToken, client)));
+        return started.Map(session =>
+            new SignInOutcome(user.ToSignInResponse(isAdmin, session.CsrfToken), session.SessionToken, client));
     }
 }

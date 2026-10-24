@@ -837,7 +837,7 @@ from the structure in one place, so a change from W to K later does not touch
 the diary.
 
 **Backend**
-- Migration `0055_diary.sql`: `diary_settings` and `diary_entries`.
+- Migration `0057_diary.sql`: `diary_settings` and `diary_entries`.
 - `Domain/Diary`: `DiaryEntry`, `DiarySettings`, `DiaryFigures` and
   `DiaryErrors`.
 - `Application/Users/DiaryLookup`: adding and changing an amount share one

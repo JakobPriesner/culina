@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Mail;
 using Application.Telemetry;
 using Domain.Shared;
 using Domain.Users;
@@ -15,6 +16,7 @@ internal sealed class IssueRecoveryCodeCommandHandler(
     IUserRepository users,
     IRecoveryCodeRepository recoveryCodes,
     ISecretTokens tokens,
+    AccountMail mail,
     IUnitOfWork unitOfWork,
     TimeProvider time)
     : ICommandHandler<IssueRecoveryCodeCommand, Response>
@@ -54,6 +56,8 @@ internal sealed class IssueRecoveryCodeCommandHandler(
             async token =>
             {
                 await recoveryCodes.AddAsync(issued, token).ConfigureAwait(false);
+                // The administrator passes the code on themselves; this is for the owner, in case they did not ask.
+                await mail.TellRecoveryCodeIssuedAsync(user, issued.CreatedAt, token).ConfigureAwait(false);
 
                 return Result.Success();
             },

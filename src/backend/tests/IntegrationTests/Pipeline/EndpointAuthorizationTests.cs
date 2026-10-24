@@ -33,13 +33,25 @@ public class EndpointAuthorizationTests(PostgresFixture postgres)
         "POST /api/v1/sessions",
         "POST /api/v1/password-resets",
 
+        // Links by mail for somebody with no session: the address or the mailed token is all they hold.
+        "POST /api/v1/password-reset-links",
+        "POST /api/v1/sign-in-links",
+        "POST /api/v1/sign-in-links/redemptions",
+        "POST /api/v1/email-confirmations",
+
         // A recipe somebody shared behind a link; the token is the key.
         "GET /api/v1/shared-recipes/{token}",
         "GET /api/v1/shared-recipes/{token}/image",
         "GET /api/v1/shared-recipes/{token}/nutrition",
 
         // The web app's own error reports: a sign-in page breaks too.
-        "POST /api/v1/log-records"
+        "POST /api/v1/log-records",
+
+        // OAuth for MCP clients: an app has no account, and the person signs in on the consent screen, not here.
+        "GET /.well-known/oauth-authorization-server",
+        "GET /oauth/authorize",
+        "POST /oauth/token",
+        "POST /oauth/register"
     ];
 
     [Fact]

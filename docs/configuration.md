@@ -296,6 +296,49 @@ The key is encrypted with the data-protection key ring before it is stored — s
 `Storage__DataProtectionKeyPath` above, and `operations.md` for what losing that
 directory now means.
 
+## Mail
+
+Nothing here either: the mail account is entered under **Settings → Mail**, by
+the administrator, and applies on Save with no restart. Off by default, and an
+instance with mail off behaves exactly as before mail existed — nobody is asked
+to confirm an address, and recovery is by saved or administrator-issued codes.
+
+Give it your provider's SMTP server, port and security (STARTTLS on 587 is the
+usual; TLS from the first byte is usually 465; *none* only for a relay on the
+same machine or network), the user and password Culina signs in with (many
+providers want an app password), and the sender's address and name. **Send a
+test mail** goes to the administrator's own address through what was saved, and
+says what the server answered when it refuses.
+
+Mail needs `Site__Url` (below): every mail carries a link, and Culina will not
+guess its own address from a request's `Host` header, which whoever sends the
+request controls. Without it the switch is refused with `mail.site_url_required`.
+
+While mail is on:
+
+* **New accounts confirm their address** before they can sign in, with a link
+  that works for 48 hours and signs them in when opened. The first account is
+  exempt (it is the one that sets mail up), and so is every account that
+  existed, or was made, while mail was off. Signing in with the right password
+  but an unconfirmed address mails the link again, at most once a minute.
+* **The sign-in page offers a sign-in link**: one use, 15 minutes.
+* **Password forgotten** mails a link with a one-hour recovery code in it; the
+  code can be typed too. Saved and issued codes keep working.
+* **Notices** go to the account's address when a device it has not used before
+  signs in (a kind of device, `Firefox · macOS`, not one machine), when the
+  password changes, when a new set of recovery codes is made, and when the
+  administrator issues one.
+* **Invitations can be mailed** to an address from the household screen.
+
+Mails are queued in the database in the same transaction as whatever they are
+about and sent by a background worker, so a slow or broken mail server never
+fails or delays a request; a mail is retried with growing gaps for about a day,
+then given up on (see `operations.md`). The password and every queued mail are
+encrypted with the data-protection key ring, like the assistant's key. Mails are
+written in the person's chosen language, or their device's when they chose
+none. Links carry their secret after `#`, so it never reaches a server log, a
+proxy or a `Referer`.
+
 ## Site
 
 What the instance says about itself to strangers. Both optional, neither in the
@@ -304,7 +347,7 @@ app.
 | Variable | Default | |
 | --- | --- | --- |
 | `Site__SecurityContact` | unset | Where a vulnerability report about this instance should go — a `mailto:`, `https://` or `tel:` address you actually read. Set, `/.well-known/security.txt` (RFC 9116) names it; unset, that path is a `404`, because a contact nobody reads is worse than none. |
-| `Site__Url` | unset | This instance's public address, such as `https://culina.example.com`. Gives security.txt its `Canonical:` line. |
+| `Site__Url` | unset | This instance's public address, such as `https://culina.example.com`. Gives security.txt its `Canonical:` line, and is where every link in a mail points; mail cannot be switched on without it. |
 
 ## App notifications
 

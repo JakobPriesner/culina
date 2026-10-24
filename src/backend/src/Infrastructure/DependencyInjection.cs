@@ -1,14 +1,17 @@
 using Application.Abstractions;
 using Application.Abstractions.Settings;
 using Domain.Suggestions;
+using Infrastructure.AgentAuthorizations;
 using Infrastructure.Assistance;
 using Infrastructure.Identity;
 using Infrastructure.Import;
 using Infrastructure.Import.Culina;
 using Infrastructure.Import.Mealie;
 using Infrastructure.Import.Tandoor;
+using Infrastructure.Mail;
 using Infrastructure.Nutrition;
 using Infrastructure.Persistence;
+using Infrastructure.Persistence.AgentAuthorizations;
 using Infrastructure.Persistence.Assistance;
 using Infrastructure.Persistence.Cookbooks;
 using Infrastructure.Persistence.Cooking;
@@ -18,6 +21,7 @@ using Infrastructure.Persistence.Ingredients;
 using Infrastructure.Persistence.Migrations;
 using Infrastructure.Persistence.Nutrition;
 using Infrastructure.Persistence.Planning;
+using Infrastructure.Persistence.Products;
 using Infrastructure.Persistence.Recipes;
 using Infrastructure.Persistence.Searches;
 using Infrastructure.Persistence.Shopping;
@@ -60,6 +64,7 @@ public static class DependencyInjection
             .AddIdentity()
             .AddRecipeImport()
             .AddAssistance()
+            .AddMail()
             .AddScoped<IRecipeIntakeJobs, RecipeIntakeJobs>()
             .AddScoped<IIntakePurge, IntakePurge>()
             .AddSingleton<PushTransport>()
@@ -90,6 +95,8 @@ public static class DependencyInjection
             .AddScoped<ISettingsStore<RegistrationSettings>, PostgresSettingsStore<RegistrationSettings>>()
             .AddSingleton<AssistanceSettings>()
             .AddScoped<ISettingsStore<AssistanceSettings>, PostgresSettingsStore<AssistanceSettings>>()
+            .AddSingleton<MailSettings>()
+            .AddScoped<ISettingsStore<MailSettings>, PostgresSettingsStore<MailSettings>>()
             .AddHostedService<InstanceSettingsLoader>();
 
     // A bucket when one is configured, the image directory otherwise; the same store either way.
@@ -112,6 +119,24 @@ public static class DependencyInjection
             .AddSingleton<IAssistants, Assistants>()
             .AddSingleton<IModelPrices, ModelPrices>()
             .AddScoped<IAssistanceLedger, AssistanceLedger>();
+
+    // The password and queued mail each have their own encryption purpose, so neither reads back as the other or as an API key.
+    private static IServiceCollection AddMail(this IServiceCollection services) =>
+        services
+            .AddKeyedSingleton<ISecretProtector>(
+                MailSettings.PasswordProtection,
+                (provider, _) => new SecretProtector(
+                    provider.GetRequiredService<StorageSettings>(), MailSettings.PasswordProtection))
+            .AddKeyedSingleton<ISecretProtector>(
+                MailOutbox.Protection,
+                (provider, _) => new SecretProtector(
+                    provider.GetRequiredService<StorageSettings>(), MailOutbox.Protection))
+            .AddSingleton<IMailTransport, SmtpTransport>()
+            .AddScoped<MailOutbox>()
+            .AddScoped<IMailOutbox>(provider => provider.GetRequiredService<MailOutbox>())
+            .AddScoped<IEmailTokenRepository, EmailTokenRepository>()
+            .AddScoped<IKnownDevices, KnownDevices>()
+            .AddHostedService<MailOutboxWorker>();
 
     // Readers are singletons (stateless, shared HTTP pool); one per source app, picked by the registry.
     private static IServiceCollection AddRecipeImport(this IServiceCollection services) =>
@@ -168,6 +193,9 @@ public static class DependencyInjection
             .AddScoped<ICookLogRepository, CookLogRepository>()
             .AddScoped<ICookSessionRepository, CookSessionRepository>()
             .AddSingleton<IWebPageFetcher, SafeWebPageFetcher>()
+            .AddScoped<IAgentClientRepository, AgentClientRepository>()
+            .AddScoped<IAgentAuthorizationRepository, AgentAuthorizationRepository>()
+            .AddSingleton<IClientMetadataDocuments, ClientMetadataFetcher>()
             .AddScoped<IMealPlanRepository, MealPlanRepository>()
             .AddScoped<ICookbookRepository, CookbookRepository>()
             .AddScoped<ISavedSearchRepository, SavedSearchRepository>()
@@ -176,6 +204,7 @@ public static class DependencyInjection
             .AddScoped<IRecipeCalories, RecipeCalories>()
             .AddScoped<INutritionCorrectionRepository, NutritionCorrectionRepository>()
             .AddScoped<IHouseholdFoodRepository, HouseholdFoodRepository>()
+            .AddScoped<IProductRepository, ProductRepository>()
             .AddScoped<IIngredientNameRepository, IngredientNameRepository>()
             .AddScoped<INutritionWeightRepository, NutritionWeightRepository>()
             .AddScoped<IRecipeSourceRepository, RecipeSourceRepository>()

@@ -124,6 +124,33 @@ class SessionStore {
       await rememberSessionToken(result.value.sessionToken ?? null);
     }
 
+    await this.#arrive();
+
+    return null;
+  }
+
+  /**
+   * Signs this browser in with the token from a mailed link: a sign-in link, or an address confirmation, which signs
+   * in too. Always a cookie session: a link opens in a browser, never in the app.
+   */
+  async signInWithLink(kind: 'sign-in' | 'confirmation', token: string): Promise<AppError | null> {
+    const result = await request(() =>
+      kind === 'sign-in'
+        ? http.POST('/api/v1/sign-in-links/redemptions', { body: { token } })
+        : http.POST('/api/v1/email-confirmations', { body: { token } })
+    );
+
+    if (!result.ok) {
+      return result.error;
+    }
+
+    await this.#arrive();
+
+    return null;
+  }
+
+  /** What every way in does once the server has started a session. */
+  async #arrive(): Promise<void> {
     // Drop the previous person's reads on the way in too: a closed browser never signed out.
     forgetCachedReads();
 
@@ -134,8 +161,6 @@ class SessionStore {
     if (this.#user) {
       forgetAccounts(this.#user.userId);
     }
-
-    return null;
   }
 
   async signOut(): Promise<void> {

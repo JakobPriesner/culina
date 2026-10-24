@@ -7,7 +7,7 @@ the next person can see what was looked at and what was not.
 
 | | |
 | --- | --- |
-| Reviewed | 13 September 2026, against ASVS 5.0 Level 2 |
+| Reviewed | 13 September 2026, against ASVS 5.0 Level 2; a full-code follow-up on 1 October 2026 (below) |
 | Scope | The application, the container image, and the deployment `compose.prod.yaml` describes |
 | Owner | The maintainer |
 | Method | Source review, plus tests that fail when the property stops holding |
@@ -39,7 +39,7 @@ notice losing.
 | Revocation takes effect immediately | Met | `Session_ShouldStopWorking_TheMomentItIsRevokedFromAnotherDevice` |
 | One account cannot revoke another's session | Met | `Revoke_ShouldNotSeeAnotherUsersSession_EvenWithItsExactId` |
 | Sessions expire | Met | `Cookies__SessionDays`, `DeleteExpired_ShouldRemoveLapsedSessions_ButKeepLiveOnes` |
-| Expiry is idle time, not absolute | Met | Renewed on use, at most once per `Cookies__RenewAfterHours`. `AnAuthenticatedRequest_ShouldReissueBothCookies_OnceTheSessionIsDueForRenewal` |
+| Expiry is idle time, with an absolute ceiling | Met | Renewed on use, at most once per `Cookies__RenewAfterHours`, but never past `Cookies__MaxSessionDays` (90 by default) from sign-in, so a stolen cookie cannot renew forever. A renewal cannot revive a session revoked after it was read. `AnAuthenticatedRequest_ShouldReissueBothCookies_OnceTheSessionIsDueForRenewal`, `Renew_ShouldLeaveTheSessionRevoked_WhenItWasRevokedAfterBeingRead`, `CookieValidate_ShouldThrow_WhenTheCeilingIsShorterThanTheIdleLifetime` |
 | Sign-out ends the session server-side | Met | `SignOut_ShouldEndTheSession_SoTheCookieStopsWorking` |
 | Changing or resetting a password ends other sessions | Met | Change keeps the caller's session and ends the rest, `ChangePassword_ShouldSignOutEveryOtherDevice_ButKeepThisOne`; a reset ends all of them, `Reset_ShouldSetANewPassword_AndSignOutEverySession` |
 
@@ -69,8 +69,10 @@ notice losing.
 
 ## V2 — Account recovery
 
-Culina sends no mail, so recovery is something a person holds rather than
-something sent to them. The flow is custom, which is why it is recorded here.
+Recovery works without mail: something a person holds rather than something
+sent to them. Where the administrator has set up mail (Settings → Mail), a
+third kind of code can also be mailed. The flow is custom, which is why it is
+recorded here.
 
 * **Saved codes.** Ten per account, made on the Password settings page after
   re-entering the password. 80 random bits each (Crockford base 32, four
@@ -81,6 +83,10 @@ something sent to them. The flow is custom, which is why it is recorded here.
   because it has passed through somebody else's hands. This is the way back for
   anyone without saved codes, except the administrator on an instance with no
   other administrator — whose only way back is their own saved codes.
+* **Mailed codes.** Only with mail on. `POST /password-reset-links` mails a
+  code of the same format, valid one hour, inside a link to the reset page. It
+  is stored like the others (`issued_by` null, `expires_at` set), is not one of
+  the saved set, and using it also confirms the address.
 * **Redeeming.** `POST /password-resets` with the address, the code and a new
   password. The code is used up and every session of the account is revoked;
   the web app then signs in with the new password.
@@ -94,6 +100,28 @@ something sent to them. The flow is custom, which is why it is recorded here.
 | Brute force is limited | Met | Per address by the sign-in limiter, and per account by the same budget sign-in and password confirmation draw on. `Reset_ShouldRefuseEvenTheRightCode_OnceTheAccountHasFailedTooOften`. Argon2 runs only after a code is known to be good, so guessing costs the server a lookup |
 | Only the administrator issues codes | Met | `IssuedCode_ShouldBeForbidden_ForAnAccountThatIsNotTheAdministrator` |
 | Failures are counted | Met | `culina.auth.recovery_failures` |
+| Asking for a mailed code reveals nothing | Met | `202` whether or not the address is registered, `409 mail.off` the same for every address; the mail is queued, not sent, so the answer takes no longer for a real account. `Links_ShouldBeAccepted_ForAnAddressNobodyHas_AndMailNothing` |
+| Nobody can fill a stranger's inbox | Met | Per address by the sign-in limiter, and at most one mail of a kind per account a minute however many clients ask (`MailThrottle`) |
+
+## V2 — Mailed links and address confirmation
+
+With mail on, a sign-in link and an address confirmation are tokens mailed to
+the account's address (`email_tokens`). 256 random bits, stored as SHA-256,
+single use, 15 minutes for a sign-in link and 48 hours for a confirmation. They
+are redeemed by a `POST` from the page, never by opening the URL, so a mail
+scanner that fetches every link uses nothing up, and the token travels after
+`#`, which no server, proxy or `Referer` sees; the page removes it from the
+address bar once read. Links point only at `Site__Url`, never at the request's
+`Host`, so a forged host header cannot turn a reset mail into a phishing link.
+
+| Requirement | Verdict | Evidence |
+| --- | --- | --- |
+| Single use, even under a race | Met | One `update … where used_at is null returning`. `SignInLink_ShouldSignIn_AndWorkOnlyOnce`, `ConfirmationLink_ShouldWorkOnlyOnce` |
+| A token does only what it was sent for | Met | The purpose is part of the statement. `ConfirmationToken_ShouldNotSignInAsASignInLink` |
+| Refusals are indistinguishable | Met | One answer, `400 auth.invalid_link`, for unknown, used, expired and foreign tokens |
+| An unconfirmed address is said only to the password's owner | Met | `auth.email_unconfirmed` comes after the password matched; a wrong password is still `auth.invalid_credentials`. `WrongPassword_ShouldNotSayTheAddressIsUnconfirmed` |
+| The mail password and queued mail are unreadable from a dump | Met | Both encrypted with the key ring under their own purposes; the password is never in a response (`ThePassword_ShouldNeverAppearInAnyResponse_OnlyThatThereIsOne`) and only sent to the server it was saved for (`Update_ShouldAskForThePasswordAgain_WhenTheServerChanges`) |
+| The owner hears about changes to the way in | Met | Notices for a new kind of device, a changed password, new recovery codes and an issued code. `NewDevice_ShouldBeMailed_OnlyTheFirstTimeItSignsIn`, `PasswordResetLink_ShouldMailACode_ThatSetsANewPassword_AndSayItChanged` |
 
 ## V5 — Validation and encoding
 
@@ -102,6 +130,7 @@ something sent to them. The flow is custom, which is why it is recorded here.
 | Every input is validated server-side | Met | Value objects in the domain; a request that cannot be read is a 400 problem document, not a 500 — `Update_ShouldBlameTheCaller_WhenTheBodyCannotBeRead` |
 | Unknown parameters are refused, not ignored | Met | `Request_ShouldBeRejected_WhenItCarriesAnUndeclaredParameter`. A mistyped filter that is silently dropped returns everything while the caller believes it filtered |
 | SQL is parameterised | Met | Hand-written SQL through Dapper with parameters throughout; no string concatenation of user input |
+| `LIKE` patterns carry no wildcard from the caller | Met | Every pattern is built from a fold (`culina_fold_ae`, `culina_fold_a`, `culina_search_terms`, `culina_wanted_words`, `SearchText.FoldAe`), which keeps only `a-z`, `0-9` and spaces, so `%`, `_` and `\` never reach a pattern. A search or an ingredient chip of only `%` or `_` folds to nothing and matches nothing (or, as free text, behaves like an empty box), and a smart-shelf ingredient rule that folds to nothing is refused (`cookbooks.invalid_rule`), since a wordless rule would hold every recipe. `AnIngredientChip_ShouldHoldNothing_WhenItIsOnlyAWildcard`, `ItShouldRefuseAnIngredientRuleThatIsOnlyAWildcard`, the wildcard cases in `RecipeSearchRelevanceTests`. A new `LIKE` over raw input needs `escape` or a fold first |
 | Output encoding | Met | Svelte escapes by default; no `{@html}` anywhere in the app |
 
 ## V12 — Files and resources
@@ -153,15 +182,54 @@ something sent to them. The flow is custom, which is why it is recorded here.
 | A reload is never imposed while somebody is working | Met | `says nothing while somebody is cooking or editing`, and it is offered again at the next safe moment |
 | Revocation on a disconnected device | **Cannot be met** | A device that is not in contact with the server cannot learn anything from it. Documented plainly in `docs/operations.md` rather than papered over |
 
+## Follow-up review, 1 October 2026
+
+A second, full-code review (backend, frontend, deployment and CI) found fifty
+issues, tracked as `culina-v2-kufx` with one child per finding. Every one is
+fixed except one that was accepted on purpose (under Exceptions). Where a
+finding changed a claim above, the row carries its evidence; the rest:
+
+| Area | What changed | Evidence |
+| --- | --- | --- |
+| Transactions | A returned failure rolls the unit of work back, so a refused registration writes nothing | tests beside the unit of work |
+| Registration | The first account becomes administrator exactly once under a race, and the user limit holds under one; a closed registration is refused before the address is looked at, so it reveals nothing about accounts (an open one still says an address is taken) | `Register_ShouldMakeExactlyOneAdministrator_WhenFirstRegistrationsRace`, `Register_ShouldStopAtTheUserLimit_WhenRegistrationsRaceForTheLastPlace`, `Register_ShouldBeClosed_ForTheSecondAccount_WhenTheAdminHasNotOpenedIt` |
+| Sign-in | The lockout counter reserves an attempt atomically, and Argon2 runs at most one hash per core at a time | `TryReserve_ShouldAdmitOnlyTheBudget_WhenGuessesArriveAllAtOnce` |
+| Rate limits | Costly limits count per person rather than per session, so signing in again buys no fresh budget | `Import_ShouldBeRefused_WhenThePersonSignsInAgainForAFreshBudget` |
+| Images | At most two decodes at once per process, a bounded allocator, and the first frame only | `Upload_ShouldKeepOnlyTheFirstFrame_OfAnAnimatedImage` |
+| Outbound fetches | `HTTP(S)_PROXY` is ignored (a proxy would bypass the address check, or is dialled only after it); allowing private sources never allows loopback or the metadata address | `Handler_ShouldRefuseALoopbackTarget_WithoutContactingTheProxy_WhenOneIsConfigured`, `GetAsync_ShouldRefuseLoopback_WhenPrivateAddressesAreAllowed` |
+| Secrets at rest | Connected-source tokens are encrypted under their own purpose, and a plaintext token left by an older version is encrypted at start | `AddAsync_ShouldStoreTheTokenEncrypted_AndReadItBack`, `StartAsync_ShouldEncryptATokenStoredBeforeTokensWereEncrypted` |
+| Secrets in logs | Share tokens and invitation codes are redacted from the path before it reaches a log or a span | `Redact_ShouldReplaceTheSecretSegment_UnderEveryRouteThatCarriesOne` |
+| Configuration | A trusted-proxy network that would trust every client is refused unless the deployment names it; whether cookies may go without `Secure` is the deployment's to say, never the app's settings screen, and running without it logs a warning | `Update_ShouldRefuseAProxyNetworkThatWouldTrustEveryClient_AndSaveNothing`, `Handle_ShouldRefuseAProxyNetworkTooWideToTrust_WithACodeOfItsOwn` |
+| Error responses | An unhandled exception still carries every security header and the request id | `UnhandledException_ShouldStillCarryEverySecurityHeaderAndTheRequestId` |
+| Households | Removing a member ends the inheritance they set up; a stranger learns nothing about who is in a household | `DeletingAnAccount_ShouldEndTheInheritanceItSetUp`, `Stranger_ShouldLearnNothingAboutWhoIsInAnotherHousehold_OrWhoInheritsIt` |
+| Assistant | The monthly budget is reserved under a lock, so concurrent requests cannot overspend it | `ComposeAsync_ShouldReserveAgainstTheConfiguredCeilings` |
+| Supply chain | Base images are pinned by digest; the `latest` tag moves only after the CI gates and the image scan | `Dockerfile`, `.github/workflows/release.yml` |
+| Deployment | Production compose requires a Postgres superuser password rather than defaulting one; the development database listens on loopback only | `compose.prod.yaml`, `compose.yaml` |
+
 ## Exceptions, with reasons
 
-**No email in account recovery.** A reset link by mail needs an SMTP
-configuration a self-hoster would have to keep working, and an expired mail
-password is a recovery flow that silently stops. Recovery codes and
-administrator-issued codes need nothing outside the app. The cost: an
-instance's only administrator who loses both their password and their saved
-codes still needs somebody with database access. Optional SMTP would close
-that gap and remains open as a separate decision.
+**A fresh instance's setup is anonymous.** Until setup is complete, whoever
+reaches the port can point the instance at a database and register first as
+administrator. Decided on 24 September 2026 and kept after the 1 October review
+(`culina-v2-kufx.8`): a setup code printed to the log would be one more thing a
+self-hoster has to find.
+What is done around it: the
+connection check is rate limited, answers without raw socket errors, and a
+changed database host needs the stored password typed again. The cost: an
+operator who publishes the port to the internet and then waits can lose the
+instance to whoever scans first. `docs/configuration.md` says to finish setup
+before exposing the port.
+
+**Mail is optional, and recovery never depends on it.** Decided 24 October
+2026 (`culina-v2-b6l6`, closing `culina-v2-wov4`): the administrator may give
+Culina an SMTP account, and then reset links, sign-in links, address
+confirmation and notices are mailed. Saved and issued recovery codes stay, so an
+expired mail password is a convenience that stops, not the only way back. The
+cost that remains: an instance's only administrator who loses both their
+password and their saved codes, on an instance without mail, still needs
+somebody with database access. With mail on, a new device is recognised by its
+kind (`Firefox · macOS`), not a device cookie: a second machine of the same
+kind brings no notice, which keeps the notice rare enough to be read.
 
 **No multi-factor authentication.** ASVS Level 2 expects it. Culina is a recipe
 app for a household, its sessions are opaque and revocable, and sign-in is rate

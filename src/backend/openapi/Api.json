@@ -1143,6 +1143,142 @@
         }
       }
     },
+    "/api/v1/agent-authorizations/{authorizationId}": {
+      "get": {
+        "tags": [
+          "AgentAuthorizations"
+        ],
+        "summary": "Read a request to connect an AI agent",
+        "description": "The app asking, through OAuth, to connect an AI agent to the caller's account, and where it sends the browser back to. Only while it waits for an answer; afterwards, or once expired, agent_authorizations.not_found.",
+        "operationId": "getAgentAuthorizationByIdV1",
+        "parameters": [
+          {
+            "name": "authorizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentAuthorizationsGetByIdResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agent-authorizations/{authorizationId}/decision": {
+      "put": {
+        "tags": [
+          "AgentAuthorizations"
+        ],
+        "summary": "Answer a request to connect an AI agent",
+        "description": "Approves or denies the request. Answers with the app's return address, carrying the authorization code or error=access_denied, which the browser navigates to. The code becomes an agent session of the caller's, which reaches only the MCP server and is listed and revoked with the other sessions.",
+        "operationId": "decideAgentAuthorizationV1",
+        "parameters": [
+          {
+            "name": "authorizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentAuthorizationsDecideRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentAuthorizationsDecideResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/password-resets": {
       "post": {
         "tags": [
@@ -1249,6 +1385,200 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/password-reset-links": {
+      "post": {
+        "tags": [
+          "PasswordResetLinks"
+        ],
+        "summary": "Mail a link to choose a new password",
+        "description": "Answers 202 whether or not the address is registered; when it is, a link and a one-hour recovery code are mailed to it, to use with createPasswordResetV1. 409 mail.off when the instance sends no mail, the same for every address.",
+        "operationId": "createPasswordResetLinkV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetLinksCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sign-in-links": {
+      "post": {
+        "tags": [
+          "SignInLinks"
+        ],
+        "summary": "Mail a sign-in link",
+        "description": "Answers 202 whether or not the address is registered; when it is, a link that signs in once, within 15 minutes, is mailed to it (redeemSignInLinkV1). 409 mail.off when the instance sends no mail.",
+        "operationId": "createSignInLinkV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInLinksCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sign-in-links/redemptions": {
+      "post": {
+        "tags": [
+          "SignInLinks"
+        ],
+        "summary": "Sign in with a mailed link",
+        "description": "Uses up the token from a sign-in link and starts a browser session, as signInV1 does; opening the link also confirms the address. Failure is always auth.invalid_link.",
+        "operationId": "redeemSignInLinkV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInLinksRedeemRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionsSignInResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/email-confirmations": {
+      "post": {
+        "tags": [
+          "EmailConfirmations"
+        ],
+        "summary": "Confirm an email address",
+        "description": "Uses up the token from a confirmation link, records the address as confirmed and starts a browser session, as signInV1 does. Failure is always auth.invalid_link.",
+        "operationId": "createEmailConfirmationV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailConfirmationsCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionsSignInResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2177,7 +2507,7 @@
           "Households"
         ],
         "summary": "Invite someone",
-        "description": "Owners only. The response carries the code, and it is the only time the code is ever shown: only its digest is stored.",
+        "description": "Owners only. The response carries the code, and it is the only time the code is ever shown: only its digest is stored. With an email, the invitation is also mailed to that address (mailedTo); that needs mail to be set up on the server.",
         "operationId": "createHouseholdInvitationV1",
         "parameters": [
           {
@@ -2190,6 +2520,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "description": "An address to mail the invitation to, or null. Needs mail to be set up on the server.",
+                    "nullable": true
+                  }
+                },
+                "description": "Who to invite; the body may be left out entirely to only get a code to share."
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "Created",
@@ -2197,6 +2544,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HouseholdsCreateInvitationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -2954,6 +3311,163 @@
         }
       }
     },
+    "/api/v1/settings/mail": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Read the mail account",
+        "description": "Instance administrator only. Never returns the password, only whether one is set.",
+        "operationId": "getMailSettingsV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsGetMailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Change the mail account",
+        "description": "Instance administrator only. Takes effect at once, with no restart. While mail is on, new accounts must confirm their address before they can sign in, and sign-in links, password-forgotten links and account notices are mailed.",
+        "operationId": "updateMailSettingsV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsUpdateMailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsGetMailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/settings/mail/tests": {
+      "post": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Send a test mail",
+        "description": "Instance administrator only. Sends a mail to the administrator's own address through the saved account, straight away. mail.send_failed carries what the server answered.",
+        "operationId": "sendMailTestV1",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/settings/server": {
       "get": {
         "tags": [
@@ -3208,7 +3722,7 @@
           "Registration"
         ],
         "summary": "Read what a new account is allowed to do",
-        "description": "Public: a sign-up form has to know which fields to ask for before anyone has an account.",
+        "description": "Public: a sign-up form has to know which fields to ask for before anyone has an account, and a sign-in form whether it can offer links by mail.",
         "operationId": "getRegistrationPolicyV1",
         "responses": {
           "200": {
@@ -7040,6 +7554,321 @@
         }
       }
     },
+    "/api/v1/households/{householdId}/products": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "List what a household says its barcodes are",
+        "description": "Every barcode this household, and the households it inherits from, have named, one entry per barcode, the nearest household's when several named it (`householdId` says whose). Not paged: it seeds the offline cache, and a household names hundreds of barcodes at most. Has an `ETag` and answers `304` to a matching `If-None-Match`. This is a mapping from packaging to an ingredient, never what the household has at home.",
+        "operationId": "listHouseholdProductsV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductsProductsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/households/{householdId}/products/{gtin}": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "Read what a household says a barcode is",
+        "description": "The household's own memory of the barcode, else the nearest household it inherits from (`householdId` in the body says whose). `{gtin}` is the digits of an EAN-8, UPC-A, EAN-13 or GTIN-14, or an eight-digit UPC-E, with a correct check digit; the response carries the normalised form (a UPC-A or UPC-E is padded to 13 digits). 404 `products.unknown` when nobody named it: the caller then asks for a name and PUTs it. Has an `ETag`; send it as `If-Match` to change or remove the household's own row.",
+        "operationId": "getHouseholdProductV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "gtin",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductsProductDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "Say what a barcode is",
+        "description": "Names a barcode for this household, or changes what it said. Without `If-Match` the barcode is being named: 201 with the new `ETag`, or 428 `products.already_named` when this household already has it (two phones naming the same code at once: the later one reads the row and decides). With `If-Match` from a read of the household's own row it is replaced: 200 with the new `ETag`, 412 when the row moved on, 404 `products.unknown` when it is gone. A household that only inherits the barcode names its own row without `If-Match`; the ancestor's is never touched. `{gtin}` is read as for GET and stored normalised. `name` is required; `ingredient`, `quantity` (with `unit`), `cookMinutes` and `note` are optional, and `cookMinutes` is only ever what the household says: a barcode does not supply one. Any member may.",
+        "operationId": "setHouseholdProductV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "gtin",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductsSetProductRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductsProductDetail"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductsProductDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "Forget what a barcode is",
+        "description": "Removes this household's own row; a household it inherits from keeps its own, so an heir that removes a row it overrode sees the ancestor's again. Requires `If-Match` with the version you last read (428 without, 412 when the row moved on). 204, also when it is already gone.",
+        "operationId": "removeHouseholdProductV1",
+        "parameters": [
+          {
+            "name": "householdId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "gtin",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "Precondition Required",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/households/{householdId}/ingredient-names": {
       "get": {
         "tags": [
@@ -10376,6 +11205,82 @@
   },
   "components": {
     "schemas": {
+      "AgentAuthorizationsDecideRequest": {
+        "required": [
+          "approved"
+        ],
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean",
+            "description": "True to let the app's agent into the caller's account, false to refuse."
+          }
+        },
+        "description": "The caller's answer to an app asking to connect an AI agent."
+      },
+      "AgentAuthorizationsDecideResponse": {
+        "required": [
+          "approved",
+          "redirectUri"
+        ],
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean",
+            "description": "Whether the app was let in."
+          },
+          "redirectUri": {
+            "type": "string",
+            "description": "The app's return address, carrying the authorization code or `error=access_denied`; navigate to it."
+          }
+        },
+        "description": "Where the browser goes now that the request is answered."
+      },
+      "AgentAuthorizationsGetByIdResponse": {
+        "required": [
+          "authorizationId",
+          "clientId",
+          "clientName",
+          "redirectHost",
+          "redirectsToThisComputer",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "authorizationId": {
+            "type": "string",
+            "description": "The request's id, for answering it.",
+            "format": "uuid"
+          },
+          "clientId": {
+            "type": "string",
+            "description": "The app's OAuth `client_id`: the address of its metadata document, or the id it registered with."
+          },
+          "clientName": {
+            "type": "string",
+            "description": "What the app calls itself."
+          },
+          "verifiedHost": {
+            "type": "string",
+            "description": "The host the app's metadata document came from, which vouches for its name; null when nothing does (the app registered itself).",
+            "nullable": true
+          },
+          "redirectHost": {
+            "type": "string",
+            "description": "The host the browser is sent back to, with the code."
+          },
+          "redirectsToThisComputer": {
+            "type": "boolean",
+            "description": "Whether that is this computer (a loopback address), which any program on it can listen on."
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "Until when the request can be answered.",
+            "format": "date-time"
+          }
+        },
+        "description": "An app asking to connect an AI agent to the caller's account, as the consent screen shows it."
+      },
       "ArchiveRestored": {
         "required": [
           "restored",
@@ -10895,6 +11800,19 @@
         },
         "description": "Renames a cookbook, and rewrites what it is for. Both fields together: they are one form."
       },
+      "EmailConfirmationsCreateRequest": {
+        "required": [
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "What follows `#token=` in the link."
+          }
+        },
+        "description": "The token from a link Culina mailed."
+      },
       "HouseholdsChangeMemberRoleRequest": {
         "required": [
           "role"
@@ -10947,6 +11865,11 @@
             "type": "string",
             "description": "When it stops working.",
             "format": "date-time"
+          },
+          "mailedTo": {
+            "type": "string",
+            "description": "The address the invitation was mailed to, or null when it was not mailed.",
+            "nullable": true
           }
         },
         "description": "A newly issued invitation."
@@ -12341,6 +13264,19 @@
         },
         "description": "What one unit weighs, as a household says."
       },
+      "PasswordResetLinksCreateRequest": {
+        "required": [
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The address the account signs in with."
+          }
+        },
+        "description": "Where to send the link."
+      },
       "PasswordResetsCreateRequest": {
         "required": [
           "email",
@@ -12610,6 +13546,116 @@
           }
         },
         "description": "An RFC 9457 problem document. Branch on `code`; `detail` is prose and will be reworded."
+      },
+      "ProductsProductDetail": {
+        "required": [
+          "gtin",
+          "name",
+          "householdId",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "gtin": {
+            "type": "string",
+            "description": "The barcode in its normalised form: digits only, a UPC-A padded to 13."
+          },
+          "name": {
+            "type": "string",
+            "description": "What to show."
+          },
+          "ingredient": {
+            "type": "string",
+            "description": "The ingredient a recipe line or list item is matched by.",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "number",
+            "description": "What the pack holds.",
+            "format": "double",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "description": "The unit of `quantity`.",
+            "nullable": true
+          },
+          "cookMinutes": {
+            "type": "integer",
+            "description": "Minutes the household found it needs.",
+            "format": "int32",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "description": "A line for people.",
+            "nullable": true
+          },
+          "householdId": {
+            "type": "string",
+            "description": "The household whose memory this is: the one asked, or the nearest household it inherits from. Only that\nhousehold changes or removes it.",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "description": "The version of the row, sent back as `If-Match` to change or remove it.",
+            "format": "int64"
+          }
+        },
+        "description": "What a household says a barcode is, as the household's memory holds it."
+      },
+      "ProductsProductsResponse": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductsProductDetail"
+            },
+            "description": "The products by barcode; a barcode more than one household named is the nearest household's."
+          }
+        },
+        "description": "Every barcode a household, and the households it inherits from, have named."
+      },
+      "ProductsSetProductRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "What to show: \"Barilla Spaghetti n.5\". Required, at most 200 characters."
+          },
+          "ingredient": {
+            "type": "string",
+            "description": "The ingredient a recipe line or list item is matched by: \"Spaghetti\". Blank is none; at most 200 characters.",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "number",
+            "description": "What the pack holds, more than 0 and at most 9999999.",
+            "format": "double",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "description": "The unit of `quantity`, written as in a recipe (`g`, `ml`, `pack`); needs a quantity.",
+            "nullable": true
+          },
+          "cookMinutes": {
+            "type": "integer",
+            "description": "Minutes the household found it needs, 1 to 600. A barcode never supplies this; only the household does.",
+            "format": "int32",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "description": "A line for people, at most 500 characters.",
+            "nullable": true
+          }
+        },
+        "description": "What a household says a barcode is."
       },
       "RecipesCopyRequest": {
         "required": [
@@ -15382,6 +16428,10 @@
           "hasAccounts": {
             "type": "boolean",
             "description": "Whether this instance has been set up yet."
+          },
+          "sendsMail": {
+            "type": "boolean",
+            "description": "Whether this instance sends mail: then a new account confirms its address before signing in, and the sign-in\npage can offer a sign-in link and a password-forgotten link."
           }
         },
         "description": "What a sign-up form needs to know before it draws itself."
@@ -16131,6 +17181,65 @@
         },
         "description": "How this instance reaches PostgreSQL. Never the password."
       },
+      "SettingsGetMailResponse": {
+        "required": [
+          "enabled",
+          "host",
+          "port",
+          "security",
+          "username",
+          "passwordConfigured",
+          "fromAddress",
+          "fromName",
+          "sending"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether mail is switched on."
+          },
+          "host": {
+            "type": "string",
+            "description": "The SMTP server, or empty."
+          },
+          "port": {
+            "type": "integer",
+            "description": "The SMTP port.",
+            "format": "int32"
+          },
+          "security": {
+            "type": "string",
+            "description": "`none`, `starttls` or `tls`."
+          },
+          "username": {
+            "type": "string",
+            "description": "Who Culina signs in to the server as, or empty for no sign-in."
+          },
+          "passwordConfigured": {
+            "type": "boolean",
+            "description": "Whether a password has been entered. Never the password."
+          },
+          "fromAddress": {
+            "type": "string",
+            "description": "The sender's address, or empty."
+          },
+          "fromName": {
+            "type": "string",
+            "description": "The sender's name."
+          },
+          "siteUrl": {
+            "type": "string",
+            "description": "The public address links in mails point to (`Site__Url`), or null when it is not set and mail cannot be switched on.",
+            "nullable": true
+          },
+          "sending": {
+            "type": "boolean",
+            "description": "Whether mail actually goes out: switched on, complete, and with a public address."
+          }
+        },
+        "description": "The mail account Culina sends from."
+      },
       "SettingsGetRegistrationResponse": {
         "required": [
           "openRegistration",
@@ -16735,6 +17844,55 @@
         },
         "description": "How to reach PostgreSQL from now on."
       },
+      "SettingsUpdateMailRequest": {
+        "required": [
+          "enabled",
+          "host",
+          "port",
+          "security",
+          "username",
+          "fromAddress",
+          "fromName"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether mail is switched on. Needs a server, a sender and Culina's public address."
+          },
+          "host": {
+            "type": "string",
+            "description": "The SMTP server, such as `smtp.example.com`."
+          },
+          "port": {
+            "type": "integer",
+            "description": "The SMTP port, usually 587 for `starttls` and 465 for `tls`.",
+            "format": "int32"
+          },
+          "security": {
+            "type": "string",
+            "description": "`none`, `starttls` or `tls`."
+          },
+          "username": {
+            "type": "string",
+            "description": "Who to sign in to the server as, or empty for a server that takes mail without signing in."
+          },
+          "password": {
+            "type": "string",
+            "description": "A new password, or null to keep the stored one. An empty string removes it.",
+            "nullable": true
+          },
+          "fromAddress": {
+            "type": "string",
+            "description": "The sender's address."
+          },
+          "fromName": {
+            "type": "string",
+            "description": "The sender's name, as inboxes show it."
+          }
+        },
+        "description": "The mail account to send from, all at once."
+      },
       "SettingsUpdateRegistrationRequest": {
         "required": [
           "openRegistration",
@@ -17255,6 +18413,32 @@
           }
         },
         "description": "A change to one line."
+      },
+      "SignInLinksCreateRequest": {
+        "required": [
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The address the account signs in with."
+          }
+        },
+        "description": "Where to send the link."
+      },
+      "SignInLinksRedeemRequest": {
+        "required": [
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "What follows `#token=` in the link."
+          }
+        },
+        "description": "The token from a link Culina mailed."
       },
       "StreamingProblem": {
         "required": [
@@ -18099,6 +19283,10 @@
             "description": "The household created with the account; null means the client should offer to create one or\nredeem an invitation.",
             "format": "uuid",
             "nullable": true
+          },
+          "emailConfirmationRequired": {
+            "type": "boolean",
+            "description": "Whether the account must confirm its address before it can sign in; a link was mailed to it. False when the\ninstance sends no mail, and for the first account."
           }
         },
         "description": "The account that was created."
@@ -18386,10 +19574,22 @@
       "name": "Sessions"
     },
     {
+      "name": "AgentAuthorizations"
+    },
+    {
       "name": "PasswordResets"
     },
     {
       "name": "RecoveryCodes"
+    },
+    {
+      "name": "PasswordResetLinks"
+    },
+    {
+      "name": "SignInLinks"
+    },
+    {
+      "name": "EmailConfirmations"
     },
     {
       "name": "Households"
@@ -18414,6 +19614,9 @@
     },
     {
       "name": "Nutrition"
+    },
+    {
+      "name": "Products"
     },
     {
       "name": "Ingredients"

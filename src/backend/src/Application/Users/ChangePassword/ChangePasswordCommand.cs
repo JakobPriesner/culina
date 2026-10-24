@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Mail;
 using Application.Telemetry;
 using Domain.Shared;
 using Domain.Users;
@@ -24,6 +25,7 @@ internal sealed class ChangePasswordCommandHandler(
     ISessionStore sessions,
     IPasswordHasher passwordHasher,
     PasswordConfirmation confirmation,
+    AccountMail mail,
     IUnitOfWork unitOfWork,
     TimeProvider time)
     : ICommandHandler<ChangePasswordCommand>
@@ -63,11 +65,20 @@ internal sealed class ChangePasswordCommandHandler(
 
                 // Every other device is signed out: a password changed because somebody else knew
                 // it must shut them out, and this device stays.
+                var now = time.GetUtcNow();
+
                 await sessions
-                    .RevokeAllAsync(user.Id, command.SessionId, time.GetUtcNow(), token)
+                    .RevokeAllAsync(user.Id, command.SessionId, now, token)
                     .ConfigureAwait(false);
 
-                return saved.Bind(_ => Result.Success());
+                return await saved.Match(
+                    async _ =>
+                    {
+                        await mail.TellPasswordChangedAsync(user, now, token).ConfigureAwait(false);
+
+                        return Result.Success();
+                    },
+                    error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
             },
             cancellationToken).ConfigureAwait(false);
     }

@@ -38,7 +38,20 @@ public sealed record Archive
 
     /// <summary>Its cookbooks. Optional, so archives written before cookbooks travelled still restore.</summary>
     public IReadOnlyList<ArchivedCookbook>? Cookbooks { get; init; }
+
+    /// <summary>What the household said its barcodes are. Optional, so archives written before product memory still restore.</summary>
+    public IReadOnlyList<ArchivedProduct>? Products { get; init; }
 }
+
+/// <summary>What the household itself said one barcode is; what it only inherits belongs to the household it came from.</summary>
+public sealed record ArchivedProduct(
+    string Gtin,
+    string Name,
+    string? Ingredient,
+    decimal? Quantity,
+    string? Unit,
+    int? CookMinutes,
+    string? Note);
 
 /// <summary>A cookbook: a chosen shelf by the positions of its recipes, or a smart one by its rules.</summary>
 /// <remarks>

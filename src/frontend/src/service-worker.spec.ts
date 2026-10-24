@@ -103,6 +103,26 @@ function read(path: string) {
 
 const readRecipe = () => read('/api/v1/recipes/r1');
 
+/** A navigation, which a Request cannot be constructed as; returns whether the worker answered it. */
+function navigate(path: string) {
+  const respondWith = vi.fn((pending: Promise<Response>) => void pending.catch(() => {}));
+
+  onFetch({
+    request: { url: new URL(path, location.origin).href, method: 'GET', mode: 'navigate' },
+    respondWith
+  });
+
+  return respondWith.mock.calls.length > 0;
+}
+
+it('leaves navigations to the server-owned OAuth endpoint and well-known documents to the network', () => {
+  vi.stubGlobal('fetch', () => new Promise(() => {}));
+
+  expect(navigate('/oauth/authorize?client_id=x')).toBe(false);
+  expect(navigate('/.well-known/oauth-authorization-server')).toBe(false);
+  expect(navigate('/authorize?request=r1')).toBe(true);
+});
+
 it('answers a recipe read from the cache when the network stalls', async () => {
   vi.stubGlobal('fetch', () => new Promise(() => {}));
 

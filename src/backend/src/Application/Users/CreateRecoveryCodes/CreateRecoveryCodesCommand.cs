@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Mail;
 using Application.Telemetry;
 using Domain.Shared;
 using Domain.Users;
@@ -15,6 +16,7 @@ internal sealed class CreateRecoveryCodesCommandHandler(
     IRecoveryCodeRepository recoveryCodes,
     ISecretTokens tokens,
     PasswordConfirmation confirmation,
+    AccountMail mail,
     IUnitOfWork unitOfWork,
     TimeProvider time)
     : ICommandHandler<CreateRecoveryCodesCommand, Response>
@@ -55,6 +57,7 @@ internal sealed class CreateRecoveryCodesCommandHandler(
             async token =>
             {
                 await recoveryCodes.ReplaceSavedAsync(user.Id, saved, token).ConfigureAwait(false);
+                await mail.TellRecoveryCodesMadeAsync(user, now, token).ConfigureAwait(false);
 
                 return Result.Success();
             },

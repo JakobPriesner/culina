@@ -348,6 +348,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agent-authorizations/{authorizationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a request to connect an AI agent
+         * @description The app asking, through OAuth, to connect an AI agent to the caller's account, and where it sends the browser back to. Only while it waits for an answer; afterwards, or once expired, agent_authorizations.not_found.
+         */
+        get: operations["getAgentAuthorizationByIdV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent-authorizations/{authorizationId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Answer a request to connect an AI agent
+         * @description Approves or denies the request. Answers with the app's return address, carrying the authorization code or error=access_denied, which the browser navigates to. The code becomes an agent session of the caller's, which reaches only the MCP server and is listed and revoked with the other sessions.
+         */
+        put: operations["decideAgentAuthorizationV1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/password-resets": {
         parameters: {
             query?: never;
@@ -382,6 +422,86 @@ export interface paths {
          * @description The administrator's only. Returns a one-time code, good for 24 hours, that sets a new password for the account with this address. Pass it on yourself; Culina sends nothing.
          */
         post: operations["issueRecoveryCodeV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/password-reset-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mail a link to choose a new password
+         * @description Answers 202 whether or not the address is registered; when it is, a link and a one-hour recovery code are mailed to it, to use with createPasswordResetV1. 409 mail.off when the instance sends no mail, the same for every address.
+         */
+        post: operations["createPasswordResetLinkV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sign-in-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mail a sign-in link
+         * @description Answers 202 whether or not the address is registered; when it is, a link that signs in once, within 15 minutes, is mailed to it (redeemSignInLinkV1). 409 mail.off when the instance sends no mail.
+         */
+        post: operations["createSignInLinkV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sign-in-links/redemptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in with a mailed link
+         * @description Uses up the token from a sign-in link and starts a browser session, as signInV1 does; opening the link also confirms the address. Failure is always auth.invalid_link.
+         */
+        post: operations["redeemSignInLinkV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-confirmations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm an email address
+         * @description Uses up the token from a confirmation link, records the address as confirmed and starts a browser session, as signInV1 does. Failure is always auth.invalid_link.
+         */
+        post: operations["createEmailConfirmationV1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -599,7 +719,7 @@ export interface paths {
         put?: never;
         /**
          * Invite someone
-         * @description Owners only. The response carries the code, and it is the only time the code is ever shown: only its digest is stored.
+         * @description Owners only. The response carries the code, and it is the only time the code is ever shown: only its digest is stored. With an email, the invitation is also mailed to that address (mailedTo); that needs mail to be set up on the server.
          */
         post: operations["createHouseholdInvitationV1"];
         delete?: never;
@@ -802,6 +922,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/mail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the mail account
+         * @description Instance administrator only. Never returns the password, only whether one is set.
+         */
+        get: operations["getMailSettingsV1"];
+        /**
+         * Change the mail account
+         * @description Instance administrator only. Takes effect at once, with no restart. While mail is on, new accounts must confirm their address before they can sign in, and sign-in links, password-forgotten links and account notices are mailed.
+         */
+        put: operations["updateMailSettingsV1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/mail/tests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a test mail
+         * @description Instance administrator only. Sends a mail to the administrator's own address through the saved account, straight away. mail.send_failed carries what the server answered.
+         */
+        post: operations["sendMailTestV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings/server": {
         parameters: {
             query?: never;
@@ -879,7 +1043,7 @@ export interface paths {
         };
         /**
          * Read what a new account is allowed to do
-         * @description Public: a sign-up form has to know which fields to ask for before anyone has an account.
+         * @description Public: a sign-up form has to know which fields to ask for before anyone has an account, and a sign-in form whether it can offer links by mail.
          */
         get: operations["getRegistrationPolicyV1"];
         put?: never;
@@ -1735,6 +1899,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/households/{householdId}/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List what a household says its barcodes are
+         * @description Every barcode this household, and the households it inherits from, have named, one entry per barcode, the nearest household's when several named it (`householdId` says whose). Not paged: it seeds the offline cache, and a household names hundreds of barcodes at most. Has an `ETag` and answers `304` to a matching `If-None-Match`. This is a mapping from packaging to an ingredient, never what the household has at home.
+         */
+        get: operations["listHouseholdProductsV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/households/{householdId}/products/{gtin}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read what a household says a barcode is
+         * @description The household's own memory of the barcode, else the nearest household it inherits from (`householdId` in the body says whose). `{gtin}` is the digits of an EAN-8, UPC-A, EAN-13 or GTIN-14, or an eight-digit UPC-E, with a correct check digit; the response carries the normalised form (a UPC-A or UPC-E is padded to 13 digits). 404 `products.unknown` when nobody named it: the caller then asks for a name and PUTs it. Has an `ETag`; send it as `If-Match` to change or remove the household's own row.
+         */
+        get: operations["getHouseholdProductV1"];
+        /**
+         * Say what a barcode is
+         * @description Names a barcode for this household, or changes what it said. Without `If-Match` the barcode is being named: 201 with the new `ETag`, or 428 `products.already_named` when this household already has it (two phones naming the same code at once: the later one reads the row and decides). With `If-Match` from a read of the household's own row it is replaced: 200 with the new `ETag`, 412 when the row moved on, 404 `products.unknown` when it is gone. A household that only inherits the barcode names its own row without `If-Match`; the ancestor's is never touched. `{gtin}` is read as for GET and stored normalised. `name` is required; `ingredient`, `quantity` (with `unit`), `cookMinutes` and `note` are optional, and `cookMinutes` is only ever what the household says: a barcode does not supply one. Any member may.
+         */
+        put: operations["setHouseholdProductV1"];
+        post?: never;
+        /**
+         * Forget what a barcode is
+         * @description Removes this household's own row; a household it inherits from keeps its own, so an heir that removes a row it overrode sees the ancestor's again. Requires `If-Match` with the version you last read (428 without, 412 when the row moved on). 204, also when it is already gone.
+         */
+        delete: operations["removeHouseholdProductV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/households/{householdId}/ingredient-names": {
         parameters: {
             query?: never;
@@ -2560,6 +2772,41 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description The caller's answer to an app asking to connect an AI agent. */
+        AgentAuthorizationsDecideRequest: {
+            /** @description True to let the app's agent into the caller's account, false to refuse. */
+            approved: boolean;
+        };
+        /** @description Where the browser goes now that the request is answered. */
+        AgentAuthorizationsDecideResponse: {
+            /** @description Whether the app was let in. */
+            approved: boolean;
+            /** @description The app's return address, carrying the authorization code or `error=access_denied`; navigate to it. */
+            redirectUri: string;
+        };
+        /** @description An app asking to connect an AI agent to the caller's account, as the consent screen shows it. */
+        AgentAuthorizationsGetByIdResponse: {
+            /**
+             * Format: uuid
+             * @description The request's id, for answering it.
+             */
+            authorizationId: string;
+            /** @description The app's OAuth `client_id`: the address of its metadata document, or the id it registered with. */
+            clientId: string;
+            /** @description What the app calls itself. */
+            clientName: string;
+            /** @description The host the app's metadata document came from, which vouches for its name; null when nothing does (the app registered itself). */
+            verifiedHost?: string | null;
+            /** @description The host the browser is sent back to, with the code. */
+            redirectHost: string;
+            /** @description Whether that is this computer (a loopback address), which any program on it can listen on. */
+            redirectsToThisComputer: boolean;
+            /**
+             * Format: date-time
+             * @description Until when the request can be answered.
+             */
+            expiresAt: string;
+        };
         /** @description What a restore did. */
         ArchiveRestored: {
             /**
@@ -2828,6 +3075,11 @@ export interface components {
              */
             coverRecipeId?: string | null;
         };
+        /** @description The token from a link Culina mailed. */
+        EmailConfirmationsCreateRequest: {
+            /** @description What follows `#token=` in the link. */
+            token: string;
+        };
         /** @description The role to give a member. */
         HouseholdsChangeMemberRoleRequest: {
             /** @description `owner` or `member`. */
@@ -2856,6 +3108,8 @@ export interface components {
              * @description When it stops working.
              */
             expiresAt: string;
+            /** @description The address the invitation was mailed to, or null when it was not mailed. */
+            mailedTo?: string | null;
         };
         /** @description A new household. */
         HouseholdsCreateRequest: {
@@ -3599,6 +3853,11 @@ export interface components {
              */
             grams: number;
         };
+        /** @description Where to send the link. */
+        PasswordResetLinksCreateRequest: {
+            /** @description The address the account signs in with. */
+            email: string;
+        };
         /** @description A new password for an account, unlocked by a recovery code. */
         PasswordResetsCreateRequest: {
             /** @description The address the account signs in with. */
@@ -3743,6 +4002,66 @@ export interface components {
                 code: string;
                 detail: string;
             }[] | null;
+        };
+        /** @description What a household says a barcode is, as the household's memory holds it. */
+        ProductsProductDetail: {
+            /** @description The barcode in its normalised form: digits only, a UPC-A padded to 13. */
+            gtin: string;
+            /** @description What to show. */
+            name: string;
+            /** @description The ingredient a recipe line or list item is matched by. */
+            ingredient?: string | null;
+            /**
+             * Format: double
+             * @description What the pack holds.
+             */
+            quantity?: number | null;
+            /** @description The unit of `quantity`. */
+            unit?: string | null;
+            /**
+             * Format: int32
+             * @description Minutes the household found it needs.
+             */
+            cookMinutes?: number | null;
+            /** @description A line for people. */
+            note?: string | null;
+            /**
+             * Format: uuid
+             * @description The household whose memory this is: the one asked, or the nearest household it inherits from. Only that
+             *     household changes or removes it.
+             */
+            householdId: string;
+            /**
+             * Format: int64
+             * @description The version of the row, sent back as `If-Match` to change or remove it.
+             */
+            version: number;
+        };
+        /** @description Every barcode a household, and the households it inherits from, have named. */
+        ProductsProductsResponse: {
+            /** @description The products by barcode; a barcode more than one household named is the nearest household's. */
+            items: components["schemas"]["ProductsProductDetail"][];
+        };
+        /** @description What a household says a barcode is. */
+        ProductsSetProductRequest: {
+            /** @description What to show: "Barilla Spaghetti n.5". Required, at most 200 characters. */
+            name?: string;
+            /** @description The ingredient a recipe line or list item is matched by: "Spaghetti". Blank is none; at most 200 characters. */
+            ingredient?: string | null;
+            /**
+             * Format: double
+             * @description What the pack holds, more than 0 and at most 9999999.
+             */
+            quantity?: number | null;
+            /** @description The unit of `quantity`, written as in a recipe (`g`, `ml`, `pack`); needs a quantity. */
+            unit?: string | null;
+            /**
+             * Format: int32
+             * @description Minutes the household found it needs, 1 to 600. A barcode never supplies this; only the household does.
+             */
+            cookMinutes?: number | null;
+            /** @description A line for people, at most 500 characters. */
+            note?: string | null;
         };
         /** @description Where the copy goes. */
         RecipesCopyRequest: {
@@ -5131,6 +5450,11 @@ export interface components {
             requireInvitation: boolean;
             /** @description Whether this instance has been set up yet. */
             hasAccounts: boolean;
+            /**
+             * @description Whether this instance sends mail: then a new account confirms its address before signing in, and the sign-in
+             *     page can offer a sign-in link and a password-forgotten link.
+             */
+            sendsMail?: boolean;
         };
         /** @description Saves a search. */
         SearchesCreateSavedSearchRequest: {
@@ -5527,6 +5851,32 @@ export interface components {
             /** @description Whether changes can be saved at all. */
             writable: boolean;
         };
+        /** @description The mail account Culina sends from. */
+        SettingsGetMailResponse: {
+            /** @description Whether mail is switched on. */
+            enabled: boolean;
+            /** @description The SMTP server, or empty. */
+            host: string;
+            /**
+             * Format: int32
+             * @description The SMTP port.
+             */
+            port: number;
+            /** @description `none`, `starttls` or `tls`. */
+            security: string;
+            /** @description Who Culina signs in to the server as, or empty for no sign-in. */
+            username: string;
+            /** @description Whether a password has been entered. Never the password. */
+            passwordConfigured: boolean;
+            /** @description The sender's address, or empty. */
+            fromAddress: string;
+            /** @description The sender's name. */
+            fromName: string;
+            /** @description The public address links in mails point to (`Site__Url`), or null when it is not set and mail cannot be switched on. */
+            siteUrl?: string | null;
+            /** @description Whether mail actually goes out: switched on, complete, and with a public address. */
+            sending: boolean;
+        };
         /** @description Who may create an account on this instance. */
         SettingsGetRegistrationResponse: {
             /** @description Whether anyone may create an account. */
@@ -5832,6 +6182,28 @@ export interface components {
              */
             maxPoolSize: number;
         };
+        /** @description The mail account to send from, all at once. */
+        SettingsUpdateMailRequest: {
+            /** @description Whether mail is switched on. Needs a server, a sender and Culina's public address. */
+            enabled: boolean;
+            /** @description The SMTP server, such as `smtp.example.com`. */
+            host: string;
+            /**
+             * Format: int32
+             * @description The SMTP port, usually 587 for `starttls` and 465 for `tls`.
+             */
+            port: number;
+            /** @description `none`, `starttls` or `tls`. */
+            security: string;
+            /** @description Who to sign in to the server as, or empty for a server that takes mail without signing in. */
+            username: string;
+            /** @description A new password, or null to keep the stored one. An empty string removes it. */
+            password?: string | null;
+            /** @description The sender's address. */
+            fromAddress: string;
+            /** @description The sender's name, as inboxes show it. */
+            fromName: string;
+        };
         /** @description The registration policy to apply. */
         SettingsUpdateRegistrationRequest: {
             /** @description Whether anyone may create an account. */
@@ -6122,6 +6494,16 @@ export interface components {
              * @description How much to buy now, in the line's own unit: a person correcting the sum.
              */
             quantity?: number | null;
+        };
+        /** @description Where to send the link. */
+        SignInLinksCreateRequest: {
+            /** @description The address the account signs in with. */
+            email: string;
+        };
+        /** @description The token from a link Culina mailed. */
+        SignInLinksRedeemRequest: {
+            /** @description What follows `#token=` in the link. */
+            token: string;
         };
         /**
          * @description A failure after the response had already started (a 200 in flight), so it travels as an event on the stream.
@@ -6597,6 +6979,11 @@ export interface components {
              *     redeem an invitation.
              */
             householdId?: string | null;
+            /**
+             * @description Whether the account must confirm its address before it can sign in; a link was mailed to it. False when the
+             *     instance sends no mail, and for the first account.
+             */
+            emailConfirmationRequired?: boolean;
         };
         /** @description What may be changed about your own account. */
         UsersUpdateCurrentRequest: {
@@ -7728,6 +8115,108 @@ export interface operations {
             };
         };
     };
+    getAgentAuthorizationByIdV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                authorizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentAuthorizationsGetByIdResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    decideAgentAuthorizationV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                authorizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentAuthorizationsDecideRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentAuthorizationsDecideResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     createPasswordResetV1: {
         parameters: {
             query?: never;
@@ -7819,6 +8308,170 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createPasswordResetLinkV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetLinksCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createSignInLinkV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignInLinksCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    redeemSignInLinkV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignInLinksRedeemRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionsSignInResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createEmailConfirmationV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailConfirmationsCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionsSignInResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -8602,7 +9255,14 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description An address to mail the invitation to, or null. Needs mail to be set up on the server. */
+                    email?: string | null;
+                };
+            };
+        };
         responses: {
             /** @description Created */
             201: {
@@ -8611,6 +9271,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HouseholdsCreateInvitationResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
             /** @description Unauthorized */
@@ -9173,6 +9842,149 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getMailSettingsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsGetMailResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateMailSettingsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingsUpdateMailRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsGetMailResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    sendMailTestV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -12207,6 +13019,243 @@ export interface operations {
             };
             /** @description Not Found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    listHouseholdProductsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductsProductsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getHouseholdProductV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                gtin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductsProductDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    setHouseholdProductV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                gtin: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductsSetProductRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductsProductDetail"];
+                };
+            };
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductsProductDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    removeHouseholdProductV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                householdId: string;
+                gtin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Failed */
+            412: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Precondition Required */
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };

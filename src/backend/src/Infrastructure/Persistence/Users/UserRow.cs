@@ -14,4 +14,6 @@ internal sealed record UserRow
     public DateTimeOffset CreatedAt { get; init; }
 
     public long Version { get; init; }
+
+    public DateTimeOffset? EmailConfirmedAt { get; init; }
 }

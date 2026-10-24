@@ -20,4 +20,10 @@ public sealed record Response
     /// redeem an invitation.
     /// </summary>
     public Guid? HouseholdId { get; init; }
+
+    /// <summary>
+    /// Whether the account must confirm its address before it can sign in; a link was mailed to it. False when the
+    /// instance sends no mail, and for the first account.
+    /// </summary>
+    public bool EmailConfirmationRequired { get; init; }
 }

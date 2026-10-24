@@ -2,7 +2,7 @@
 // `$service-worker` is declared in service-worker.d.ts; tsconfig.worker.json type-checks the worker
 // because the app's tsconfig excludes it.
 
-import { version } from '$service-worker';
+import { base, version } from '$service-worker';
 import { forgetKitchen } from './lib/features/cooking/timerState';
 import { apiResponse, isApi, policyFor } from './service-worker/apiCache';
 import { assetResponse, precache, shellResponse } from './service-worker/assets';
@@ -16,6 +16,9 @@ import { isShareTarget, shareTargetResponse } from './service-worker/shareTarget
  * sign-in/out (`culina:forget`) and on a 401, and each copy carries an owner (`ownerHeader`) as a backstop.
  * This file is the lifecycle and dispatcher; handlers live in `service-worker/`.
  */
+
+/** Paths outside /api that the server answers itself: OAuth's endpoints and the well-known documents. */
+const serverOwned = [`${base}/oauth/`, `${base}/.well-known/`];
 
 worker.addEventListener('install', (event) => {
   // No skipWaiting: the running app decides when to hand over (see the message handler).
@@ -92,6 +95,11 @@ worker.addEventListener('fetch', (event) => {
   }
 
   if (url.origin !== worker.location.origin) {
+    return;
+  }
+
+  // Answered by the server, never the app: an OAuth client sends the browser to the authorization endpoint.
+  if (serverOwned.some((prefix) => url.pathname.startsWith(prefix))) {
     return;
   }
 
