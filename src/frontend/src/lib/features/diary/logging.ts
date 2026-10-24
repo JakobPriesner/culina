@@ -15,6 +15,40 @@ const failed = (error: AppError): void => {
 };
 
 /**
+ * A whole meal again ("Wie gestern"): every entry written, one toast for all of them, and one Rückgängig that takes
+ * them all back. What did not reach the server is said, and not claimed.
+ */
+export async function logAllAndConfirm(entries: readonly DiaryEntryRequest[]): Promise<void> {
+  const written: DiaryEntry[] = [];
+
+  for (const entry of entries) {
+    const one = await diary.add(entry);
+
+    if (!one.ok) {
+      failed(one.error);
+      break;
+    }
+
+    written.push(one.entry);
+  }
+
+  if (written.length === 0) return;
+
+  toaster.show({
+    message: () => m['diary.repeated']({ count: written.length }),
+    tone: 'success',
+    action: {
+      label: () => m['diary.undo'](),
+      run: () =>
+        void Promise.all(written.map((entry) => diary.remove(entry))).then((failures) => {
+          const failure = failures.find(Boolean);
+          if (failure) failed(failure);
+        })
+    }
+  });
+}
+
+/**
  * Logs something eaten and says so with an undo, from wherever it is said: the diary's sheets, a plan suggestion, or
  * "Als Portion eintragen" after "made it". A failure says why; nothing is claimed that did not reach the server.
  */

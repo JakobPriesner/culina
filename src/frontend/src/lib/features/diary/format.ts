@@ -25,19 +25,47 @@ export function portionsText(portions: number): string {
     : formatNumber(portions, { maximumFractionDigits: 2 });
 }
 
-/** How much of it was eaten: "1½ Portionen", "50 g", "2 Stück · ca. 220 g"; nothing for the person's own figures. */
+/**
+ * How much of it was eaten: "1½ Portionen", "50 g", "2 Stück · ca. 220 g"; the person's own figures say so. Grams not
+ * known are left out rather than written as nought.
+ */
 export function amountText(entry: DiaryEntry): string {
   switch (entry.source) {
     case 'recipe':
       return m['diary.portions']({ count: entry.amount, amount: portionsText(entry.amount) });
-    case 'food':
-      return entry.unit === 'g'
-        ? `${formatNumber(entry.amount)}${nbsp}g`
-        : `${portionsText(entry.amount)}${nbsp}${unitLabel(entry.unit as Unit)} · ${m['nutrition.about']()}${nbsp}${formatNumber(Math.round(entry.grams ?? 0))}${nbsp}g`;
+    case 'food': {
+      if (entry.unit === 'g') return `${formatNumber(entry.amount)}${nbsp}g`;
+
+      const counted = `${portionsText(entry.amount)}${nbsp}${unitLabel(entry.unit as Unit)}`;
+
+      return entry.grams
+        ? `${counted} · ${m['nutrition.about']()}${nbsp}${formatNumber(Math.round(entry.grams))}${nbsp}g`
+        : counted;
+    }
     default:
       return m['diary.typedByYou']();
   }
 }
+
+/** How far a figure can be trusted (docs/food-log-redesign.md §3.4, docs/glossary.md). */
+export type Precision = 'exact' | 'estimated' | 'atLeast';
+
+export const precisionOf = (flags: { atLeast: boolean; estimated: boolean }): Precision =>
+  flags.atLeast ? 'atLeast' : flags.estimated ? 'estimated' : 'exact';
+
+/** The light mark beside a figure; nothing for an exact one. */
+export const precisionMark: Record<Precision, string> = { exact: '', estimated: '≈', atLeast: '≥' };
+
+/** What a screen reader says in place of the mark, which it would read as a symbol's name. */
+export function precisionWord(precision: Precision): string {
+  if (precision === 'atLeast') return m['diary.mark.atLeast']();
+
+  return precision === 'estimated' ? m['diary.mark.estimated']() : '';
+}
+
+/** Energy as a label rounds it, without a qualifier: "1.666". */
+export const kcalNumber = (kcal: number, atLeast = false): string =>
+  labelNumber('energy', { value: kcal, atLeast, estimated: false, mostlyMissing: false });
 
 /** Energy as a label prints it, with "mind." for a lower bound and "ca." for an estimate. */
 export function kcalText(kcal: number, flags: { atLeast: boolean; estimated: boolean }): string {
@@ -73,6 +101,32 @@ export function dayLabel(date: string, today: string): string {
     day: 'numeric',
     month: 'long'
   });
+}
+
+/** The day as the page's large title: "Heute", "Gestern", or its weekday. */
+export function dayTitle(date: string, today: string): string {
+  if (date === today) return m['diary.today']();
+  if (date === addDays(today, -1)) return m['diary.yesterday']();
+
+  return formatDate(new Date(`${date}T12:00:00`), { weekday: 'long' });
+}
+
+/** The date under that title: with its weekday when the title does not already say it. */
+export function dayDateLine(date: string, today: string): string {
+  const named = date === today || date === addDays(today, -1);
+
+  return formatDate(new Date(`${date}T12:00:00`), {
+    weekday: named ? 'long' : undefined,
+    day: 'numeric',
+    month: 'long'
+  });
+}
+
+/** The Monday of the week a date is in. */
+export function mondayOfDate(date: string): string {
+  const day = new Date(`${date}T12:00:00`);
+
+  return addDays(date, -((day.getDay() + 6) % 7));
 }
 
 /** A date `days` after another, both `yyyy-MM-dd`, counted in calendar days. */

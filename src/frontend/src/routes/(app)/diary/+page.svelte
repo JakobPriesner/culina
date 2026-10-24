@@ -1,7 +1,17 @@
 <script lang="ts">
   import { SvelteSet } from 'svelte/reactivity';
 
-  import { Button, EmptyState, ErrorState, IconButton } from '$ds';
+  import {
+    Button,
+    EmptyState,
+    ErrorState,
+    IconButton,
+    ListRow,
+    ListSection,
+    Skeleton,
+    WeekStrip,
+    type StripDay
+  } from '$ds';
   import { session } from '$features/auth/session.svelte';
   import DiaryAddSheet, { type FoodChoice } from '$features/diary/DiaryAddSheet.svelte';
   import DiaryAmountSheet, {
@@ -11,26 +21,40 @@
   import DiaryEntryRow from '$features/diary/DiaryEntryRow.svelte';
   import type { TypedFigures } from '$features/diary/DiaryOwnFigures.svelte';
   import DiarySummary from '$features/diary/DiarySummary.svelte';
+  import Figure from '$features/diary/Figure.svelte';
   import { requestOf, unlogged } from '$features/diary/dayTotals';
-  import { addDays, dayLabel, kcalText, mealLabel } from '$features/diary/format';
-  import { logAndConfirm, removeAndConfirm } from '$features/diary/logging';
+  import {
+    addDays,
+    dayDateLine,
+    dayTitle,
+    mealLabel,
+    mondayOfDate,
+    portionsText
+  } from '$features/diary/format';
+  import {
+    logAllAndConfirm,
+    logAndConfirm,
+    mealByClock,
+    removeAndConfirm
+  } from '$features/diary/logging';
   import { diary } from '$features/diary/stores/diary.svelte';
   import { diarySettings } from '$features/diary/stores/diarySettings.svelte';
+  import { skipped } from '$features/diary/stores/skipped.svelte';
   import { currentDate } from '$features/diary/today.svelte';
   import { diaryMeals, type DiaryEntry, type DiaryMeal } from '$features/diary/types';
   import { upcoming } from '$features/planning/upcoming.svelte';
   import RecipePicker from '$features/recipes/RecipePicker.svelte';
   import type { RecipeSummary } from '$features/recipes/types';
   import { explain } from '$shell/explain';
-  import { m } from '$shell/i18n';
+  import { formatDate, m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
-  import PageHeader from '$shell/PageHeader.svelte';
   import { toaster } from '$shell/toaster.svelte';
 
   /**
-   * A person's food diary, one day as a ruled page (docs/diary-design.md §9.1): what they ate by meal, what it adds up
-   * to, and the plan's meals of today as suggestions that count for nothing until confirmed. Private: a tab for
-   * everyone, whose page offers the switch (with its consent sentence) until someone turns it on.
+   * What one ate, one day at a time (docs/food-log-redesign.md §4): the day as the large title with its week beside it,
+   * one number for the day, then the meals as grouped lists with the plan's meals of today offered as rows to confirm
+   * in one tap. Private: a tab for everyone, whose page offers the switch (with its consent sentence) until someone
+   * turns it on. From 64rem the summary stays beside the meals.
    */
   const householdId = $derived(session.activeHouseholdId);
   const today = $derived(currentDate());
@@ -39,11 +63,10 @@
   let picked = $state<string | null>(null);
   const date = $derived(picked ?? today);
 
-  function go(days: number) {
-    const to = addDays(date, days);
-
+  function show(to: string) {
     picked = to >= today ? null : to;
   }
+
   const day = $derived(diary.day(date));
   const settings = $derived(diarySettings.settings);
 
@@ -63,13 +86,14 @@
     if (failure) toaster.show({ message: () => explain(failure), tone: 'danger' });
   }
 
-  // Two weeks at first, so "what you ate before" has something to offer; then each day as it is shown.
+  // Two weeks at first, so recent foods have something to offer; then each week as the strip shows it.
   let primed = false;
+  const monday = $derived(mondayOfDate(date));
 
   $effect(() => {
     if (!diarySettings.enabled) return;
 
-    const shown = date;
+    const from = monday;
 
     if (!primed) {
       primed = true;
@@ -78,39 +102,55 @@
       return;
     }
 
-    // Today again only when it is not read yet: a new day after midnight.
-    if (shown !== today || !diary.day(shown)) void diary.load(shown);
+    // A week not read yet (the strip moved), or today again after midnight.
+    const to = addDays(from, 6) > today ? today : addDays(from, 6);
+    if (!diary.day(from) || !diary.day(to)) void diary.load(from, to);
   });
 
   $effect(() => {
     if (householdId && diarySettings.enabled) void upcoming.load(householdId);
   });
 
-  /** Today's planned meals not yet logged, by meal: a suggestion, never a count. */
-  const suggestions = $derived(date !== today ? [] : unlogged(upcoming.today, day?.entries ?? []));
+  /** The week around the day shown, as the strip draws it: a dot where something is logged, nothing to come. */
+  const week = $derived<StripDay[]>(
+    Array.from({ length: 7 }, (_, index) => {
+      const id = addDays(monday, index);
+      const at = new Date(`${id}T12:00:00`);
 
-  /** Days with anything logged in the last seven: a count that never resets and never says "lost". */
-  const loggedDays = $derived(
-    Array.from({ length: 7 }, (_, index) => diary.day(addDays(today, -index))).filter(
-      (one) => one && one.entries.length > 0
-    ).length
+      return {
+        id,
+        weekday: formatDate(at, { weekday: 'short' }).replace('.', ''),
+        number: String(at.getDate()),
+        label: formatDate(at, { weekday: 'long', day: 'numeric', month: 'long' }),
+        marked: (diary.day(id)?.entries.length ?? 0) > 0,
+        disabled: id > today
+      };
+    })
+  );
+
+  /** Today's planned meals not yet logged nor skipped, by meal: offered, never counted. */
+  const suggestions = $derived(
+    date !== today
+      ? []
+      : unlogged(upcoming.today, day?.entries ?? []).filter(
+          (meal) => !skipped.has(date, meal.entryId)
+        )
   );
 
   const entriesOf = (meal: DiaryMeal): DiaryEntry[] =>
     (day?.entries ?? []).filter((entry) => entry.meal === meal);
 
-  const subtotal = (entries: readonly DiaryEntry[]): string | null => {
+  /** A meal's energy, with how far to trust it: unknown figures make it a lower bound. */
+  const subtotalOf = (entries: readonly DiaryEntry[]) => {
     const known = entries.filter((entry) => entry.figures.kcal != null);
 
-    if (known.length === 0) return null;
-
-    return kcalText(
-      known.reduce((sum, entry) => sum + (entry.figures.kcal ?? 0), 0),
-      {
-        atLeast: entries.some((entry) => entry.atLeast || entry.figures.kcal == null),
-        estimated: entries.some((entry) => entry.estimated)
-      }
-    );
+    return known.length === 0
+      ? null
+      : {
+          kcal: known.reduce((sum, entry) => sum + (entry.figures.kcal ?? 0), 0),
+          atLeast: entries.some((entry) => entry.atLeast || entry.figures.kcal == null),
+          estimated: entries.some((entry) => entry.estimated)
+        };
   };
 
   // What is being added or changed, and to which meal.
@@ -218,7 +258,7 @@
   /** Planned meals being confirmed, so a second tap does not log the same meal twice. */
   const confirming = new SvelteSet<string>();
 
-  /** A planned meal confirmed as eaten: one portion, at the meal it was planned for. */
+  /** A planned meal confirmed as eaten, in one tap: one portion, at the meal it was planned for. */
   async function eaten(meal: (typeof suggestions)[number]) {
     if (confirming.has(meal.entryId)) return;
 
@@ -232,96 +272,198 @@
     });
     confirming.delete(meal.entryId);
   }
+
+  /** Yesterday's entries at a meal still empty today: offered as one tap, the quickest way to log a usual breakfast. */
+  const yesterdayAt = (meal: DiaryMeal, todays: readonly DiaryEntry[]): DiaryEntry[] =>
+    date !== today || todays.length > 0
+      ? []
+      : (diary.day(addDays(today, -1))?.entries ?? []).filter((entry) => entry.meal === meal);
+
+  const labelsOf = (entries: readonly DiaryEntry[]) =>
+    entries.map((entry) => entry.label).join(', ');
+
+  async function repeat(meal: DiaryMeal, entries: readonly DiaryEntry[]) {
+    busy = true;
+    await logAllAndConfirm(entries.map((entry) => requestOf(entry, date, meal)));
+    busy = false;
+  }
+
+  /** "Übersprungen": the plan stops offering it today; a neutral answer, undone as easily. */
+  function skip(meal: (typeof suggestions)[number]) {
+    skipped.skip(date, meal.entryId, today);
+    toaster.show({
+      message: () => m['diary.planned.skipped']({ title: meal.title }),
+      action: {
+        label: () => m['diary.undo'](),
+        run: () => skipped.unskip(date, meal.entryId, today)
+      }
+    });
+  }
 </script>
 
 <svelte:head><title>{m['diary.title']()}</title></svelte:head>
 
-<Page width="reading">
-  <PageHeader title={m['diary.title']()} eyebrow={dayLabel(date, today)}>
-    {#snippet actions()}
-      <div class="days">
-        <IconButton label={m['diary.dayBefore']()} onclick={() => go(-1)}>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            aria-hidden="true"
-            ><path d="m15 6-6 6 6 6" stroke-linecap="round" stroke-linejoin="round" /></svg
-          >
-        </IconButton>
-        <IconButton label={m['diary.dayAfter']()} disabled={date >= today} onclick={() => go(1)}>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            aria-hidden="true"
-            ><path d="m9 6 6 6-6 6" stroke-linecap="round" stroke-linejoin="round" /></svg
-          >
-        </IconButton>
-      </div>
-    {/snippet}
-  </PageHeader>
+{#snippet plus()}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"
+    ><path d="M12 5v14M5 12h14" stroke-linecap="round" /></svg
+  >
+{/snippet}
 
-  {#if settings && !settings.enabled}
-    <EmptyState title={m['diary.off.title']()} body={m['me.diary.consent']()}>
-      {#snippet action()}
-        <Button variant="primary" loading={switching} onclick={() => void switchOn()}
-          >{m['diary.off.action']()}</Button
-        >
-      {/snippet}
-    </EmptyState>
-  {:else if diary.status === 'failed' && !day}
-    <ErrorState title={m['error.unexpected.title']()} body={m['error.unexpected.body']()}>
-      {#snippet action()}
-        <Button variant="primary" onclick={() => void diary.load(date)}>{m['error.retry']()}</Button
-        >
-      {/snippet}
-    </ErrorState>
-  {:else}
-    <DiarySummary
-      {day}
-      kcalTarget={settings?.kcalTarget ?? null}
-      proteinTarget={settings?.proteinTarget ?? null}
-      headline={settings?.headline === 'remaining' ? 'remaining' : 'eaten'}
-    />
+{#snippet circle()}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"
+    ><circle cx="12" cy="12" r="8.5" /></svg
+  >
+{/snippet}
 
-    {#each diaryMeals as meal (meal)}
-      {@const entries = entriesOf(meal)}
-      {@const planned = suggestions.filter((one) => one.slot === meal)}
-      <section class="meal" aria-labelledby="meal-{meal}">
-        <header class="mealHead">
-          <h2 id="meal-{meal}">{mealLabel[meal]()}</h2>
-          {#if subtotal(entries)}<span class="subtotal">{subtotal(entries)}</span>{/if}
-        </header>
-        <ul class="entries">
-          {#each entries as entry (entry.entryId)}
-            <DiaryEntryRow {entry} onopen={open} />
-          {/each}
-          {#each planned as one (one.entryId)}
-            <li class="suggestion">
-              <span class="what">
-                <span class="label">{one.title}</span>
-                <span class="from">{m['diary.suggestion.fromPlan']()}</span>
-              </span>
-              <Button
+<Page>
+  <div class="log">
+    <div class="aside">
+      <header class="day">
+        <div>
+          <h1>{dayTitle(date, today)}</h1>
+          <p class="date">{dayDateLine(date, today)}</p>
+        </div>
+        <!-- One way in from the top, for the meal the clock suggests; each meal has its own "+" below. -->
+        {#if settings?.enabled}
+          <Button size="sm" onclick={() => add(mealByClock())}>+ {m['diary.log']()}</Button>
+        {/if}
+      </header>
+
+      {#if !settings || settings.enabled}
+        <WeekStrip
+          days={week}
+          selected={date}
+          {today}
+          label={m['diary.week.label']({
+            date: formatDate(new Date(`${monday}T12:00:00`), { day: 'numeric', month: 'long' })
+          })}
+          onselect={show}
+          previousLabel={m['diary.week.previous']()}
+          nextLabel={m['diary.week.next']()}
+          onprevious={() => show(addDays(date, -7))}
+          onnext={() => show(addDays(date, 7))}
+          nextDisabled={monday >= mondayOfDate(today)}
+        />
+      {/if}
+
+      {#if settings?.enabled && !day && diary.status !== 'failed'}
+        <div class="loading-summary" aria-hidden="true">
+          <Skeleton width="10rem" height="2.5rem" shape="block" />
+          <Skeleton width="100%" height="0.375rem" shape="block" />
+          <Skeleton width="14rem" height="1rem" />
+        </div>
+      {:else if settings?.enabled && day}
+        <DiarySummary
+          {day}
+          kcalTarget={settings?.kcalTarget ?? null}
+          proteinTarget={settings?.proteinTarget ?? null}
+          headline={settings?.headline === 'remaining' ? 'remaining' : 'eaten'}
+        />
+      {/if}
+    </div>
+
+    <div class="meals">
+      {#if settings && !settings.enabled}
+        <EmptyState title={m['diary.off.title']()} body={m['me.diary.consent']()}>
+          {#snippet action()}
+            <Button variant="primary" loading={switching} onclick={() => void switchOn()}
+              >{m['diary.off.action']()}</Button
+            >
+          {/snippet}
+        </EmptyState>
+      {:else if diary.status === 'failed' && !day}
+        <ErrorState title={m['error.unexpected.title']()} body={m['error.unexpected.body']()}>
+          {#snippet action()}
+            <Button variant="primary" onclick={() => void diary.load(date)}
+              >{m['error.retry']()}</Button
+            >
+          {/snippet}
+        </ErrorState>
+      {:else}
+        {#if !day}
+          <!-- The day's shape while it arrives: four meals, a row or two each, nothing counted yet. -->
+          <div class="loading" aria-busy="true" aria-label={m['diary.title']()}>
+            {#each [2, 1, 1, 0] as rows, index (index)}
+              <div class="loading-meal">
+                <Skeleton width="6rem" height="1rem" />
+                {#if rows > 0}
+                  <div class="loading-rows">
+                    {#each Array.from({ length: rows }) as _, row (row)}
+                      <Skeleton width="100%" height="3rem" shape="block" />
+                    {/each}
+                  </div>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {:else}
+          {#each diaryMeals as meal (meal)}
+            {@const entries = entriesOf(meal)}
+            {@const planned = suggestions.filter((one) => one.slot === meal)}
+            {@const subtotal = subtotalOf(entries)}
+            {@const before = yesterdayAt(meal, entries)}
+            {#snippet sum()}
+              {#if subtotal}<Figure {...subtotal} />{/if}
+            {/snippet}
+            {#snippet addTo()}
+              <IconButton
+                label={m['diary.add.title']({ meal: mealLabel[meal]() })}
                 size="sm"
-                loading={confirming.has(one.entryId)}
-                onclick={() => void eaten(one)}>{m['diary.suggestion.eaten']()}</Button
+                onclick={() => add(meal)}>{@render plus()}</IconButton
               >
-            </li>
+            {/snippet}
+            {#if entries.length + planned.length + before.length === 0}
+              <ListSection title={mealLabel[meal]()} trailing={sum} action={addTo} />
+            {:else}
+              <ListSection title={mealLabel[meal]()} trailing={sum} action={addTo}>
+                {#each entries as entry (entry.entryId)}
+                  <DiaryEntryRow {entry} onopen={open} />
+                {/each}
+                {#each planned as one (one.entryId)}
+                  <ListRow>
+                    {#snippet leading()}
+                      <IconButton
+                        label={m['diary.planned.log']({ title: one.title })}
+                        disabled={confirming.has(one.entryId)}
+                        onclick={() => void eaten(one)}>{@render circle()}</IconButton
+                      >
+                    {/snippet}
+                    <span class="planned-title">{one.title}</span>
+                    <span class="planned-detail"
+                      >{m['diary.planned']()} · {m['diary.portions']({
+                        count: 1,
+                        amount: portionsText(1)
+                      })}</span
+                    >
+                    {#snippet trailing()}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        label={m['diary.planned.skipLabel']({ title: one.title })}
+                        onclick={() => skip(one)}>{m['diary.planned.skip']()}</Button
+                      >
+                    {/snippet}
+                  </ListRow>
+                {/each}
+                {#if before.length > 0}
+                  <ListRow
+                    tone="action"
+                    label={m['diary.repeat.label']({ items: labelsOf(before) })}
+                    onclick={() => void repeat(meal, before)}
+                  >
+                    <span>{m['diary.repeat']()}</span>
+                    <span class="repeat-detail">{labelsOf(before)}</span>
+                  </ListRow>
+                {/if}
+              </ListSection>
+            {/if}
           {/each}
-        </ul>
-        <Button size="sm" variant="ghost" onclick={() => add(meal)}
-          >+ {m['diary.add.action']()}</Button
-        >
-      </section>
-    {/each}
+        {/if}
 
-    <p class="streak">{m['diary.loggedDays']({ count: loggedDays })}</p>
-    <p class="source">{m['diary.attribution']()}</p>
-  {/if}
+        <p class="source">{m['diary.attribution']()}</p>
+      {/if}
+    </div>
+  </div>
 </Page>
 
 <DiaryAddSheet
@@ -360,73 +502,97 @@
 />
 
 <style>
-  .days {
-    display: flex;
-    gap: var(--space-1);
+  .log {
+    display: grid;
+    gap: var(--space-8);
+    max-inline-size: var(--measure);
+    margin-inline: auto;
   }
 
-  .meal {
-    margin-block-end: var(--space-6);
+  .aside {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
   }
 
-  .mealHead {
+  .day {
     display: flex;
-    align-items: baseline;
+    align-items: flex-start;
     justify-content: space-between;
     gap: var(--space-4);
-    padding-block-end: var(--space-1);
-    border-block-end: 1px solid var(--border-strong);
   }
 
-  h2 {
+  .day h1 {
     margin: 0;
-    font-size: var(--text-base);
-    font-weight: var(--weight-semibold);
+    font-family: var(--font-editorial);
+    font-size: var(--text-3xl);
+    font-weight: var(--weight-regular);
+    letter-spacing: -0.02em;
   }
 
-  .subtotal,
-  .from,
-  .streak,
+  .date {
+    margin: var(--space-1) 0 0;
+    color: var(--text-muted);
+  }
+
+  .meals {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+    min-inline-size: 0;
+  }
+
+  .loading-summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .loading {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .loading-meal,
+  .loading-rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .loading-meal {
+    padding-inline-start: var(--space-4);
+  }
+
+  .planned-title {
+    font-weight: var(--weight-medium);
+  }
+
+  .planned-detail,
+  .repeat-detail,
   .source {
     color: var(--text-muted);
     font-size: var(--text-sm);
   }
 
-  .entries {
-    margin: 0 0 var(--space-2);
-    padding: 0;
-    list-style: none;
-  }
-
-  /* A suggestion is not an entry: dashed, and it counts for nothing until it is confirmed. */
-  .suggestion {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-3);
-    margin-block-start: var(--space-2);
-    padding: var(--space-2) var(--space-3);
-    border: 1px dashed var(--border-strong);
-    border-radius: var(--radius-md);
-  }
-
-  .what {
-    display: flex;
-    flex-direction: column;
-    min-inline-size: 0;
-  }
-
-  .label {
-    font-family: var(--font-editorial);
-    overflow-wrap: anywhere;
-  }
-
-  .streak {
-    margin-block: var(--space-8) var(--space-2);
-  }
-
   .source {
-    margin: 0;
+    margin: var(--space-2) 0 0;
     font-size: var(--text-xs);
+  }
+
+  /* From 64rem the day and its numbers stay beside the meals (docs/food-log-redesign.md §4.2). */
+  @media (min-width: 64rem) {
+    .log {
+      grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
+      align-items: start;
+      gap: var(--space-12);
+      max-inline-size: 64rem;
+    }
+
+    .aside {
+      position: sticky;
+      inset-block-start: calc(var(--header-inset, var(--space-16)) + var(--space-4));
+    }
   }
 </style>

@@ -115,10 +115,10 @@ class DiaryStore {
   }
 
   /**
-   * What this person ate most often in the days read, newest occurrence of each, most frequent first; never ranked
+   * What this person ate most often in the days read, newest occurrence of each, most frequent first (at `meal` above all); never ranked
    * by energy. The quick path: most of what anyone eats, they ate before.
    */
-  recent(limit = 8): DiaryEntry[] {
+  recent(limit = 8, meal?: string): DiaryEntry[] {
     // eslint-disable-next-line svelte/prefer-svelte-reactivity -- Counted and read within one call.
     const seen = new Map<string, { entry: DiaryEntry; count: number }>();
     const newestFirst = [...this.#days.values()]
@@ -128,8 +128,10 @@ class DiaryStore {
     for (const entry of newestFirst) {
       const key = sameThing(entry);
       const known = seen.get(key);
+      // What is eaten at this meal comes first: breakfast's oats before dinner's pasta (a meal's "go-tos").
+      const weight = meal && entry.meal === meal ? 3 : 1;
 
-      seen.set(key, { entry: known?.entry ?? entry, count: (known?.count ?? 0) + 1 });
+      seen.set(key, { entry: known?.entry ?? entry, count: (known?.count ?? 0) + weight });
     }
 
     return [...seen.values()]
