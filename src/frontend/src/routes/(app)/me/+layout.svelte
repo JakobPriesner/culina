@@ -41,7 +41,8 @@
       href: resolve('/(app)/me/ingredients'),
       label: m['me.ingredients'],
       lead: m['me.ingredients.lead']
-    }
+    },
+    { href: resolve('/(app)/me/diary'), label: m['me.diary'], lead: m['me.diary.lead'] }
   ];
 
   // Assistant and server configure the instance, not the person: the administrator gets them as a group of their own

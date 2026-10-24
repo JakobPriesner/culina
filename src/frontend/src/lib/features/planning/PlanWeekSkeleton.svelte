@@ -2,31 +2,36 @@
   import { Skeleton } from '$ds';
   import { m } from '$shell/i18n';
 
-  // 7 days of the week, with typical varying numbers of planned meals
-  const days = [
-    { name: '4rem', num: '1.25rem', meals: 1 },
-    { name: '4.5rem', num: '1.25rem', meals: 2 },
-    { name: '5rem', num: '1.25rem', meals: 1 },
-    { name: '4.5rem', num: '1.25rem', meals: 0 },
-    { name: '3.5rem', num: '1.25rem', meals: 2 },
-    { name: '4.5rem', num: '1.25rem', meals: 1 },
-    { name: '4rem', num: '1.25rem', meals: 0 }
+  /** The days' own layout while they load: the agenda's days, or (on a wide screen) its rows; as many as will show. */
+  let { rows = false, count = 7 }: { rows?: boolean; count?: number } = $props();
+
+  // Typical days, with varying numbers of planned meals.
+  const typical = [
+    { name: '4rem', meals: 1 },
+    { name: '4.5rem', meals: 2 },
+    { name: '5rem', meals: 1 },
+    { name: '4.5rem', meals: 0 },
+    { name: '3.5rem', meals: 2 },
+    { name: '4.5rem', meals: 1 },
+    { name: '4rem', meals: 0 }
   ];
+
+  const days = $derived(typical.slice(0, count));
 </script>
 
-<ol class="week" aria-busy="true" aria-label={m['plan.title']()}>
+<ol class="week" class:rows aria-busy="true" aria-label={m['plan.title']()}>
   {#each days as day, i (i)}
-    <li class="day" aria-hidden="true">
+    <li class="day" class:row={rows} aria-hidden="true">
       <div class="name">
         <Skeleton width={day.name} height="1rem" />
-        <Skeleton width={day.num} height="1rem" />
+        <Skeleton width="3.5rem" height="0.875rem" />
       </div>
 
       {#if day.meals > 0}
         <div class="meals">
           {#each Array.from({ length: day.meals }) as _, mIndex (mIndex)}
             <div class="meal-card">
-              <Skeleton width="var(--space-8)" height="var(--space-8)" shape="block" />
+              <Skeleton width="2.5rem" height="2.5rem" shape="block" />
               <div class="meal-words">
                 <Skeleton width="80%" height="0.875rem" />
                 <Skeleton width="50%" height="0.75rem" />
@@ -35,65 +40,55 @@
           {/each}
         </div>
       {/if}
-
-      <div class="add-button">
-        <Skeleton width="4rem" height="1.75rem" shape="block" />
-      </div>
     </li>
   {/each}
 </ol>
 
 <style>
+  /* The agenda of `PlanWeek` and `PlanDay`, so nothing moves when the days arrive. */
   .week {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-4);
+    display: flex;
+    flex-direction: column;
     margin: 0;
     padding: 0;
     list-style: none;
   }
 
-  @media (min-width: 48rem) {
-    .week {
-      grid-template-columns: repeat(7, minmax(0, 1fr));
-      gap: var(--space-3);
-    }
-  }
-
   .day {
     display: flex;
     flex-direction: column;
-    gap: var(--space-3);
+    gap: var(--space-2);
     min-width: 0;
-    min-height: 12rem;
     padding: var(--space-3);
-    border-radius: var(--radius-lg);
-    background: var(--surface-sunken);
+    border-top: 1px solid var(--border);
+  }
+
+  .day:first-child {
+    border-top-color: transparent;
   }
 
   .name {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: var(--space-2);
-    min-height: 1.5rem;
+    min-height: 1.75rem;
   }
 
   .meals {
     display: flex;
     flex-direction: column;
     gap: var(--space-2);
-    flex: 1;
   }
 
   .meal-card {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
+    gap: var(--space-3);
+    min-height: 3.5rem;
     padding: var(--space-2);
-    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
     background: var(--surface-raised);
-    min-height: var(--control-sm);
   }
 
   .meal-words {
@@ -104,7 +99,26 @@
     min-width: 0;
   }
 
-  .add-button {
-    margin-top: auto;
+  /* As `PlanDay`'s rows: the day in a column, its meals side by side. */
+  .row {
+    display: grid;
+    grid-template-columns: 8rem minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: var(--space-4);
+  }
+
+  .row .name {
+    flex-direction: column;
+    align-items: flex-start;
+    padding-top: var(--space-3);
+  }
+
+  .row .meals {
+    flex-flow: row wrap;
+  }
+
+  .row .meal-card {
+    flex: 1 1 15rem;
+    max-width: 24rem;
   }
 </style>

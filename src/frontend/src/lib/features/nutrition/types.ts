@@ -105,6 +105,9 @@ export interface Nutrition {
 /** A food of the table as the search offers it; the kilocalories per 100 g tell the many foods of one name apart. */
 export interface FoodHit extends Pick<NutritionFood, 'code' | 'nameDe' | 'nameEn' | 'source'> {
   readonly energyKcal: number | null;
+  /** Units it can be counted in besides grams, each with a cited typical weight; a table food's only. */
+  readonly units?:
+    readonly { readonly unit: string; readonly grams: number; readonly source: string }[] | null;
 }
 
 /** What a household can say a name is: a food, nothing to count, or whatever the table says. */

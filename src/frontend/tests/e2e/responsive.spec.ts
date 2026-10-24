@@ -109,7 +109,8 @@ test.describe('responsive production layouts @offline', () => {
                 expect(box.width).toBeGreaterThanOrEqual(Math.min(width * 0.9, 1920) - 2 * 48 - 1);
               } else {
                 expect(columns).toBe(
-                  width < 640 ? 1 : width < 1024 ? 2 : path === '/plan' && width >= 1280 ? 7 : 3
+                  // The plan is an agenda at every width: one column of days (rows from 48rem).
+                  path === '/plan' ? 1 : width < 640 ? 1 : width < 1024 ? 2 : 3
                 );
               }
             }
@@ -128,7 +129,7 @@ test.describe('responsive production layouts @offline', () => {
       await responsiveData(page, 'de');
       await page.goto('/plan');
 
-      const title = page.locator('a[href^="/recipes/"] .name').first();
+      const title = page.locator('.card a.name[href^="/recipes/"]').first();
       await expect(title).toBeVisible();
 
       const measured = await title.evaluate((name) => {
@@ -166,7 +167,7 @@ test.describe('responsive production layouts @offline', () => {
     await expect(page.locator('#g0-ingredient-0-name')).toBeVisible();
     expect((await page.locator('#g0-ingredient-0-name').boundingBox())!.width).toBeGreaterThan(200);
     await page.goto('/plan');
-    await page.getByRole('button', { name: /^Weiter$/i }).click();
+    await page.getByRole('button', { name: /^(Einen Tag|Eine Woche) weiter$/i }).click();
     await expectReflow(page);
     await page
       .getByRole('button', { name: /Hinzufügen/i })
@@ -229,7 +230,9 @@ test.describe('responsive production layouts @offline', () => {
       await expect(page.getByText(/1 schon vergangen/)).toBeVisible();
       await meals.click();
       await expect(page.getByText('Schon vergangen', { exact: true })).toBeVisible();
-      await expect(page.locator('.meals').getByRole('link')).toBeVisible();
+      // The meal's recipe, and its day back in the plan.
+      await expect(page.locator('.meals .meal-name').getByRole('link')).toBeVisible();
+      await expect(page.locator('.meals .date').getByRole('link')).toBeVisible();
       await expectReflow(page);
     });
   }
@@ -265,7 +268,7 @@ test.describe('responsive production layouts @offline', () => {
       await responsiveData(page);
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.goto('/plan');
-      await page.getByRole('button', { name: /^Weiter$/i }).click();
+      await page.getByRole('button', { name: /^(Einen Tag|Eine Woche) weiter$/i }).click();
       await page
         .getByRole('button', { name: /Hinzufügen/i })
         .first()

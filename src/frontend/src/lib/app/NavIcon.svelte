@@ -34,6 +34,10 @@
   {:else if icon === 'plan'}
     <rect x="3" y="5" width="18" height="16" rx="3" />
     <path d="M7 3v4m10-4v4M3 11h18" />
+  {:else if icon === 'diary'}
+    <!-- A notebook with a bound edge: what was eaten, written down. -->
+    <rect x="5" y="3" width="14" height="18" rx="2" />
+    <path d="M9 3v18M12.5 8h3.5M12.5 12h3.5" />
   {:else}
     <!-- A basket. -->
     <path d="M4 8h16l-1.4 10a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7Z" />

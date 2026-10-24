@@ -47,11 +47,11 @@ class UpcomingStore {
   #reads = new LatestRead();
 
   get days(): readonly PlannedDay[] {
-    if (mealPlan.householdId !== this.#householdId || mealPlan.days.length === 0) {
+    if (mealPlan.householdId !== this.#householdId || mealPlan.knownDays.length === 0) {
       return this.#days;
     }
 
-    const edited = new Map(mealPlan.days.map((day) => [day.date, day]));
+    const edited = new Map(mealPlan.knownDays.map((day) => [day.date, day]));
 
     return this.#days.map((day) => edited.get(day.date) ?? day);
   }

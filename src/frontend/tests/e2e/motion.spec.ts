@@ -107,8 +107,8 @@ test.describe('polished motion @offline', () => {
     await page.goto('/recipes');
     await page.getByRole('link', { name: 'Cookbooks', exact: true }).click();
     await expect(page).toHaveURL('/cookbooks');
-    await page.getByRole('link', { name: 'Shopping', exact: true }).click();
-    await expect(page).toHaveURL('/shopping');
+    await page.getByRole('link', { name: 'Week', exact: true }).click();
+    await expect(page).toHaveURL('/plan');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     expect(
       await page.evaluate(() => (window as unknown as { viewTransitions: number }).viewTransitions)

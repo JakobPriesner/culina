@@ -13,7 +13,10 @@
   import { formatDate, m } from '$shell/i18n';
   import { amountOf } from './shoppingAmount';
   import { nameOf, sectionOrder, type Section } from './sections';
-  import type { ShoppingItem } from './stores/shopping.svelte';
+  import { planDayHref } from '$features/planning/weekDates';
+  import { provenance } from '$features/planning/provenance.svelte';
+  import { lineMarks } from './lineMarks.svelte';
+  import { shopping, type ShoppingItem } from './stores/shopping.svelte';
 
   /**
    * One line, read while walking: the whole row is the tick, and the amount is rounded here, last (the server keeps the exact sum so added recipes do not compound error).
@@ -69,7 +72,36 @@
   let showingSources = $state(false);
 
   const amount = $derived(amountOf(item.quantity, item.unit));
+  /** Just put here by a plan or a recipe: a brief tint says so where the list is on screen. */
+  const arrived = $derived(shopping.arrived.includes(item.itemId));
+  /** For the planned meal whose "Auf der Liste" led here. */
+  const marked = $derived(
+    lineMarks.entryId !== null &&
+      (item.sources ?? []).some((source) => source.planEntryId === lineMarks.entryId)
+  );
   const sources = $derived(item.sources ?? []);
+
+  /** The meal pointed at in the week beside, if this line is for it: lit, and its share said where it is merged. */
+  const pointedSource = $derived(
+    provenance.meal === null
+      ? undefined
+      : sources.find((source) => source.planEntryId === provenance.meal)
+  );
+  const share = $derived(
+    pointedSource && sources.length > 1 ? amountOf(pointedSource.quantity, pointedSource.unit) : ''
+  );
+  const plannedIn = $derived(
+    sources.flatMap((source) => (source.planEntryId ? [source.planEntryId] : []))
+  );
+
+  function point(event: PointerEvent | FocusEvent, on: boolean) {
+    if ('pointerType' in event && event.pointerType !== 'mouse') return;
+    if (!on && event instanceof FocusEvent && event.currentTarget instanceof Element) {
+      if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))
+        return;
+    }
+    provenance.pointLine(on ? plannedIn : []);
+  }
   /** What no recipe accounts for (typed by hand, or left from elsewhere), so the sources add up to the line. */
   const other = $derived(item.otherQuantity ? amountOf(item.otherQuantity, item.unit) : '');
 
@@ -99,7 +131,17 @@
   }
 </script>
 
-<li class="row" class:bought={item.isChecked}>
+<li
+  class="row"
+  class:bought={item.isChecked}
+  class:arrived
+  class:marked
+  class:related={pointedSource !== undefined}
+  onpointerenter={(event) => point(event, true)}
+  onpointerleave={(event) => point(event, false)}
+  onfocusin={(event) => point(event, true)}
+  onfocusout={(event) => point(event, false)}
+>
   <div class="check">
     <Checkbox
       checked={item.isChecked}
@@ -111,7 +153,9 @@
       }}
     />
   </div>
-  {#if amount}<span class="amount" id="shopping-amount-{item.itemId}">{amount}</span>{/if}
+  {#if amount}<span class="amount" id="shopping-amount-{item.itemId}"
+      >{share ? m['shopping.share']({ part: share, whole: amount }) : amount}</span
+    >{/if}
   <div class="actions">
     <ActionMenu wrap>
       {#snippet trigger({ popovertarget })}
@@ -218,9 +262,12 @@
           {#if amountOf(source.quantity, source.unit)}<span class="source-amount"
               >{amountOf(source.quantity, source.unit)}</span
             >{/if}
-          {#if source.plannedDate}<span class="source-plan"
-              >{plannedFor(source.plannedDate, source.plannedSlot)}</span
+          <!-- The way back from the list: the plan at that day. -->
+          <!-- eslint-disable svelte/no-navigation-without-resolve -- planDayHref resolves the route; only the day is appended. -->
+          {#if source.plannedDate}<a class="source-plan" href={planDayHref(source.plannedDate)}
+              >{plannedFor(source.plannedDate, source.plannedSlot)}</a
             >{/if}
+          <!-- eslint-enable svelte/no-navigation-without-resolve -->
         </li>
       {/each}
       {#if other}
@@ -242,6 +289,31 @@
     min-height: var(--control-lg);
     border-bottom: 1px solid var(--border);
     transition: background-color var(--duration-fast) var(--ease-out);
+  }
+  /* Asked for from the week: the meal's lines, ringed where they stand. */
+  /* For the meal pointed at in the week beside. */
+  .related {
+    background: var(--surface-accent-subtle);
+  }
+  .marked {
+    box-shadow: inset 3px 0 0 var(--accent);
+    background: var(--surface-accent-subtle);
+  }
+  .arrived {
+    animation: arrive 2.4s var(--ease-out);
+  }
+  @keyframes arrive {
+    from,
+    40% {
+      background: var(--surface-accent-subtle);
+    }
+  }
+  /* Still said, without the fade. */
+  @media (prefers-reduced-motion: reduce) {
+    .arrived {
+      animation: none;
+      background: var(--surface-accent-subtle);
+    }
   }
   @media (hover: hover) {
     .row:hover {
@@ -356,6 +428,12 @@
     font-variant-numeric: tabular-nums;
   }
   .source-plan {
-    color: var(--text-subtle);
+    color: var(--text-muted);
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 0.2em;
+  }
+  .source-plan:hover {
+    color: var(--text);
   }
 </style>

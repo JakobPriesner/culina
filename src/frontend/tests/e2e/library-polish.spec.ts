@@ -156,7 +156,7 @@ test.describe('library refinement @offline', () => {
       ['Recipes', '/'],
       ['Cookbooks', '/cookbooks'],
       ['Week', '/plan'],
-      ['Shopping', '/shopping']
+      ['Diary', '/diary']
     ] as const;
     await expect(navigation.getByRole('link')).toHaveCount(4);
     await expect(navigation.getByRole('button')).toHaveCount(0);
@@ -169,7 +169,7 @@ test.describe('library refinement @offline', () => {
       await expect(navigation.locator('[aria-current="page"]')).toHaveCount(1);
       await expect(page.getByRole('dialog')).not.toBeVisible();
     }
-    // Back from the last destination, Shopping, is the one before it.
+    // Back from the last destination, Diary, is the one before it.
     await page.goBack();
     await expect(page).toHaveURL(/\/plan$/);
     await expect(navigation.getByRole('link', { name: 'Week', exact: true })).toHaveAttribute(

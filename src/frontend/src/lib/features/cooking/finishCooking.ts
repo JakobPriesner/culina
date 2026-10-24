@@ -1,3 +1,4 @@
+import { offerPortion, takeBackPortion } from '$features/diary/logging';
 import { upcoming } from '$features/planning/upcoming.svelte';
 import { haptics } from '$shell/haptics';
 import { m } from '$shell/i18n';
@@ -36,6 +37,11 @@ export async function finishCooking(
     void upcoming.load(householdId);
   }
 
+  // For someone who keeps a food diary: their portion of it, one more tap away, from cook mode or "made it" alike.
+  if (recorded) {
+    offerPortion(recipeId, householdId, recorded.entryId);
+  }
+
   return { closed, recorded };
 }
 
@@ -71,6 +77,7 @@ export async function madeIt(
 
 async function undoMadeIt(recipeId: string, entryId: string, householdId: string | null) {
   await cookLog.undo(recipeId, entryId);
+  await takeBackPortion(entryId);
 
   if (householdId) {
     void upcoming.load(householdId);

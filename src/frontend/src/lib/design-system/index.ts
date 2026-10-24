@@ -10,6 +10,7 @@ export { default as Tabs, type Tab } from './containment/Tabs.svelte';
 
 export { default as Avatar } from './display/Avatar.svelte';
 export { default as Badge } from './display/Badge.svelte';
+export { default as Band } from './display/Band.svelte';
 export { default as Chevron } from './display/Chevron.svelte';
 export { default as Icon } from './display/Icon.svelte';
 export { default as Image } from './display/Image.svelte';

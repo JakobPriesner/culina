@@ -6,6 +6,7 @@
   import { Button, ErrorState } from '$ds';
   import { session } from '$features/auth/session.svelte';
   import { cooking } from '$features/cooking/stores/cooking.svelte';
+  import { diarySettings } from '$features/diary/stores/diarySettings.svelte';
   import AppShell from '$shell/AppShell.svelte';
   import { m } from '$shell/i18n';
   import Olli from '$shell/olli/Olli.svelte';
@@ -25,6 +26,8 @@
   onMount(() => {
     if (!unreachable) {
       void cooking.resume();
+      // Whether this person keeps a diary decides whether its line under Today and the portion offer appear.
+      void diarySettings.load();
     }
   });
 

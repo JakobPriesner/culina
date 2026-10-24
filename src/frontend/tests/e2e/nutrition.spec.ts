@@ -430,7 +430,12 @@ test.describe('nutrition on a recipe @offline', () => {
       page
     }) => {
       await responsiveData(page, 'de', { nutritionLines: true });
+      // The whole week, its days gone unfolded: the fixture plans every day.
+      await page.addInitScript(() => localStorage.setItem('culina.plan.view', 'week'));
       await page.goto('/plan');
+      const earlier = page.getByRole('button', { name: /Früher diese Woche/ });
+      await expect(days(page).first()).toBeVisible();
+      if ((await earlier.count()) > 0) await earlier.click();
 
       await expect(days(page)).toHaveCount(7);
       await expect(days(page).first()).toHaveText(/^mind\.\s520\skcal\spro\sPortion$/);

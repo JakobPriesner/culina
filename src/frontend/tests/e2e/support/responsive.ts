@@ -593,6 +593,9 @@ export async function responsiveData(
         measurementSystem: 'metric',
         version: 1
       });
+    // The food diary is off unless a spec switches it on with its own route (tests/e2e/diary.spec.ts).
+    if (path === '/users/me/settings/diary')
+      return reply({ enabled: false, currentConsentVersion: 1, headline: 'eaten', version: 0 });
     if (path === '/registration/policy')
       return reply({ openRegistration: true, requireInvitation: false, hasAccounts: true });
     // Asked before sign-in and register, which redirect to setup until an admin exists.
@@ -818,7 +821,15 @@ export async function openShoppingFromCooking(page: Page) {
   if ((await nav.count()) === 0) {
     await page.getByRole('link', { name: 'Back to recipe', exact: true }).click();
   }
-  await nav.getByRole('link', { name: /shopping/i }).click();
+  // Woche holds the list: its List view on a phone, the pane beside the week from 80rem.
+  await nav.getByRole('link', { name: 'Week', exact: true }).click();
+  const list = page.getByRole('group', { name: 'Week' }).getByRole('button', { name: 'List' });
+  const pane = page.getByRole('complementary', { name: 'Shopping' });
+  await expect(list.or(pane).first()).toBeVisible();
+  if (await list.isVisible()) {
+    await list.click();
+    await expect(page).toHaveURL(/\/shopping$/);
+  }
 }
 
 /** No word of any element's text is split across lines. */
