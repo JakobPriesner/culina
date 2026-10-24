@@ -57,4 +57,7 @@ internal static class Tags
     internal const string Searches = "Searches";
 
     internal const string LogRecords = "LogRecords";
+
+    /// <summary>Apps asking, through OAuth, to connect an AI agent to someone's account.</summary>
+    internal const string AgentAuthorizations = "AgentAuthorizations";
 }

@@ -29,6 +29,10 @@ public class AgentOperationsTests(PostgresFixture postgres)
         "createPasswordResetV1",
         "issueRecoveryCodeV1",
 
+        // Approving apps that connect agents: an agent must not let more agents in.
+        "getAgentAuthorizationByIdV1",
+        "decideAgentAuthorizationV1",
+
         // A device's push registrations.
         "getPushKeyV1",
         "registerPushV1",

@@ -739,6 +739,142 @@
         }
       }
     },
+    "/api/v1/agent-authorizations/{authorizationId}": {
+      "get": {
+        "tags": [
+          "AgentAuthorizations"
+        ],
+        "summary": "Read a request to connect an AI agent",
+        "description": "The app asking, through OAuth, to connect an AI agent to the caller's account, and where it sends the browser back to. Only while it waits for an answer; afterwards, or once expired, agent_authorizations.not_found.",
+        "operationId": "getAgentAuthorizationByIdV1",
+        "parameters": [
+          {
+            "name": "authorizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentAuthorizationsGetByIdResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agent-authorizations/{authorizationId}/decision": {
+      "put": {
+        "tags": [
+          "AgentAuthorizations"
+        ],
+        "summary": "Answer a request to connect an AI agent",
+        "description": "Approves or denies the request. Answers with the app's return address, carrying the authorization code or error=access_denied, which the browser navigates to. The code becomes an agent session of the caller's, which reaches only the MCP server and is listed and revoked with the other sessions.",
+        "operationId": "decideAgentAuthorizationV1",
+        "parameters": [
+          {
+            "name": "authorizationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentAuthorizationsDecideRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentAuthorizationsDecideResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/password-resets": {
       "post": {
         "tags": [
@@ -10287,6 +10423,82 @@
   },
   "components": {
     "schemas": {
+      "AgentAuthorizationsDecideRequest": {
+        "required": [
+          "approved"
+        ],
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean",
+            "description": "True to let the app's agent into the caller's account, false to refuse."
+          }
+        },
+        "description": "The caller's answer to an app asking to connect an AI agent."
+      },
+      "AgentAuthorizationsDecideResponse": {
+        "required": [
+          "approved",
+          "redirectUri"
+        ],
+        "type": "object",
+        "properties": {
+          "approved": {
+            "type": "boolean",
+            "description": "Whether the app was let in."
+          },
+          "redirectUri": {
+            "type": "string",
+            "description": "The app's return address, carrying the authorization code or `error=access_denied`; navigate to it."
+          }
+        },
+        "description": "Where the browser goes now that the request is answered."
+      },
+      "AgentAuthorizationsGetByIdResponse": {
+        "required": [
+          "authorizationId",
+          "clientId",
+          "clientName",
+          "redirectHost",
+          "redirectsToThisComputer",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "authorizationId": {
+            "type": "string",
+            "description": "The request's id, for answering it.",
+            "format": "uuid"
+          },
+          "clientId": {
+            "type": "string",
+            "description": "The app's OAuth `client_id`: the address of its metadata document, or the id it registered with."
+          },
+          "clientName": {
+            "type": "string",
+            "description": "What the app calls itself."
+          },
+          "verifiedHost": {
+            "type": "string",
+            "description": "The host the app's metadata document came from, which vouches for its name; null when nothing does (the app registered itself).",
+            "nullable": true
+          },
+          "redirectHost": {
+            "type": "string",
+            "description": "The host the browser is sent back to, with the code."
+          },
+          "redirectsToThisComputer": {
+            "type": "boolean",
+            "description": "Whether that is this computer (a loopback address), which any program on it can listen on."
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "Until when the request can be answered.",
+            "format": "date-time"
+          }
+        },
+        "description": "An app asking to connect an AI agent to the caller's account, as the consent screen shows it."
+      },
       "ArchiveRestored": {
         "required": [
           "restored",
@@ -17843,6 +18055,9 @@
     },
     {
       "name": "Sessions"
+    },
+    {
+      "name": "AgentAuthorizations"
     },
     {
       "name": "PasswordResets"

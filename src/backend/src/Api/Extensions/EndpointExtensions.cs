@@ -1,4 +1,5 @@
 using Api.Endpoints;
+using Api.Endpoints.AgentAuthorizations;
 using Api.Endpoints.Cookbooks;
 using Api.Endpoints.CookSessions;
 using Api.Endpoints.Households;
@@ -40,6 +41,7 @@ internal static class EndpointExtensions
             .AddUsersEndpoints()
             .AddPushEndpoints()
             .AddSessionsEndpoints()
+            .AddAgentAuthorizationsEndpoints()
             .AddPasswordResetsEndpoints()
             .AddRecoveryCodesEndpoints()
             .AddHouseholdsEndpoints()

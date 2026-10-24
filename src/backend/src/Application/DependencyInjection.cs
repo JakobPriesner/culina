@@ -1,4 +1,10 @@
 using Application.Abstractions.Messaging;
+using Application.AgentAuthorizations;
+using Application.AgentAuthorizations.Decide;
+using Application.AgentAuthorizations.GetById;
+using Application.AgentAuthorizations.Redeem;
+using Application.AgentAuthorizations.Register;
+using Application.AgentAuthorizations.Start;
 using Application.Archive;
 using Application.Assistance;
 using Application.Cookbooks;
@@ -64,6 +70,7 @@ using Application.Recipes.Update;
 using Application.RecoveryCodes.Issue;
 using Application.Registration.GetPolicy;
 using Application.Searches;
+using Application.Sessions;
 using Application.Sessions.GetAll;
 using Application.Sessions.Revoke;
 using Application.Sessions.SignIn;
@@ -152,7 +159,19 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<RevokeSessionCommand>, RevokeSessionCommandHandler>()
             .AddScoped<IQueryHandler<GetSessionsQuery, Contracts.Sessions.GetAll.Response>,
                 GetSessionsQueryHandler>()
-            .AddScoped<SignInDependencies>()
+            .AddScoped<SessionStarter>()
+
+            // Connecting AI agents through OAuth
+            .AddScoped<ClientRegistrations>()
+            .AddScoped<ICommandHandler<RegisterAgentClientCommand, RegisteredAgentClient>, RegisterAgentClientCommandHandler>()
+            .AddScoped<ICommandHandler<StartAgentAuthorizationCommand, AuthorizationStep>,
+                StartAgentAuthorizationCommandHandler>()
+            .AddScoped<IQueryHandler<GetAgentAuthorizationByIdQuery, Contracts.AgentAuthorizations.GetById.Response>,
+                GetAgentAuthorizationByIdQueryHandler>()
+            .AddScoped<ICommandHandler<DecideAgentAuthorizationCommand, Contracts.AgentAuthorizations.Decide.Response>,
+                DecideAgentAuthorizationCommandHandler>()
+            .AddScoped<ICommandHandler<RedeemAuthorizationCodeCommand, AgentAccessToken>,
+                RedeemAuthorizationCodeCommandHandler>()
 
             // Log records
             .AddScoped<ICommandHandler<CreateLogRecordsCommand>, CreateLogRecordsCommandHandler>()
