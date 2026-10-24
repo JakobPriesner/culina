@@ -59,15 +59,24 @@
     });
   }
 
-  // Back through the switch: the view opens where it was left, not at its top (or, for the week, at today).
+  // Back through the switch: the view opens where it was left, not at its top (or, for the week, at today). The page
+  // may still be growing as its days arrive, which caps a scroll short of the place, so it tries again for a moment.
   onMount(() => {
     const y = woche.arrive(view);
     if (y === null) return;
 
-    requestAnimationFrame(() => {
+    let frames = 0;
+    const land = () => {
       window.scrollTo({ top: y });
-      woche.arrived();
-    });
+
+      if (Math.round(window.scrollY) < y && frames++ < 30) {
+        requestAnimationFrame(land);
+      } else {
+        woche.arrived();
+      }
+    };
+
+    requestAnimationFrame(land);
   });
 </script>
 
