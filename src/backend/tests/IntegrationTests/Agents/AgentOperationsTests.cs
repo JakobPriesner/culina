@@ -29,6 +29,16 @@ public class AgentOperationsTests(PostgresFixture postgres)
         "createPasswordResetV1",
         "issueRecoveryCodeV1",
 
+        // The food diary is personal health data: a person could share it through an agent without meaning to
+        // (docs/diary-design.md §0, decision 5).
+        "getDiarySettingsV1",
+        "updateDiarySettingsV1",
+        "getDiaryV1",
+        "addDiaryEntryV1",
+        "updateDiaryEntryV1",
+        "removeDiaryEntryV1",
+        "eraseDiaryV1",
+
         // A device's push registrations.
         "getPushKeyV1",
         "registerPushV1",

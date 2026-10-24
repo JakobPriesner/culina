@@ -2,6 +2,7 @@ using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Telemetry;
 using Contracts.Nutrition;
+using Domain.Nutrition;
 using Domain.Shared;
 
 namespace Application.Nutrition;
@@ -29,7 +30,12 @@ internal sealed class GetFoodsQueryHandler(IFoodTable foods) : IQueryHandler<Get
                         food.Code,
                         food.NameDe,
                         food.NameEn,
-                        food.Per100Grams.EnergyKcal))
+                        food.Per100Grams.EnergyKcal,
+                        [
+                            .. TypicalWeights
+                                .UnitsOf(food.Code)
+                                .Select(unit => new FoodUnit(unit.UnitKey, unit.Grams, unit.Source))
+                        ]))
             ]
         };
 

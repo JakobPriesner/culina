@@ -116,6 +116,98 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/users/me/settings/diary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read your diary settings
+         * @description Off until you switch it on. currentConsentVersion is the wording switching on agrees to; consentedAt and consentVersion record your last agreement.
+         */
+        get: operations["getDiarySettingsV1"];
+        /**
+         * Change your diary settings
+         * @description Replaces every value. Switching on needs consentVersion (the currentConsentVersion you were shown) and records your agreement. Switching off keeps your entries hidden, or deletes them with eraseEntries. No If-Match: one person's own settings, with no second writer.
+         */
+        put: operations["updateDiarySettingsV1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/me/diary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read days of your diary
+         * @description Every day from `from` to `to` (inclusive, at most 62 days; `to` defaults to `from`), logged or not, with each day's entries and totals. 403 diary.disabled while the diary is switched off.
+         */
+        get: operations["getDiaryV1"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete your whole diary
+         * @description Every entry, switched on or off; the settings stay. The client asks for a typed confirmation first, the one place it does not offer an undo instead.
+         */
+        delete: operations["eraseDiaryV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/me/diary/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Log something you ate
+         * @description A recipe in portions, a food in grams or a typical unit, or your own typed figures. The server looks up and keeps the figures, marks a lower bound (atLeast) or an estimate, and never takes figures from the client for a recipe or a food.
+         */
+        post: operations["addDiaryEntryV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/users/me/diary/entries/{entryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a diary entry
+         * @description The undo in the client logs the entry again; nothing is kept here.
+         */
+        delete: operations["removeDiaryEntryV1"];
+        options?: never;
+        head?: never;
+        /**
+         * Change a diary entry
+         * @description A new day or meal moves the entry and keeps its figures; a new amount looks them up again. Typed entries have no amount to change. No If-Match: one person's own diary.
+         */
+        patch: operations["updateDiaryEntryV1"];
+        trace?: never;
+    };
     "/api/v1/push/key": {
         parameters: {
             query?: never;
@@ -3379,6 +3471,23 @@ export interface components {
              * @description Kilocalories per 100 g; null when the table has none.
              */
             energyKcal: number | null;
+            /**
+             * @description The units it can be counted in besides grams, each with a cited typical weight: an amount in one of these is an
+             *     estimate. Absent or empty when there are none.
+             */
+            units?: components["schemas"]["NutritionFoodUnit"][] | null;
+        };
+        /** @description A unit a food can be counted in, by a cited typical weight. */
+        NutritionFoodUnit: {
+            /** @description The unit key: `piece`, `slice`, `tbsp` and so on. */
+            unit: string;
+            /**
+             * Format: double
+             * @description What one of it typically weighs.
+             */
+            grams: number;
+            /** @description Where that weight comes from, written as a citation. */
+            source: string;
         };
         /** @description Foods that fit what was typed. */
         NutritionFoodsResponse: {
@@ -6105,6 +6214,76 @@ export interface components {
             /** @description The recipes that were on screen, at most as many as one set can hold. */
             recipeIds: string[];
         };
+        /**
+         * @description Something a person ate. Say exactly one of: a recipe (`recipeId`, with `portions`), a food (`foodCode`,
+         *     with `amount` and `unit`), or typed figures (`label` and `kcal`). The server looks figures up;
+         *     for a recipe or a food the client never sends them.
+         */
+        UsersAddDiaryEntryRequest: {
+            /**
+             * Format: date
+             * @description The day, `yyyy-MM-dd`.
+             */
+            date: string;
+            /** @description `breakfast`, `lunch`, `dinner` or `snack`. */
+            meal: string;
+            /**
+             * Format: uuid
+             * @description A recipe, eaten in portions (or pieces, for a recipe that makes pieces).
+             */
+            recipeId?: string | null;
+            /**
+             * Format: double
+             * @description How many portions of the recipe; defaults to one.
+             */
+            portions?: number | null;
+            /**
+             * Format: uuid
+             * @description The household whose recipe or own food it is: for an inherited recipe, the kitchen it was eaten in; for a
+             *     household's own food (`h:` code), required.
+             */
+            householdId?: string | null;
+            /**
+             * Format: uuid
+             * @description The "made it" this portion comes from, so undoing it can offer to take the portion too.
+             */
+            cookLogEntryId?: string | null;
+            /** @description A food: a BLS code, or `h:` and a household food's id. */
+            foodCode?: string | null;
+            /**
+             * Format: double
+             * @description How much of the food, in `unit`.
+             */
+            amount?: number | null;
+            /** @description `g` (the default), or a typical unit the food has (`piece`, `slice`…, see `GET /foods`). */
+            unit?: string | null;
+            /** @description For typed figures: what it was. */
+            label?: string | null;
+            /**
+             * Format: double
+             * @description For typed figures: kilocalories, required.
+             */
+            kcal?: number | null;
+            /**
+             * Format: double
+             * @description For typed figures: protein in grams, if known.
+             */
+            protein?: number | null;
+            /**
+             * Format: double
+             * @description For typed figures: carbohydrate in grams, if known.
+             */
+            carbohydrate?: number | null;
+            /**
+             * Format: double
+             * @description For typed figures: fat in grams, if known.
+             */
+            fat?: number | null;
+        };
+        /** @description The entry as it was logged, with the figures the server looked up. */
+        UsersAddDiaryEntryResponse: {
+            entry: components["schemas"]["UsersDiaryEntryDetail"];
+        };
         /** @description A new password, and the current one to prove it is you. */
         UsersChangePasswordRequest: {
             /** @description The password the account has now. */
@@ -6129,6 +6308,124 @@ export interface components {
              * @description When the set was made.
              */
             createdAt: string;
+        };
+        /** @description One day of a diary: its entries and what they add up to. */
+        UsersDiaryDay: {
+            /**
+             * Format: date
+             * @description The day.
+             */
+            date: string;
+            /** @description The day's entries, by meal and then in the order they were logged. */
+            entries: components["schemas"]["UsersDiaryEntryDetail"][];
+            totals: components["schemas"]["UsersDiaryFiguresDetail"];
+            /** @description Some entry is a lower bound, so the day is one too. */
+            atLeast: boolean;
+            /** @description Some entry is an estimate, so the day is one too. */
+            estimated: boolean;
+            /**
+             * Format: double
+             * @description The kilocalories that come from figures the person typed, for "davon … von dir eingetragen".
+             */
+            typedKcal: number;
+        };
+        /** @description One thing a person ate, with the figures it was logged with. */
+        UsersDiaryEntryDetail: {
+            /**
+             * Format: uuid
+             * @description The entry's id.
+             */
+            entryId: string;
+            /**
+             * Format: date
+             * @description The day, `yyyy-MM-dd`.
+             */
+            date: string;
+            /** @description `breakfast`, `lunch`, `dinner` or `snack`. */
+            meal: string;
+            /** @description `recipe`, `food` (the table or a household's own) or `typed` (the person's own figures). */
+            source: string;
+            /** @description The name as it was when logged. */
+            label: string;
+            /**
+             * Format: double
+             * @description How much: portions of a recipe, or an amount of a food in `unit`.
+             */
+            amount: number;
+            /** @description `portion`, `g`, or a typical unit key such as `piece` or `slice`. */
+            unit: string;
+            /**
+             * Format: double
+             * @description The grams the figures were computed from, for a food.
+             */
+            grams?: number | null;
+            figures: components["schemas"]["UsersDiaryFiguresDetail"];
+            /** @description Something was not counted, so the figures are a lower bound ("mind."). */
+            atLeast: boolean;
+            /** @description A cited typical weight was used, so the figures are an estimate ("≈"). */
+            estimated: boolean;
+            /** @description What an estimate rests on: the typical weight's citation. */
+            basis?: string | null;
+            /**
+             * Format: uuid
+             * @description The recipe, for a recipe entry; it may have been deleted since.
+             */
+            recipeId?: string | null;
+            /**
+             * Format: uuid
+             * @description The household whose recipe or own food it was.
+             */
+            householdId?: string | null;
+            /** @description The food's code, for a food entry: a BLS code or `h:` and a household food's id. */
+            foodCode?: string | null;
+            /**
+             * Format: uuid
+             * @description The "made it" this portion was logged from.
+             */
+            cookLogEntryId?: string | null;
+            /**
+             * Format: int64
+             * @description The entry's version.
+             */
+            version: number;
+        };
+        /** @description Figures of an entry or a day; null is unknown, never zero. */
+        UsersDiaryFiguresDetail: {
+            /**
+             * Format: double
+             * @description Energy in kilocalories.
+             */
+            kcal?: number | null;
+            /**
+             * Format: double
+             * @description Protein in grams.
+             */
+            protein?: number | null;
+            /**
+             * Format: double
+             * @description Carbohydrate in grams.
+             */
+            carbohydrate?: number | null;
+            /**
+             * Format: double
+             * @description Fat in grams.
+             */
+            fat?: number | null;
+            /**
+             * Format: double
+             * @description Saturated fat in grams.
+             */
+            saturatedFat?: number | null;
+            /**
+             * Format: double
+             * @description Sugars in grams.
+             */
+            sugars?: number | null;
+            /**
+             * Format: double
+             * @description Salt in grams.
+             */
+            salt?: number | null;
         };
         /** @description Which assistant capabilities are switched on. */
         UsersGetCurrentAssistanceAvailability: {
@@ -6194,6 +6491,48 @@ export interface components {
             /**
              * Format: int64
              * @description The entity version, for If-Match on an update.
+             */
+            version: number;
+        };
+        /** @description A range of a person's diary, one entry per day whether or not anything was logged. */
+        UsersGetDiaryResponse: {
+            /** @description The days from the first to the last asked for, oldest first. */
+            days: components["schemas"]["UsersDiaryDay"][];
+        };
+        /** @description Whether you keep a food diary, what you agreed to, and your own targets. */
+        UsersGetDiarySettingsResponse: {
+            /** @description Whether the diary is switched on. */
+            enabled: boolean;
+            /**
+             * Format: date-time
+             * @description When you last agreed, by switching it on.
+             */
+            consentedAt?: string | null;
+            /**
+             * Format: int32
+             * @description Which wording you agreed to.
+             */
+            consentVersion?: number | null;
+            /**
+             * Format: int32
+             * @description The wording switching on agrees to now; send it as `consentVersion` when switching on.
+             */
+            currentConsentVersion: number;
+            /**
+             * Format: int32
+             * @description Your daily kcal target, if you set one.
+             */
+            kcalTarget?: number | null;
+            /**
+             * Format: int32
+             * @description Your daily protein target in grams, if you set one.
+             */
+            proteinTarget?: number | null;
+            /** @description `eaten` or `remaining`: what the day's headline shows. */
+            headline: string;
+            /**
+             * Format: int64
+             * @description The settings' version.
              */
             version: number;
         };
@@ -6276,6 +6615,120 @@ export interface components {
             /**
              * Format: int64
              * @description The new entity version, so the client needs no follow-up read.
+             */
+            version: number;
+        };
+        /**
+         * @description A change to an entry. A new day or meal moves it and keeps its figures; a new amount (portions of a recipe, or an
+         *     amount and unit of a food) looks the figures up again. Left out, a field stays as it is. An entry of the person's
+         *     own figures is corrected by sending them again: a name or kilocalories left out stay, a macro left out becomes
+         *     unknown.
+         */
+        UsersUpdateDiaryEntryRequest: {
+            /**
+             * Format: date
+             * @description Another day.
+             */
+            date?: string | null;
+            /** @description Another meal. */
+            meal?: string | null;
+            /**
+             * Format: double
+             * @description Another number of portions of the recipe.
+             */
+            portions?: number | null;
+            /**
+             * Format: double
+             * @description Another amount of the food.
+             */
+            amount?: number | null;
+            /** @description Another unit for the food's amount. */
+            unit?: string | null;
+            /** @description Own figures: what it was. */
+            label?: string | null;
+            /**
+             * Format: double
+             * @description Own figures: kilocalories.
+             */
+            kcal?: number | null;
+            /**
+             * Format: double
+             * @description Own figures: protein in grams, or unknown.
+             */
+            protein?: number | null;
+            /**
+             * Format: double
+             * @description Own figures: carbohydrate in grams, or unknown.
+             */
+            carbohydrate?: number | null;
+            /**
+             * Format: double
+             * @description Own figures: fat in grams, or unknown.
+             */
+            fat?: number | null;
+        };
+        /** @description The entry after the change. */
+        UsersUpdateDiaryEntryResponse: {
+            entry: components["schemas"]["UsersDiaryEntryDetail"];
+        };
+        /** @description Your diary settings, all of them. */
+        UsersUpdateDiarySettingsRequest: {
+            /** @description On or off. Switching on needs `consentVersion`. */
+            enabled: boolean;
+            /**
+             * Format: int32
+             * @description The wording you agree to by switching on: the `currentConsentVersion` you were shown.
+             */
+            consentVersion?: number | null;
+            /**
+             * Format: int32
+             * @description Your daily kcal target, or null for none.
+             */
+            kcalTarget?: number | null;
+            /**
+             * Format: int32
+             * @description Your daily protein target in grams, or null for none.
+             */
+            proteinTarget?: number | null;
+            /** @description `eaten` (the default) or `remaining`. */
+            headline?: string | null;
+            /** @description When switching off: also delete every entry. Left out, they are kept and hidden until you switch on again. */
+            eraseEntries?: boolean | null;
+        };
+        /** @description Your diary settings after the change. */
+        UsersUpdateDiarySettingsResponse: {
+            /** @description Whether the diary is switched on. */
+            enabled: boolean;
+            /**
+             * Format: date-time
+             * @description When you last agreed, by switching it on.
+             */
+            consentedAt?: string | null;
+            /**
+             * Format: int32
+             * @description Which wording you agreed to.
+             */
+            consentVersion?: number | null;
+            /**
+             * Format: int32
+             * @description The wording switching on agrees to now.
+             */
+            currentConsentVersion: number;
+            /**
+             * Format: int32
+             * @description Your daily kcal target, if you set one.
+             */
+            kcalTarget?: number | null;
+            /**
+             * Format: int32
+             * @description Your daily protein target in grams, if you set one.
+             */
+            proteinTarget?: number | null;
+            /** @description `eaten` or `remaining`. */
+            headline: string;
+            /**
+             * Format: int64
+             * @description The settings' version.
              */
             version: number;
         };
@@ -6669,6 +7122,330 @@ export interface operations {
             };
             /** @description Too Many Requests */
             429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getDiarySettingsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsersGetDiarySettingsResponse"];
+                };
+            };
+            /** @description Not Modified */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateDiarySettingsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UsersUpdateDiarySettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsersUpdateDiarySettingsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getDiaryV1: {
+        parameters: {
+            query?: {
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsersGetDiaryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    eraseDiaryV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    addDiaryEntryV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UsersAddDiaryEntryRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsersAddDiaryEntryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    removeDiaryEntryV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateDiaryEntryV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entryId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UsersUpdateDiaryEntryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UsersUpdateDiaryEntryResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

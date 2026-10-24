@@ -12,7 +12,22 @@ public sealed record SetFoodRequest
 /// <param name="NameDe">The German name.</param>
 /// <param name="NameEn">The English name.</param>
 /// <param name="EnergyKcal">Kilocalories per 100 g; null when the table has none.</param>
-public sealed record FoodSummary(string Code, string NameDe, string NameEn, decimal? EnergyKcal);
+/// <param name="Units">
+/// The units it can be counted in besides grams, each with a cited typical weight: an amount in one of these is an
+/// estimate. Absent or empty when there are none.
+/// </param>
+public sealed record FoodSummary(
+    string Code,
+    string NameDe,
+    string NameEn,
+    decimal? EnergyKcal,
+    IReadOnlyList<FoodUnit>? Units = null);
+
+/// <summary>A unit a food can be counted in, by a cited typical weight.</summary>
+/// <param name="Unit">The unit key: <c>piece</c>, <c>slice</c>, <c>tbsp</c> and so on.</param>
+/// <param name="Grams">What one of it typically weighs.</param>
+/// <param name="Source">Where that weight comes from, written as a citation.</param>
+public sealed record FoodUnit(string Unit, decimal Grams, string Source);
 
 /// <summary>A food a household typed from a package's label, per 100 g; null is unknown.</summary>
 public sealed record HouseholdFoodDetail

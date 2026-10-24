@@ -496,6 +496,26 @@ of the list.
 
 Timers are **not** in the API. They are device-local (`domain-model.md`).
 
+## Food diary
+
+One person's diary (`docs/diary-design.md`). It is never a household's, and it
+is withheld from AI agents (`AgentOperationsTests`). Every route but the
+settings answers `403 diary.disabled` while the diary is switched off.
+
+| Method | Path | Notes |
+| --- | --- | --- |
+| `GET` | `/users/me/settings/diary` | Settings and ETag. Off until switched on. `currentConsentVersion` is the wording that switching on agrees to. |
+| `PUT` | `/users/me/settings/diary` | `enabled`, `consentVersion` (needed to switch on, else `400 diary.consent_required`), `kcalTarget?`, `proteinTarget?`, `headline` (`eaten` or `remaining`), and `eraseEntries` when switching off. No If-Match. |
+| `GET` | `/users/me/diary?from=&to=` | Every day in the range, at most 62 days, logged or not. Each day has its entries and totals: `atLeast` when any entry is a lower bound or has no energy, `estimated` when any entry is an estimate, and `typedKcal` for the person's own figures. |
+| `POST` | `/users/me/diary/entries` | Exactly one of: a recipe with `recipeId` and `portions`; a food with `foodCode`, `amount` and `unit` (`g`, or a typical unit listed on `GET /foods`); or typed figures with `label` and `kcal`. The server looks the figures up and keeps a snapshot; it never takes figures for a recipe or a food. `201`. |
+| `PATCH` | `/users/me/diary/entries/{entryId}` | A new `date` or `meal` moves the entry and keeps its figures. A new `portions`, `amount` or `unit` looks them up again. A typed entry is corrected by sending its figures again (`label`, `kcal`, `protein`, `carbohydrate`, `fat`): a label or kcal left out stays, a macro left out becomes unknown. Figures on any other entry are `400 diary.unclear_source`. |
+| `DELETE` | `/users/me/diary/entries/{entryId}` | `204`. The client's undo logs the entry again. |
+| `DELETE` | `/users/me/diary` | Deletes every entry, whether the diary is on or off. The settings stay. `204`. |
+
+`GET /foods` lists, per food, the `units` it can be counted in by a cited
+typical weight (`TypicalWeights.UnitsOf`). An amount in one of those units is
+an estimate, and the entry names its source in `basis`.
+
 ## Shopping
 
 One list per household, under the household. Every write answers `200` with

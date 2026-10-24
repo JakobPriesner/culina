@@ -415,6 +415,410 @@
         }
       }
     },
+    "/api/v1/users/me/settings/diary": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Read your diary settings",
+        "description": "Off until you switch it on. currentConsentVersion is the wording switching on agrees to; consentedAt and consentVersion record your last agreement.",
+        "operationId": "getDiarySettingsV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersGetDiarySettingsResponse"
+                }
+              }
+            }
+          },
+          "304": {
+            "description": "Not Modified"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Change your diary settings",
+        "description": "Replaces every value. Switching on needs consentVersion (the currentConsentVersion you were shown) and records your agreement. Switching off keeps your entries hidden, or deletes them with eraseEntries. No If-Match: one person's own settings, with no second writer.",
+        "operationId": "updateDiarySettingsV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsersUpdateDiarySettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersUpdateDiarySettingsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/diary": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Read days of your diary",
+        "description": "Every day from `from` to `to` (inclusive, at most 62 days; `to` defaults to `from`), logged or not, with each day's entries and totals. 403 diary.disabled while the diary is switched off.",
+        "operationId": "getDiaryV1",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "explode": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersGetDiaryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Delete your whole diary",
+        "description": "Every entry, switched on or off; the settings stay. The client asks for a typed confirmation first, the one place it does not offer an undo instead.",
+        "operationId": "eraseDiaryV1",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/diary/entries": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Log something you ate",
+        "description": "A recipe in portions, a food in grams or a typical unit, or your own typed figures. The server looks up and keeps the figures, marks a lower bound (atLeast) or an estimate, and never takes figures from the client for a recipe or a food.",
+        "operationId": "addDiaryEntryV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsersAddDiaryEntryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersAddDiaryEntryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/diary/entries/{entryId}": {
+      "patch": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Change a diary entry",
+        "description": "A new day or meal moves the entry and keeps its figures; a new amount looks them up again. Typed entries have no amount to change. No If-Match: one person's own diary.",
+        "operationId": "updateDiaryEntryV1",
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsersUpdateDiaryEntryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsersUpdateDiaryEntryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Remove a diary entry",
+        "description": "The undo in the client logs the entry again; nothing is kept here.",
+        "operationId": "removeDiaryEntryV1",
+        "parameters": [
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/push/key": {
       "get": {
         "tags": [
@@ -11683,9 +12087,41 @@
             "description": "Kilocalories per 100 g; null when the table has none.",
             "format": "double",
             "nullable": true
+          },
+          "units": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NutritionFoodUnit"
+            },
+            "description": "The units it can be counted in besides grams, each with a cited typical weight: an amount in one of these is an\nestimate. Absent or empty when there are none.",
+            "nullable": true
           }
         },
         "description": "A food of the Bundeslebensmittelschlüssel, as a search result."
+      },
+      "NutritionFoodUnit": {
+        "required": [
+          "unit",
+          "grams",
+          "source"
+        ],
+        "type": "object",
+        "properties": {
+          "unit": {
+            "type": "string",
+            "description": "The unit key: `piece`, `slice`, `tbsp` and so on."
+          },
+          "grams": {
+            "type": "number",
+            "description": "What one of it typically weighs.",
+            "format": "double"
+          },
+          "source": {
+            "type": "string",
+            "description": "Where that weight comes from, written as a citation."
+          }
+        },
+        "description": "A unit a food can be counted in, by a cited typical weight."
       },
       "NutritionFoodsResponse": {
         "required": [
@@ -17000,6 +17436,106 @@
         },
         "description": "The recipes a suggestion set actually showed."
       },
+      "UsersAddDiaryEntryRequest": {
+        "required": [
+          "date",
+          "meal"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "The day, `yyyy-MM-dd`.",
+            "format": "date"
+          },
+          "meal": {
+            "type": "string",
+            "description": "`breakfast`, `lunch`, `dinner` or `snack`."
+          },
+          "recipeId": {
+            "type": "string",
+            "description": "A recipe, eaten in portions (or pieces, for a recipe that makes pieces).",
+            "format": "uuid",
+            "nullable": true
+          },
+          "portions": {
+            "type": "number",
+            "description": "How many portions of the recipe; defaults to one.",
+            "format": "double",
+            "nullable": true
+          },
+          "householdId": {
+            "type": "string",
+            "description": "The household whose recipe or own food it is: for an inherited recipe, the kitchen it was eaten in; for a\nhousehold's own food (`h:` code), required.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "cookLogEntryId": {
+            "type": "string",
+            "description": "The \"made it\" this portion comes from, so undoing it can offer to take the portion too.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "foodCode": {
+            "type": "string",
+            "description": "A food: a BLS code, or `h:` and a household food's id.",
+            "nullable": true
+          },
+          "amount": {
+            "type": "number",
+            "description": "How much of the food, in `unit`.",
+            "format": "double",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "description": "`g` (the default), or a typical unit the food has (`piece`, `slice`…, see `GET /foods`).",
+            "nullable": true
+          },
+          "label": {
+            "type": "string",
+            "description": "For typed figures: what it was.",
+            "nullable": true
+          },
+          "kcal": {
+            "type": "number",
+            "description": "For typed figures: kilocalories, required.",
+            "format": "double",
+            "nullable": true
+          },
+          "protein": {
+            "type": "number",
+            "description": "For typed figures: protein in grams, if known.",
+            "format": "double",
+            "nullable": true
+          },
+          "carbohydrate": {
+            "type": "number",
+            "description": "For typed figures: carbohydrate in grams, if known.",
+            "format": "double",
+            "nullable": true
+          },
+          "fat": {
+            "type": "number",
+            "description": "For typed figures: fat in grams, if known.",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "description": "Something a person ate. Say exactly one of: a recipe (`recipeId`, with `portions`), a food (`foodCode`,\nwith `amount` and `unit`), or typed figures (`label` and `kcal`). The server looks figures up;\nfor a recipe or a food the client never sends them."
+      },
+      "UsersAddDiaryEntryResponse": {
+        "required": [
+          "entry"
+        ],
+        "type": "object",
+        "properties": {
+          "entry": {
+            "$ref": "#/components/schemas/UsersDiaryEntryDetail"
+          }
+        },
+        "description": "The entry as it was logged, with the figures the server looked up."
+      },
       "UsersChangePasswordRequest": {
         "required": [
           "currentPassword",
@@ -17052,6 +17588,196 @@
           }
         },
         "description": "A new set of recovery codes. Any earlier set has stopped working."
+      },
+      "UsersDiaryDay": {
+        "required": [
+          "date",
+          "entries",
+          "totals",
+          "atLeast",
+          "estimated",
+          "typedKcal"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "The day.",
+            "format": "date"
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsersDiaryEntryDetail"
+            },
+            "description": "The day's entries, by meal and then in the order they were logged."
+          },
+          "totals": {
+            "$ref": "#/components/schemas/UsersDiaryFiguresDetail"
+          },
+          "atLeast": {
+            "type": "boolean",
+            "description": "Some entry is a lower bound, so the day is one too."
+          },
+          "estimated": {
+            "type": "boolean",
+            "description": "Some entry is an estimate, so the day is one too."
+          },
+          "typedKcal": {
+            "type": "number",
+            "description": "The kilocalories that come from figures the person typed, for \"davon … von dir eingetragen\".",
+            "format": "double"
+          }
+        },
+        "description": "One day of a diary: its entries and what they add up to."
+      },
+      "UsersDiaryEntryDetail": {
+        "required": [
+          "entryId",
+          "date",
+          "meal",
+          "source",
+          "label",
+          "amount",
+          "unit",
+          "figures",
+          "atLeast",
+          "estimated",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "entryId": {
+            "type": "string",
+            "description": "The entry's id.",
+            "format": "uuid"
+          },
+          "date": {
+            "type": "string",
+            "description": "The day, `yyyy-MM-dd`.",
+            "format": "date"
+          },
+          "meal": {
+            "type": "string",
+            "description": "`breakfast`, `lunch`, `dinner` or `snack`."
+          },
+          "source": {
+            "type": "string",
+            "description": "`recipe`, `food` (the table or a household's own) or `typed` (the person's own figures)."
+          },
+          "label": {
+            "type": "string",
+            "description": "The name as it was when logged."
+          },
+          "amount": {
+            "type": "number",
+            "description": "How much: portions of a recipe, or an amount of a food in `unit`.",
+            "format": "double"
+          },
+          "unit": {
+            "type": "string",
+            "description": "`portion`, `g`, or a typical unit key such as `piece` or `slice`."
+          },
+          "grams": {
+            "type": "number",
+            "description": "The grams the figures were computed from, for a food.",
+            "format": "double",
+            "nullable": true
+          },
+          "figures": {
+            "$ref": "#/components/schemas/UsersDiaryFiguresDetail"
+          },
+          "atLeast": {
+            "type": "boolean",
+            "description": "Something was not counted, so the figures are a lower bound (\"mind.\")."
+          },
+          "estimated": {
+            "type": "boolean",
+            "description": "A cited typical weight was used, so the figures are an estimate (\"≈\")."
+          },
+          "basis": {
+            "type": "string",
+            "description": "What an estimate rests on: the typical weight's citation.",
+            "nullable": true
+          },
+          "recipeId": {
+            "type": "string",
+            "description": "The recipe, for a recipe entry; it may have been deleted since.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "householdId": {
+            "type": "string",
+            "description": "The household whose recipe or own food it was.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "foodCode": {
+            "type": "string",
+            "description": "The food's code, for a food entry: a BLS code or `h:` and a household food's id.",
+            "nullable": true
+          },
+          "cookLogEntryId": {
+            "type": "string",
+            "description": "The \"made it\" this portion was logged from.",
+            "format": "uuid",
+            "nullable": true
+          },
+          "version": {
+            "type": "integer",
+            "description": "The entry's version.",
+            "format": "int64"
+          }
+        },
+        "description": "One thing a person ate, with the figures it was logged with."
+      },
+      "UsersDiaryFiguresDetail": {
+        "type": "object",
+        "properties": {
+          "kcal": {
+            "type": "number",
+            "description": "Energy in kilocalories.",
+            "format": "double",
+            "nullable": true
+          },
+          "protein": {
+            "type": "number",
+            "description": "Protein in grams.",
+            "format": "double",
+            "nullable": true
+          },
+          "carbohydrate": {
+            "type": "number",
+            "description": "Carbohydrate in grams.",
+            "format": "double",
+            "nullable": true
+          },
+          "fat": {
+            "type": "number",
+            "description": "Fat in grams.",
+            "format": "double",
+            "nullable": true
+          },
+          "saturatedFat": {
+            "type": "number",
+            "description": "Saturated fat in grams.",
+            "format": "double",
+            "nullable": true
+          },
+          "sugars": {
+            "type": "number",
+            "description": "Sugars in grams.",
+            "format": "double",
+            "nullable": true
+          },
+          "salt": {
+            "type": "number",
+            "description": "Salt in grams.",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "description": "Figures of an entry or a day; null is unknown, never zero."
       },
       "UsersGetCurrentAssistanceAvailability": {
         "required": [
@@ -17184,6 +17910,76 @@
           }
         },
         "description": "The signed-in user, and where they can cook."
+      },
+      "UsersGetDiaryResponse": {
+        "required": [
+          "days"
+        ],
+        "type": "object",
+        "properties": {
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsersDiaryDay"
+            },
+            "description": "The days from the first to the last asked for, oldest first."
+          }
+        },
+        "description": "A range of a person's diary, one entry per day whether or not anything was logged."
+      },
+      "UsersGetDiarySettingsResponse": {
+        "required": [
+          "enabled",
+          "currentConsentVersion",
+          "headline",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the diary is switched on."
+          },
+          "consentedAt": {
+            "type": "string",
+            "description": "When you last agreed, by switching it on.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "consentVersion": {
+            "type": "integer",
+            "description": "Which wording you agreed to.",
+            "format": "int32",
+            "nullable": true
+          },
+          "currentConsentVersion": {
+            "type": "integer",
+            "description": "The wording switching on agrees to now; send it as `consentVersion` when switching on.",
+            "format": "int32"
+          },
+          "kcalTarget": {
+            "type": "integer",
+            "description": "Your daily kcal target, if you set one.",
+            "format": "int32",
+            "nullable": true
+          },
+          "proteinTarget": {
+            "type": "integer",
+            "description": "Your daily protein target in grams, if you set one.",
+            "format": "int32",
+            "nullable": true
+          },
+          "headline": {
+            "type": "string",
+            "description": "`eaten` or `remaining`: what the day's headline shows."
+          },
+          "version": {
+            "type": "integer",
+            "description": "The settings' version.",
+            "format": "int64"
+          }
+        },
+        "description": "Whether you keep a food diary, what you agreed to, and your own targets."
       },
       "UsersGetPreferencesResponse": {
         "required": [
@@ -17344,6 +18140,176 @@
           }
         },
         "description": "The account after the change."
+      },
+      "UsersUpdateDiaryEntryRequest": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "description": "Another day.",
+            "format": "date",
+            "nullable": true
+          },
+          "meal": {
+            "type": "string",
+            "description": "Another meal.",
+            "nullable": true
+          },
+          "portions": {
+            "type": "number",
+            "description": "Another number of portions of the recipe.",
+            "format": "double",
+            "nullable": true
+          },
+          "amount": {
+            "type": "number",
+            "description": "Another amount of the food.",
+            "format": "double",
+            "nullable": true
+          },
+          "unit": {
+            "type": "string",
+            "description": "Another unit for the food's amount.",
+            "nullable": true
+          },
+          "label": {
+            "type": "string",
+            "description": "Own figures: what it was.",
+            "nullable": true
+          },
+          "kcal": {
+            "type": "number",
+            "description": "Own figures: kilocalories.",
+            "format": "double",
+            "nullable": true
+          },
+          "protein": {
+            "type": "number",
+            "description": "Own figures: protein in grams, or unknown.",
+            "format": "double",
+            "nullable": true
+          },
+          "carbohydrate": {
+            "type": "number",
+            "description": "Own figures: carbohydrate in grams, or unknown.",
+            "format": "double",
+            "nullable": true
+          },
+          "fat": {
+            "type": "number",
+            "description": "Own figures: fat in grams, or unknown.",
+            "format": "double",
+            "nullable": true
+          }
+        },
+        "description": "A change to an entry. A new day or meal moves it and keeps its figures; a new amount (portions of a recipe, or an\namount and unit of a food) looks the figures up again. Left out, a field stays as it is. An entry of the person's\nown figures is corrected by sending them again: a name or kilocalories left out stay, a macro left out becomes\nunknown."
+      },
+      "UsersUpdateDiaryEntryResponse": {
+        "required": [
+          "entry"
+        ],
+        "type": "object",
+        "properties": {
+          "entry": {
+            "$ref": "#/components/schemas/UsersDiaryEntryDetail"
+          }
+        },
+        "description": "The entry after the change."
+      },
+      "UsersUpdateDiarySettingsRequest": {
+        "required": [
+          "enabled"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "On or off. Switching on needs `consentVersion`."
+          },
+          "consentVersion": {
+            "type": "integer",
+            "description": "The wording you agree to by switching on: the `currentConsentVersion` you were shown.",
+            "format": "int32",
+            "nullable": true
+          },
+          "kcalTarget": {
+            "type": "integer",
+            "description": "Your daily kcal target, or null for none.",
+            "format": "int32",
+            "nullable": true
+          },
+          "proteinTarget": {
+            "type": "integer",
+            "description": "Your daily protein target in grams, or null for none.",
+            "format": "int32",
+            "nullable": true
+          },
+          "headline": {
+            "type": "string",
+            "description": "`eaten` (the default) or `remaining`.",
+            "nullable": true
+          },
+          "eraseEntries": {
+            "type": "boolean",
+            "description": "When switching off: also delete every entry. Left out, they are kept and hidden until you switch on again.",
+            "nullable": true
+          }
+        },
+        "description": "Your diary settings, all of them."
+      },
+      "UsersUpdateDiarySettingsResponse": {
+        "required": [
+          "enabled",
+          "currentConsentVersion",
+          "headline",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the diary is switched on."
+          },
+          "consentedAt": {
+            "type": "string",
+            "description": "When you last agreed, by switching it on.",
+            "format": "date-time",
+            "nullable": true
+          },
+          "consentVersion": {
+            "type": "integer",
+            "description": "Which wording you agreed to.",
+            "format": "int32",
+            "nullable": true
+          },
+          "currentConsentVersion": {
+            "type": "integer",
+            "description": "The wording switching on agrees to now.",
+            "format": "int32"
+          },
+          "kcalTarget": {
+            "type": "integer",
+            "description": "Your daily kcal target, if you set one.",
+            "format": "int32",
+            "nullable": true
+          },
+          "proteinTarget": {
+            "type": "integer",
+            "description": "Your daily protein target in grams, if you set one.",
+            "format": "int32",
+            "nullable": true
+          },
+          "headline": {
+            "type": "string",
+            "description": "`eaten` or `remaining`."
+          },
+          "version": {
+            "type": "integer",
+            "description": "The settings' version.",
+            "format": "int64"
+          }
+        },
+        "description": "Your diary settings after the change."
       },
       "UsersUpdatePreferencesRequest": {
         "required": [
