@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Mail;
 using Application.Sessions;
 using Application.Telemetry;
 using Domain.Sessions;
@@ -23,6 +24,7 @@ internal sealed class ResetPasswordCommandHandler(
     ISecretTokens tokens,
     IPasswordHasher passwordHasher,
     ILoginAttempts attempts,
+    AccountMail mail,
     IUnitOfWork unitOfWork,
     TimeProvider time,
     ILogger<ResetPasswordCommandHandler> logger)
@@ -78,7 +80,7 @@ internal sealed class ResetPasswordCommandHandler(
                     .ConfigureAwait(false);
 
                 var found = await redeemed.Match(
-                    userId => users.FindAsync(userId, token),
+                    code => FindAsync(code, now, token),
                     error => Task.FromResult(Result<User>.Failure(error))).ConfigureAwait(false);
 
                 return await found.Match(
@@ -86,6 +88,22 @@ internal sealed class ResetPasswordCommandHandler(
                     error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
             },
             cancellationToken);
+
+    /// <summary>The account the code unlocked; a code that came by mail also proves the address.</summary>
+    private async Task<Result<User>> FindAsync(RedeemedCode code, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var found = await users.FindAsync(code.UserId, cancellationToken).ConfigureAwait(false);
+
+        return found.Map(user =>
+        {
+            if (code.WasMailed)
+            {
+                user.ConfirmEmail(now);
+            }
+
+            return user;
+        });
+    }
 
     private async Task<Result> ReplacePasswordAsync(
         User user,
@@ -101,6 +119,13 @@ internal sealed class ResetPasswordCommandHandler(
         // Whoever was signed in (perhaps the person who took the old password) is signed out everywhere.
         await sessions.RevokeAllAsync(user.Id, keepSessionId: null, now, cancellationToken).ConfigureAwait(false);
 
-        return saved.Bind(_ => Result.Success());
+        return await saved.Match(
+            async _ =>
+            {
+                await mail.TellPasswordChangedAsync(user, now, cancellationToken).ConfigureAwait(false);
+
+                return Result.Success();
+            },
+            error => Task.FromResult(Result.Failure(error))).ConfigureAwait(false);
     }
 }

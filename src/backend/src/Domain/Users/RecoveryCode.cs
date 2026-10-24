@@ -5,7 +5,8 @@ namespace Domain.Users;
 
 /// <summary>
 /// A one-time credential that sets a new password; only its digest is stored. A <em>saved</em> code is one of a
-/// set the holder keeps and never expires; an <em>issued</em> code comes from the administrator and expires within a day.
+/// set the holder keeps and never expires; an <em>issued</em> code comes from the administrator and expires within a day;
+/// a <em>mailed</em> code was sent to the account's address and expires within an hour.
 /// </summary>
 public sealed class RecoveryCode
 {
@@ -14,6 +15,9 @@ public sealed class RecoveryCode
 
     /// <summary>How long a code the administrator issued stays usable.</summary>
     public static readonly TimeSpan IssuedLifetime = TimeSpan.FromHours(24);
+
+    /// <summary>How long a code mailed to the account's address stays usable: it waits in an inbox, not a drawer.</summary>
+    public static readonly TimeSpan MailedLifetime = TimeSpan.FromHours(1);
 
     private RecoveryCode(
         Guid id,
@@ -67,6 +71,13 @@ public sealed class RecoveryCode
         Guid issuedBy,
         DateTimeOffset now) =>
         new(CulinaId.New(), userId, codeHash, issuedBy, now, now.Add(IssuedLifetime));
+
+    /// <summary>A code mailed to the account's own address because they forgot the password; it has no issuer but expires.</summary>
+    /// <param name="userId">Whose account.</param>
+    /// <param name="codeHash">The digest of the normalised code.</param>
+    /// <param name="now">The injected current time.</param>
+    public static RecoveryCode Mailed(Guid userId, ReadOnlyMemory<byte> codeHash, DateTimeOffset now) =>
+        new(CulinaId.New(), userId, codeHash, issuedBy: null, now, now.Add(MailedLifetime));
 
     /// <summary>
     /// The form a code is hashed in. Codes are typed from paper, so case, spaces and dashes are ignored

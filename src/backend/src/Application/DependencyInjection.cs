@@ -1,5 +1,19 @@
 using Application.Abstractions.Messaging;
+using Application.AgentAuthorizations;
+using Application.AgentAuthorizations.Decide;
+using Application.AgentAuthorizations.GetById;
+using Application.AgentAuthorizations.Redeem;
+using Application.AgentAuthorizations.Register;
+using Application.AgentAuthorizations.Start;
 using Application.Archive;
+using Application.EmailConfirmations.Create;
+using Application.Mail;
+using Application.PasswordResetLinks.Create;
+using Application.Settings.GetMail;
+using Application.Settings.SendMailTest;
+using Application.Settings.UpdateMail;
+using Application.SignInLinks.Create;
+using Application.SignInLinks.Redeem;
 using Application.Assistance;
 using Application.Cookbooks;
 using Application.Cooking.CookPhoto;
@@ -27,6 +41,7 @@ using Application.LogRecords.Create;
 using Application.Nutrition;
 using Application.PasswordResets.Create;
 using Application.Planning;
+using Application.Products;
 using Application.Recipes;
 using Application.Recipes.Copy;
 using Application.Recipes.Create;
@@ -63,6 +78,7 @@ using Application.Recipes.Update;
 using Application.RecoveryCodes.Issue;
 using Application.Registration.GetPolicy;
 using Application.Searches;
+using Application.Sessions;
 using Application.Sessions.GetAll;
 using Application.Sessions.Revoke;
 using Application.Sessions.SignIn;
@@ -162,12 +178,40 @@ public static class DependencyInjection
                 IssueRecoveryCodeCommandHandler>()
             .AddScoped<ICommandHandler<ResetPasswordCommand>, ResetPasswordCommandHandler>()
 
+            // Mail
+            .AddScoped<AccountMail>()
+            // A singleton: what it remembers is shared by every request.
+            .AddSingleton<MailThrottle>()
+            .AddScoped<ICommandHandler<RequestPasswordResetLinkCommand>, RequestPasswordResetLinkCommandHandler>()
+            .AddScoped<ICommandHandler<RequestSignInLinkCommand>, RequestSignInLinkCommandHandler>()
+            .AddScoped<ICommandHandler<RedeemSignInLinkCommand, SignInOutcome>, RedeemSignInLinkCommandHandler>()
+            .AddScoped<ICommandHandler<ConfirmEmailCommand, SignInOutcome>, ConfirmEmailCommandHandler>()
+            .AddScoped<LinkSignIn>()
+            .AddScoped<NewDeviceNotice>()
+            .AddScoped<IQueryHandler<GetMailSettingsQuery, Contracts.Settings.GetMail.Response>,
+                GetMailSettingsQueryHandler>()
+            .AddScoped<ICommandHandler<UpdateMailSettingsCommand, Contracts.Settings.GetMail.Response>,
+                UpdateMailSettingsCommandHandler>()
+            .AddScoped<ICommandHandler<SendMailTestCommand>, SendMailTestCommandHandler>()
+
             // Sessions
             .AddScoped<ICommandHandler<SignInCommand, SignInOutcome>, SignInCommandHandler>()
             .AddScoped<ICommandHandler<RevokeSessionCommand>, RevokeSessionCommandHandler>()
             .AddScoped<IQueryHandler<GetSessionsQuery, Contracts.Sessions.GetAll.Response>,
                 GetSessionsQueryHandler>()
-            .AddScoped<SignInDependencies>()
+            .AddScoped<SessionStarter>()
+
+            // Connecting AI agents through OAuth
+            .AddScoped<ClientRegistrations>()
+            .AddScoped<ICommandHandler<RegisterAgentClientCommand, RegisteredAgentClient>, RegisterAgentClientCommandHandler>()
+            .AddScoped<ICommandHandler<StartAgentAuthorizationCommand, AuthorizationStep>,
+                StartAgentAuthorizationCommandHandler>()
+            .AddScoped<IQueryHandler<GetAgentAuthorizationByIdQuery, Contracts.AgentAuthorizations.GetById.Response>,
+                GetAgentAuthorizationByIdQueryHandler>()
+            .AddScoped<ICommandHandler<DecideAgentAuthorizationCommand, Contracts.AgentAuthorizations.Decide.Response>,
+                DecideAgentAuthorizationCommandHandler>()
+            .AddScoped<ICommandHandler<RedeemAuthorizationCodeCommand, AgentAccessToken>,
+                RedeemAuthorizationCodeCommandHandler>()
 
             // Log records
             .AddScoped<ICommandHandler<CreateLogRecordsCommand>, CreateLogRecordsCommandHandler>()
@@ -228,6 +272,10 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<CreateHouseholdFoodCommand, Contracts.Nutrition.HouseholdFoodDetail>, CreateHouseholdFoodCommandHandler>()
             .AddScoped<ICommandHandler<DeleteHouseholdFoodCommand>, DeleteHouseholdFoodCommandHandler>()
             .AddScoped<IQueryHandler<GetFoodsQuery, Contracts.Nutrition.FoodsResponse>, GetFoodsQueryHandler>()
+            .AddScoped<IQueryHandler<GetProductQuery, Contracts.Products.ProductDetail>, GetProductQueryHandler>()
+            .AddScoped<IQueryHandler<ListProductsQuery, Contracts.Products.ProductsResponse>, ListProductsQueryHandler>()
+            .AddScoped<ICommandHandler<SetProductCommand, Contracts.Products.ProductDetail>, SetProductCommandHandler>()
+            .AddScoped<ICommandHandler<RemoveProductCommand>, RemoveProductCommandHandler>()
             .AddScoped<IQueryHandler<GetShoppingListQuery,
                 Contracts.Shopping.Response>, GetShoppingListQueryHandler>()
             .AddScoped<ICommandHandler<AddShoppingItemCommand,

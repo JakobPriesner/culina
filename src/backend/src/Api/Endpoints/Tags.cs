@@ -14,6 +14,12 @@ internal static class Tags
 
     internal const string RecoveryCodes = "RecoveryCodes";
 
+    internal const string PasswordResetLinks = "PasswordResetLinks";
+
+    internal const string SignInLinks = "SignInLinks";
+
+    internal const string EmailConfirmations = "EmailConfirmations";
+
     internal const string Households = "Households";
 
     internal const string Recipes = "Recipes";
@@ -42,6 +48,9 @@ internal static class Tags
 
     internal const string Nutrition = "Nutrition";
 
+    /// <summary>What a household says its barcodes are.</summary>
+    internal const string Products = "Products";
+
     /// <summary>A household's ingredient names and its merges of them.</summary>
     internal const string Ingredients = "Ingredients";
 
@@ -54,4 +63,7 @@ internal static class Tags
     internal const string Searches = "Searches";
 
     internal const string LogRecords = "LogRecords";
+
+    /// <summary>Apps asking, through OAuth, to connect an AI agent to someone's account.</summary>
+    internal const string AgentAuthorizations = "AgentAuthorizations";
 }

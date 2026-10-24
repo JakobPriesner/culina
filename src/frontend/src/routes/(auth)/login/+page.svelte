@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
 
   import { goto } from '$app/navigation';
   import { resolve } from '$app/paths';
@@ -10,6 +10,9 @@
   import ColdStove from '$features/auth/ColdStove.svelte';
   import FamilySecret from '$features/auth/FamilySecret.svelte';
   import FormFailure from '$features/auth/FormFailure.svelte';
+  import CheckInbox from '$features/auth/CheckInbox.svelte';
+  import { requestSignInLink } from '$features/auth/mailLinks';
+  import { readPolicy } from '$features/auth/registration.svelte';
   import SubmitButton from '$features/auth/SubmitButton.svelte';
   import { safeRedirect } from '$features/auth/redirectTarget';
   import { session } from '$features/auth/session.svelte';
@@ -19,6 +22,16 @@
   /** Sign in and return to where you were headed: the `next` parameter makes deep links survive a sign-in. */
   let email = $state('');
   let password = $state('');
+
+  /** With mail, a sign-in link instead of the password; `sent` once one is on its way. */
+  let mode = $state<'password' | 'link' | 'sent'>('password');
+
+  /** Learnt after the form is drawn, so the sign-in screen never waits on it; the link appears when it is known. */
+  let sendsMail = $state(false);
+
+  onMount(async () => {
+    sendsMail = (await readPolicy()).sendsMail ?? false;
+  });
 
   const submission = createSubmission();
 
@@ -63,6 +76,19 @@
     `${resolve('/(auth)/register')}?next=${encodeURIComponent(destination)}`
   );
 
+  async function sendLink(event: SubmitEvent) {
+    event.preventDefault();
+
+    if (await submission.run(() => requestSignInLink(email))) {
+      mode = 'sent';
+    }
+  }
+
+  function choose(next: 'password' | 'link') {
+    submission.clear();
+    mode = next;
+  }
+
   async function submit(event: SubmitEvent) {
     event.preventDefault();
 
@@ -82,59 +108,102 @@
 
 <svelte:head><title>{m['auth.signIn.title']()}</title></svelte:head>
 
-<form class="form" onsubmit={submit} novalidate>
-  {#if moment === 'cold'}
-    <div class="moment"><ColdStove lit={flames} /></div>
-  {:else if moment === 'secret'}
-    <div class="moment"><FamilySecret /></div>
-  {/if}
+{#if mode === 'sent'}
+  <CheckInbox title={m['auth.link.sent.title']()} body={m['auth.link.sent.body']({ email })}>
+    <p class="alternative">
+      <button class="switch" type="button" onclick={() => choose('password')}>
+        {m['auth.link.usePassword']()}
+      </button>
+    </p>
+  </CheckInbox>
+{:else if mode === 'link'}
+  <form class="form" onsubmit={sendLink} novalidate>
+    <AuthIntro title={m['auth.link.ask.title']()} subtitle={m['auth.link.ask.intro']()} />
 
-  <AuthIntro
-    eyebrow={m['auth.signIn.welcome']()}
-    title={heading.title}
-    subtitle={heading.body}
-    long={moment !== null}
-  />
+    <FormFailure failure={submission.failure} />
 
-  <!-- One message for "no such account" and "wrong password", so the form cannot reveal which addresses are registered. -->
-  <FormFailure
-    failure={submission.failure}
-    message={submission.failure?.code === ErrorCodes.invalidCredentials
-      ? m['auth.signIn.failed']()
-      : undefined}
-  />
+    <FormField
+      name="email"
+      label={m['auth.signIn.email']()}
+      type="email"
+      autocomplete="username"
+      inputmode="email"
+      autofocus
+      bind:value={email}
+      {submission}
+    />
 
-  <FormField
-    name="email"
-    label={m['auth.signIn.email']()}
-    type="email"
-    autocomplete="username"
-    inputmode="email"
-    autofocus
-    bind:value={email}
-    {submission}
-  />
+    <SubmitButton label={m['auth.link.ask.submit']()} {submission} />
 
-  <FormField
-    name="password"
-    label={m['auth.signIn.password']()}
-    type="password"
-    autocomplete="current-password"
-    bind:value={password}
-    {submission}
-  />
+    <p class="alternative">
+      <button class="switch" type="button" onclick={() => choose('password')}>
+        {m['auth.link.usePassword']()}
+      </button>
+    </p>
+  </form>
+{:else}
+  <form class="form" onsubmit={submit} novalidate>
+    {#if moment === 'cold'}
+      <div class="moment"><ColdStove lit={flames} /></div>
+    {:else if moment === 'secret'}
+      <div class="moment"><FamilySecret /></div>
+    {/if}
 
-  <SubmitButton label={heading.submit} {submission} />
+    <AuthIntro
+      eyebrow={m['auth.signIn.welcome']()}
+      title={heading.title}
+      subtitle={heading.body}
+      long={moment !== null}
+    />
 
-  <p class="alternative">
-    <a href={resolve('/(auth)/password-reset')}>{m['auth.signIn.forgot']()}</a>
-  </p>
+    <!-- One message for "no such account" and "wrong password", so the form cannot reveal which addresses are registered. -->
+    <FormFailure
+      failure={submission.failure}
+      message={submission.failure?.code === ErrorCodes.invalidCredentials
+        ? m['auth.signIn.failed']()
+        : undefined}
+    />
 
-  <p class="alternative">
-    {m['auth.signIn.noAccount']()}
-    <a href={registerHref}>{m['auth.signIn.register']()}</a>
-  </p>
-</form>
+    <FormField
+      name="email"
+      label={m['auth.signIn.email']()}
+      type="email"
+      autocomplete="username"
+      inputmode="email"
+      autofocus
+      bind:value={email}
+      {submission}
+    />
+
+    <FormField
+      name="password"
+      label={m['auth.signIn.password']()}
+      type="password"
+      autocomplete="current-password"
+      bind:value={password}
+      {submission}
+    />
+
+    <SubmitButton label={heading.submit} {submission} />
+
+    {#if sendsMail}
+      <p class="alternative">
+        <button class="switch" type="button" onclick={() => choose('link')}>
+          {m['auth.link.useLink']()}
+        </button>
+      </p>
+    {/if}
+
+    <p class="alternative">
+      <a href={resolve('/(auth)/password-reset')}>{m['auth.signIn.forgot']()}</a>
+    </p>
+
+    <p class="alternative">
+      {m['auth.signIn.noAccount']()}
+      <a href={registerHref}>{m['auth.signIn.register']()}</a>
+    </p>
+  </form>
+{/if}
 
 <style>
   .form {
@@ -152,5 +221,16 @@
     color: var(--text-muted);
     font-size: var(--text-sm);
     text-align: center;
+  }
+
+  /* A link's look for a choice that stays on this page. */
+  .switch {
+    border: 0;
+    background: none;
+    padding: 0;
+    color: var(--accent);
+    font: inherit;
+    text-decoration: underline;
+    cursor: pointer;
   }
 </style>

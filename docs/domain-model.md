@@ -481,7 +481,7 @@ that is all. The cook log stays the batch that was made.
 wording (`DiarySettings.CurrentConsentVersion`), because a kcal diary is
 treated as health data. Both tables go with the account (`on delete cascade`),
 and neither is in the household archive. See `docs/diary-design.md` and
-migration `0055_diary.sql`.
+migration `0057_diary.sql`.
 
 ### PersonalNote — person-owned
 
@@ -738,6 +738,12 @@ household's originals, and a shelf that does not hold together (no name, a
 smart one with no rules) is passed over like an odd recipe. The field is
 optional, so archives from before it still restore at version 1.
 
+**Barcode memory travels too**, as `products` after the cookbooks: only what the
+household itself said, never what it inherits (that leaves with the ancestor's
+archive). A restore adds each one the household has not named yet and leaves a
+barcode it already named alone, so it never overwrites what people have written
+since. The field is optional, so archives from before it restore at version 1.
+
 **Notes are the asking person's, and nobody else's.** The recipes belong to the
 household; notes and the cook log are personal, and an archive carrying every
 member's would be one person handing out another's private writing.
@@ -752,6 +758,28 @@ can tell which half is wrong.
 **The export is streamed**, a recipe at a time. With photographs inline an
 archive of a well-used household is tens of megabytes, and building it in memory
 would make the export the largest allocation in the process.
+
+## Product memory
+
+What a household says a barcode is, from `docs/barcode-scanning-design.md`:
+`household_products(household_id, gtin, name, ingredient, quantity, unit,
+cook_minutes, note, created_by, updated_at, version)`, primary key
+`(household_id, gtin)`, `on delete cascade` from `households_with_deleted`. It maps a
+pack to an ingredient so a scan can match a recipe line or a shopping item; it is
+not what the household has at home, and Culina still keeps no stock.
+
+`Gtin` is the one form every scanner's spelling shares: digits only with a correct
+check digit; a UPC-A is padded with a zero to 13 and a UPC-E is expanded to its
+UPC-A first, so the symbology a phone read does not choose the row. An EAN-8 stays
+eight digits (and a UPC-E that fits the EAN-8 sum as well stays as read: the digits
+cannot say which it was).
+
+Unlike a correction or a weight, a row has a `version`: two phones can name the same
+unknown code at the same moment and the later one must hear about it. `PUT` without
+`If-Match` only names (`428 products.already_named` when the row exists); with it,
+it replaces that version (`412` when stale). The nearest household that named a
+barcode decides, as for corrections, and an heir names its own row without touching
+its ancestor's.
 
 ## Persistence conventions
 

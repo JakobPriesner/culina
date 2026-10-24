@@ -14,7 +14,14 @@ public sealed class User
     /// </summary>
     public const int MinimumPasswordLength = 12;
 
-    private User(Guid id, Email email, DisplayName displayName, string passwordHash, DateTimeOffset createdAt, long version)
+    private User(
+        Guid id,
+        Email email,
+        DisplayName displayName,
+        string passwordHash,
+        DateTimeOffset createdAt,
+        long version,
+        DateTimeOffset? emailConfirmedAt)
     {
         Id = id;
         Email = email;
@@ -22,6 +29,7 @@ public sealed class User
         PasswordHash = passwordHash;
         CreatedAt = createdAt;
         Version = version;
+        EmailConfirmedAt = emailConfirmedAt;
     }
 
     /// <summary>The user's identifier.</summary>
@@ -41,6 +49,18 @@ public sealed class User
     /// <summary>When the account was created.</summary>
     public DateTimeOffset CreatedAt { get; }
 
+    /// <summary>
+    /// When the owner proved the address is theirs by opening a link mailed to it, or null while they have not.
+    /// </summary>
+    /// <remarks>
+    /// Also set at registration when the instance sends no mail (nothing could confirm it then, and turning mail on
+    /// later must not lock those people out), and for the first account.
+    /// </remarks>
+    public DateTimeOffset? EmailConfirmedAt { get; private set; }
+
+    /// <summary>Whether the address has been confirmed.</summary>
+    public bool HasConfirmedEmail => EmailConfirmedAt is not null;
+
     /// <summary>Incremented by every write; the ETag is derived from it.</summary>
     public long Version { get; private set; }
 
@@ -55,7 +75,7 @@ public sealed class User
         ArgumentNullException.ThrowIfNull(displayName);
         ArgumentException.ThrowIfNullOrWhiteSpace(passwordHash);
 
-        return new User(CulinaId.New(), email, displayName, passwordHash, createdAt, version: 1);
+        return new User(CulinaId.New(), email, displayName, passwordHash, createdAt, version: 1, emailConfirmedAt: null);
     }
 
     /// <summary>
@@ -68,12 +88,13 @@ public sealed class User
         DisplayName displayName,
         string passwordHash,
         DateTimeOffset createdAt,
-        long version)
+        long version,
+        DateTimeOffset? emailConfirmedAt = null)
     {
         ArgumentNullException.ThrowIfNull(email);
         ArgumentNullException.ThrowIfNull(displayName);
 
-        return new User(id, email, displayName, passwordHash, createdAt, version);
+        return new User(id, email, displayName, passwordHash, createdAt, version, emailConfirmedAt);
     }
 
     /// <summary>Checks a plaintext password against the length rule.</summary>
@@ -99,6 +120,10 @@ public sealed class User
 
         PasswordHash = passwordHash;
     }
+
+    /// <summary>Records that the address is the owner's; a later confirmation keeps the first time.</summary>
+    /// <param name="at">The injected current time.</param>
+    public void ConfirmEmail(DateTimeOffset at) => EmailConfirmedAt ??= at;
 
     /// <summary>Changes the address used to sign in.</summary>
     public Result ChangeEmail(Email email)

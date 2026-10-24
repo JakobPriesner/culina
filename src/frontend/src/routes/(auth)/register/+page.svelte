@@ -7,6 +7,7 @@
   import AuthIntro from '$features/auth/AuthIntro.svelte';
   import FormField from '$features/auth/FormField.svelte';
   import FormFailure from '$features/auth/FormFailure.svelte';
+  import CheckInbox from '$features/auth/CheckInbox.svelte';
   import SubmitButton from '$features/auth/SubmitButton.svelte';
   import { safeRedirect } from '$features/auth/redirectTarget';
   import { register } from '$features/auth/registration.svelte';
@@ -23,6 +24,9 @@
   let password = $state('');
   let householdName = $state('');
   let invitationCode = $state(page.url.searchParams.get('code') ?? '');
+
+  /** The account exists but signs in only once its address is confirmed: the form gives way to where to look. */
+  let awaitingConfirmation = $state(false);
 
   const submission = createSubmission();
 
@@ -55,11 +59,18 @@
 
       landedIn = outcome.householdId;
 
+      if (outcome.confirmationRequired) {
+        awaitingConfirmation = true;
+
+        return null;
+      }
+
       // Registering signs you in; no second password prompt.
       return session.signIn(email, password);
     });
 
-    if (!succeeded) {
+    // The link signs in when it is opened, so this tab has nowhere to go yet.
+    if (!succeeded || awaitingConfirmation) {
       return;
     }
 
@@ -73,7 +84,14 @@
 
 <svelte:head><title>{m['auth.register.title']()}</title></svelte:head>
 
-{#if closed}
+{#if awaitingConfirmation}
+  <CheckInbox
+    title={m['auth.register.confirm.title']()}
+    body={m['auth.register.confirm.body']({ email })}
+  >
+    <a href={loginHref}>{m['auth.register.signIn']()}</a>
+  </CheckInbox>
+{:else if closed}
   <div class="closed">
     <AuthIntro title={m['auth.register.closed.title']()} />
     <p class="body">{m['auth.register.closed.body']()}</p>

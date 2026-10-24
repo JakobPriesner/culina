@@ -28,6 +28,14 @@ public class AgentOperationsTests(PostgresFixture postgres)
         "revokeSessionV1",
         "createPasswordResetV1",
         "issueRecoveryCodeV1",
+        "createPasswordResetLinkV1",
+        "createSignInLinkV1",
+        "redeemSignInLinkV1",
+        "createEmailConfirmationV1",
+
+        // Approving apps that connect agents: an agent must not let more agents in.
+        "getAgentAuthorizationByIdV1",
+        "decideAgentAuthorizationV1",
 
         // The food diary is personal health data: a person could share it through an agent without meaning to
         // (docs/diary-design.md §0, decision 5).
@@ -73,6 +81,9 @@ public class AgentOperationsTests(PostgresFixture postgres)
         "updateRegistrationSettingsV1",
         "getAssistanceSettingsV1",
         "updateAssistanceSettingsV1",
+        "getMailSettingsV1",
+        "updateMailSettingsV1",
+        "sendMailTestV1",
         "getAssistanceUsageV1",
         "getAssistanceModelsV1",
         "getServerSettingsV1",
@@ -117,6 +128,12 @@ public class AgentOperationsTests(PostgresFixture postgres)
         "getRecipeIntakeV1",
         "getRecipeIntakePhotoV1",
         "reviewRecipeIntakeV1",
+
+        // What a household says a barcode is: it serves the scanner, and is not yet decided on for agents.
+        "getHouseholdProductV1",
+        "listHouseholdProductsV1",
+        "setHouseholdProductV1",
+        "removeHouseholdProductV1",
 
         // What the web app reports about itself and what it showed.
         "recordSuggestionImpressionsV1",

@@ -125,6 +125,16 @@ read along the inheritance chain, nearest first, the way nutrition corrections
 do. The rows go into the household archive export with everything else the
 household owns.
 
+**As built (`culina-v2-nb65.6.1`).** The table is migration 0054, `updated_at` has no
+default (the repository writes it), and the unit and quantity rules are those of a
+recipe line. `GET .../products/{gtin}` answers from `household_products` only: the
+response has `householdId` (whose row it is) and `version` instead of `source` and
+`attribution`, which arrive with Open Food Facts (§5.2) as optional fields, so adding
+them breaks nothing. `PUT` without `If-Match` names a barcode (`201`, or `428
+products.already_named`); with it, it changes that version. `DELETE` needs `If-Match`.
+`GET .../products` lists the whole library, the nearest household first per code, for
+the offline cache (§7). The full contract is in `docs/api.md`, "Products".
+
 ### 3.2 `product_lookups` (only with OFF enabled)
 
 This holds `gtin`, the raw OFF fields we use (not the whole document),

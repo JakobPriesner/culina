@@ -28,6 +28,7 @@ public sealed class PostgresFixture : IAsyncLifetime
 
     private CulinaApiFactory? api;
     private CulinaApiFactory? steadyRanking;
+    private MailHost? mail;
     private NpgsqlDataSource? dataSource;
 
     /// <summary>How to reach the container, in the shape the app configures.</summary>
@@ -86,6 +87,9 @@ public sealed class PostgresFixture : IAsyncLifetime
     /// built once per run.
     /// </summary>
     public CulinaApiFactory Api => api ??= new CulinaApiFactory(this, servesIntakes: true);
+
+    /// <summary>A second host that knows its public address and records the mail it sends; created on first use.</summary>
+    public MailHost Mail => mail ??= new MailHost(this);
 
     /// <summary>The same host, ranking without its exploration jitter.</summary>
     /// <remarks>
@@ -201,6 +205,9 @@ public sealed class PostgresFixture : IAsyncLifetime
 
             api.Services.GetRequiredService<AssistanceSettings>()
                 .CopyFrom(new AssistanceSettings());
+
+            api.Services.GetRequiredService<MailSettings>()
+                .CopyFrom(new MailSettings());
         }
     }
 
@@ -208,6 +215,7 @@ public sealed class PostgresFixture : IAsyncLifetime
     {
         api?.Dispose();
         steadyRanking?.Dispose();
+        mail?.Dispose();
 
         if (dataSource is not null)
         {

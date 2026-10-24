@@ -49,4 +49,18 @@ public static class SessionErrors
         "auth.invalid_client",
         "A session is started from 'browser', 'ios' or 'android'.",
         ErrorType.Validation);
+
+    /// <summary>The password was right, but the address has not been confirmed and this instance requires it.</summary>
+    /// <remarks>Only ever said after the password matched, so it reveals nothing to somebody guessing.</remarks>
+    public static readonly Error EmailUnconfirmed = new(
+        "auth.email_unconfirmed",
+        "Confirm your email address first: open the link we sent you. We have just sent it again.",
+        ErrorType.Forbidden);
+
+    /// <summary>A mailed link that is unknown, used, expired or for something else.</summary>
+    /// <remarks>One answer for all of them, like <see cref="InvalidRecoveryCode"/>.</remarks>
+    public static readonly Error InvalidLink = new(
+        "auth.invalid_link",
+        "That link does not work any more. Links work once and only for a while; ask for a new one.",
+        ErrorType.Validation);
 }
