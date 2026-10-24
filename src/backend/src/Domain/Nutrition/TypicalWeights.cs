@@ -43,6 +43,14 @@ public static class TypicalWeights
     public static TypicalWeight? Find(string code, string unitKey) =>
         ByFood.GetValueOrDefault((code, unitKey));
 
+    /// <summary>
+    /// The units a food can be eaten in by a cited weight ("1 Stück ≈ 110 g"): its rows that weigh the food itself, not
+    /// another food the unit really means (<see cref="TypicalWeight.CountAs"/>).
+    /// </summary>
+    /// <param name="code">The BLS code of the food.</param>
+    public static IReadOnlyList<TypicalWeight> UnitsOf(string code) =>
+        [.. Rows.Where(weight => weight.Code == code && weight.CountAs is null)];
+
     private static TypicalWeight[] Entries() =>
     [
         // Zwiebel: a German Zwiebel is 70-150 g; medium of FDC's three sizes

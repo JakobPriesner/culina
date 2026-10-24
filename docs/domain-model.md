@@ -454,6 +454,35 @@ Append-only. Powers "you've made this 7 times, last in March" and the
 "most cooked" sort, which is why Culina needs no star ratings: what you actually
 cook is a better signal than what you claim to like.
 
+### DiaryEntry and DiarySettings — person-owned
+
+`DiaryEntry` holds:
+- `Id`, `UserId`, `Date` (a date, like the plan's), `Meal` (`breakfast`,
+  `lunch`, `dinner` or `snack`) and `Source` (`recipe`, `food` or `typed`);
+- `Link`: the recipe, household, food code and cook-log entry, as soft links;
+- `Amount`: a value, a unit, and the grams used;
+- `Label`, as it was when logged;
+- `Figures`: kcal, protein, carbohydrate, fat, saturated fat, sugars and salt,
+  where null means unknown;
+- `Trust`: `AtLeast`, `Estimated` and `Basis`;
+- `NutritionVersion`, `CreatedAt` and `Version`.
+
+What someone ate is a snapshot, taken when it was logged. A recipe edited or
+binned later never changes what was eaten on Monday, and a month reads as one
+indexed range (`user_id, on_date`). Adding an entry and changing its amount
+both go through `Application/Users/DiaryLookup`, so a changed amount is looked
+up exactly as a new one would be.
+
+Eating is not cooking: an entry may point at the "made it" it came from, and
+that is all. The cook log stays the batch that was made.
+
+`DiarySettings` holds `Enabled`, `ConsentedAt`, `ConsentVersion`, `KcalTarget?`,
+`ProteinTarget?` and `Headline`. Switching on records agreement to the current
+wording (`DiarySettings.CurrentConsentVersion`), because a kcal diary is
+treated as health data. Both tables go with the account (`on delete cascade`),
+and neither is in the household archive. See `docs/diary-design.md` and
+migration `0055_diary.sql`.
+
 ### PersonalNote — person-owned
 
 `Id`, `RecipeId`, `UserId`, `StepId?` (null = recipe-level), `Body` (1–2000),

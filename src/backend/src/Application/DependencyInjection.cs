@@ -134,6 +134,22 @@ public static class DependencyInjection
                 GetPreferencesQueryHandler>()
             .AddScoped<ICommandHandler<UpdatePreferencesCommand, Contracts.Users.UpdatePreferences.Response>,
                 UpdatePreferencesCommandHandler>()
+            // The food diary: one person's, never a household's.
+            .AddScoped<Application.Users.DiaryLookup>()
+            .AddScoped<IQueryHandler<Application.Users.GetDiarySettings.GetDiarySettingsQuery, Contracts.Users.GetDiarySettings.Response>,
+                Application.Users.GetDiarySettings.GetDiarySettingsQueryHandler>()
+            .AddScoped<ICommandHandler<Application.Users.UpdateDiarySettings.UpdateDiarySettingsCommand, Contracts.Users.UpdateDiarySettings.Response>,
+                Application.Users.UpdateDiarySettings.UpdateDiarySettingsCommandHandler>()
+            .AddScoped<IQueryHandler<Application.Users.GetDiary.GetDiaryQuery, Contracts.Users.GetDiary.Response>,
+                Application.Users.GetDiary.GetDiaryQueryHandler>()
+            .AddScoped<ICommandHandler<Application.Users.AddDiaryEntry.AddDiaryEntryCommand, Contracts.Users.AddDiaryEntry.Response>,
+                Application.Users.AddDiaryEntry.AddDiaryEntryCommandHandler>()
+            .AddScoped<ICommandHandler<Application.Users.UpdateDiaryEntry.UpdateDiaryEntryCommand, Contracts.Users.UpdateDiaryEntry.Response>,
+                Application.Users.UpdateDiaryEntry.UpdateDiaryEntryCommandHandler>()
+            .AddScoped<ICommandHandler<Application.Users.RemoveDiaryEntry.RemoveDiaryEntryCommand>,
+                Application.Users.RemoveDiaryEntry.RemoveDiaryEntryCommandHandler>()
+            .AddScoped<ICommandHandler<Application.Users.EraseDiary.EraseDiaryCommand>,
+                Application.Users.EraseDiary.EraseDiaryCommandHandler>()
             .AddScoped<ICommandHandler<ChangePasswordCommand>, ChangePasswordCommandHandler>()
             .AddScoped<ICommandHandler<CreateRecoveryCodesCommand, Contracts.Users.CreateRecoveryCodes.Response>,
                 CreateRecoveryCodesCommandHandler>()

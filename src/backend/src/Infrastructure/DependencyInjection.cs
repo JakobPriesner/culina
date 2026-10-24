@@ -151,6 +151,7 @@ public static class DependencyInjection
             .AddScoped<IDatabaseProbe, DatabaseProbe>()
             .AddScoped<IUserRepository, UserRepository>()
             .AddScoped<IUserPreferencesRepository, UserPreferencesRepository>()
+            .AddScoped<IDiaryRepository, DiaryRepository>()
             .AddScoped<IRecoveryCodeRepository, RecoveryCodeRepository>()
             .AddScoped<ITrashRepository, TrashRepository>()
             .AddScoped<IHouseholdRepository, HouseholdRepository>()

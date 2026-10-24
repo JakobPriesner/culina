@@ -1,4 +1,11 @@
+using Api.Endpoints.Users.AddDiaryEntry.V1;
 using Api.Endpoints.Users.ChangePassword.V1;
+using Api.Endpoints.Users.EraseDiary.V1;
+using Api.Endpoints.Users.GetDiary.V1;
+using Api.Endpoints.Users.GetDiarySettings.V1;
+using Api.Endpoints.Users.RemoveDiaryEntry.V1;
+using Api.Endpoints.Users.UpdateDiaryEntry.V1;
+using Api.Endpoints.Users.UpdateDiarySettings.V1;
 using Api.Endpoints.Users.CreateRecoveryCodes.V1;
 using Api.Endpoints.Users.GetCurrent.V1;
 using Api.Endpoints.Users.GetPreferences.V1;
@@ -25,5 +32,12 @@ internal static class UsersEndpoints
             .AddSingleton<IEndpoint, UpdatePreferencesEndpoint>()
             .AddSingleton<IEndpoint, ChangePasswordEndpoint>()
             .AddSingleton<IEndpoint, GetRecoveryCodesEndpoint>()
-            .AddSingleton<IEndpoint, CreateRecoveryCodesEndpoint>();
+            .AddSingleton<IEndpoint, CreateRecoveryCodesEndpoint>()
+            .AddSingleton<IEndpoint, GetDiarySettingsEndpoint>()
+            .AddSingleton<IEndpoint, UpdateDiarySettingsEndpoint>()
+            .AddSingleton<IEndpoint, GetDiaryEndpoint>()
+            .AddSingleton<IEndpoint, AddDiaryEntryEndpoint>()
+            .AddSingleton<IEndpoint, UpdateDiaryEntryEndpoint>()
+            .AddSingleton<IEndpoint, RemoveDiaryEntryEndpoint>()
+            .AddSingleton<IEndpoint, EraseDiaryEndpoint>();
 }
