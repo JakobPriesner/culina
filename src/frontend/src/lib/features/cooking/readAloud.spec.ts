@@ -34,7 +34,7 @@ describe('reading a step aloud', () => {
       () => 4
     );
 
-    expect(spokenStep(step, 2, doubled)).toBe('Step 2. Melt the 200 g butter slowly.');
+    expect(spokenStep(step, 2, doubled, 'en')).toBe('Step 2. Melt the 200 grams butter slowly.');
   });
 
   it('interrupts the last step, in the recipe’s language', () => {

@@ -2558,5 +2558,7 @@
   "problem.mail.password_required": "Gib das Passwort noch einmal ein: Es wird nur an den Server geschickt, für den es gespeichert wurde.",
   "problem.mail.invalid_value": "Diesen Wert nimmt das Mailkonto nicht an.",
   "problem.mail.off": "Dieses Culina verschickt keine Mails.",
-  "problem.mail.send_failed": "Die Mail konnte nicht gesendet werden. Prüfe Server, Port, Verschlüsselung und Passwort und versuch es noch einmal."
+  "problem.mail.send_failed": "Die Mail konnte nicht gesendet werden. Prüfe Server, Port, Verschlüsselung und Passwort und versuch es noch einmal.",
+  "cooking.speech.read": "Schritt vorlesen",
+  "cooking.speech.stop": "Vorlesen beenden"
 }

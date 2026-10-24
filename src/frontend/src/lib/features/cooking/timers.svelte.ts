@@ -3,6 +3,7 @@ import { SvelteSet } from 'svelte/reactivity';
 import { native } from '$api';
 import { haptics } from '$shell/haptics';
 import { playKitchenChime, unlockAudio } from './kitchenAudio';
+import { readAloud } from './readAloud.svelte';
 import {
   closeTimerNotification,
   notifyTimerDone,
@@ -119,6 +120,8 @@ export function createTimers(sessionId: () => string | null, url: () => string =
           native &&
           (document.visibilityState !== 'visible' || Date.now() - timer.endsAt > freshAlarmMs);
         if ((!state || claimed) && !stale) {
+          // The alarm outranks a step being read aloud.
+          readAloud.interrupt();
           playKitchenChime();
           // OS notification vibration handles hidden windows.
           if (document.visibilityState === 'visible') haptics.alarm();

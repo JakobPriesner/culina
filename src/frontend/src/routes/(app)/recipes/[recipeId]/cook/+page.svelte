@@ -17,15 +17,16 @@
   import { notes } from '$features/cooking/stores/notes.svelte';
   import { kitchenTimers as timers } from '$features/cooking/kitchen.svelte';
   import KitchenSheet from '$features/cooking/KitchenSheet.svelte';
+  import StepSpeaker from '$features/cooking/StepSpeaker.svelte';
   import NotesSheet from '$features/cooking/NotesSheet.svelte';
   import { readAloud, spokenStep } from '$features/cooking/readAloud.svelte';
   import { createStepGestures } from '$features/cooking/stepGestures';
-  import { createScaling } from '$features/recipes/surface/scaled.svelte';
   import MealDishes from '$features/planning/MealDishes.svelte';
   import CoachTip from '$features/onboarding/CoachTip.svelte';
   import { upcoming } from '$features/planning/upcoming.svelte';
   import RecipeSurface from '$features/recipes/surface/RecipeSurface.svelte';
   import { recipes } from '$features/recipes/stores/recipes.svelte';
+  import { createScaling } from '$features/recipes/surface/scaled.svelte';
   import { urlAtYield, yieldFrom } from '$features/recipes/surface/yieldInUrl';
   import { m } from '$shell/i18n';
   import { haptics } from '$shell/haptics';
@@ -82,6 +83,27 @@
     () => servings
   );
 
+  /** The step on screen as it is said: what reading aloud says, and what its own speaker reads. */
+  const stepText = $derived.by(() => {
+    const step = recipe?.steps[currentStep];
+
+    return recipe && step ? spokenStep(step, currentStep + 1, spoken, recipe.language) : '';
+  });
+
+  /** The step last seen, so a move can end what its own speaker was saying. */
+  let seenStep: number | null = null;
+
+  // A new step ends a single step's reading, however the move came (a tap, the remote, another device); while
+  // reading aloud is on, the effect below says the new step instead.
+  $effect(() => {
+    const index = currentStep;
+
+    untrack(() => {
+      if (seenStep !== null && seenStep !== index && !readAloud.on) readAloud.stop();
+      seenStep = index;
+    });
+  });
+
   // Each step said once as it comes up, while reading aloud is on; turning it on says the step on screen.
   $effect(() => {
     const step = recipe?.steps[currentStep];
@@ -89,7 +111,7 @@
 
     if (!readAloud.on || !ready || over || !step) return;
 
-    untrack(() => readAloud.speak(spokenStep(step, currentStep + 1, spoken), language));
+    untrack(() => readAloud.speak(stepText, language));
   });
 
   $effect(() => {
@@ -209,6 +231,12 @@
   let kitchenOpen = $state(false);
 </script>
 
+{#snippet stepaction()}
+  {#if recipe}
+    <StepSpeaker text={stepText} language={recipe.language} />
+  {/if}
+{/snippet}
+
 <svelte:head>
   <title>{recipes.detail?.title ?? m['recipes.title']()}</title>
 </svelte:head>
@@ -218,6 +246,7 @@
   onkeydown={gestures.keydown}
   ontouchstart={gestures.touchstart}
   ontouchend={gestures.touchend}
+  onpagehide={() => readAloud.stop()}
 />
 
 <Page>
@@ -261,6 +290,7 @@
         onstep={move}
         onstopcooking={() => finish(false)}
         stepNote={(id) => notes.stepNote(id)}
+        {stepaction}
       />
 
       <CookingControls
