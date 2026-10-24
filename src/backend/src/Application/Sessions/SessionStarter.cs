@@ -34,6 +34,26 @@ internal sealed class SessionStarter(ISessionStore sessions, ISecretTokens token
 
         return stored.Map(() => new StartedSession(session, sessionToken, csrfToken));
     }
+
+    /// <summary>
+    /// Ends the session this browser held before signing in again; the new cookie overwrites the old one, which
+    /// would otherwise live on while somebody still used it.
+    /// </summary>
+    internal async Task EndReplacedAsync(string? previousToken, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(previousToken))
+        {
+            return;
+        }
+
+        var previous = await sessions.FindActiveByTokenAsync(previousToken, now, cancellationToken)
+            .ConfigureAwait(false);
+
+        // Nothing to report either way: a session that is already gone is what this wants.
+        await previous.Match(
+            session => sessions.RevokeAsync(session.Id, session.UserId, now, cancellationToken),
+            _ => Task.FromResult(Result.Success())).ConfigureAwait(false);
+    }
 }
 
 /// <summary>A session just started, with its token and CSRF token in the clear, which exist nowhere else.</summary>

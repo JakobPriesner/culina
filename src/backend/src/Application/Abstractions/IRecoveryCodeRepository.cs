@@ -12,7 +12,7 @@ public interface IRecoveryCodeRepository
     /// <param name="cancellationToken">Cancels the write.</param>
     Task ReplaceSavedAsync(Guid userId, IReadOnlyList<RecoveryCode> codes, CancellationToken cancellationToken);
 
-    /// <summary>Stores a code the administrator issued.</summary>
+    /// <summary>Stores a code the administrator issued, or one mailed to the account.</summary>
     /// <param name="code">The code.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
     Task AddAsync(RecoveryCode code, CancellationToken cancellationToken);
@@ -28,12 +28,17 @@ public interface IRecoveryCodeRepository
     /// <param name="now">The injected current time.</param>
     /// <param name="cancellationToken">Cancels the write.</param>
     /// <returns>Whose account it unlocked, or <c>auth.invalid_recovery_code</c>.</returns>
-    Task<Result<Guid>> RedeemAsync(
+    Task<Result<RedeemedCode>> RedeemAsync(
         Email email,
         ReadOnlyMemory<byte> codeHash,
         DateTimeOffset now,
         CancellationToken cancellationToken);
 }
+
+/// <summary>A code that was just used up.</summary>
+/// <param name="UserId">Whose account it unlocked.</param>
+/// <param name="WasMailed">Whether it had been mailed to the account's address, which proves the address too.</param>
+public sealed record RedeemedCode(Guid UserId, bool WasMailed);
 
 /// <summary>What is left of an account's saved set.</summary>
 /// <param name="Remaining">Codes not yet used.</param>

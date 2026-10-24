@@ -15,9 +15,10 @@ internal sealed class RecoveryCodeRepository(DbExecutor executor) : IRecoveryCod
     {
         ArgumentNullException.ThrowIfNull(codes);
 
-        // Used codes of the old set go too: what is left of a set is its remaining count.
+        // Used codes of the old set go too: what is left of a set is its remaining count. A saved code is the one kind
+        // with neither an issuer nor an expiry; mailed codes expire and are left to do so.
         await executor.ExecuteAsync(
-            "delete from recovery_codes where user_id = @userId and issued_by is null;",
+            "delete from recovery_codes where user_id = @userId and issued_by is null and expires_at is null;",
             new { userId },
             cancellationToken).ConfigureAwait(false);
 
@@ -74,7 +75,7 @@ internal sealed class RecoveryCodeRepository(DbExecutor executor) : IRecoveryCod
             """
             select count(*) filter (where used_at is null) as remaining, min(created_at) as created_at
             from recovery_codes
-            where user_id = @userId and issued_by is null;
+            where user_id = @userId and issued_by is null and expires_at is null;
             """,
             new { userId },
             cancellationToken).ConfigureAwait(false);
@@ -82,7 +83,7 @@ internal sealed class RecoveryCodeRepository(DbExecutor executor) : IRecoveryCod
         return new SavedRecoveryCodes((int)(row?.Remaining ?? 0), row?.CreatedAt);
     }
 
-    public async Task<Result<Guid>> RedeemAsync(
+    public async Task<Result<RedeemedCode>> RedeemAsync(
         Email email,
         ReadOnlyMemory<byte> codeHash,
         DateTimeOffset now,
@@ -93,7 +94,7 @@ internal sealed class RecoveryCodeRepository(DbExecutor executor) : IRecoveryCod
         // One statement for "this address, this code, still usable, now used": the work is the same
         // whether or not the address is registered, and two people racing one code cannot both get
         // through.
-        var userId = await executor.ExecuteScalarAsync<Guid?>(
+        var redeemed = await executor.QuerySingleOrDefaultAsync<RedeemedRow>(
             """
             update recovery_codes code
             set used_at = @now
@@ -103,12 +104,21 @@ internal sealed class RecoveryCodeRepository(DbExecutor executor) : IRecoveryCod
               and code.code_hash = @codeHash
               and code.used_at is null
               and (code.expires_at is null or code.expires_at > @now)
-            returning code.user_id;
+            returning code.user_id, (code.issued_by is null and code.expires_at is not null) as was_mailed;
             """,
             new { email = email.Value, codeHash = codeHash.ToArray(), now },
             cancellationToken).ConfigureAwait(false);
 
-        return userId is { } found ? found : SessionErrors.InvalidRecoveryCode;
+        return redeemed is null
+            ? SessionErrors.InvalidRecoveryCode
+            : new RedeemedCode(redeemed.UserId, redeemed.WasMailed);
+    }
+
+    private sealed record RedeemedRow
+    {
+        public Guid UserId { get; init; }
+
+        public bool WasMailed { get; init; }
     }
 
     private sealed record SavedRow

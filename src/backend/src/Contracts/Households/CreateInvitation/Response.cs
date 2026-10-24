@@ -11,4 +11,7 @@ public sealed record Response
 
     /// <summary>When it stops working.</summary>
     public required DateTimeOffset ExpiresAt { get; init; }
+
+    /// <summary>The address the invitation was mailed to, or null when it was not mailed.</summary>
+    public string? MailedTo { get; init; }
 }

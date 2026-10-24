@@ -69,8 +69,10 @@ notice losing.
 
 ## V2 — Account recovery
 
-Culina sends no mail, so recovery is something a person holds rather than
-something sent to them. The flow is custom, which is why it is recorded here.
+Recovery works without mail: something a person holds rather than something
+sent to them. Where the administrator has set up mail (Settings → Mail), a
+third kind of code can also be mailed. The flow is custom, which is why it is
+recorded here.
 
 * **Saved codes.** Ten per account, made on the Password settings page after
   re-entering the password. 80 random bits each (Crockford base 32, four
@@ -81,6 +83,10 @@ something sent to them. The flow is custom, which is why it is recorded here.
   because it has passed through somebody else's hands. This is the way back for
   anyone without saved codes, except the administrator on an instance with no
   other administrator — whose only way back is their own saved codes.
+* **Mailed codes.** Only with mail on. `POST /password-reset-links` mails a
+  code of the same format, valid one hour, inside a link to the reset page. It
+  is stored like the others (`issued_by` null, `expires_at` set), is not one of
+  the saved set, and using it also confirms the address.
 * **Redeeming.** `POST /password-resets` with the address, the code and a new
   password. The code is used up and every session of the account is revoked;
   the web app then signs in with the new password.
@@ -94,6 +100,28 @@ something sent to them. The flow is custom, which is why it is recorded here.
 | Brute force is limited | Met | Per address by the sign-in limiter, and per account by the same budget sign-in and password confirmation draw on. `Reset_ShouldRefuseEvenTheRightCode_OnceTheAccountHasFailedTooOften`. Argon2 runs only after a code is known to be good, so guessing costs the server a lookup |
 | Only the administrator issues codes | Met | `IssuedCode_ShouldBeForbidden_ForAnAccountThatIsNotTheAdministrator` |
 | Failures are counted | Met | `culina.auth.recovery_failures` |
+| Asking for a mailed code reveals nothing | Met | `202` whether or not the address is registered, `409 mail.off` the same for every address; the mail is queued, not sent, so the answer takes no longer for a real account. `Links_ShouldBeAccepted_ForAnAddressNobodyHas_AndMailNothing` |
+| Nobody can fill a stranger's inbox | Met | Per address by the sign-in limiter, and at most one mail of a kind per account a minute however many clients ask (`MailThrottle`) |
+
+## V2 — Mailed links and address confirmation
+
+With mail on, a sign-in link and an address confirmation are tokens mailed to
+the account's address (`email_tokens`). 256 random bits, stored as SHA-256,
+single use, 15 minutes for a sign-in link and 48 hours for a confirmation. They
+are redeemed by a `POST` from the page, never by opening the URL, so a mail
+scanner that fetches every link uses nothing up, and the token travels after
+`#`, which no server, proxy or `Referer` sees; the page removes it from the
+address bar once read. Links point only at `Site__Url`, never at the request's
+`Host`, so a forged host header cannot turn a reset mail into a phishing link.
+
+| Requirement | Verdict | Evidence |
+| --- | --- | --- |
+| Single use, even under a race | Met | One `update … where used_at is null returning`. `SignInLink_ShouldSignIn_AndWorkOnlyOnce`, `ConfirmationLink_ShouldWorkOnlyOnce` |
+| A token does only what it was sent for | Met | The purpose is part of the statement. `ConfirmationToken_ShouldNotSignInAsASignInLink` |
+| Refusals are indistinguishable | Met | One answer, `400 auth.invalid_link`, for unknown, used, expired and foreign tokens |
+| An unconfirmed address is said only to the password's owner | Met | `auth.email_unconfirmed` comes after the password matched; a wrong password is still `auth.invalid_credentials`. `WrongPassword_ShouldNotSayTheAddressIsUnconfirmed` |
+| The mail password and queued mail are unreadable from a dump | Met | Both encrypted with the key ring under their own purposes; the password is never in a response (`ThePassword_ShouldNeverAppearInAnyResponse_OnlyThatThereIsOne`) and only sent to the server it was saved for (`Update_ShouldAskForThePasswordAgain_WhenTheServerChanges`) |
+| The owner hears about changes to the way in | Met | Notices for a new kind of device, a changed password, new recovery codes and an issued code. `NewDevice_ShouldBeMailed_OnlyTheFirstTimeItSignsIn`, `PasswordResetLink_ShouldMailACode_ThatSetsANewPassword_AndSayItChanged` |
 
 ## V5 — Validation and encoding
 
@@ -192,13 +220,16 @@ operator who publishes the port to the internet and then waits can lose the
 instance to whoever scans first. `docs/configuration.md` says to finish setup
 before exposing the port.
 
-**No email in account recovery.** A reset link by mail needs an SMTP
-configuration a self-hoster would have to keep working, and an expired mail
-password is a recovery flow that silently stops. Recovery codes and
-administrator-issued codes need nothing outside the app. The cost: an
-instance's only administrator who loses both their password and their saved
-codes still needs somebody with database access. Optional SMTP would close
-that gap and remains open as a separate decision.
+**Mail is optional, and recovery never depends on it.** Decided 24 October
+2026 (`culina-v2-b6l6`, closing `culina-v2-wov4`): the administrator may give
+Culina an SMTP account, and then reset links, sign-in links, address
+confirmation and notices are mailed. Saved and issued recovery codes stay, so an
+expired mail password is a convenience that stops, not the only way back. The
+cost that remains: an instance's only administrator who loses both their
+password and their saved codes, on an instance without mail, still needs
+somebody with database access. With mail on, a new device is recognised by its
+kind (`Firefox · macOS`), not a device cookie: a second machine of the same
+kind brings no notice, which keeps the notice rare enough to be read.
 
 **No multi-factor authentication.** ASVS Level 2 expects it. Culina is a recipe
 app for a household, its sessions are opaque and revocable, and sign-in is rate

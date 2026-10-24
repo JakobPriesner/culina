@@ -9,7 +9,7 @@ namespace Infrastructure.Persistence.Users;
 /// <param name="executor">Runs the SQL inside the request's transaction.</param>
 internal sealed class UserRepository(DbExecutor executor) : IUserRepository
 {
-    private const string Columns = "id, email, display_name, password_hash, created_at, version";
+    private const string Columns = "id, email, display_name, password_hash, created_at, version, email_confirmed_at";
 
     // The unique index the email column carries, named for the catch below.
     private const string EmailUniqueConstraint = "users_email_key";
@@ -62,8 +62,8 @@ internal sealed class UserRepository(DbExecutor executor) : IUserRepository
         {
             await executor.ExecuteAsync(
                 """
-                insert into users (id, email, display_name, password_hash, is_admin, created_at, version)
-                values (@id, @email, @displayName, @passwordHash, @isAdmin, @createdAt, 1);
+                insert into users (id, email, display_name, password_hash, is_admin, created_at, version, email_confirmed_at)
+                values (@id, @email, @displayName, @passwordHash, @isAdmin, @createdAt, 1, @emailConfirmedAt);
                 """,
                 new
                 {
@@ -72,7 +72,8 @@ internal sealed class UserRepository(DbExecutor executor) : IUserRepository
                     displayName = user.DisplayName.Value,
                     passwordHash = user.PasswordHash,
                     isAdmin,
-                    createdAt = user.CreatedAt
+                    createdAt = user.CreatedAt,
+                    emailConfirmedAt = user.EmailConfirmedAt
                 },
                 cancellationToken).ConfigureAwait(false);
 
@@ -99,6 +100,7 @@ internal sealed class UserRepository(DbExecutor executor) : IUserRepository
             set email = @email,
                 display_name = @displayName,
                 password_hash = @passwordHash,
+                email_confirmed_at = @emailConfirmedAt,
                 version = version + 1
             where id = @id and version = @expectedVersion
             returning version;
@@ -109,6 +111,7 @@ internal sealed class UserRepository(DbExecutor executor) : IUserRepository
                 email = user.Email.Value,
                 displayName = user.DisplayName.Value,
                 passwordHash = user.PasswordHash,
+                emailConfirmedAt = user.EmailConfirmedAt,
                 expectedVersion
             },
             cancellationToken).ConfigureAwait(false);

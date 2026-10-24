@@ -992,6 +992,200 @@
         }
       }
     },
+    "/api/v1/password-reset-links": {
+      "post": {
+        "tags": [
+          "PasswordResetLinks"
+        ],
+        "summary": "Mail a link to choose a new password",
+        "description": "Answers 202 whether or not the address is registered; when it is, a link and a one-hour recovery code are mailed to it, to use with createPasswordResetV1. 409 mail.off when the instance sends no mail, the same for every address.",
+        "operationId": "createPasswordResetLinkV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetLinksCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sign-in-links": {
+      "post": {
+        "tags": [
+          "SignInLinks"
+        ],
+        "summary": "Mail a sign-in link",
+        "description": "Answers 202 whether or not the address is registered; when it is, a link that signs in once, within 15 minutes, is mailed to it (redeemSignInLinkV1). 409 mail.off when the instance sends no mail.",
+        "operationId": "createSignInLinkV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInLinksCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted"
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/sign-in-links/redemptions": {
+      "post": {
+        "tags": [
+          "SignInLinks"
+        ],
+        "summary": "Sign in with a mailed link",
+        "description": "Uses up the token from a sign-in link and starts a browser session, as signInV1 does; opening the link also confirms the address. Failure is always auth.invalid_link.",
+        "operationId": "redeemSignInLinkV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignInLinksRedeemRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionsSignInResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/email-confirmations": {
+      "post": {
+        "tags": [
+          "EmailConfirmations"
+        ],
+        "summary": "Confirm an email address",
+        "description": "Uses up the token from a confirmation link, records the address as confirmed and starts a browser session, as signInV1 does. Failure is always auth.invalid_link.",
+        "operationId": "createEmailConfirmationV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailConfirmationsCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionsSignInResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/households": {
       "get": {
         "tags": [
@@ -1909,7 +2103,7 @@
           "Households"
         ],
         "summary": "Invite someone",
-        "description": "Owners only. The response carries the code, and it is the only time the code is ever shown: only its digest is stored.",
+        "description": "Owners only. The response carries the code, and it is the only time the code is ever shown: only its digest is stored. With an email, the invitation is also mailed to that address (mailedTo); that needs mail to be set up on the server.",
         "operationId": "createHouseholdInvitationV1",
         "parameters": [
           {
@@ -1922,6 +2116,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "description": "An address to mail the invitation to, or null. Needs mail to be set up on the server.",
+                    "nullable": true
+                  }
+                },
+                "description": "Who to invite; the body may be left out entirely to only get a code to share."
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "Created",
@@ -1929,6 +2140,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HouseholdsCreateInvitationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -2686,6 +2907,163 @@
         }
       }
     },
+    "/api/v1/settings/mail": {
+      "get": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Read the mail account",
+        "description": "Instance administrator only. Never returns the password, only whether one is set.",
+        "operationId": "getMailSettingsV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsGetMailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Change the mail account",
+        "description": "Instance administrator only. Takes effect at once, with no restart. While mail is on, new accounts must confirm their address before they can sign in, and sign-in links, password-forgotten links and account notices are mailed.",
+        "operationId": "updateMailSettingsV1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettingsUpdateMailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettingsGetMailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/settings/mail/tests": {
+      "post": {
+        "tags": [
+          "Settings"
+        ],
+        "summary": "Send a test mail",
+        "description": "Instance administrator only. Sends a mail to the administrator's own address through the saved account, straight away. mail.send_failed carries what the server answered.",
+        "operationId": "sendMailTestV1",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/settings/server": {
       "get": {
         "tags": [
@@ -2940,7 +3318,7 @@
           "Registration"
         ],
         "summary": "Read what a new account is allowed to do",
-        "description": "Public: a sign-up form has to know which fields to ask for before anyone has an account.",
+        "description": "Public: a sign-up form has to know which fields to ask for before anyone has an account, and a sign-in form whether it can offer links by mail.",
         "operationId": "getRegistrationPolicyV1",
         "responses": {
           "200": {
@@ -11018,6 +11396,19 @@
         },
         "description": "Renames a cookbook, and rewrites what it is for. Both fields together: they are one form."
       },
+      "EmailConfirmationsCreateRequest": {
+        "required": [
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "What follows `#token=` in the link."
+          }
+        },
+        "description": "The token from a link Culina mailed."
+      },
       "HouseholdsChangeMemberRoleRequest": {
         "required": [
           "role"
@@ -11070,6 +11461,11 @@
             "type": "string",
             "description": "When it stops working.",
             "format": "date-time"
+          },
+          "mailedTo": {
+            "type": "string",
+            "description": "The address the invitation was mailed to, or null when it was not mailed.",
+            "nullable": true
           }
         },
         "description": "A newly issued invitation."
@@ -12431,6 +12827,19 @@
           }
         },
         "description": "What one unit weighs, as a household says."
+      },
+      "PasswordResetLinksCreateRequest": {
+        "required": [
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The address the account signs in with."
+          }
+        },
+        "description": "Where to send the link."
       },
       "PasswordResetsCreateRequest": {
         "required": [
@@ -15583,6 +15992,10 @@
           "hasAccounts": {
             "type": "boolean",
             "description": "Whether this instance has been set up yet."
+          },
+          "sendsMail": {
+            "type": "boolean",
+            "description": "Whether this instance sends mail: then a new account confirms its address before signing in, and the sign-in\npage can offer a sign-in link and a password-forgotten link."
           }
         },
         "description": "What a sign-up form needs to know before it draws itself."
@@ -16332,6 +16745,65 @@
         },
         "description": "How this instance reaches PostgreSQL. Never the password."
       },
+      "SettingsGetMailResponse": {
+        "required": [
+          "enabled",
+          "host",
+          "port",
+          "security",
+          "username",
+          "passwordConfigured",
+          "fromAddress",
+          "fromName",
+          "sending"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether mail is switched on."
+          },
+          "host": {
+            "type": "string",
+            "description": "The SMTP server, or empty."
+          },
+          "port": {
+            "type": "integer",
+            "description": "The SMTP port.",
+            "format": "int32"
+          },
+          "security": {
+            "type": "string",
+            "description": "`none`, `starttls` or `tls`."
+          },
+          "username": {
+            "type": "string",
+            "description": "Who Culina signs in to the server as, or empty for no sign-in."
+          },
+          "passwordConfigured": {
+            "type": "boolean",
+            "description": "Whether a password has been entered. Never the password."
+          },
+          "fromAddress": {
+            "type": "string",
+            "description": "The sender's address, or empty."
+          },
+          "fromName": {
+            "type": "string",
+            "description": "The sender's name."
+          },
+          "siteUrl": {
+            "type": "string",
+            "description": "The public address links in mails point to (`Site__Url`), or null when it is not set and mail cannot be switched on.",
+            "nullable": true
+          },
+          "sending": {
+            "type": "boolean",
+            "description": "Whether mail actually goes out: switched on, complete, and with a public address."
+          }
+        },
+        "description": "The mail account Culina sends from."
+      },
       "SettingsGetRegistrationResponse": {
         "required": [
           "openRegistration",
@@ -16936,6 +17408,55 @@
         },
         "description": "How to reach PostgreSQL from now on."
       },
+      "SettingsUpdateMailRequest": {
+        "required": [
+          "enabled",
+          "host",
+          "port",
+          "security",
+          "username",
+          "fromAddress",
+          "fromName"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether mail is switched on. Needs a server, a sender and Culina's public address."
+          },
+          "host": {
+            "type": "string",
+            "description": "The SMTP server, such as `smtp.example.com`."
+          },
+          "port": {
+            "type": "integer",
+            "description": "The SMTP port, usually 587 for `starttls` and 465 for `tls`.",
+            "format": "int32"
+          },
+          "security": {
+            "type": "string",
+            "description": "`none`, `starttls` or `tls`."
+          },
+          "username": {
+            "type": "string",
+            "description": "Who to sign in to the server as, or empty for a server that takes mail without signing in."
+          },
+          "password": {
+            "type": "string",
+            "description": "A new password, or null to keep the stored one. An empty string removes it.",
+            "nullable": true
+          },
+          "fromAddress": {
+            "type": "string",
+            "description": "The sender's address."
+          },
+          "fromName": {
+            "type": "string",
+            "description": "The sender's name, as inboxes show it."
+          }
+        },
+        "description": "The mail account to send from, all at once."
+      },
       "SettingsUpdateRegistrationRequest": {
         "required": [
           "openRegistration",
@@ -17457,6 +17978,32 @@
         },
         "description": "A change to one line."
       },
+      "SignInLinksCreateRequest": {
+        "required": [
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The address the account signs in with."
+          }
+        },
+        "description": "Where to send the link."
+      },
+      "SignInLinksRedeemRequest": {
+        "required": [
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "What follows `#token=` in the link."
+          }
+        },
+        "description": "The token from a link Culina mailed."
+      },
       "StreamingProblem": {
         "required": [
           "code",
@@ -17940,6 +18487,10 @@
             "description": "The household created with the account; null means the client should offer to create one or\nredeem an invitation.",
             "format": "uuid",
             "nullable": true
+          },
+          "emailConfirmationRequired": {
+            "type": "boolean",
+            "description": "Whether the account must confirm its address before it can sign in; a link was mailed to it. False when the\ninstance sends no mail, and for the first account."
           }
         },
         "description": "The account that was created."
@@ -18064,6 +18615,15 @@
     },
     {
       "name": "RecoveryCodes"
+    },
+    {
+      "name": "PasswordResetLinks"
+    },
+    {
+      "name": "SignInLinks"
+    },
+    {
+      "name": "EmailConfirmations"
     },
     {
       "name": "Households"

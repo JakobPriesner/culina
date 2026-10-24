@@ -116,7 +116,7 @@ describe('the settings rail', () => {
       within(group)
         .getAllByRole('link')
         .map((link) => link.textContent?.trim())
-    ).toEqual(['Assistant', 'Server']);
+    ).toEqual(['Assistant', 'Mail', 'Server']);
   });
 
   it('offers a member no administration at all', async () => {

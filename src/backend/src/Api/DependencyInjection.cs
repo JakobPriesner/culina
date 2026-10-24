@@ -13,7 +13,8 @@ internal static class DependencyInjection
     {
         services
             .AddHttpContextAccessor()
-            .AddScoped<IUserContext, HttpUserContext>();
+            .AddScoped<IUserContext, HttpUserContext>()
+            .AddScoped<IDeviceLanguage, HttpDeviceLanguage>();
 
         services
             .AddAuthentication(CulinaClaims.Scheme)

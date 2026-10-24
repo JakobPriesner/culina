@@ -14,6 +14,12 @@ internal static class Tags
 
     internal const string RecoveryCodes = "RecoveryCodes";
 
+    internal const string PasswordResetLinks = "PasswordResetLinks";
+
+    internal const string SignInLinks = "SignInLinks";
+
+    internal const string EmailConfirmations = "EmailConfirmations";
+
     internal const string Households = "Households";
 
     internal const string Recipes = "Recipes";

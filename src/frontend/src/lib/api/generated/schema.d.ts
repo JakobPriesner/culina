@@ -336,6 +336,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/password-reset-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mail a link to choose a new password
+         * @description Answers 202 whether or not the address is registered; when it is, a link and a one-hour recovery code are mailed to it, to use with createPasswordResetV1. 409 mail.off when the instance sends no mail, the same for every address.
+         */
+        post: operations["createPasswordResetLinkV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sign-in-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mail a sign-in link
+         * @description Answers 202 whether or not the address is registered; when it is, a link that signs in once, within 15 minutes, is mailed to it (redeemSignInLinkV1). 409 mail.off when the instance sends no mail.
+         */
+        post: operations["createSignInLinkV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sign-in-links/redemptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign in with a mailed link
+         * @description Uses up the token from a sign-in link and starts a browser session, as signInV1 does; opening the link also confirms the address. Failure is always auth.invalid_link.
+         */
+        post: operations["redeemSignInLinkV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/email-confirmations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm an email address
+         * @description Uses up the token from a confirmation link, records the address as confirmed and starts a browser session, as signInV1 does. Failure is always auth.invalid_link.
+         */
+        post: operations["createEmailConfirmationV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/households": {
         parameters: {
             query?: never;
@@ -547,7 +627,7 @@ export interface paths {
         put?: never;
         /**
          * Invite someone
-         * @description Owners only. The response carries the code, and it is the only time the code is ever shown: only its digest is stored.
+         * @description Owners only. The response carries the code, and it is the only time the code is ever shown: only its digest is stored. With an email, the invitation is also mailed to that address (mailedTo); that needs mail to be set up on the server.
          */
         post: operations["createHouseholdInvitationV1"];
         delete?: never;
@@ -750,6 +830,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/mail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the mail account
+         * @description Instance administrator only. Never returns the password, only whether one is set.
+         */
+        get: operations["getMailSettingsV1"];
+        /**
+         * Change the mail account
+         * @description Instance administrator only. Takes effect at once, with no restart. While mail is on, new accounts must confirm their address before they can sign in, and sign-in links, password-forgotten links and account notices are mailed.
+         */
+        put: operations["updateMailSettingsV1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/settings/mail/tests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a test mail
+         * @description Instance administrator only. Sends a mail to the administrator's own address through the saved account, straight away. mail.send_failed carries what the server answered.
+         */
+        post: operations["sendMailTestV1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings/server": {
         parameters: {
             query?: never;
@@ -827,7 +951,7 @@ export interface paths {
         };
         /**
          * Read what a new account is allowed to do
-         * @description Public: a sign-up form has to know which fields to ask for before anyone has an account.
+         * @description Public: a sign-up form has to know which fields to ask for before anyone has an account, and a sign-in form whether it can offer links by mail.
          */
         get: operations["getRegistrationPolicyV1"];
         put?: never;
@@ -2859,6 +2983,11 @@ export interface components {
              */
             coverRecipeId?: string | null;
         };
+        /** @description The token from a link Culina mailed. */
+        EmailConfirmationsCreateRequest: {
+            /** @description What follows `#token=` in the link. */
+            token: string;
+        };
         /** @description The role to give a member. */
         HouseholdsChangeMemberRoleRequest: {
             /** @description `owner` or `member`. */
@@ -2887,6 +3016,8 @@ export interface components {
              * @description When it stops working.
              */
             expiresAt: string;
+            /** @description The address the invitation was mailed to, or null when it was not mailed. */
+            mailedTo?: string | null;
         };
         /** @description A new household. */
         HouseholdsCreateRequest: {
@@ -3612,6 +3743,11 @@ export interface components {
              * @description Grams of one unit.
              */
             grams: number;
+        };
+        /** @description Where to send the link. */
+        PasswordResetLinksCreateRequest: {
+            /** @description The address the account signs in with. */
+            email: string;
         };
         /** @description A new password for an account, unlocked by a recovery code. */
         PasswordResetsCreateRequest: {
@@ -5205,6 +5341,11 @@ export interface components {
             requireInvitation: boolean;
             /** @description Whether this instance has been set up yet. */
             hasAccounts: boolean;
+            /**
+             * @description Whether this instance sends mail: then a new account confirms its address before signing in, and the sign-in
+             *     page can offer a sign-in link and a password-forgotten link.
+             */
+            sendsMail?: boolean;
         };
         /** @description Saves a search. */
         SearchesCreateSavedSearchRequest: {
@@ -5601,6 +5742,32 @@ export interface components {
             /** @description Whether changes can be saved at all. */
             writable: boolean;
         };
+        /** @description The mail account Culina sends from. */
+        SettingsGetMailResponse: {
+            /** @description Whether mail is switched on. */
+            enabled: boolean;
+            /** @description The SMTP server, or empty. */
+            host: string;
+            /**
+             * Format: int32
+             * @description The SMTP port.
+             */
+            port: number;
+            /** @description `none`, `starttls` or `tls`. */
+            security: string;
+            /** @description Who Culina signs in to the server as, or empty for no sign-in. */
+            username: string;
+            /** @description Whether a password has been entered. Never the password. */
+            passwordConfigured: boolean;
+            /** @description The sender's address, or empty. */
+            fromAddress: string;
+            /** @description The sender's name. */
+            fromName: string;
+            /** @description The public address links in mails point to (`Site__Url`), or null when it is not set and mail cannot be switched on. */
+            siteUrl?: string | null;
+            /** @description Whether mail actually goes out: switched on, complete, and with a public address. */
+            sending: boolean;
+        };
         /** @description Who may create an account on this instance. */
         SettingsGetRegistrationResponse: {
             /** @description Whether anyone may create an account. */
@@ -5906,6 +6073,28 @@ export interface components {
              */
             maxPoolSize: number;
         };
+        /** @description The mail account to send from, all at once. */
+        SettingsUpdateMailRequest: {
+            /** @description Whether mail is switched on. Needs a server, a sender and Culina's public address. */
+            enabled: boolean;
+            /** @description The SMTP server, such as `smtp.example.com`. */
+            host: string;
+            /**
+             * Format: int32
+             * @description The SMTP port, usually 587 for `starttls` and 465 for `tls`.
+             */
+            port: number;
+            /** @description `none`, `starttls` or `tls`. */
+            security: string;
+            /** @description Who to sign in to the server as, or empty for a server that takes mail without signing in. */
+            username: string;
+            /** @description A new password, or null to keep the stored one. An empty string removes it. */
+            password?: string | null;
+            /** @description The sender's address. */
+            fromAddress: string;
+            /** @description The sender's name, as inboxes show it. */
+            fromName: string;
+        };
         /** @description The registration policy to apply. */
         SettingsUpdateRegistrationRequest: {
             /** @description Whether anyone may create an account. */
@@ -6197,6 +6386,16 @@ export interface components {
              */
             quantity?: number | null;
         };
+        /** @description Where to send the link. */
+        SignInLinksCreateRequest: {
+            /** @description The address the account signs in with. */
+            email: string;
+        };
+        /** @description The token from a link Culina mailed. */
+        SignInLinksRedeemRequest: {
+            /** @description What follows `#token=` in the link. */
+            token: string;
+        };
         /**
          * @description A failure after the response had already started (a 200 in flight), so it travels as an event on the stream.
          *     Clients branch on string Problem.Code, never on string Problem.Detail, which is reworded.
@@ -6441,6 +6640,11 @@ export interface components {
              *     redeem an invitation.
              */
             householdId?: string | null;
+            /**
+             * @description Whether the account must confirm its address before it can sign in; a link was mailed to it. False when the
+             *     instance sends no mail, and for the first account.
+             */
+            emailConfirmationRequired?: boolean;
         };
         /** @description What may be changed about your own account. */
         UsersUpdateCurrentRequest: {
@@ -7336,6 +7540,170 @@ export interface operations {
             };
         };
     };
+    createPasswordResetLinkV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PasswordResetLinksCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createSignInLinkV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignInLinksCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    redeemSignInLinkV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignInLinksRedeemRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionsSignInResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    createEmailConfirmationV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailConfirmationsCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SessionsSignInResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
     getHouseholdsV1: {
         parameters: {
             query?: {
@@ -8110,7 +8478,14 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description An address to mail the invitation to, or null. Needs mail to be set up on the server. */
+                    email?: string | null;
+                };
+            };
+        };
         responses: {
             /** @description Created */
             201: {
@@ -8119,6 +8494,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HouseholdsCreateInvitationResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
                 };
             };
             /** @description Unauthorized */
@@ -8681,6 +9065,149 @@ export interface operations {
             };
             /** @description Forbidden */
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getMailSettingsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsGetMailResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateMailSettingsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingsUpdateMailRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsGetMailResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    sendMailTestV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

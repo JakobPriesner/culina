@@ -1,5 +1,6 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
+using Application.Mail;
 using Application.Telemetry;
 using Domain.Sessions;
 using Domain.Shared;
@@ -33,8 +34,10 @@ public sealed record SignInCommand(
 
 internal sealed class SignInCommandHandler(
     IUserRepository users,
-    ISessionStore sessions,
     SessionStarter starter,
+    AccountMail mail,
+    MailThrottle throttle,
+    NewDeviceNotice notice,
     IPasswordHasher passwordHasher,
     ILoginAttempts attempts,
     TimeProvider time,
@@ -89,6 +92,18 @@ internal sealed class SignInCommandHandler(
             await UpgradeHashAsync(user, command.Password, cancellationToken).ConfigureAwait(false);
         }
 
+        // Said only now the password matched, so it tells a guesser nothing. The link goes out again, so the way
+        // forward from this answer is the inbox, not a second button.
+        if (mail.Sends && !user.HasConfirmedEmail)
+        {
+            if (throttle.TryTake("confirmation", user.Id))
+            {
+                await mail.SendConfirmationAsync(user, cancellationToken).ConfigureAwait(false);
+            }
+
+            return tracked.Record(Result<SignInOutcome>.Failure(SessionErrors.EmailUnconfirmed));
+        }
+
         var outcome = await StartSessionAsync(user, command, client, now, cancellationToken).ConfigureAwait(false);
 
         // An agent is connected from a signed-in browser or a terminal, and is a second device beside it, not the
@@ -96,9 +111,13 @@ internal sealed class SignInCommandHandler(
         if (client != SessionClient.Agent)
         {
             await outcome.Match(
-                _ => EndReplacedSessionAsync(command.PreviousSessionToken, now, cancellationToken),
+                _ => starter.EndReplacedAsync(command.PreviousSessionToken, now, cancellationToken),
                 _ => Task.CompletedTask).ConfigureAwait(false);
         }
+
+        await outcome.Match(
+            _ => notice.RecordAsync(user, client, command.UserAgent, now, cancellationToken),
+            _ => Task.CompletedTask).ConfigureAwait(false);
 
         tracked.Tag("culina.user_id", user.Id);
 
@@ -124,29 +143,6 @@ internal sealed class SignInCommandHandler(
         AuthenticationLogs.SignInRefused(logger);
 
         return SessionErrors.InvalidCredentials;
-    }
-
-    /// <summary>
-    /// Ends the session this browser held before signing in again; the new cookie overwrites the
-    /// old one, which would otherwise live on while somebody still used it.
-    /// </summary>
-    private async Task EndReplacedSessionAsync(
-        string? previousToken,
-        DateTimeOffset now,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrEmpty(previousToken))
-        {
-            return;
-        }
-
-        var previous = await sessions.FindActiveByTokenAsync(previousToken, now, cancellationToken)
-            .ConfigureAwait(false);
-
-        // Nothing to report either way: a session that is already gone is what this wants.
-        await previous.Match(
-            session => sessions.RevokeAsync(session.Id, session.UserId, now, cancellationToken),
-            _ => Task.FromResult(Result.Success())).ConfigureAwait(false);
     }
 
     private async Task UpgradeHashAsync(User user, string password, CancellationToken cancellationToken)
