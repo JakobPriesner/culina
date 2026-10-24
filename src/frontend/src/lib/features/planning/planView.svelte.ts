@@ -24,6 +24,20 @@ class PlanViewChoice {
     this.#chosen = view;
     writeDevice(viewKey, view);
   }
+
+  /**
+   * The Monday whose days already over were unfolded, for this visit to the app: going to the list and back finds them
+   * open, so the week comes back where it was left. A new week folds them again.
+   */
+  #unfoldedWeek = $state<string | null>(null);
+
+  earlierShown(monday: string): boolean {
+    return this.#unfoldedWeek === monday;
+  }
+
+  showEarlier(monday: string): void {
+    this.#unfoldedWeek = monday;
+  }
 }
 
 function readChoice(): PlanView | null {

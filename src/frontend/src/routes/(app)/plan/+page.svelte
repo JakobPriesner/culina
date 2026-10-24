@@ -112,8 +112,9 @@
   });
 
   /** The days of this week already over, folded into one line until asked for: on a Saturday, Monday is history. */
-  let showEarlier = $state(false);
-  const foldsEarlier = $derived(view === 'week' && start === mondayOf(0) && !showEarlier);
+  const foldsEarlier = $derived(
+    view === 'week' && start === mondayOf(0) && !planView.earlierShown(start)
+  );
 
   function choose(next: PlanView) {
     planView.choose(next);
@@ -275,7 +276,7 @@
           rows={wide.current}
           seek={sought}
           folded={foldsEarlier}
-          onunfold={() => (showEarlier = true)}
+          onunfold={() => planView.showEarlier(start)}
           onlines={listBeside.current ? (meal) => lineMarks.show(meal.entryId) : undefined}
           ontolist={listBeside.current ? (meal) => void actions.toList(meal.entryId) : undefined}
           ondrop={actions.drop}
