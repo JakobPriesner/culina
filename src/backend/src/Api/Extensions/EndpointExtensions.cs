@@ -7,6 +7,8 @@ using Api.Endpoints.Ingredients;
 using Api.Endpoints.Invitations;
 using Api.Endpoints.LogRecords;
 using Api.Endpoints.Nutrition;
+using Api.Endpoints.EmailConfirmations;
+using Api.Endpoints.PasswordResetLinks;
 using Api.Endpoints.PasswordResets;
 using Api.Endpoints.Planning;
 using Api.Endpoints.Products;
@@ -15,6 +17,7 @@ using Api.Endpoints.RecipeDrafts;
 using Api.Endpoints.Recipes;
 using Api.Endpoints.RecipeSources;
 using Api.Endpoints.RecoveryCodes;
+using Api.Endpoints.SignInLinks;
 using Api.Endpoints.Registration;
 using Api.Endpoints.Searches;
 using Api.Endpoints.Sessions;
@@ -44,6 +47,9 @@ internal static class EndpointExtensions
             .AddAgentAuthorizationsEndpoints()
             .AddPasswordResetsEndpoints()
             .AddRecoveryCodesEndpoints()
+            .AddPasswordResetLinksEndpoints()
+            .AddSignInLinksEndpoints()
+            .AddEmailConfirmationsEndpoints()
             .AddHouseholdsEndpoints()
             .AddInvitationsEndpoints()
             .AddSettingsEndpoints()

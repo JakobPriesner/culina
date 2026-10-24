@@ -237,8 +237,8 @@ docker compose -f compose.yaml -f compose.prod.yaml exec -T db \
 docker run --rm -v culina_culina-images:/data -v "$PWD":/backup alpine \
     tar xzf /backup/culina-images-2026-09-13.tar.gz -C /data
 
-# The key ring, decrypted on its way in. Without it the assistant's key has to
-# be entered again, and import notifications stop.
+# The key ring, decrypted on its way in. Without it the assistant's key and the
+# mail password have to be entered again, and import notifications stop.
 age -d -i culina-secrets.key culina-keys-2026-09-13.tar.gz.age \
     | docker run --rm -i -v culina_culina-keys:/data alpine tar xzf - -C /data
 
@@ -365,6 +365,12 @@ previous release's dump.
   log. With a collector, Npgsql's metrics show the pool itself:
   `db.client.connection.count` by state against `db.client.connection.max`,
   and `db.client.connection.npgsql.pending_requests` for requests waiting.
+- **Mail that does not go out.** 1801 is a mail the server or network refused,
+  to be tried again (a warning, with what the server said); 1802 is one given up
+  on after its eighth attempt, about a day later (an error); 1803 is one that
+  could not be decrypted because the key ring changed, and was dropped. A burst
+  of 1801 right after changing Settings → Mail is a wrong password or port;
+  **Send a test mail** on that screen says the same thing immediately.
 - **Telemetry.** Set a collector under Settings → Server, or
   `OTEL_EXPORTER_OTLP_ENDPOINT`, and traces, metrics and logs all export. Unset,
   nothing leaves the machine.

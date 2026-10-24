@@ -44,10 +44,11 @@
     }
   ];
 
-  // Assistant and server configure the instance, not the person: the administrator gets them as a group of their own
+  // Assistant, mail and server configure the instance, not the person: the administrator gets them as a group of their own
   // in the rail, and nobody else gets them at all (absent, not disabled).
   const administration = [
     { href: resolve('/(app)/me/ai'), label: m['me.ai'], lead: m['me.ai.lead'] },
+    { href: resolve('/(app)/me/mail'), label: m['me.mail'], lead: m['me.mail.lead'] },
     { href: resolve('/(app)/me/server'), label: m['me.server'], lead: m['me.server.lead'] }
   ];
   const admin = $derived(session.user?.isAdmin ? administration : []);

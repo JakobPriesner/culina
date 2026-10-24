@@ -20,6 +20,7 @@ class Invitations {
   #error = $state<AppError | null>(null);
 
   #fresh = $state<string | null>(null);
+  #mailedTo = $state<string | null>(null);
 
   /** Plain, not $state: read before the first await of an effect-called method, where a tracked read would retrigger on its own writes. */
   #householdId: string | null = null;
@@ -40,6 +41,11 @@ class Invitations {
 
   get freshCode(): string | null {
     return this.#fresh;
+  }
+
+  /** Where the freshest invitation was mailed, or null when it was only made to share. */
+  get mailedTo(): string | null {
+    return this.#mailedTo;
   }
 
   async load(householdId: string): Promise<void> {
@@ -70,12 +76,14 @@ class Invitations {
     }
   }
 
-  async create(householdId: string): Promise<AppError | null> {
+  /** Makes an invitation; with an address, Culina also mails it there (only where the instance sends mail). */
+  async create(householdId: string, email?: string): Promise<AppError | null> {
     this.#adopt(householdId);
 
     const result = await request(() =>
       http.POST('/api/v1/households/{householdId}/invitations', {
-        params: { path: { householdId } }
+        params: { path: { householdId } },
+        ...(email ? { body: { email } } : {})
       })
     );
 
@@ -91,6 +99,7 @@ class Invitations {
     }
 
     this.#fresh = result.value.code;
+    this.#mailedTo = result.value.mailedTo ?? null;
     this.#error = null;
 
     await this.load(householdId);
@@ -128,6 +137,7 @@ class Invitations {
       this.#householdId = householdId;
       this.#items = [];
       this.#fresh = null;
+      this.#mailedTo = null;
     }
   }
 
@@ -139,6 +149,7 @@ class Invitations {
     this.#status = 'idle';
     this.#error = null;
     this.#fresh = null;
+    this.#mailedTo = null;
   }
 }
 

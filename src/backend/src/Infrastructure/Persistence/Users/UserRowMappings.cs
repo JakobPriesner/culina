@@ -15,7 +15,7 @@ internal static class UserRowMappings
         var email = row.Email.ToEmailOrThrow();
         var displayName = row.DisplayName.ToDisplayNameOrThrow();
 
-        return User.Restore(row.Id, email, displayName, row.PasswordHash, row.CreatedAt, row.Version);
+        return User.Restore(row.Id, email, displayName, row.PasswordHash, row.CreatedAt, row.Version, row.EmailConfirmedAt);
     }
 
     private static Email ToEmailOrThrow(this string value) =>

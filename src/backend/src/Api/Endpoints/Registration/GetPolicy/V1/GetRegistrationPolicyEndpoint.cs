@@ -29,7 +29,8 @@ internal sealed class GetRegistrationPolicyEndpoint : IEndpoint
             .WithTags(Tags.Registration)
             .WithSummary("Read what a new account is allowed to do")
             .WithDescription(
-                "Public: a sign-up form has to know which fields to ask for before anyone has an account.")
+                "Public: a sign-up form has to know which fields to ask for before anyone has an account, and a "
+                + "sign-in form whether it can offer links by mail.")
             .Produces<Response>()
             .AllowAnonymous();
     }

@@ -24,6 +24,29 @@ internal static class OpenApiExtensions
                 ?? OpenApiOptions.CreateDefaultSchemaReferenceId(type);
 
             // Query parameters are declared once as endpoint metadata, read by the guard and here.
+            // A body read by hand (see OptionalJsonBody) is described here, since routing never saw it.
+            options.AddOperationTransformer(async (operation, context, cancellationToken) =>
+            {
+                var body = context.Description.ActionDescriptor.EndpointMetadata
+                    .OfType<OptionalJsonBody>()
+                    .FirstOrDefault();
+
+                if (body is not null)
+                {
+                    operation.RequestBody = new OpenApiRequestBody
+                    {
+                        Required = false,
+                        Content = new Dictionary<string, OpenApiMediaType>
+                        {
+                            ["application/json"] = new()
+                            {
+                                Schema = await context.GetOrCreateSchemaAsync(body.Type, null, cancellationToken).ConfigureAwait(false)
+                            }
+                        }
+                    };
+                }
+            });
+
             options.AddOperationTransformer((operation, context, _) =>
             {
                 var allowed = context.Description.ActionDescriptor.EndpointMetadata

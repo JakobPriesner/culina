@@ -8,6 +8,7 @@ using Infrastructure.Import;
 using Infrastructure.Import.Culina;
 using Infrastructure.Import.Mealie;
 using Infrastructure.Import.Tandoor;
+using Infrastructure.Mail;
 using Infrastructure.Nutrition;
 using Infrastructure.Persistence;
 using Infrastructure.Persistence.AgentAuthorizations;
@@ -63,6 +64,7 @@ public static class DependencyInjection
             .AddIdentity()
             .AddRecipeImport()
             .AddAssistance()
+            .AddMail()
             .AddScoped<IRecipeIntakeJobs, RecipeIntakeJobs>()
             .AddScoped<IIntakePurge, IntakePurge>()
             .AddSingleton<PushTransport>()
@@ -93,6 +95,8 @@ public static class DependencyInjection
             .AddScoped<ISettingsStore<RegistrationSettings>, PostgresSettingsStore<RegistrationSettings>>()
             .AddSingleton<AssistanceSettings>()
             .AddScoped<ISettingsStore<AssistanceSettings>, PostgresSettingsStore<AssistanceSettings>>()
+            .AddSingleton<MailSettings>()
+            .AddScoped<ISettingsStore<MailSettings>, PostgresSettingsStore<MailSettings>>()
             .AddHostedService<InstanceSettingsLoader>();
 
     // A bucket when one is configured, the image directory otherwise; the same store either way.
@@ -115,6 +119,24 @@ public static class DependencyInjection
             .AddSingleton<IAssistants, Assistants>()
             .AddSingleton<IModelPrices, ModelPrices>()
             .AddScoped<IAssistanceLedger, AssistanceLedger>();
+
+    // The password and queued mail each have their own encryption purpose, so neither reads back as the other or as an API key.
+    private static IServiceCollection AddMail(this IServiceCollection services) =>
+        services
+            .AddKeyedSingleton<ISecretProtector>(
+                MailSettings.PasswordProtection,
+                (provider, _) => new SecretProtector(
+                    provider.GetRequiredService<StorageSettings>(), MailSettings.PasswordProtection))
+            .AddKeyedSingleton<ISecretProtector>(
+                MailOutbox.Protection,
+                (provider, _) => new SecretProtector(
+                    provider.GetRequiredService<StorageSettings>(), MailOutbox.Protection))
+            .AddSingleton<IMailTransport, SmtpTransport>()
+            .AddScoped<MailOutbox>()
+            .AddScoped<IMailOutbox>(provider => provider.GetRequiredService<MailOutbox>())
+            .AddScoped<IEmailTokenRepository, EmailTokenRepository>()
+            .AddScoped<IKnownDevices, KnownDevices>()
+            .AddHostedService<MailOutboxWorker>();
 
     // Readers are singletons (stateless, shared HTTP pool); one per source app, picked by the registry.
     private static IServiceCollection AddRecipeImport(this IServiceCollection services) =>

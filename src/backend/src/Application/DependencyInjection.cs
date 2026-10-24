@@ -6,6 +6,14 @@ using Application.AgentAuthorizations.Redeem;
 using Application.AgentAuthorizations.Register;
 using Application.AgentAuthorizations.Start;
 using Application.Archive;
+using Application.EmailConfirmations.Create;
+using Application.Mail;
+using Application.PasswordResetLinks.Create;
+using Application.Settings.GetMail;
+using Application.Settings.SendMailTest;
+using Application.Settings.UpdateMail;
+using Application.SignInLinks.Create;
+using Application.SignInLinks.Redeem;
 using Application.Assistance;
 using Application.Cookbooks;
 using Application.Cooking.CookPhoto;
@@ -153,6 +161,22 @@ public static class DependencyInjection
             .AddScoped<ICommandHandler<IssueRecoveryCodeCommand, Contracts.RecoveryCodes.Issue.Response>,
                 IssueRecoveryCodeCommandHandler>()
             .AddScoped<ICommandHandler<ResetPasswordCommand>, ResetPasswordCommandHandler>()
+
+            // Mail
+            .AddScoped<AccountMail>()
+            // A singleton: what it remembers is shared by every request.
+            .AddSingleton<MailThrottle>()
+            .AddScoped<ICommandHandler<RequestPasswordResetLinkCommand>, RequestPasswordResetLinkCommandHandler>()
+            .AddScoped<ICommandHandler<RequestSignInLinkCommand>, RequestSignInLinkCommandHandler>()
+            .AddScoped<ICommandHandler<RedeemSignInLinkCommand, SignInOutcome>, RedeemSignInLinkCommandHandler>()
+            .AddScoped<ICommandHandler<ConfirmEmailCommand, SignInOutcome>, ConfirmEmailCommandHandler>()
+            .AddScoped<LinkSignIn>()
+            .AddScoped<NewDeviceNotice>()
+            .AddScoped<IQueryHandler<GetMailSettingsQuery, Contracts.Settings.GetMail.Response>,
+                GetMailSettingsQueryHandler>()
+            .AddScoped<ICommandHandler<UpdateMailSettingsCommand, Contracts.Settings.GetMail.Response>,
+                UpdateMailSettingsCommandHandler>()
+            .AddScoped<ICommandHandler<SendMailTestCommand>, SendMailTestCommandHandler>()
 
             // Sessions
             .AddScoped<ICommandHandler<SignInCommand, SignInOutcome>, SignInCommandHandler>()

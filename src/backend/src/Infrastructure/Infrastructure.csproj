@@ -23,6 +23,7 @@
     <PackageReference Include="Microsoft.AspNetCore.DataProtection.Extensions" />
     <PackageReference Include="SixLabors.ImageSharp" />
     <PackageReference Include="AWSSDK.S3" />
+    <PackageReference Include="MailKit" />
     <PackageReference Include="OpenAI" />
     <PackageReference Include="Google.GenAI" />
     <PackageReference Include="OllamaSharp" />

@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Settings;
+using Application.Mail;
 using Application.Telemetry;
 using Domain.Households;
 using Domain.Shared;
@@ -23,6 +24,7 @@ internal sealed class RegisterUserCommandHandler(
     IInvitationRepository invitations,
     IPasswordHasher passwordHasher,
     IUnitOfWork unitOfWork,
+    AccountMail mail,
     RegistrationDependencies dependencies)
     : ICommandHandler<RegisterUserCommand, Response>
 {
@@ -139,10 +141,29 @@ internal sealed class RegisterUserCommandHandler(
         string? householdName,
         CancellationToken cancellationToken)
     {
+        // Nothing could confirm the address while no mail goes out, and the first account is the one that sets mail up.
+        if (admission.IsFirstAccount || !mail.Sends)
+        {
+            user.ConfirmEmail(user.CreatedAt);
+        }
+
         var added = await users.AddAsync(user, admission.IsFirstAccount, cancellationToken).ConfigureAwait(false);
 
-        return await added.Match(
+        var placed = await added.Match(
             () => PlaceAsync(user, admission, householdName, cancellationToken),
+            error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
+
+        return await placed.Match(
+            async response =>
+            {
+                // In the same transaction, so the link is only mailed for an account that exists.
+                if (!user.HasConfirmedEmail)
+                {
+                    await mail.SendConfirmationAsync(user, cancellationToken).ConfigureAwait(false);
+                }
+
+                return Result<Response>.Success(response with { EmailConfirmationRequired = !user.HasConfirmedEmail });
+            },
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
     }
 

@@ -28,6 +28,10 @@ public class AgentOperationsTests(PostgresFixture postgres)
         "revokeSessionV1",
         "createPasswordResetV1",
         "issueRecoveryCodeV1",
+        "createPasswordResetLinkV1",
+        "createSignInLinkV1",
+        "redeemSignInLinkV1",
+        "createEmailConfirmationV1",
 
         // Approving apps that connect agents: an agent must not let more agents in.
         "getAgentAuthorizationByIdV1",
@@ -67,6 +71,9 @@ public class AgentOperationsTests(PostgresFixture postgres)
         "updateRegistrationSettingsV1",
         "getAssistanceSettingsV1",
         "updateAssistanceSettingsV1",
+        "getMailSettingsV1",
+        "updateMailSettingsV1",
+        "sendMailTestV1",
         "getAssistanceUsageV1",
         "getAssistanceModelsV1",
         "getServerSettingsV1",

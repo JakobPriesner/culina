@@ -21,16 +21,16 @@ export async function readPolicy(): Promise<RegistrationPolicy> {
   // Closed by default: a sign-up form that cannot succeed is worse.
   return result.ok
     ? result.value
-    : { openRegistration: false, requireInvitation: false, hasAccounts: true };
+    : { openRegistration: false, requireInvitation: false, hasAccounts: true, sendsMail: false };
 }
 
 /**
  * Creates the account; returns the household it landed in, or `null` when the instance allows an
- * account without one.
+ * account without one, and whether the address must be confirmed (from the mailed link) before it can sign in.
  */
 export async function register(
   details: Registration
-): Promise<{ householdId: string | null } | AppError> {
+): Promise<{ householdId: string | null; confirmationRequired: boolean } | AppError> {
   const result = await request(() =>
     http.POST('/api/v1/users', {
       body: {
@@ -43,5 +43,10 @@ export async function register(
     })
   );
 
-  return result.ok ? { householdId: result.value.householdId ?? null } : result.error;
+  return result.ok
+    ? {
+        householdId: result.value.householdId ?? null,
+        confirmationRequired: result.value.emailConfirmationRequired ?? false
+      }
+    : result.error;
 }

@@ -58,4 +58,46 @@ describe('the sign-in page', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: "I'm family, sign me in" })).toBeInTheDocument();
   });
+
+  it('offers a sign-in link where the instance sends mail, and says where to look once it is sent', async () => {
+    const posted: string[] = [];
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: unknown) => {
+        const request = input as Request;
+
+        if (request.url.includes('/registration/policy')) {
+          return new Response(
+            JSON.stringify({
+              openRegistration: false,
+              requireInvitation: false,
+              hasAccounts: true,
+              sendsMail: true
+            }),
+            { headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+
+        posted.push(request.url);
+
+        return new Response(null, { status: 202 });
+      })
+    );
+
+    renderWithProviders(LoginPage);
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Email me a sign-in link instead' })
+    );
+    await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'ada@example.com');
+    await userEvent.click(screen.getByRole('button', { name: 'Email me a link' }));
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Check your inbox' })
+    ).toBeInTheDocument();
+    // Said as "if it has an account": the answer is the same either way.
+    expect(screen.getByText(/If ada@example.com has a Culina account/)).toBeInTheDocument();
+    expect(posted.some((url) => url.endsWith('/api/v1/sign-in-links'))).toBe(true);
+  });
 });

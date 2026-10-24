@@ -52,6 +52,10 @@ on the operations offered as tools, and nowhere else.
 | `POST` | `/users/me/recovery-codes` | Needs `password`. `201` with ten one-time codes, shown once; any earlier set stops working. |
 | `POST` | `/recovery-codes` | Administrator only. `201` with a one-time code for the account with that `email`, valid 24 hours. `404` when no account has the address — the administrator may know. |
 | `POST` | `/password-resets` | Anonymous. `email`, `code` (saved or issued; case, spaces and dashes ignored), `password`. Uses up the code, sets the password, revokes **every** session of the account. `204`. Failure is always `400 auth.invalid_recovery_code`, whether or not the address is registered. Rate limited like sign-in, per IP and per account. |
+| `POST` | `/password-reset-links` | Anonymous. `email`. `202` whether or not the address is registered; when it is, mails a link and a one-hour code for `/password-resets`. `409 mail.off` when the instance sends no mail (the same for every address). Rate limited like sign-in; at most one mail per account a minute. |
+| `POST` | `/sign-in-links` | Anonymous. `email`. `202`, as above; mails a link that signs in once, within 15 minutes. |
+| `POST` | `/sign-in-links/redemptions` | Anonymous. `token` from the link (after `#token=`). `201` and a browser session, as `/sessions`; also confirms the address. Failure is always `400 auth.invalid_link`. |
+| `POST` | `/email-confirmations` | Anonymous. `token` from a confirmation link. Confirms the address and signs the browser in, `201` as `/sessions`. Failure is always `400 auth.invalid_link`. While mail is on, `/sessions` answers `403 auth.email_unconfirmed` for an unconfirmed address once the password matched, and mails the link again. |
 
 ## Households
 

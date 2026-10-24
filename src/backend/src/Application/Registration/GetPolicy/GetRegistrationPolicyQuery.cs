@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Abstractions.Settings;
+using Application.Mail;
 using Application.Telemetry;
 using Domain.Shared;
 using Response = Contracts.Registration.GetPolicy.Response;
@@ -12,7 +13,8 @@ public sealed record GetRegistrationPolicyQuery;
 
 internal sealed class GetRegistrationPolicyQueryHandler(
     RegistrationSettings settings,
-    IUserRepository users)
+    IUserRepository users,
+    AccountMail mail)
     : IQueryHandler<GetRegistrationPolicyQuery, Response>
 {
     public async Task<Result<Response>> Handle(
@@ -29,7 +31,8 @@ internal sealed class GetRegistrationPolicyQueryHandler(
         {
             OpenRegistration = settings.OpenRegistration,
             RequireInvitation = settings.RequireInvitation,
-            HasAccounts = existing > 0
+            HasAccounts = existing > 0,
+            SendsMail = mail.Sends
         }));
     }
 }

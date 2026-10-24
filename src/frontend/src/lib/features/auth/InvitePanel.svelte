@@ -1,7 +1,10 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
+
   import { publicOrigin } from '$api';
-  import { Button, SectionLabel } from '$ds';
+  import { Button, Field, SectionLabel, TextInput } from '$ds';
   import { invitations } from './invitations.svelte';
+  import { readPolicy } from './registration.svelte';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
@@ -17,7 +20,15 @@
 
   let { householdId }: Props = $props();
 
-  let working = $state(false);
+  let working = $state<'share' | 'mail' | null>(null);
+
+  /** Where to mail an invitation; offered only where the instance sends mail. */
+  let address = $state('');
+  let sendsMail = $state(false);
+
+  onMount(async () => {
+    sendsMail = (await readPolicy()).sendsMail ?? false;
+  });
 
   $effect(() => {
     void invitations.load(householdId);
@@ -28,15 +39,23 @@
   const when = (iso: string) =>
     new Intl.DateTimeFormat(preferences.locale, { dateStyle: 'long' }).format(new Date(iso));
 
-  async function create() {
-    working = true;
+  async function create(how: 'share' | 'mail') {
+    working = how;
 
-    const failure = await invitations.create(householdId);
+    const to = how === 'mail' ? address.trim() : undefined;
+    const failure = await invitations.create(householdId, to);
 
-    working = false;
+    working = null;
 
     if (failure) {
-      toaster.show({ message: () => explain(failure), tone: 'danger' });
+      toaster.show({ message: () => explain(failure.fields[0] ?? failure), tone: 'danger' });
+
+      return;
+    }
+
+    if (to) {
+      address = '';
+      toaster.show({ message: () => m['me.invite.mailed']({ email: to }), tone: 'success' });
     }
   }
 
@@ -60,7 +79,37 @@
 </script>
 
 <div class="panel">
-  <Button variant="primary" onclick={create} loading={working}>{m['me.invite.create']()}</Button>
+  <Button variant="primary" onclick={() => create('share')} loading={working === 'share'}>
+    {m['me.invite.create']()}
+  </Button>
+
+  {#if sendsMail}
+    <form
+      class="mail"
+      onsubmit={(event) => {
+        event.preventDefault();
+        void create('mail');
+      }}
+    >
+      <Field label={m['me.invite.email']()} hint={m['me.invite.email.hint']()}>
+        {#snippet children({ id, describedBy, invalid })}
+          <TextInput
+            {id}
+            {describedBy}
+            {invalid}
+            type="email"
+            inputmode="email"
+            autocomplete="off"
+            value={address}
+            oninput={(typed) => (address = typed)}
+          />
+        {/snippet}
+      </Field>
+      <Button type="submit" loading={working === 'mail'} disabled={address.trim().length === 0}>
+        {m['me.invite.send']()}
+      </Button>
+    </form>
+  {/if}
 
   {#if invitations.freshCode}
     <div class="fresh">
@@ -98,6 +147,18 @@
     flex-direction: column;
     gap: var(--space-4);
     align-items: flex-start;
+  }
+
+  .mail {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: var(--space-3);
+    width: 100%;
+  }
+
+  .mail > :global(:first-child) {
+    flex: 1 1 14rem;
   }
 
   .fresh {

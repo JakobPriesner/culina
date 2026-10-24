@@ -16,4 +16,10 @@ public sealed record Response
     /// Whether this instance has been set up yet.
     /// </summary>
     public required bool HasAccounts { get; init; }
+
+    /// <summary>
+    /// Whether this instance sends mail: then a new account confirms its address before signing in, and the sign-in
+    /// page can offer a sign-in link and a password-forgotten link.
+    /// </summary>
+    public bool SendsMail { get; init; }
 }
