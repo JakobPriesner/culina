@@ -85,6 +85,20 @@ internal static class RateLimitExtensions
 
     private const int LogRecordBatchesPerMinute = 20;
 
+    /// <summary>The OAuth authorization and token endpoints an app connecting an AI agent uses.</summary>
+    /// <remarks>
+    /// Anonymous, and the authorization endpoint makes the server fetch the app's metadata document, so it is
+    /// limited per address. Fixed rather than a setting: a person connects an app now and then.
+    /// </remarks>
+    internal const string AgentAuthorization = "agent-authorization";
+
+    private const int AgentAuthorizationsPerMinute = 60;
+
+    /// <summary>An app registering itself to connect AI agents: anonymous, and stored until it goes unused.</summary>
+    internal const string AgentRegistration = "agent-registration";
+
+    private const int AgentRegistrationsPerHour = 60;
+
     /// <summary>
     /// What every caller together may send to <see cref="LogRecords"/> in a minute.
     /// </summary>
@@ -132,6 +146,12 @@ internal static class RateLimitExtensions
 
             options.AddPolicy(LogRecords, context =>
                 PerAddress(context, LogRecordBatchesPerMinute, TimeSpan.FromMinutes(1)));
+
+            options.AddPolicy(AgentAuthorization, context =>
+                PerAddress(context, AgentAuthorizationsPerMinute, TimeSpan.FromMinutes(1)));
+
+            options.AddPolicy(AgentRegistration, context =>
+                PerAddress(context, AgentRegistrationsPerHour, TimeSpan.FromHours(1)));
 
             // A generous per-address ceiling so one client cannot exhaust the connection pool
             // (keyed on address, not cookie, so a made-up cookie buys nothing). Then the ceilings

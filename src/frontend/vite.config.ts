@@ -16,11 +16,14 @@ const galleryWanted = process.env['VITE_GALLERY'] === '1';
 // The installed app's bundle (docs/native-app-design.md, part 5): its own output directory, so `build/` stays exactly the website.
 const nativeTarget = process.env['CULINA_TARGET'] === 'native';
 
+const api = { target: process.env['CULINA_API'] ?? 'http://localhost:5000', changeOrigin: false };
+
+// The OAuth endpoints and their discovery documents sit outside /api (see Api/Agents/Authorization), as on one origin in production.
 const apiProxy = {
-  '/api': {
-    target: process.env['CULINA_API'] ?? 'http://localhost:5000',
-    changeOrigin: false
-  }
+  '/api': api,
+  '/oauth': api,
+  '/.well-known/oauth-protected-resource': api,
+  '/.well-known/oauth-authorization-server': api
 };
 
 function messages(outputStructure: 'message-modules' | 'locale-modules') {

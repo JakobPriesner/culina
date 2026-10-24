@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Settings;
 using Domain.Suggestions;
+using Infrastructure.AgentAuthorizations;
 using Infrastructure.Assistance;
 using Infrastructure.Identity;
 using Infrastructure.Import;
@@ -9,6 +10,7 @@ using Infrastructure.Import.Mealie;
 using Infrastructure.Import.Tandoor;
 using Infrastructure.Nutrition;
 using Infrastructure.Persistence;
+using Infrastructure.Persistence.AgentAuthorizations;
 using Infrastructure.Persistence.Assistance;
 using Infrastructure.Persistence.Cookbooks;
 using Infrastructure.Persistence.Cooking;
@@ -168,6 +170,9 @@ public static class DependencyInjection
             .AddScoped<ICookLogRepository, CookLogRepository>()
             .AddScoped<ICookSessionRepository, CookSessionRepository>()
             .AddSingleton<IWebPageFetcher, SafeWebPageFetcher>()
+            .AddScoped<IAgentClientRepository, AgentClientRepository>()
+            .AddScoped<IAgentAuthorizationRepository, AgentAuthorizationRepository>()
+            .AddSingleton<IClientMetadataDocuments, ClientMetadataFetcher>()
             .AddScoped<IMealPlanRepository, MealPlanRepository>()
             .AddScoped<ICookbookRepository, CookbookRepository>()
             .AddScoped<ISavedSearchRepository, SavedSearchRepository>()

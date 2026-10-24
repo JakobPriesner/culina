@@ -591,6 +591,72 @@ The agent's session appears in `GET /sessions` as `client: "agent"` and is
 revoked like any other (`DELETE /sessions/{sessionId}`); it lapses when unused,
 like an app's.
 
+**Connecting through OAuth.** A client that cannot be given a header (Claude.ai
+and Claude Desktop custom connectors, ChatGPT) is given only the address,
+`https://culina.example/api/mcp`, and connects through OAuth 2.1 as the [MCP
+authorization spec](https://modelcontextprotocol.io/specification/latest/basic/authorization)
+(revision 2026-07-28) describes. Culina is its own authorization server; the
+code is in `Api/Agents/Authorization`.
+
+1. *Discovery.* `/api/mcp` answers a request without an agent token `401` with
+   `WWW-Authenticate: Bearer resource_metadata="https://culina.example/.well-known/oauth-protected-resource/api/mcp"`.
+   That document (RFC 9728, served by the MCP SDK's handler) names the resource
+   `https://culina.example/api/mcp`, the authorization server
+   `https://culina.example` and the one scope, `mcp`. The authorization server's
+   metadata is at `/.well-known/oauth-authorization-server` (RFC 8414). Issuer
+   and resource are built from the request's own scheme and host, after
+   forwarded headers, so they match the address the person typed.
+2. *Registration.* Either a [Client ID Metadata
+   Document](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/):
+   the `client_id` is an https address with a path, fetched afresh on every
+   authorization request (public addresses only, no redirects, 5 s, 16 kB) and
+   accepted only when its own `client_id` is that address; or dynamic client
+   registration (RFC 7591, deprecated by the spec but still used) at
+   `POST /oauth/register`. Every client is public: `token_endpoint_auth_method`
+   is always `none`, whatever was asked for. A registered client that never
+   connects anybody is forgotten after a day.
+3. *Authorization.* `GET /oauth/authorize` takes only `response_type=code` and
+   PKCE with `code_challenge_method=S256`. The `redirect_uri` must be one the
+   client registered, matched exactly, except that the port of a loopback
+   address (`http://localhost`, `127.0.0.1`, `[::1]`) may differ (RFC 8252).
+   Only https and loopback addresses can be registered at all. `resource`
+   (RFC 8707) must name `/api/mcp` when given. Until client and return address
+   check out, a failure is shown on Culina's own page (`/authorize?problem=…`)
+   and the browser goes nowhere; after that it goes back to the client with
+   `error`, `state` and `iss` (RFC 9207). Unknown parameters, `scope` included,
+   are ignored.
+4. *Consent.* The browser lands on the web app's `/authorize?request={id}`,
+   signing in first if need be. It reads `GET /api/v1/agent-authorizations/{id}`
+   (the client's name, who vouches for it, where it returns to, and whether that
+   is this computer) and answers with
+   `PUT /api/v1/agent-authorizations/{id}/decision` `{ "approved": true }`. The
+   answer is an ordinary unsafe cookie request, so it needs our own `Origin`
+   and the CSRF token: a page elsewhere cannot approve on someone's behalf. The
+   response's `redirectUri` carries the code (or `error=access_denied`), with
+   `state` and `iss`, and the page navigates there. A request must be answered
+   within 10 minutes, and only once.
+5. *Token.* `POST /oauth/token` (form-encoded, `grant_type=authorization_code`,
+   `code`, `redirect_uri`, `client_id`, `code_verifier`, optional `resource`)
+   answers `{ "access_token", "token_type": "Bearer", "scope": "mcp" }`. The code
+   lives 2 minutes and is redeemed once; a code presented again is refused and
+   ends the session it became. Only the code's digest is stored. Errors are
+   RFC 6749 JSON (`invalid_grant`, `invalid_target`, …), not problem documents.
+
+The access token **is an agent session**, started exactly as signing in as
+client `agent` starts one, for whoever approved, and listed with the browser
+that approved it. So everything above applies unchanged: it reaches only
+`/api/mcp` and the allow-listed operations, shows on the devices screen, and is
+revoked there. Culina issues no refresh tokens and no `expires_in`: the session
+slides while used (`Cookies__SessionDays`, at most `Cookies__MaxSessionDays`),
+and once it ends, `/api/mcp` answers `401` and the client runs the flow again.
+Every other session's token, and a cookie, is refused at `/api/mcp` with the
+same challenge: none of them was issued for it. The three OAuth endpoints and
+the two discovery documents sit outside `/api` (OAuth asks a server to ignore
+unknown parameters, which the API refuses) and outside the OpenAPI document;
+they are rate limited per address (`agent-authorization`, 60 a minute, and
+`agent-registration`, 60 an hour). There is no CORS: Claude and ChatGPT
+exchange the code from their servers, not from a page.
+
 **Tools.** One tool per API operation in `Api/Agents/AgentOperations.cs`, named
 after its `operationId` (`getRecipesV1`, `createRecipeV1`, …) and described
 from this API's own OpenAPI document. A tool's arguments are the operation's
@@ -602,7 +668,8 @@ in memory and as the agent, so validation, authorization, rate limits and
 `If-Match` behave exactly as documented above.
 
 **What an agent cannot do.** The allow-list withholds the account and its
-credentials (sign-in, sessions, password, recovery codes, preferences), push
+credentials (sign-in, sessions, password, recovery codes, preferences,
+approving OAuth connections), push
 devices, household membership and invitations, creating, renaming, deleting or
 restoring a household, instance settings, share links, connected libraries,
 archives, the assistant, and every binary, multipart or streaming endpoint. An

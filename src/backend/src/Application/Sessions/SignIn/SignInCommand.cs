@@ -1,6 +1,5 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
-using Application.Abstractions.Settings;
 using Application.Telemetry;
 using Domain.Sessions;
 using Domain.Shared;
@@ -35,10 +34,10 @@ public sealed record SignInCommand(
 internal sealed class SignInCommandHandler(
     IUserRepository users,
     ISessionStore sessions,
-    ISecretTokens tokens,
+    SessionStarter starter,
     IPasswordHasher passwordHasher,
     ILoginAttempts attempts,
-    SignInDependencies dependencies,
+    TimeProvider time,
     ILogger<SignInCommandHandler> logger)
     : ICommandHandler<SignInCommand, SignInOutcome>
 {
@@ -57,7 +56,7 @@ internal sealed class SignInCommandHandler(
                 new FieldError("client", SessionErrors.InvalidClient.Code, SessionErrors.InvalidClient.Description)));
         }
 
-        var now = dependencies.Time.GetUtcNow();
+        var now = time.GetUtcNow();
         var accountKey = AccountKey.For(command.Email);
 
         // Counted before the password is checked, so simultaneous guesses cannot all pass before
@@ -176,23 +175,12 @@ internal sealed class SignInCommandHandler(
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        var sessionToken = tokens.NewToken();
-        var csrfToken = tokens.NewToken();
-
-        var session = Session.Start(
-            user.Id,
-            tokens.Digest(sessionToken),
-            tokens.Digest(csrfToken),
-            now,
-            dependencies.Cookies.SessionLifetime,
-            command.IpAddress,
-            command.UserAgent,
-            client);
-
-        var stored = await sessions.AddAsync(session, cancellationToken).ConfigureAwait(false);
+        var started = await starter
+            .StartAsync(user.Id, client, command.IpAddress, command.UserAgent, now, cancellationToken)
+            .ConfigureAwait(false);
         var isAdmin = await users.IsAdminAsync(user.Id, cancellationToken).ConfigureAwait(false);
 
-        return stored.Bind(() => Result<SignInOutcome>.Success(
-            new SignInOutcome(user.ToSignInResponse(isAdmin, csrfToken), sessionToken, client)));
+        return started.Map(session =>
+            new SignInOutcome(user.ToSignInResponse(isAdmin, session.CsrfToken), session.SessionToken, client));
     }
 }

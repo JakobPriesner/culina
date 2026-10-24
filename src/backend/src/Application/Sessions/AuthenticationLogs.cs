@@ -25,4 +25,10 @@ internal static partial class AuthenticationLogs
         Level = LogLevel.Warning,
         Message = "Refused a password reset: wrong, used or expired recovery code, or the account is locked out")]
     internal static partial void RecoveryRefused(ILogger logger);
+
+    [LoggerMessage(
+        EventId = 1004,
+        Level = LogLevel.Warning,
+        Message = "Refused an OAuth authorization code redeemed a second time, and ended the agent session it became")]
+    internal static partial void AuthorizationCodeReused(ILogger logger);
 }

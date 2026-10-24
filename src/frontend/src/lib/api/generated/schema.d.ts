@@ -256,6 +256,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agent-authorizations/{authorizationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read a request to connect an AI agent
+         * @description The app asking, through OAuth, to connect an AI agent to the caller's account, and where it sends the browser back to. Only while it waits for an answer; afterwards, or once expired, agent_authorizations.not_found.
+         */
+        get: operations["getAgentAuthorizationByIdV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent-authorizations/{authorizationId}/decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Answer a request to connect an AI agent
+         * @description Approves or denies the request. Answers with the app's return address, carrying the authorization code or error=access_denied, which the browser navigates to. The code becomes an agent session of the caller's, which reaches only the MCP server and is listed and revoked with the other sessions.
+         */
+        put: operations["decideAgentAuthorizationV1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/password-resets": {
         parameters: {
             query?: never;
@@ -2516,6 +2556,41 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description The caller's answer to an app asking to connect an AI agent. */
+        AgentAuthorizationsDecideRequest: {
+            /** @description True to let the app's agent into the caller's account, false to refuse. */
+            approved: boolean;
+        };
+        /** @description Where the browser goes now that the request is answered. */
+        AgentAuthorizationsDecideResponse: {
+            /** @description Whether the app was let in. */
+            approved: boolean;
+            /** @description The app's return address, carrying the authorization code or `error=access_denied`; navigate to it. */
+            redirectUri: string;
+        };
+        /** @description An app asking to connect an AI agent to the caller's account, as the consent screen shows it. */
+        AgentAuthorizationsGetByIdResponse: {
+            /**
+             * Format: uuid
+             * @description The request's id, for answering it.
+             */
+            authorizationId: string;
+            /** @description The app's OAuth `client_id`: the address of its metadata document, or the id it registered with. */
+            clientId: string;
+            /** @description What the app calls itself. */
+            clientName: string;
+            /** @description The host the app's metadata document came from, which vouches for its name; null when nothing does (the app registered itself). */
+            verifiedHost?: string | null;
+            /** @description The host the browser is sent back to, with the code. */
+            redirectHost: string;
+            /** @description Whether that is this computer (a loopback address), which any program on it can listen on. */
+            redirectsToThisComputer: boolean;
+            /**
+             * Format: date-time
+             * @description Until when the request can be answered.
+             */
+            expiresAt: string;
+        };
         /** @description What a restore did. */
         ArchiveRestored: {
             /**
@@ -7041,6 +7116,108 @@ export interface operations {
             };
             /** @description Unauthorized */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getAgentAuthorizationByIdV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                authorizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentAuthorizationsGetByIdResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    decideAgentAuthorizationV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                authorizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentAuthorizationsDecideRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentAuthorizationsDecideResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
