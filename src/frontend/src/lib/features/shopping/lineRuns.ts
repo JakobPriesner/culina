@@ -31,11 +31,14 @@ export function groupsToBuy(
   keep: readonly string[] = []
 ): SectionGroup[] {
   const remaining = items.filter((item) => !item.isChecked || keep.includes(item.itemId));
+  // A section this client does not know (a newer server's) is drawn as "other", so no counted line goes missing.
+  const sectionOf = (item: ShoppingItem) =>
+    sectionOrder.includes(item.section) ? item.section : 'other';
 
   return sectionOrder
     .map((section) => ({
       section,
-      items: togetherByName(remaining.filter((item) => item.section === section))
+      items: togetherByName(remaining.filter((item) => sectionOf(item) === section))
     }))
     .filter((group) => group.items.length > 0);
 }

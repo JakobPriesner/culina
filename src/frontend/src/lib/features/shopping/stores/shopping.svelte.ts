@@ -32,6 +32,8 @@ class ShoppingStore {
   #householdId: string | null = null;
   #reads = new LatestRead();
   #error = $state<AppError | null>(null);
+  #arrived = $state<readonly string[]>([]);
+  #arrivedTimer: ReturnType<typeof setTimeout> | undefined;
 
   get householdId() {
     return this.#list ? this.#householdId : null;
@@ -60,6 +62,16 @@ class ShoppingStore {
   /** Already in the trolley; kept visible because putting one back is common. */
   get bought(): readonly ShoppingItem[] {
     return this.items.filter((item) => item.isChecked);
+  }
+
+  /** Lines a plan or a recipe has just put here, or whose amount it has just changed; empty again after a moment. */
+  get arrived(): readonly string[] {
+    return this.#arrived;
+  }
+
+  /** Lines still to find, as the list's heading and Woche's switch say it. */
+  get remaining(): number {
+    return this.items.length - this.bought.length;
   }
 
   /** The line of this name still to buy, whichever recipe (or nobody) put it there. */
@@ -182,7 +194,11 @@ class ShoppingStore {
       })
     );
 
-    this.#take(householdId, result.ok ? result.value : null, result.ok ? null : result.error);
+    this.#takeArrivals(
+      householdId,
+      result.ok ? result.value : null,
+      result.ok ? null : result.error
+    );
 
     return result.ok ? null : result.error;
   }
@@ -196,7 +212,11 @@ class ShoppingStore {
       })
     );
 
-    this.#take(householdId, result.ok ? result.value : null, result.ok ? null : result.error);
+    this.#takeArrivals(
+      householdId,
+      result.ok ? result.value : null,
+      result.ok ? null : result.error
+    );
 
     return result.ok ? null : result.error;
   }
@@ -215,7 +235,11 @@ class ShoppingStore {
       })
     );
 
-    this.#take(householdId, result.ok ? result.value : null, result.ok ? null : result.error);
+    this.#takeArrivals(
+      householdId,
+      result.ok ? result.value : null,
+      result.ok ? null : result.error
+    );
 
     return result.ok ? null : result.error;
   }
@@ -228,7 +252,11 @@ class ShoppingStore {
       })
     );
 
-    this.#take(householdId, result.ok ? result.value : null, result.ok ? null : result.error);
+    this.#takeArrivals(
+      householdId,
+      result.ok ? result.value : null,
+      result.ok ? null : result.error
+    );
 
     return result.ok ? null : result.error;
   }
@@ -288,6 +316,8 @@ class ShoppingStore {
     this.#list = null;
     this.#status = 'idle';
     this.#error = null;
+    clearTimeout(this.#arrivedTimer);
+    this.#arrived = [];
   }
 
   /** One line changed here first, then on the server; if that fails only this line is put back, so other ticks meanwhile stay. */
@@ -359,6 +389,29 @@ class ShoppingStore {
         )
       };
     }
+  }
+
+  /**
+   * As `#take`, for a write that puts a plan's or a recipe's lines here: what arrived (or changed amount) is kept for
+   * a moment, so a list on screen can show it instead of a toast saying it.
+   */
+  #takeArrivals(householdId: string, list: ShoppingList | null, error: AppError | null): void {
+    const before = new Map(this.items.map((item) => [item.itemId, item.quantity]));
+
+    this.#take(householdId, list, error);
+
+    const arrived = (list?.items ?? [])
+      .filter(
+        (item) =>
+          !item.isChecked && (!before.has(item.itemId) || before.get(item.itemId) !== item.quantity)
+      )
+      .map((item) => item.itemId);
+
+    if (arrived.length === 0) return;
+
+    clearTimeout(this.#arrivedTimer);
+    this.#arrived = arrived;
+    this.#arrivedTimer = setTimeout(() => (this.#arrived = []), 2400);
   }
 
   #take(householdId: string, list: ShoppingList | null, error: AppError | null): void {

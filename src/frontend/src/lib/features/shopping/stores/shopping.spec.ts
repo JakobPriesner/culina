@@ -223,3 +223,30 @@ describe('a tick then an untick that both fail', () => {
     expect(shopping.items[0]?.isChecked).toBe(true);
   });
 });
+
+describe('lines a plan puts on the list', () => {
+  it('are marked as arrived for a moment, with lines whose amount changed, and nothing else', async () => {
+    vi.useFakeTimers();
+    const flour: ShoppingItem = { ...milk, itemId: 'i3', name: 'Mehl', quantity: 200, unit: 'g' };
+    const salt: ShoppingItem = { ...milk, itemId: 'i4', name: 'Salz', quantity: null, unit: null };
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) =>
+        input.method === 'GET'
+          ? json({ items: [milk, salt] })
+          : json({ items: [{ ...milk, quantity: 750 }, salt, flour] })
+      )
+    );
+
+    await shopping.load('h1');
+    expect(shopping.arrived).toEqual([]);
+
+    await shopping.addPlannedWeek('h1', '2026-10-19');
+    expect(shopping.arrived).toEqual(['i1', 'i3']);
+
+    vi.advanceTimersByTime(2400);
+    expect(shopping.arrived).toEqual([]);
+    vi.useRealTimers();
+  });
+});

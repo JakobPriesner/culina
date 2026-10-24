@@ -5,6 +5,7 @@
   import type { MealSlot } from '$features/planning/mealPlan.svelte';
   import { slotLabel } from '$features/planning/slots';
   import { upcoming } from '$features/planning/upcoming.svelte';
+  import { planDayHref } from '$features/planning/weekDates';
   import { hrefAtYield } from '$features/recipes/surface/yieldInUrl';
   import { formatDate, m } from '$shell/i18n';
   import type { ListedDay, ListedMeal } from './listedMeals';
@@ -20,9 +21,11 @@
     days: readonly ListedDay[];
     /** Takes one meal's (or recipe's) unbought lines off the list. */
     onwithdraw?: (meal: ListedMeal) => void;
+    /** Beside the week, which shows its own meals: these are the others, and say so. */
+    also?: boolean;
   }
 
-  let { days, onwithdraw }: Props = $props();
+  let { days, onwithdraw, also = false }: Props = $props();
 
   /** At the servings the meal is planned for, while the plan still holds it (today on). */
   const recipeHref = (meal: ListedMeal) =>
@@ -50,7 +53,9 @@
       {#snippet summary()}
         <!-- One run of text: as two items of the summary's row, a narrow screen wrapped them into two ragged columns. -->
         <span
-          >{m['shopping.meals.title']({ count: meals })}{#if past > 0}
+          >{also
+            ? m['shopping.meals.also']({ count: meals })
+            : m['shopping.meals.title']({ count: meals })}{#if past > 0}
             <span class="past-count">· {m['shopping.meals.pastCount']({ count: past })}</span
             >{/if}</span
         >
@@ -59,7 +64,11 @@
       {#each days as day (day.date ?? 'alone')}
         <section class="day">
           <h3 class="date">
-            {day.date ? dayLabel(day.date) : m['shopping.meals.direct']()}
+            <!-- A planned day leads back to the plan at that day. -->
+            <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- planDayHref resolves the route; only the day is appended. -->
+            {#if day.date}<a href={planDayHref(day.date)}>{dayLabel(day.date)}</a>{:else}{m[
+                'shopping.meals.direct'
+              ]()}{/if}
             {#if day.isPast}<span class="past">{m['shopping.meals.past']()}</span>{/if}
           </h3>
           {#if day.isPast}<p class="note">{m['shopping.meals.pastNote']()}</p>{/if}
@@ -124,6 +133,10 @@
     gap: var(--space-2);
     padding-block: var(--space-3);
     border-bottom: 1px solid var(--border);
+  }
+  .date a {
+    color: inherit;
+    text-underline-offset: 0.2em;
   }
   .date {
     margin: 0;

@@ -29,25 +29,37 @@ export interface Landing {
   readonly date: string;
   /** Counted with the held meal still in place. */
   readonly position: number;
+  /** Over the shopping list beside the week (`data-plan-list`): the meal's shopping goes there, the meal stays. */
+  readonly list?: boolean;
 }
 
 export type OnDrop = (held: Held, landing: Landing) => void;
 
 /** The day and gap under a point, read from the DOM; a registry would go stale on reflow. */
 const landingAt = (x: number, y: number): Landing | null => {
-  const day = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-plan-day]');
+  const under = document.elementFromPoint(x, y);
+
+  if (under?.closest('[data-plan-list]')) {
+    return { date: '', position: 0, list: true };
+  }
+
+  const day = under?.closest<HTMLElement>('[data-plan-day]');
 
   if (!day?.dataset.planDay) {
     return null;
   }
 
   const meals = [...day.querySelectorAll<HTMLElement>('[data-plan-meal]')];
+  // A day drawn as a row (the desktop week beside the list) lays its cards side by side, wrapping: read in that order.
+  const row = day.dataset.planRow !== undefined;
 
-  // Gap above every card whose middle the pointer has passed; middles rather than edges leave no dead band.
+  // Gap after every card whose middle the pointer has passed; middles rather than edges leave no dead band.
   const position = meals.filter((meal) => {
     const box = meal.getBoundingClientRect();
 
-    return y > box.top + box.height / 2;
+    return row
+      ? y > box.bottom || (y >= box.top && x > box.left + box.width / 2)
+      : y > box.top + box.height / 2;
   }).length;
 
   return { date: day.dataset.planDay, position };

@@ -1,9 +1,10 @@
 import { resolve } from '$app/paths';
 
 import { m } from './i18n';
+import type { WocheView } from './woche.svelte';
 
-/** The four stable workflows, in the same order on desktop and mobile. */
-export type DestinationIcon = 'recipes' | 'cookbooks' | 'plan' | 'shopping';
+/** The stable workflows; the bar shows them in the same order on desktop and mobile. */
+export type DestinationIcon = 'recipes' | 'cookbooks' | 'plan' | 'shopping' | 'diary';
 
 export interface Destination {
   readonly href: string;
@@ -28,7 +29,7 @@ export const inSettings = startsWith('/me');
 /** Whether search is offered: everywhere but the cook screen, where a search box invites losing the place. */
 export const offersSearch = (pathname: string): boolean => !pathname.endsWith('/cook');
 
-/** One peer navigation model, rendered directly at every viewport size. */
+/** Every place, as search offers them; the bar folds the plan and the list into Woche (`barDestinations`). */
 export const destinations: readonly Destination[] = [
   {
     href: resolve('/(app)'),
@@ -55,3 +56,27 @@ export const destinations: readonly Destination[] = [
     match: startsWith('/shopping')
   }
 ];
+
+const diaryDestination: Destination = {
+  href: resolve('/(app)/diary'),
+  icon: 'diary',
+  label: m['diary.title'],
+  match: startsWith('/diary')
+};
+
+/**
+ * The bar, the same at every width (docs/woche-design.md): Woche holds the plan and the list, leads to whichever of
+ * its two views was used last and stays lit on both. The diary has the fourth place, for everyone: while it is off,
+ * its page offers to switch it on, so the bar never changes shape when someone does.
+ */
+export function barDestinations(view: WocheView): Destination[] {
+  const [recipes, cookbooks] = destinations;
+  const week: Destination = {
+    href: view === 'list' ? resolve('/(app)/shopping') : resolve('/(app)/plan'),
+    icon: 'plan',
+    label: m['nav.plan'],
+    match: (path) => startsWith('/plan')(path) || startsWith('/shopping')(path)
+  };
+
+  return [recipes!, cookbooks!, week, diaryDestination];
+}

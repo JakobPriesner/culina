@@ -32,7 +32,10 @@ describe('inferring what a step needs from its words', () => {
     const pasta = [ingredient('spaghetti', 'Spaghetti')];
 
     expect(
-      inferUses([step('Spaghetti kochen.'), step('Soße rühren.'), step('Spaghetti abgießen.')], pasta)
+      inferUses(
+        [step('Spaghetti kochen.'), step('Soße rühren.'), step('Spaghetti abgießen.')],
+        pasta
+      )
     ).toEqual([['spaghetti'], [], []]);
   });
 

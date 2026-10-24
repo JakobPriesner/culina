@@ -68,6 +68,48 @@ describe('dragging a planned meal', () => {
     expect(drag.held).toBeNull();
   });
 
+  it('in a day drawn as a row, lands after the cards left of the pointer and on the lines above', () => {
+    const tomorrow = document.getElementById('tomorrow')!;
+    tomorrow.dataset.planRow = '';
+    // Two cards side by side on one line, a third on the line below.
+    const boxes = [
+      { top: 0, bottom: 40, left: 0, width: 100 },
+      { top: 0, bottom: 40, left: 110, width: 100 },
+      { top: 50, bottom: 90, left: 0, width: 100 }
+    ];
+    tomorrow.innerHTML = boxes.map(() => '<div data-plan-meal></div>').join('');
+    tomorrow.querySelectorAll<HTMLElement>('[data-plan-meal]').forEach((meal, index) => {
+      meal.getBoundingClientRect = () => boxes[index] as DOMRect;
+    });
+
+    lift();
+    // Right half of the second card: after it, before the one on the next line.
+    window.dispatchEvent(pointer('pointermove', 190, 20));
+    window.dispatchEvent(pointer('pointerup', 190, 20));
+
+    expect(onDrop).toHaveBeenCalledWith(expect.objectContaining({ entryId: 'e1' }), {
+      date: '2026-10-13',
+      position: 2
+    });
+  });
+
+  it('drops on the list beside the week as the list, not as the last day passed', () => {
+    document.body.insertAdjacentHTML(
+      'beforeend',
+      '<aside data-plan-list id="list"><p id="line"></p></aside>'
+    );
+    lift();
+    document.elementFromPoint = () => document.getElementById('line');
+    window.dispatchEvent(pointer('pointermove', 400, 60));
+    window.dispatchEvent(pointer('pointerup', 400, 60));
+
+    expect(onDrop).toHaveBeenCalledWith(expect.objectContaining({ entryId: 'e1' }), {
+      date: '',
+      position: 0,
+      list: true
+    });
+  });
+
   it('does not lift the card from its remove button', () => {
     lift(remove);
 

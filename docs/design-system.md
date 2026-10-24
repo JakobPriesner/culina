@@ -100,8 +100,10 @@ explains the release scope and quality contracts.
 
 The recipe and cookbook libraries share `PageHeader`: an editorial title,
 a short supporting line, and contextual creation actions. One shared navigation
-exposes Recipes, Cookbooks, Week, Shopping, and Me directly. The same order and
-route selection appear in the desktop top bar and, below 64rem, the bottom bar.
+exposes Recipes, Cookbooks, Week and Diary directly; Week holds the plan and the
+shopping list (a Plan | List switch, and the list beside the week from 80rem).
+The same order and route selection appear in the desktop top bar and, below
+64rem, the bottom bar.
 There is no collection submenu or secondary sidebar. Cookbook detail uses the
 shared navigation too. The [research and current decision](navigation-research.md)
 explain the evidence and the explicit five-destination limit.

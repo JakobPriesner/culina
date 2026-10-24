@@ -101,7 +101,7 @@ test.describe('cooking remote @offline', () => {
     await expectReflow(page);
     await page.screenshot({ path: testInfo.outputPath('cooking-remote.png'), fullPage: true });
     await openShoppingFromCooking(page);
-    await expect(page.getByRole('heading', { name: 'Shopping', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^Shopping/ }).first()).toBeVisible();
     await expect(page.getByRole('button', { name: 'Turn off remote' })).toBeVisible();
     await page.evaluate(() => (window as unknown as RemoteHarness).remoteAction('nexttrack'));
     await expect

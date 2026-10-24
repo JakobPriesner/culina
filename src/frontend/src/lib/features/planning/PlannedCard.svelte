@@ -1,11 +1,14 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
+
   import { resolve } from '$app/paths';
-  import { IconButton, Image } from '$ds';
+  import { Chevron, IconButton, Image } from '$ds';
 
   import { imageUrl } from '$features/recipes/recipeImage';
   import { hrefAtYield } from '$features/recipes/surface/yieldInUrl';
   import { m } from '$shell/i18n';
   import type { MealSlot, PlannedMeal } from './mealPlan.svelte';
+  import { provenance } from './provenance.svelte';
   import { slotLabel } from './slots';
 
   /** One planned meal on its day; small on purpose, as a week is seven of these side by side. */
@@ -21,6 +24,12 @@
     cooked?: boolean;
     /** Offered for a meal of today or earlier not yet cooked: "I made it", without opening anything. */
     onmadeit?: () => void;
+    /** Beside the list: shows this meal's lines there. Without it, "on the list" leads to the list page. */
+    onlines?: () => void;
+    /** Today's meal: "Kochen" on the card itself, the hand-off from the plan to the hob (no Today card repeats it). */
+    cookable?: boolean;
+    /** Beside the list, for a meal not on it yet: its shopping onto the list, the way dragging it there does. */
+    ontolist?: () => void;
   }
 
   let {
@@ -30,7 +39,10 @@
     onedit,
     lifted = false,
     cooked = false,
-    onmadeit
+    onmadeit,
+    onlines,
+    cookable = false,
+    ontolist
   }: Props = $props();
 
   // Joined here, not in markup: Svelte trims the space at the start of an {#if} block, which made "Abendessen· 4 Portionen".
@@ -42,7 +54,33 @@
       .filter(Boolean)
       .join(' · ')
   );
+
+  /** Beside the list: pointing at the card lights its lines there, and a line pointed at lights this card. */
+  const beside = $derived(onlines !== undefined);
+  const related = $derived(beside && provenance.lineMeals.includes(meal.entryId));
+
+  function point(event: PointerEvent | FocusEvent, on: boolean) {
+    if (!beside || ('pointerType' in event && event.pointerType !== 'mouse')) return;
+    // Focus moving between the card's own controls is still the card.
+    if (!on && event instanceof FocusEvent && event.currentTarget instanceof Element) {
+      if (event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))
+        return;
+    }
+    if (on) provenance.pointMeal(meal.entryId);
+    else if (provenance.meal === meal.entryId) provenance.pointMeal(null);
+  }
+
+  // A card unplanned while pointed at leaves nothing lit behind.
+  onDestroy(() => {
+    if (provenance.meal === meal.entryId) provenance.pointMeal(null);
+  });
 </script>
+
+{#snippet listedMark()}
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+    <path d="m5 12 5 5 9-10" stroke-linecap="round" stroke-linejoin="round" />
+  </svg>
+{/snippet}
 
 <!-- A press anywhere can become a drag (the phone gesture); the real button is the grip.
      `dragstart` is refused because a native drag of the link or picture stops pointer events. -->
@@ -50,7 +88,12 @@
 <div
   class="card"
   class:lifted
+  class:related
   onpointerdown={onpress}
+  onpointerenter={(event) => point(event, true)}
+  onpointerleave={(event) => point(event, false)}
+  onfocusin={(event) => point(event, true)}
+  onfocusout={(event) => point(event, false)}
   ondragstart={(event) => event.preventDefault()}
 >
   {#if onedit}
@@ -68,15 +111,7 @@
     </IconButton>
   {/if}
 
-  <!-- eslint-disable svelte/no-navigation-without-resolve -- The route is resolved; only the yield is appended. -->
-  <a
-    class="body"
-    href={hrefAtYield(
-      resolve('/(app)/recipes/[recipeId]', { recipeId: meal.recipeId }),
-      meal.servings
-    )}
-  >
-    <!-- eslint-enable svelte/no-navigation-without-resolve -->
+  <div class="body">
     {#if meal.imageId}
       <div class="thumb">
         <Image src={imageUrl(meal.recipeId, 400, meal.imageId)} alt="" ratio={1} />
@@ -84,42 +119,65 @@
     {/if}
 
     <div class="words">
-      <span class="name">{meal.title}</span>
-      <span class="meta">{meta}</span>
-      {#if meal.leftoverOf}
-        <span class="listed">{m['plan.leftover']()}</span>
-      {:else if cooked}
-        <span class="listed">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            aria-hidden="true"
+      <!-- The title is the link, stretched over the card, so the status beside the meta can be a control of its own. -->
+      <!-- eslint-disable svelte/no-navigation-without-resolve -- The route is resolved; only the yield is appended. -->
+      <a
+        class="name"
+        href={hrefAtYield(
+          resolve('/(app)/recipes/[recipeId]', { recipeId: meal.recipeId }),
+          meal.servings
+        )}>{meal.title}</a
+      >
+      <!-- eslint-enable svelte/no-navigation-without-resolve -->
+      <span class="line">
+        <span class="meta">{meta}</span>
+        {#if meal.leftoverOf}
+          <span class="listed">{m['plan.leftover']()}</span>
+        {:else if cooked}
+          <span class="listed">{@render listedMark()}{m['plan.cooked']()}</span>
+        {:else if meal.isOnShoppingList}
+          <!-- "On the list" leads to the meal's lines: beside the week in the pane, on a phone the list page. -->
+          {#if onlines}
+            <button class="listed to-lines" type="button" data-no-drag onclick={onlines}>
+              {@render listedMark()}{m['plan.onList']()}
+            </button>
+          {:else}
+            <!-- eslint-disable svelte/no-navigation-without-resolve -- The route is resolved; only the meal is appended. -->
+            <a
+              class="listed to-lines"
+              data-no-drag
+              href={`${resolve('/(app)/shopping')}?mahlzeit=${meal.entryId}`}
+              >{@render listedMark()}{m['plan.onList']()}</a
+            >
+            <!-- eslint-enable svelte/no-navigation-without-resolve -->
+          {/if}
+        {:else if ontolist}
+          <button
+            class="listed to-lines"
+            type="button"
+            data-no-drag
+            aria-label={m['plan.toList.label']({ title: meal.title })}
+            onclick={ontolist}>+ {m['plan.toList']()}</button
           >
-            <path d="m5 12 5 5 9-10" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-          {m['plan.cooked']()}
-        </span>
-      {:else if meal.isOnShoppingList}
-        <span class="listed">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2.5"
-            aria-hidden="true"
+        {/if}
+        {#if cookable && !cooked}
+          <!-- eslint-disable svelte/no-navigation-without-resolve -- The route is resolved; only the yield is appended. -->
+          <a
+            class="cook"
+            data-no-drag
+            href={hrefAtYield(
+              resolve('/(app)/recipes/[recipeId]/cook', { recipeId: meal.recipeId }),
+              meal.servings
+            )}>{m['plan.today.cook']()}<Chevron /></a
           >
-            <path d="m5 12 5 5 9-10" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
-          {m['plan.onList']()}
-        </span>
-      {/if}
+          <!-- eslint-enable svelte/no-navigation-without-resolve -->
+        {/if}
+      </span>
     </div>
-  </a>
+  </div>
 
-  {#if onmadeit}
-    <span class="remove" data-no-drag>
+  <span class="actions" data-no-drag>
+    {#if onmadeit}
       <IconButton
         label={m['cooking.madeIt.named']({ title: meal.title })}
         size="sm"
@@ -129,10 +187,8 @@
           <path d="m5 12 5 5 9-10" stroke-linecap="round" stroke-linejoin="round" />
         </svg>
       </IconButton>
-    </span>
-  {/if}
+    {/if}
 
-  <span class="remove" data-no-drag>
     <IconButton label={m['plan.remove']({ title: meal.title })} size="sm" onclick={onremove}>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
@@ -142,33 +198,35 @@
 </div>
 
 <style>
+  /* A list cell: raised, a hairline edge rather than a shadow, so seven days of them stay calm. */
   .card {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-2);
+    gap: var(--space-1) var(--space-2);
     width: 100%;
-    padding: var(--space-2);
-    border-radius: var(--radius-sm);
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
     background: var(--surface-raised);
+    /* The title's link covers the card; its controls sit above it. */
+    position: relative;
   }
 
+  /* The picture stays beside the words at any width: above them it made one card twice the height of its neighbour. */
   .body {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
+    gap: var(--space-3);
     flex: 1 1 10rem;
-    flex-wrap: wrap;
-    min-height: var(--control-sm);
+    min-height: 3.25rem;
     min-width: 0;
-    color: inherit;
-    text-decoration: none;
   }
 
   .thumb {
     flex: 0 0 auto;
-    width: var(--space-8);
-    height: var(--space-8);
+    width: 2.5rem;
+    height: 2.5rem;
     overflow: hidden;
     border-radius: var(--radius-sm);
   }
@@ -185,22 +243,103 @@
    * distinguishable.
    */
   .name {
-    display: block;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
     line-height: var(--leading-tight);
-    /* Long compounds hyphenate by the page's language; only a word wider than the card breaks anywhere else
-       (the inherited 'anywhere' would shrink the minimum width and cut every word mid-way). */
-    hyphens: auto;
+    /* Whole words: no hyphenation ("Pizza-teig"), and only a word wider than the card itself breaks (the inherited
+       'anywhere' would shrink the minimum width and cut every word mid-way). */
+    hyphens: manual;
     overflow-wrap: break-word;
+    color: inherit;
+    text-decoration: none;
   }
 
-  .remove {
+  /* The whole card opens the recipe, as it did when the card was one link. */
+  .name::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+
+  .name:focus-visible {
+    outline: none;
+  }
+
+  .name:focus-visible::after {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+
+  /* Above the stretched link: each is a control of its own. */
+  .card :global(> button:first-child),
+  .actions,
+  .cook,
+  .to-lines {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* The meta and the status share a line, wrapping only when the card is narrow. */
+  .line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--space-2);
+  }
+
+  /*
+   * Today's "Kochen": the hand-off from the plan to the hob, at the end of the meal's line so every card keeps one
+   * shape. Tonal rather than filled, so a day of three meals is not three loud buttons; 32px drawn, 44px to press.
+   */
+  .cook {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: 2rem;
+    margin-inline-start: auto;
+    padding-inline: var(--space-3) var(--space-2);
+    border-radius: var(--radius-full);
+    background: var(--surface-accent-subtle);
+    color: var(--accent);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    text-decoration: none;
+    transition: background-color var(--duration-fast) var(--ease-out);
+  }
+
+  .cook::before {
+    content: '';
+    position: absolute;
+    inset: -0.375rem 0;
+  }
+
+  .cook:hover {
+    background: var(--surface-selected);
+  }
+
+  .cook:focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+
+  .actions {
     display: inline-flex;
     margin-inline-start: auto;
   }
 
   /* Left behind while its copy is dragged, so the day doesn't reflow under the pointer. */
+  /* A line in the list pointed at is for this meal. */
+  .related {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
   .lifted {
     opacity: 0.4;
   }
@@ -223,6 +362,25 @@
     gap: var(--space-1);
     color: var(--text-muted);
     font-size: var(--text-xs);
+  }
+
+  /* Beside the meta; a target of at least 24px. */
+  .to-lines {
+    min-height: 1.5rem;
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: var(--text-xs);
+    text-align: start;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .to-lines:hover {
+    color: var(--text);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
   }
 
   .listed svg {

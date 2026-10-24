@@ -4,7 +4,7 @@
   import { upcoming } from '$features/planning/upcoming.svelte';
   import { slotLabel } from '$features/planning/slots';
   import { dayOf } from '$features/planning/weekDates';
-  import { openListAction } from '$features/shopping/openList';
+  import { openList } from '$features/shopping/openList';
   import { shopping } from '$features/shopping/stores/shopping.svelte';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
@@ -123,7 +123,7 @@
     toaster.show({
       message: () => (said ? m['shopping.addedForMeal']({ when: said }) : m['shopping.added']()),
       tone: 'success',
-      action: openListAction
+      action: openList()
     });
     onclose();
   }

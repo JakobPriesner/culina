@@ -26,6 +26,7 @@
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
   import PageHeader from '$shell/PageHeader.svelte';
+  import DiaryTodayLine from '$features/diary/DiaryTodayLine.svelte';
 
   /** Everything the household can cook; the toolbar owns search and filters, this page owns what to do with the answer. */
   const householdId = $derived(session.activeHouseholdId);
@@ -79,7 +80,7 @@
 <Page>
   <PageHeader title={m['recipes.title']()} subtitle={m['recipes.collection.subtitle']()} />
 
-  {#if householdId}<TodayMeal {householdId} />{/if}
+  {#if householdId}<TodayMeal {householdId} /><DiaryTodayLine />{/if}
 
   <!-- An empty library has nothing to search or filter; it shows its invitation instead. -->
   {#if !(recipes.status === 'ready' && recipes.total === 0 && !filtered)}

@@ -188,7 +188,7 @@
 
   /** The meal just planned is the last of its kind on that day and in that slot: the server appends it. */
   const plannedEntry = () =>
-    mealPlan.days
+    mealPlan.knownDays
       .find((day) => day.date === date)
       ?.meals.findLast(
         (meal) => meal.recipeId === recipeId && meal.slot === slot && !meal.leftoverOf

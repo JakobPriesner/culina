@@ -1,6 +1,9 @@
+import type { AppError } from '$api';
 import { madeIt as recordMadeIt } from '$features/cooking/finishCooking';
-import { openListAction } from '$features/shopping/openList';
+import { lineMarks } from '$features/shopping/lineMarks.svelte';
+import { listShown, openList } from '$features/shopping/openList';
 import { shopping } from '$features/shopping/stores/shopping.svelte';
+import { withdrawOffer } from '$features/shopping/withdrawOffer.svelte';
 import { explain } from '$shell/explain';
 import { m } from '$shell/i18n';
 import { toaster } from '$shell/toaster.svelte';
@@ -12,7 +15,8 @@ import {
   placeOf,
   servingsOf,
   type MealSlot,
-  type PlannedMeal
+  type PlannedMeal,
+  weekStart
 } from './mealPlan.svelte';
 import { upcoming } from './upcoming.svelte';
 import { weekdayName } from './weekDates';
@@ -20,17 +24,18 @@ import type { Held, Landing } from './weekDrag.svelte';
 
 interface Page {
   readonly householdId: () => string | null;
-  readonly monday: () => string;
+  /** Reads the days on screen again, after a change the plan's answer does not carry (the list, a cook). */
+  readonly reload: () => Promise<void>;
 }
 
-/** Actions on the week on screen; each ends in a toast. */
+/** Actions on the days on screen; each ends in a toast. */
 export function usePlanActions(page: Page) {
   const ui = $state({ busy: false });
 
   /** Moves a meal and offers undo; a drop is cheap to reverse, a confirmation would interrupt it. */
   async function move(entryId: string, to: { date: string; slot?: MealSlot; position?: number }) {
     const householdId = page.householdId();
-    const before = householdId && placeOf(mealPlan.days, entryId);
+    const before = householdId && placeOf(mealPlan.knownDays, entryId);
 
     if (!householdId || !before) {
       return;
@@ -48,7 +53,7 @@ export function usePlanActions(page: Page) {
     void upcoming.load(householdId);
 
     // From the returned week: only the server's answer can anchor an undo, as it decides a day's order.
-    const after = placeOf(mealPlan.days, entryId);
+    const after = placeOf(mealPlan.knownDays, entryId);
 
     toaster.show({
       message: () => m['plan.move.done']({ day: weekdayName(to.date, preferences.locale) }),
@@ -75,7 +80,7 @@ export function usePlanActions(page: Page) {
     to: { date: string; slot: MealSlot; servings?: number; updateList: boolean }
   ) {
     const householdId = page.householdId();
-    const before = householdId && placeOf(mealPlan.days, meal.entryId);
+    const before = householdId && placeOf(mealPlan.knownDays, meal.entryId);
 
     if (!householdId || !before) {
       return;
@@ -115,6 +120,9 @@ export function usePlanActions(page: Page) {
 
     const failure = await shopping.refreshMeal(householdId, meal.entryId);
 
+    // The list on screen tints the amounts that changed: said there, not again in a toast.
+    if (!failure && listShown()) return;
+
     toaster.show(
       failure
         ? { message: () => m['plan.edit.listFailed']({ title: meal.title }), tone: 'danger' }
@@ -122,9 +130,47 @@ export function usePlanActions(page: Page) {
     );
   }
 
+  /**
+   * One meal's shopping onto the list beside the week (dropped there, or its card's "Auf die Liste"); the meal stays
+   * where it is. Already there, its lines are shown instead.
+   */
+  async function toList(entryId: string) {
+    const householdId = page.householdId();
+    const place = placeOf(mealPlan.knownDays, entryId);
+    const meal =
+      place && mealPlan.knownDays.find((day) => day.date === place.date)?.meals[place.index];
+
+    if (!householdId || !place || !meal) {
+      return;
+    }
+
+    if (meal.isOnShoppingList) {
+      lineMarks.show(entryId);
+
+      return;
+    }
+
+    const week = weekStart(place.date);
+    const failure = await shopping.addPlannedMeal(householdId, week, entryId);
+
+    if (failure) {
+      toaster.show({ message: () => explain(failure), tone: 'danger' });
+
+      return;
+    }
+
+    await page.reload();
+  }
+
   /** The gaps either side of the card's own position are no move. */
   function drop(held: Held, landing: Landing) {
-    const before = placeOf(mealPlan.days, held.entryId);
+    if (landing.list) {
+      void toList(held.entryId);
+
+      return;
+    }
+
+    const before = placeOf(mealPlan.knownDays, held.entryId);
 
     if (
       before?.date === landing.date &&
@@ -136,7 +182,7 @@ export function usePlanActions(page: Page) {
     void move(held.entryId, { date: landing.date, position: landing.position });
   }
 
-  /** Adds the week's shopping in one request: only the server knows which meals are already listed. */
+  /** Adds the shopping of each week on screen with meals still missing, a request a week: only the server knows which meals are already listed. */
   async function shop() {
     const householdId = page.householdId();
 
@@ -146,11 +192,16 @@ export function usePlanActions(page: Page) {
 
     ui.busy = true;
 
-    const week = mealPlan.from ?? page.monday();
-    const failure = await shopping.addPlannedWeek(householdId, week);
+    let failed: AppError | null = null;
+
+    for (const week of mealPlan.weeks.filter((monday) => mealPlan.unshoppedIn(monday).length > 0)) {
+      failed ??= await shopping.addPlannedWeek(householdId, week);
+    }
+
+    const failure = failed;
 
     if (!failure) {
-      await mealPlan.load(householdId, week);
+      await page.reload();
     }
 
     ui.busy = false;
@@ -161,7 +212,7 @@ export function usePlanActions(page: Page) {
         : {
             message: () => m['plan.addedToList'](),
             tone: 'success',
-            action: openListAction
+            action: openList()
           }
     );
   }
@@ -196,6 +247,13 @@ export function usePlanActions(page: Page) {
       return;
     }
 
+    // The list beside the week asks at the meal's lines, where the answer shows.
+    if (listShown()) {
+      withdrawOffer.offer({ entryId: meal.entryId, title: meal.title });
+
+      return;
+    }
+
     toaster.show({
       message: () => m['plan.unplanned.stillOnList']({ title: meal.title }),
       action: {
@@ -214,8 +272,8 @@ export function usePlanActions(page: Page) {
     }
 
     await recordMadeIt(meal.recipeId, servingsOf(meal), householdId);
-    void mealPlan.load(householdId, mealPlan.from ?? page.monday());
+    void page.reload();
   }
 
-  return { ui, move, edit, drop, shop, unplan, madeIt };
+  return { ui, move, edit, drop, shop, unplan, madeIt, toList };
 }

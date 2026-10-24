@@ -8,6 +8,7 @@
   import { recipes } from '$features/recipes/stores/recipes.svelte';
 
   import { connection } from '../connection.svelte';
+  import { headerAccessory } from '../headerAccessory.svelte';
   import { m } from '$shell/i18n';
   import { offersNewRecipe } from '../navigation';
   import Navigation from '../Navigation.svelte';
@@ -65,6 +66,9 @@
     </div>
     {#if !connection.online}
       <div class="status"><p class="offline">{m['connection.offline']()}</p></div>
+    {/if}
+    {#if headerAccessory.current}
+      <div class="accessory">{@render headerAccessory.current()}</div>
     {/if}
   </div>
 </header>
@@ -145,6 +149,13 @@
     color: var(--text);
     font-size: var(--text-xs);
     text-align: end;
+  }
+
+  /* A page's own bar (see headerAccessory): a row of the header, so the scrim ends below it. */
+  .accessory {
+    grid-column: 1 / -1;
+    min-width: 0;
+    pointer-events: auto;
   }
 
   .wide-only {

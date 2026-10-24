@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { expectReflow, recipeId, responsiveData } from './support/responsive';
+import {
+  expectReflow,
+  openShoppingFromCooking,
+  recipeId,
+  responsiveData
+} from './support/responsive';
 
 test.describe('floating kitchen companion @offline', () => {
   test.use({ serviceWorkers: 'block' });
@@ -138,12 +143,8 @@ test.describe('floating kitchen companion @offline', () => {
     await expect(child.locator('body')).toHaveCSS('background-color', 'rgb(250, 249, 246)');
     await child.screenshot({ path: testInfo.outputPath('companion.png'), fullPage: true });
     // Cook mode has no navigation of its own: leave through the recipe, as a cook would.
-    await page.getByRole('link', { name: 'Back to recipe', exact: true }).click();
-    await page
-      .locator('nav:visible')
-      .getByRole('link', { name: /shopping/i })
-      .click();
-    await expect(page.getByRole('heading', { name: 'Shopping', level: 1 })).toBeVisible();
+    await openShoppingFromCooking(page);
+    await expect(page.getByRole('heading', { name: /^Shopping/ }).first()).toBeVisible();
     await child.getByRole('button', { name: 'Next step', exact: true }).click();
     await child.getByRole('button', { name: 'Back to finish' }).click();
     await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/cook`));

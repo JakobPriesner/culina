@@ -100,8 +100,8 @@ test.describe('app flow polish @offline', () => {
     const nav = page.getByRole('navigation', { name: 'Sections' });
     const visibleNav = nav.filter({ visible: true });
     await page.getByRole('link', { name: 'Cookbooks', exact: true }).click();
-    await page.getByRole('link', { name: 'Shopping', exact: true }).click();
-    await expect(page).toHaveURL('/shopping');
+    await page.getByRole('link', { name: 'Week', exact: true }).click();
+    await expect(page).toHaveURL('/plan');
     // The marker is a tile behind the whole current destination, on the bottom dock as at the top.
     const target = '[aria-current=page]';
     await expectIndicatorFits(visibleNav, target);

@@ -2,6 +2,9 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { tick } from 'svelte';
+
+import { provenance } from '$features/planning/provenance.svelte';
 import { preferences } from '$shell/preferences.svelte';
 
 import ShoppingItemRow from './ShoppingItemRow.svelte';
@@ -198,5 +201,24 @@ describe('a line on the shopping list', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Merge' }));
 
     expect(onmerge).toHaveBeenCalledOnce();
+  });
+
+  it("says the share of the meal pointed at in the week beside, where several meals' amounts are merged", async () => {
+    const source = { recipeId: 'r', recipeTitle: 'Dal', unit: 'ml', plannedDate: '2026-10-20' };
+    row({
+      ...milk,
+      sources: [
+        { ...source, quantity: 200, planEntryId: 'e1' },
+        { ...source, recipeTitle: 'Curry', quantity: 300, planEntryId: 'e2' }
+      ]
+    });
+
+    provenance.pointMeal('e1');
+    await tick();
+    expect(screen.getByText(/^200\sml (von|of) 500\sml$/)).toBeInTheDocument();
+
+    provenance.pointMeal(null);
+    await tick();
+    expect(screen.getByText(/^500\sml$/)).toBeInTheDocument();
   });
 });

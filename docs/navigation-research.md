@@ -101,3 +101,71 @@ passed; 72 unit checks passed. The combined library/responsive browser run passe
 single-line English/German navigation labels across light and dark modes (four
 duplicate matrix cases skipped). Manual inspection confirmed the 320px labels and
 1024px desktop header. Browser tests use controlled fixture data.
+
+## A fifth destination for the food diary: measured, 22 October 2026
+
+The food diary (`docs/diary-design.md` §7, bead `culina-v2-b3hl.19`) asked for
+a fifth tab, **Tagebuch** / **Diary**, shown only to a person who switched the
+diary on. It was decided on condition that the five-tab bar holds whole labels
+at 320 px.
+
+**Method.** A harness copied the bottom dock's CSS: `Navigation.svelte`'s
+`.bottom` rules, including the `width < 25rem` block, and `BottomBar.svelte`'s
+12 px margin. It used the real token values and the font stack (`system-ui`,
+which is SF Pro on macOS and iOS). It ran in Chromium with emulated viewports.
+Each label's rendered width was measured against the room inside its tab, at
+weight 500 and at weight 600 (the active tab). Icons were 24 px placeholders.
+
+**Results, bottom dock, German and English:**
+
+| Viewport | Tabs | Room per label | Widest label (SF Pro) | Result |
+| --- | --- | --- | --- | --- |
+| 320 | 4 (today) | 67 px | Kochbücher 64.3 / 65.7 active | fits, 1.3 px spare |
+| 320 | 5 | 52 px | Kochbücher 64.3 / 65.7; Cookbooks 59.9 / 61.2; Tagebuch 52.3 | **fails**: Kochbücher and Cookbooks overflow into their neighbours |
+| 360 | 5 | 60 px | Kochbücher 65.7 | **fails** in both languages |
+| 375 | 5 | 63 px | Kochbücher 65.7 | **fails** in German |
+| 390 | 5 | 66 px | Kochbücher 65.7 | fits, 0.3 px spare |
+| 414 | 5 | 64 px | Kochbücher 76.1, Cookbooks 70.9 (13 px labels from 25rem) | **fails** |
+| 430 | 5 | 67 px | Kochbücher 76.1 | **fails** |
+
+The five-tab bar fails on almost every phone width, not only at 320 px. It
+holds only between about 386 and 399 px. Above 25rem the labels go back to
+13 px and need more than the extra width gives. On Android (Roboto, about 54 px
+for "Kochbücher" at 11 px) it would still fail at 320 px. Narrower margins
+would win less than 2 px per tab.
+
+At 200 % root text size even today's four-tab bar overflows at 320 px (every
+label is 73–131 px in about 61 px). Text zoom therefore does not separate the
+options. It is a limitation of today's bar, recorded here for whoever takes
+on large text.
+
+**Fallback measured: Rezepte and Kochbücher as one library tab.**
+- Bibliothek, Woche, Einkauf and Tagebuch (Library, Week, Shopping, Diary) fit
+  at 320 px: Bibliothek is 55 px in 67 px.
+- They also fit at 430 px: 87 px of room.
+- Without the diary the bar would have three tabs.
+
+**Consequence.** Following this document's growth policy, labels are not
+shrunk and no More tab is added. The conditional fifth tab cannot ship as
+specified. The fallback decided with the diary was to merge Rezepte and
+Kochbücher into one library destination. Jakob rejected it on 22 October 2026,
+because it changes navigation for everyone (bead `culina-v2-b3hl.20`, closed).
+
+Where the diary lives is now part of the app-wide structure decision in
+`app-structure-design.md` §3 (bead `culina-v2-eawy.1`):
+
+- **K:** four tabs, with personal tools in the header.
+- **W:** Woche as a plan-and-list hub.
+- **F:** a full-width bar that fits five tabs from about 345 px.
+
+K and W were prototyped. **Jakob chose W on 24 October 2026**:
+- The bar is Rezepte, Kochbücher, Woche and Tagebuch, for everyone.
+- Woche holds the plan and the list: Plan | Liste on phones, the list beside
+  the week from 80rem.
+- Four tabs, measured whole at 320 px in German and English
+  (`tests/e2e/woche.spec.ts`).
+
+The design continues in `woche-design.md`.
+
+Not measured: the desktop header at 1024 px with five destinations. That is
+moot unless five ever return.

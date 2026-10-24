@@ -107,7 +107,7 @@ test.describe('kitchen display and badge lifecycle @offline', () => {
       .toBe(2);
     // Client navigation keeps the timer runtime and actual wake-lock status.
     await openShoppingFromCooking(page);
-    await expect(page.getByRole('heading', { name: 'Shopping', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^Shopping/ }).first()).toBeVisible();
     await expect(page.getByRole('img', { name: 'Screen stays awake' })).toBeVisible();
     await expect
       .poll(() =>
@@ -163,7 +163,7 @@ test.describe('kitchen display and badge lifecycle @offline', () => {
       });
     });
     await page.goto('/shopping');
-    await expect(page.getByRole('heading', { name: 'Shopping', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^Shopping/ }).first()).toBeVisible();
     await expect
       .poll(() =>
         page.evaluate(() => (window as unknown as { badgeWrites: number[] }).badgeWrites.at(-1))

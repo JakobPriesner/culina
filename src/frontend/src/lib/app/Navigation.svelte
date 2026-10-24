@@ -2,20 +2,22 @@
   import { selectionIndicator } from '$ds/containment/selectionIndicator';
   import { page } from '$app/state';
   import { session } from '$features/auth/session.svelte';
-  import { destinations } from './navigation';
+  import { barDestinations } from './navigation';
   import { m } from './i18n';
   import NavIcon from './NavIcon.svelte';
+  import { woche } from './woche.svelte';
 
   /** The same direct destinations: a top bar on desktop and a bottom bar on phones. */
   let { placement }: { placement: 'top' | 'bottom' } = $props();
   const current = $derived(page.url.pathname);
+  const destinations = $derived(barDestinations(woche.view));
   const selected = $derived(destinations.find((destination) => destination.match(current))?.href);
 </script>
 
 <!-- Every destination is a household's: without one (just signed up, on /welcome) they would only lead back there. -->
 {#if session.activeHouseholdId}
   <nav use:selectionIndicator={{ selected }} class="nav {placement}" aria-label={m['nav.label']()}>
-    {#each destinations as destination (destination.href)}
+    {#each destinations as destination (destination.icon)}
       {@const active = destination.match(current)}
       <a
         class="destination"
