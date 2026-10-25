@@ -24,6 +24,9 @@ async function pick(sheet: Locator, title: string) {
   await sheet.getByRole('button', { name: title }).and(sheet.locator(':not(.stub)')).click();
 }
 
+/** A day's own add button, named for its day: "Add for Sunday", "Für Sonntag hinzufügen". */
+const addOnDay = /^(add for \S+|für \S+ hinzufügen)$/i;
+
 test.describe('planning a week', () => {
   test.skip(needsBackend, skipReason);
 
@@ -64,21 +67,16 @@ test.describe('planning a week', () => {
 
     await expect(page).toHaveURL(/\/plan$/);
 
-    // Days already over this week fold into one line; opened, the week is whole whatever today is.
-    const days = page
-      .getByRole('listitem')
-      .filter({ has: page.getByRole('heading', { level: 2 }) });
-    await expect(days.first()).toBeVisible();
-    const earlier = page.getByRole('button', { name: /Früher diese Woche|Earlier this week/ });
-    if ((await earlier.count()) > 0) await earlier.click();
+    // The days on screen: the week with its days already over folded, or a run from today on a phone.
+    await expect(
+      page
+        .getByRole('listitem')
+        .filter({ has: page.getByRole('heading', { level: 2 }) })
+        .first()
+    ).toBeVisible();
 
-    await expect(days).toHaveCount(7);
-
-    // The week's last day, never one already over.
-    await page
-      .getByRole('button', { name: /^\+ (add|hinzufügen)$/i })
-      .last()
-      .click();
+    // Today: the first day on screen, the days already over folded away.
+    await page.getByRole('button', { name: addOnDay }).first().click();
 
     const sheet = page.getByRole('dialog');
 
@@ -110,10 +108,7 @@ test.describe('planning a week', () => {
     await addToList(page, recipeId);
 
     await page.goto('/plan');
-    await page
-      .getByRole('button', { name: /^\+ (add|hinzufügen)$/i })
-      .last()
-      .click();
+    await page.getByRole('button', { name: addOnDay }).last().click();
 
     const sheet = page.getByRole('dialog');
 
