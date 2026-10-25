@@ -24,6 +24,35 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe('a line added while the list is still loading', () => {
+  it('stays, when the read that began before it answers after', async () => {
+    let read: ((response: Response) => void) | null = null;
+    const bread: ShoppingItem = { ...milk, itemId: 'i3', name: 'Brot' };
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) =>
+        input.method === 'GET'
+          ? new Promise<Response>((resolve) => (read = resolve))
+          : json({ items: [milk, bread] })
+      )
+    );
+
+    const loading = shopping.load('h1');
+
+    await shopping.add('h1', 'Brot');
+    expect(shopping.items.map((item) => item.name)).toEqual(['Milch', 'Brot']);
+
+    // The list as it was before the add, answered late: what it says is older than what the add answered.
+    await vi.waitFor(() => expect(read).not.toBeNull());
+    read!(json({ items: [milk] }));
+    await loading;
+
+    expect(shopping.items.map((item) => item.name)).toEqual(['Milch', 'Brot']);
+    expect(shopping.status).toBe('ready');
+  });
+});
+
 describe('moving a line to another section', () => {
   it('moves it before the server answers, and rolls it back when the server refuses', async () => {
     let answer: ((response: Response) => void) | null = null;

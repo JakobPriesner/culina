@@ -360,7 +360,7 @@ class ShoppingStore {
 
       // Another tick still out would be undone by this list; the last answer to land carries all of them.
       if (this.#inFlight === 0 && householdId === this.#householdId) {
-        this.#list = result.value;
+        this.#answered(result.value);
       }
 
       return null;
@@ -421,11 +421,20 @@ class ShoppingStore {
     }
 
     if (list) {
-      this.#list = list;
-      this.#status = 'ready';
+      this.#answered(list);
     }
 
     this.#error = error;
+  }
+
+  /**
+   * A write's answer is the list as it is now: a read sent before the write, answering after it, would bring back what
+   * the write changed (a line just added gone again), so it is made stale.
+   */
+  #answered(list: ShoppingList): void {
+    this.#reads.cancel();
+    this.#list = list;
+    this.#status = 'ready';
   }
 }
 
