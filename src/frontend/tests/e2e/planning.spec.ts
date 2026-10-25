@@ -41,6 +41,7 @@ test.describe('planning a week', () => {
     }
 
     page = await browser.newPage();
+    await inDays(page);
 
     who = await accountFor(browser, testInfo);
 
@@ -88,7 +89,7 @@ test.describe('planning a week', () => {
 
     await page.getByRole('button', { name: weekToList }).click();
     await expect(cardOf(page, title)).toContainText(onTheList);
-    await expect(page.getByText(everythingOnTheList)).toBeVisible();
+    if (!listBeside(page)) await expect(page.getByText(everythingOnTheList)).toBeVisible();
     await expect(page.getByRole('button', { name: weekToList })).toBeHidden();
 
     await page.goto('/shopping');
@@ -202,7 +203,6 @@ test.describe('planning a week', () => {
     await expect(cardOf(page, title)).toBeVisible();
 
     const onto = await dayOtherThan(page, await settledDay(page, title));
-    const which = await indexOfDay(page, onto);
 
     await page
       .getByRole('button', {
@@ -214,11 +214,11 @@ test.describe('planning a week', () => {
 
     await expect(sheet).toBeVisible();
 
-    // The sheet also edits servings and the meal; the day is its own group.
+    // The sheet also edits servings and the meal; the day is its own group, its days around the meal's, each named by
+    // its whole date.
     await sheet
       .getByRole('group', { name: /^(day|tag)$/i })
-      .getByRole('radio')
-      .nth(which)
+      .getByRole('radio', { name: new RegExp(`^${await longDate(page, onto)}:`) })
       .check();
     await sheet.getByRole('button', { name: /^(save|speichern)$/i }).click();
 
@@ -233,6 +233,7 @@ test.describe('planning a week', () => {
     const screen = await phone.newPage();
 
     try {
+      await inDays(screen);
       await signInWithHousehold(screen, who);
       await openWeek(screen);
       await expect(cardOf(screen, title)).toBeVisible();
@@ -256,30 +257,39 @@ test.describe('planning a week', () => {
 
     await expect(cardOf(page, title)).toBeVisible();
 
-    // The card carries two controls that mention the title; the other one moves it.
+    // The card carries two controls that mention the title; the other one moves it. On a laptop they show on hover.
+    await cardOf(page, title).hover();
     await page
       .getByRole('button', { name: new RegExp(`(take ${title} off|${title} vom plan)`, 'i') })
       .click();
 
     await expect(cardOf(page, title)).toBeHidden();
 
-    await page.getByRole('button', { name: /^(remove them|entfernen)$/i }).click();
-    await expect(
-      page.getByText(/off the shopping list|von der einkaufsliste entfernt/i)
-    ).toBeVisible();
+    // Its lines on the list go too, once asked: beside the list at the lines themselves, else in the toast.
+    if (listBeside(page)) {
+      await page
+        .getByRole('button', { name: /^(remove \d+ lines?|\d+ zeilen? entfernen)$/i })
+        .click();
+      await expect(page.getByText(/is no longer planned|ist nicht mehr geplant/i)).toHaveCount(0);
+    } else {
+      await page.getByRole('button', { name: /^(remove them|entfernen)$/i }).click();
+      await expect(
+        page.getByText(/off the shopping list|von der einkaufsliste entfernt/i)
+      ).toBeVisible();
+    }
 
     await page.goto('/shopping');
     await expect(page.getByText(ingredient)).toBeHidden();
   });
 });
 
+/** What the week still needs, onto the list: the bar under the week, or beside the list the line at its top. */
 const weekToList =
-  /^put \d+ meals? on the shopping list$|^\d+ mahlzeit(en)? auf die einkaufsliste$/i;
+  /^put \d+ meals? on the shopping list$|^\d+ mahlzeit(en)? auf die einkaufsliste$|^add to shopping list$|^auf die einkaufsliste$/i;
 const onTheList = /on the shopping list|auf der einkaufsliste/i;
 const everythingOnTheList =
   /everything planned this week is on|alles, was diese woche geplant ist/i;
 
-/** A meal's card on the week; tonight's row above the days links the same title to cooking it. */
 /** The recipe's whole ingredient list onto the shopping list, through its sheet. */
 async function addToList(page: Page, recipeId: string) {
   await page.goto(`/recipes/${recipeId}`);
@@ -290,18 +300,28 @@ async function addToList(page: Page, recipeId: string) {
   await expect(page.getByText(/added to|hinzugefügt/i)).toBeVisible();
 }
 
+/** A meal's card on the days, found by its title link. */
 function cardOf(page: Page, title: string | RegExp): Locator {
-  return page.locator('[data-plan-day]').getByRole('link', { name: title });
+  return page
+    .locator('[data-plan-day] .card')
+    .filter({ has: page.getByRole('link', { name: title, exact: typeof title === 'string' }) });
 }
 
+/** From 80rem the list sits beside the week, and its top line says what the week still needs instead of a bar. */
+const listBeside = (page: Page) => page.viewportSize()!.width >= 1280;
+
 /**
- * This week, once tonight's row is in: it loads after the days and pushes them down, so a card
- * measured before it lands is dropped on the wrong day. Today has a meal by now, the scaled plan's
- * (the sheet picks today first), so the row always comes.
+ * The plan as the coming days from today, whatever the screen: in the week view the days already over fold into one
+ * line, and on a Sunday that leaves no other day to move a meal to.
  */
+async function inDays(page: Page): Promise<void> {
+  await page.addInitScript(() => localStorage.setItem('culina.plan.view', 'days'));
+}
+
+/** The days on screen, loaded: today's heading is drawn with them. */
 async function openWeek(page: Page): Promise<void> {
   await page.goto('/plan');
-  await expect(page.getByText(/^(today|heute) · /i)).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: /^(today|heute)\b/i })).toBeVisible();
 }
 
 async function dayHolding(page: Page, title: string): Promise<string> {
@@ -325,16 +345,17 @@ async function settledDay(page: Page, title: string): Promise<string> {
   return dayHolding(page, title);
 }
 
-async function indexOfDay(page: Page, date: string): Promise<number> {
-  const days = page.locator('[data-plan-day]');
-
-  for (let index = 0; index < (await days.count()); index += 1) {
-    if ((await days.nth(index).getAttribute('data-plan-day')) === date) {
-      return index;
-    }
-  }
-
-  throw new Error(`${date} is not a day of the week on screen.`);
+/** A date as the meal sheet names its day: "Montag, 26. Oktober", in the page's language. */
+function longDate(page: Page, date: string): Promise<string> {
+  return page.evaluate(
+    (day) =>
+      new Intl.DateTimeFormat(document.documentElement.lang, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      }).format(new Date(`${day}T12:00`)),
+    date
+  );
 }
 
 async function dayOtherThan(page: Page, date: string): Promise<string> {
@@ -356,7 +377,8 @@ async function dragCardOnto(page: Page, title: string, date: string): Promise<vo
   await target.scrollIntoViewIfNeeded();
   await card.scrollIntoViewIfNeeded();
 
-  const from = await card.boundingBox();
+  // By its title: the card's middle can be its list or cook control, which stay clicks.
+  const from = await card.getByRole('link', { name: title, exact: true }).boundingBox();
   const onto = await target.boundingBox();
   const viewport = page.viewportSize();
 
@@ -407,7 +429,8 @@ async function touchDragOnto(
   await target.scrollIntoViewIfNeeded();
   await card.scrollIntoViewIfNeeded();
 
-  const from = await card.boundingBox();
+  // By its title: the card's middle can be its list or cook control, which stay clicks.
+  const from = await card.getByRole('link', { name: title, exact: true }).boundingBox();
   const onto = await target.boundingBox();
   const viewport = page.viewportSize();
 
