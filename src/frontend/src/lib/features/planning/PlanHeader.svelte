@@ -90,10 +90,13 @@
     line-height: var(--leading-tight);
   }
 
+  /* At 320px back, today and forward drop under the segments rather than past the edge. */
   .controls {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-2);
+    min-width: 0;
   }
 
   /* The segments are as wide as their words: "Tage" and "Woche" each get a full thumb's width. */

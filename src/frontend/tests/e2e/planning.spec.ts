@@ -64,13 +64,20 @@ test.describe('planning a week', () => {
 
     await expect(page).toHaveURL(/\/plan$/);
 
-    await expect(
-      page.getByRole('listitem').filter({ has: page.getByRole('heading', { level: 2 }) })
-    ).toHaveCount(7);
+    // Days already over this week fold into one line; opened, the week is whole whatever today is.
+    const days = page
+      .getByRole('listitem')
+      .filter({ has: page.getByRole('heading', { level: 2 }) });
+    await expect(days.first()).toBeVisible();
+    const earlier = page.getByRole('button', { name: /Früher diese Woche|Earlier this week/ });
+    if ((await earlier.count()) > 0) await earlier.click();
 
+    await expect(days).toHaveCount(7);
+
+    // The week's last day, never one already over.
     await page
       .getByRole('button', { name: /^\+ (add|hinzufügen)$/i })
-      .first()
+      .last()
       .click();
 
     const sheet = page.getByRole('dialog');
