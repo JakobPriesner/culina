@@ -1,17 +1,17 @@
 using Api.Endpoints.Users.AddDiaryEntry.V1;
 using Api.Endpoints.Users.ChangePassword.V1;
+using Api.Endpoints.Users.CreateRecoveryCodes.V1;
 using Api.Endpoints.Users.EraseDiary.V1;
+using Api.Endpoints.Users.GetCurrent.V1;
 using Api.Endpoints.Users.GetDiary.V1;
 using Api.Endpoints.Users.GetDiarySettings.V1;
-using Api.Endpoints.Users.RemoveDiaryEntry.V1;
-using Api.Endpoints.Users.UpdateDiaryEntry.V1;
-using Api.Endpoints.Users.UpdateDiarySettings.V1;
-using Api.Endpoints.Users.CreateRecoveryCodes.V1;
-using Api.Endpoints.Users.GetCurrent.V1;
 using Api.Endpoints.Users.GetPreferences.V1;
 using Api.Endpoints.Users.GetRecoveryCodes.V1;
 using Api.Endpoints.Users.Register.V1;
+using Api.Endpoints.Users.RemoveDiaryEntry.V1;
 using Api.Endpoints.Users.UpdateCurrent.V1;
+using Api.Endpoints.Users.UpdateDiaryEntry.V1;
+using Api.Endpoints.Users.UpdateDiarySettings.V1;
 using Api.Endpoints.Users.UpdatePreferences.V1;
 
 namespace Api.Endpoints.Users;
