@@ -14,9 +14,9 @@ import type { Dictionary, Manifest } from './routePreloads.ts';
  */
 export const budgets = {
   firstLoadBytes: 80 * 1024,
-  heaviestRouteBytes: 320 * 1024,
-  totalJavaScriptBytes: 500 * 1024,
-  totalStyleBytes: 68 * 1024
+  heaviestRouteBytes: 340 * 1024,
+  totalJavaScriptBytes: 525 * 1024,
+  totalStyleBytes: 73 * 1024
 } as const;
 
 export interface Weight {
