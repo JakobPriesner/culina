@@ -83,14 +83,13 @@
 
   /*
    * A phone: the whole row, each part grown from its label, so every option reads as a place to tap rather
-   * than a word beside the chosen one, at a size a thumb finds. A label too long for the row breaks
-   * between words, so the shape is a rounded box, not a pill.
+   * than a word beside the chosen one, at a size a thumb finds. Still a pill, as on a wide screen; a label
+   * too long for the row breaks between words and the pill grows taller.
    */
   @media (width < 40rem) {
     .segments {
       display: flex;
       width: 100%;
-      border-radius: var(--radius-lg);
     }
 
     /* Little padding of its own: growing gives the room, and three meal names fit whole at 320px. */
@@ -98,17 +97,12 @@
       flex: 1 1 auto;
       min-height: var(--control-md);
       padding-inline: var(--space-1);
-      border-radius: var(--radius-md);
       font-size: var(--text-sm);
       line-height: var(--leading-tight);
       white-space: normal;
       text-wrap: balance;
       /* Between words only: the page lets long words break anywhere, which here split "Hell" in two. */
       overflow-wrap: normal;
-    }
-
-    .segments :global(.selection-indicator) {
-      border-radius: var(--radius-md);
     }
   }
 
