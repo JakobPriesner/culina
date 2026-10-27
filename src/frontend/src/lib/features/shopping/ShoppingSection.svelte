@@ -94,11 +94,11 @@
     gap: var(--space-2);
     margin-bottom: var(--space-1);
   }
-  /* Over the header's fade, which starts where it sticks: under it, a stuck heading read washed out. */
+  /* Over the header's fade, which starts where it sticks (under it, a stuck heading read washed out), and under the header itself, which a heading its section pushes up must not paint over. */
   .sticky {
     position: sticky;
     top: var(--header-inset);
-    z-index: var(--z-shell);
+    z-index: var(--z-sticky);
     padding-block: var(--space-2);
     background: var(--surface);
   }

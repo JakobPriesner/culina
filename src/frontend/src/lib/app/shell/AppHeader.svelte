@@ -72,6 +72,7 @@
     {/if}
   </div>
 </header>
+<div class="fade" aria-hidden="true"></div>
 
 <style>
   .header {
@@ -83,17 +84,29 @@
   }
 
   /*
-   * Hides the page under the pills and fades it out below them. Solid for the header's whole height: fading from a third
-   * of the way down let a heading or a line of text read through beside the pills and above a stuck section heading.
-   * A gradient, not a full-width backdrop-filter, which would blur the empty gutters every scroll frame.
+   * Hides the page under the pills. Solid for the header's whole height: fading from a third of the way down let a
+   * heading or a line of text read through beside the pills and above a stuck section heading.
    */
   .header::before {
     content: '';
     position: absolute;
-    inset-block-start: 0;
+    inset: 0;
+    background: var(--surface);
+  }
+
+  /*
+   * Fades the page out below the header. Its own layer, under the page's sticky level: a heading stuck on the header's
+   * line paints over it and stays crisp, while one its section pushes up still goes under the solid header.
+   * A gradient, not a full-width backdrop-filter, which would blur the empty gutters every scroll frame.
+   */
+  .fade {
+    position: fixed;
+    top: var(--header-inset);
     inset-inline: 0;
-    height: calc(100% + var(--space-8));
-    background: linear-gradient(to bottom, var(--surface) calc(100% - var(--space-8)), transparent);
+    z-index: var(--z-sticky);
+    height: var(--space-8);
+    background: linear-gradient(to bottom, var(--surface), transparent);
+    pointer-events: none;
   }
 
   /* Brand, destinations and tools share one row; the tools are on every page so the destinations stay centred. */
@@ -171,13 +184,13 @@
   }
 
   /* Guided cooking is a focused mode with its own way back: no navigation, at any width, so nothing pulls the cook away from the step. */
-  :global(.shell.focused-cooking) .header {
+  :global(.shell.focused-cooking) :is(.header, .fade) {
     display: none;
   }
 
   /* A recipe on a phone brings its own sticky bar (back, title) and needs the height for the photo; the bottom bar still navigates. */
   @media (width < 52rem) {
-    :global(.shell.reading-recipe) .header {
+    :global(.shell.reading-recipe) :is(.header, .fade) {
       display: none;
     }
   }
@@ -204,7 +217,8 @@
       top: auto;
     }
 
-    .header::before {
+    .header::before,
+    .fade {
       display: none;
     }
   }
@@ -215,12 +229,14 @@
     top: auto;
   }
 
-  :global(.shell.crowded) .header::before {
+  :global(.shell.crowded) .header::before,
+  :global(.shell.crowded) .fade {
     display: none;
   }
 
   @media print {
-    .header {
+    .header,
+    .fade {
       display: none !important;
     }
   }
