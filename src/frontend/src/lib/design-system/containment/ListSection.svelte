@@ -4,10 +4,10 @@
   import SectionLabel from '../display/SectionLabel.svelte';
 
   /**
-   * A grouped list, the way a settings page or a health record draws one (docs/food-log-redesign.md §4.4): a small
-   * heading with an optional value and an optional action at its end, then its rows on one raised surface with
-   * hairlines between them. Rows are `ListRow`s. A section with nothing in it is its heading alone: an empty box would
-   * say "missing", the heading's action says "add".
+   * A grouped list, the way a health record draws one (docs/food-log-redesign.md §4.4): one raised card whose first
+   * row is its heading, with an optional value and an optional action at its end, then its rows with hairlines between
+   * them. Rows are `ListRow`s. A section with nothing in it is its heading row alone, one row high: the heading's action
+   * says "add", and the card keeps it in line with the full sections beside it.
    */
   interface Props {
     title: string;
@@ -41,13 +41,19 @@
 </section>
 
 <style>
+  .section {
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    background: var(--surface-raised);
+  }
+
   .head {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-4);
-    min-block-size: var(--control-sm);
-    padding: 0 var(--space-2) var(--space-1) var(--space-4);
+    min-block-size: var(--control-lg);
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4);
   }
 
   .end {
@@ -62,12 +68,11 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* The heading's own row, parted from the rows by a hairline across the card. */
   .group {
     margin: 0;
     padding: 0;
-    overflow: hidden;
-    border-radius: var(--radius-lg);
-    background: var(--surface-raised);
+    border-block-start: 1px solid var(--border);
     list-style: none;
   }
 </style>

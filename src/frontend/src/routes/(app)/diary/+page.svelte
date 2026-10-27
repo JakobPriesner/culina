@@ -317,19 +317,19 @@
 
 <Page>
   <div class="log">
-    <div class="aside">
-      <header class="day">
-        <div>
-          <h1>{dayTitle(date, today)}</h1>
-          <p class="date">{dayDateLine(date, today)}</p>
-        </div>
-        <!-- One way in from the top, for the meal the clock suggests; each meal has its own "+" below. -->
-        {#if settings?.enabled}
-          <Button size="sm" onclick={() => add(mealByClock())}>+ {m['diary.log']()}</Button>
-        {/if}
-      </header>
+    <header class="day">
+      <div>
+        <h1>{dayTitle(date, today)}</h1>
+        <p class="date">{dayDateLine(date, today)}</p>
+      </div>
+      <!-- One way in from the top, for the meal the clock suggests; each meal has its own "+" below. -->
+      {#if settings?.enabled}
+        <Button size="sm" onclick={() => add(mealByClock())}>+ {m['diary.log']()}</Button>
+      {/if}
+    </header>
 
-      {#if !settings || settings.enabled}
+    {#if !settings || settings.enabled}
+      <div class="aside">
         <WeekStrip
           days={week}
           selected={date}
@@ -344,25 +344,25 @@
           onnext={() => show(addDays(date, 7))}
           nextDisabled={monday >= mondayOfDate(today)}
         />
-      {/if}
 
-      {#if settings?.enabled && !day && diary.status !== 'failed'}
-        <div class="loading-summary" aria-hidden="true">
-          <Skeleton width="10rem" height="2.5rem" shape="block" />
-          <Skeleton width="100%" height="0.375rem" shape="block" />
-          <Skeleton width="14rem" height="1rem" />
-        </div>
-      {:else if settings?.enabled && day}
-        <DiarySummary
-          {day}
-          kcalTarget={settings?.kcalTarget ?? null}
-          proteinTarget={settings?.proteinTarget ?? null}
-          headline={settings?.headline === 'remaining' ? 'remaining' : 'eaten'}
-        />
-      {/if}
-    </div>
+        {#if settings?.enabled && !day && diary.status !== 'failed'}
+          <div class="loading-summary" aria-hidden="true">
+            <Skeleton width="10rem" height="2.5rem" shape="block" />
+            <Skeleton width="100%" height="0.375rem" shape="block" />
+            <Skeleton width="14rem" height="1rem" />
+          </div>
+        {:else if settings?.enabled && day}
+          <DiarySummary
+            {day}
+            kcalTarget={settings?.kcalTarget ?? null}
+            proteinTarget={settings?.proteinTarget ?? null}
+            headline={settings?.headline === 'remaining' ? 'remaining' : 'eaten'}
+          />
+        {/if}
+      </div>
+    {/if}
 
-    <div class="meals">
+    <div class="meals" class:alone={settings && !settings.enabled}>
       {#if settings && !settings.enabled}
         <EmptyState title={m['diary.off.title']()} body={m['me.diary.consent']()}>
           {#snippet action()}
@@ -381,19 +381,10 @@
         </ErrorState>
       {:else}
         {#if !day}
-          <!-- The day's shape while it arrives: four meals, a row or two each, nothing counted yet. -->
+          <!-- The day's shape while it arrives: four meal cards, a row or two each, nothing counted yet. -->
           <div class="loading" aria-busy="true" aria-label={m['diary.title']()}>
             {#each [2, 1, 1, 0] as rows, index (index)}
-              <div class="loading-meal">
-                <Skeleton width="6rem" height="1rem" />
-                {#if rows > 0}
-                  <div class="loading-rows">
-                    {#each Array.from({ length: rows }) as _, row (row)}
-                      <Skeleton width="100%" height="3rem" shape="block" />
-                    {/each}
-                  </div>
-                {/if}
-              </div>
+              <Skeleton width="100%" height={`${3.5 * (rows + 1)}rem`} shape="block" />
             {/each}
           </div>
         {:else}
@@ -504,7 +495,7 @@
 <style>
   .log {
     display: grid;
-    gap: var(--space-8);
+    gap: var(--space-6);
     max-inline-size: var(--measure);
     margin-inline: auto;
   }
@@ -538,8 +529,12 @@
   .meals {
     display: flex;
     flex-direction: column;
-    gap: var(--space-6);
+    gap: var(--space-4);
     min-inline-size: 0;
+  }
+
+  .aside + .meals {
+    margin-block-start: var(--space-2);
   }
 
   .loading-summary {
@@ -551,18 +546,7 @@
   .loading {
     display: flex;
     flex-direction: column;
-    gap: var(--space-6);
-  }
-
-  .loading-meal,
-  .loading-rows {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-2);
-  }
-
-  .loading-meal {
-    padding-inline-start: var(--space-4);
+    gap: var(--space-4);
   }
 
   .planned-title {
@@ -581,18 +565,38 @@
     font-size: var(--text-xs);
   }
 
-  /* From 64rem the day and its numbers stay beside the meals (docs/food-log-redesign.md §4.2). */
+  /*
+   * From 64rem the day's title runs across the page, on the shell's edge like every other page, and its week and
+   * numbers stay beside the meals on one raised card, the meals' own surface (docs/food-log-redesign.md §4.2).
+   */
   @media (min-width: 64rem) {
     .log {
-      grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
+      grid-template-columns: minmax(20rem, 24rem) minmax(0, 52rem);
       align-items: start;
-      gap: var(--space-12);
-      max-inline-size: 64rem;
+      gap: var(--space-8) var(--space-12);
+      max-inline-size: none;
+      margin-inline: 0;
+    }
+
+    .day {
+      grid-column: 1 / -1;
+      align-items: center;
     }
 
     .aside {
       position: sticky;
       inset-block-start: calc(var(--header-inset, var(--space-16)) + var(--space-4));
+      padding: var(--space-6);
+      border-radius: var(--radius-lg);
+      background: var(--surface-raised);
+    }
+
+    .aside + .meals {
+      margin-block-start: 0;
+    }
+
+    .meals.alone {
+      grid-column: 1 / -1;
     }
   }
 </style>
