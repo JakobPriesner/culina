@@ -39,10 +39,12 @@
   import { recipeAnswers } from '$features/nutrition/stores/recipeAnswers.svelte';
   import type { RecipeSummary } from '$features/recipes/types';
   import { session } from '$features/auth/session.svelte';
+  import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
   import Olli from '$shell/olli/Olli.svelte';
   import Page from '$shell/Page.svelte';
   import { preferences } from '$shell/preferences.svelte';
+  import { toaster } from '$shell/toaster.svelte';
   import DiaryTodayLine from '$features/diary/DiaryTodayLine.svelte';
   import WocheSwitch from '$shell/WocheSwitch.svelte';
   import ShoppingListView from '$features/shopping/ShoppingListView.svelte';
@@ -193,7 +195,15 @@
 
     if (ok) {
       adding = null;
+
+      return;
     }
+
+    const failure = mealPlan.writeError;
+    toaster.show({
+      message: () => (failure ? explain(failure) : m['plan.recipe.failed']()),
+      tone: 'danger'
+    });
   }
 
   function addOn(date: string) {

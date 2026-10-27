@@ -243,7 +243,17 @@ export function usePlanActions(page: Page) {
 
     const ok = await mealPlan.unplan(householdId, meal.entryId);
 
-    if (!ok || !meal.isOnShoppingList) {
+    if (!ok) {
+      const failure = mealPlan.writeError;
+      toaster.show({
+        message: () => (failure ? explain(failure) : m['error.unexpected.body']()),
+        tone: 'danger'
+      });
+
+      return;
+    }
+
+    if (!meal.isOnShoppingList) {
       return;
     }
 

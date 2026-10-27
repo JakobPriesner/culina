@@ -121,6 +121,8 @@ class MealPlanStore {
   #weeks = $state<Readonly<Record<string, Week>>>({});
   #span = $state<Span | null>(null);
   #error = $state<AppError | null>(null);
+  /** Why the last plan, move or unplan was refused; apart from #error, so a failed write never hides the week. */
+  #writeError = $state<AppError | null>(null);
   #loading = $state(false);
 
   /** Plain counter of move writes still in flight; a whole-week answer is only taken once none are left. */
@@ -172,8 +174,14 @@ class MealPlanStore {
     return this.#span?.from ?? null;
   }
 
+  /** Why the week could not be read. */
   get error(): AppError | null {
     return this.#error;
+  }
+
+  /** Why the last change to the week was refused, for the toast that says so. */
+  get writeError(): AppError | null {
+    return this.#writeError;
   }
 
   get loading(): boolean {
@@ -272,9 +280,9 @@ class MealPlanStore {
 
     if (result.ok) {
       this.#take(result.value);
-      this.#error = null;
+      this.#writeError = null;
     } else {
-      this.#error = result.error;
+      this.#writeError = result.error;
     }
 
     return result.ok;
@@ -314,10 +322,10 @@ class MealPlanStore {
         }
       }
 
-      this.#error = null;
+      this.#writeError = null;
     } else {
       this.#putBack(entryId, before);
-      this.#error = result.error;
+      this.#writeError = result.error;
 
       // A put-back cannot say what the servings were when they were the recipe's own; the server can.
       if (to.servings !== undefined && this.#span) {
@@ -351,9 +359,9 @@ class MealPlanStore {
 
     if (result.ok) {
       this.#take(result.value);
-      this.#error = null;
+      this.#writeError = null;
     } else {
-      this.#error = result.error;
+      this.#writeError = result.error;
     }
 
     return result.ok;
@@ -364,6 +372,7 @@ class MealPlanStore {
     this.#weeks = {};
     this.#span = null;
     this.#error = null;
+    this.#writeError = null;
     this.#loading = false;
     this.#reads.cancel();
   }
