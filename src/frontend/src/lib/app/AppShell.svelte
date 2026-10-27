@@ -118,6 +118,11 @@
     padding-top: env(safe-area-inset-top, 0px);
   }
 
+  /* The cooking controls end the page: space after them would leave the sticky bar short of the bottom on the last step. */
+  .focused-cooking .content :global(.page) {
+    padding-block-end: 0;
+  }
+
   /* A recipe on a phone has no header above it, and its sticky back bar brings its own top padding. */
   @media (width < 52rem) {
     .reading-recipe .content :global(.page) {

@@ -59,6 +59,59 @@ describe('moving between steps by key and swipe', () => {
     expect(move).toHaveBeenCalledWith(1);
   });
 
+  it('keeps stepping while the step just moved to holds the focus', () => {
+    const step = document.createElement('button');
+    step.setAttribute('aria-current', 'step');
+    document.body.append(step);
+    const keyOn = (target: EventTarget) =>
+      Object.defineProperty(
+        new KeyboardEvent('keydown', { key: 'ArrowRight', cancelable: true }),
+        'target',
+        {
+          value: target
+        }
+      );
+
+    gestures.keydown(keyOn(step));
+    gestures.keydown(keyOn(step));
+    gestures.touchstart(touch(200, 100, step));
+    gestures.touchend(touch(100, 100, step));
+    step.remove();
+
+    expect(move).toHaveBeenCalledTimes(2);
+    expect(advance).toHaveBeenCalledOnce();
+  });
+
+  it('leaves arrow keys to a control that moves between its own options', () => {
+    const group = document.createElement('div');
+    group.setAttribute('role', 'radiogroup');
+    const option = document.createElement('span');
+    group.append(option);
+    document.body.append(group);
+
+    gestures.keydown(
+      Object.defineProperty(new KeyboardEvent('keydown', { key: 'ArrowRight' }), 'target', {
+        value: option
+      })
+    );
+    group.remove();
+
+    expect(move).not.toHaveBeenCalled();
+  });
+
+  it('does not finish a swipe whose start belonged to a control', () => {
+    const field = document.createElement('input');
+    document.body.append(field);
+
+    gestures.touchstart(touch(200, 100));
+    gestures.touchend(touch(190, 100));
+    gestures.touchstart(touch(300, 100, field));
+    gestures.touchend(touch(100, 100));
+    field.remove();
+
+    expect(advance).not.toHaveBeenCalled();
+  });
+
   it('ignores slow, short or mostly vertical drags', () => {
     gestures.touchstart(touch(200, 100));
     vi.advanceTimersByTime(700);
