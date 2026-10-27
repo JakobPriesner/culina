@@ -3,8 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SetupPage from './+page.svelte';
+import { tips } from '$features/onboarding/tips.svelte';
 import { server } from '$features/server/stores/server.svelte';
 import { renderWithProviders } from '$lib/test/render';
+
+const navigation = vi.hoisted(() => ({ goto: vi.fn(() => Promise.resolve()) }));
+
+vi.mock('$app/navigation', () => navigation);
 
 /* The steps a fresh instance walks its first visitor through, and the one fact only the browser knows: whether the page came over HTTPS. */
 const emptyDatabase = {
@@ -70,6 +75,33 @@ function serverAnswers(connects: boolean) {
       return Promise.resolve(new Response(null, { status: 202 }));
     }
 
+    if (request.method === 'PUT' && url.includes('/settings/server')) {
+      startedAt = '2026-09-24T10:00:04Z';
+
+      return Promise.resolve(new Response(null, { status: 202 }));
+    }
+
+    if (request.method === 'POST' && url.includes('/users')) {
+      return Promise.resolve(json({ userId: 'u1', householdId: 'h1' }, 201));
+    }
+
+    if (request.method === 'POST' && url.includes('/sessions')) {
+      return Promise.resolve(json({ userId: 'u1', csrfToken: 'c' }, 201));
+    }
+
+    if (url.includes('/users/me/settings')) return Promise.resolve(json({}));
+    if (url.includes('/users/me')) {
+      return Promise.resolve(
+        json({
+          userId: 'u1',
+          email: 'ada@example.com',
+          displayName: 'Ada',
+          isAdmin: true,
+          households: [{ householdId: 'h1', name: 'Ada’s kitchen', role: 'owner' }]
+        })
+      );
+    }
+
     if (url.includes('/setup')) return Promise.resolve(json({ stage, startedAt }));
     if (url.includes('/settings/database')) return Promise.resolve(json(emptyDatabase));
     if (url.includes('/settings/server')) return Promise.resolve(json(serverSettings));
@@ -101,6 +133,7 @@ async function fillDatabase() {
 
 beforeEach(() => {
   server.clear();
+  tips.reset();
   // jsdom has no notion of a secure context; each test says which it is.
   vi.stubGlobal('isSecureContext', false);
 });
@@ -175,5 +208,26 @@ describe('setting up a fresh instance', () => {
     expect(screen.getByText('Step 1 of 2')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'How people reach Culina' })).toBeInTheDocument();
     expect(await screen.findByRole('textbox', { name: 'Proxy addresses' })).toBeInTheDocument();
+  });
+
+  it('starts the tour once the first account is in its kitchen', async () => {
+    serverAnswers(true);
+
+    renderWithProviders(SetupPage, atStage('account'));
+    await settle();
+    await userEvent.click(await screen.findByRole('button', { name: 'Continue' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Create your account' }, { timeout: 3000 })
+    ).toBeInTheDocument();
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'What should we call you?' }), 'Ada');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Email address' }), 'ada@example.com');
+    await userEvent.type(screen.getByLabelText('Password'), 'correct horse battery');
+    await userEvent.click(screen.getByRole('button', { name: 'Create account' }));
+    await settle();
+
+    expect(tips.touring).toBe(true);
+    expect(navigation.goto).toHaveBeenCalled();
   });
 });
