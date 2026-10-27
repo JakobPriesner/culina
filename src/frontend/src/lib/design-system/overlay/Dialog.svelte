@@ -3,6 +3,7 @@
 
   import IconButton from '../actions/IconButton.svelte';
   import { lockScroll, unlockScroll } from './scrollLock';
+  import { followed, releasesSheet } from './sheetDrag';
 
   /**
    * The one modal surface; `Modal` and `Sheet` are this with different geometry.
@@ -21,6 +22,13 @@
     wide?: boolean;
     /** `top` holds a sheet near the top on wide screens, so a panel that grows (search results) grows downward instead of jumping. */
     anchor?: 'centre' | 'top';
+    /**
+     * `large` gives a phone's sheet its full height from the start (iOS's large detent), so results that arrive
+     * never make it jump; for a sheet that searches. `fit` hugs what it holds.
+     */
+    size?: 'fit' | 'large';
+    /** The panel takes the page's colour, so raised `ListSection` cards read on it as they do on a page. */
+    grouped?: boolean;
     hideTitle?: boolean;
     onclose?: () => void;
   }
@@ -34,11 +42,14 @@
     placement = 'centre',
     wide = false,
     anchor = 'centre',
+    size = 'fit',
+    grouped = false,
     hideTitle = false,
     onclose
   }: Props = $props();
 
   let element = $state<HTMLDialogElement>();
+  let panel = $state<HTMLDivElement>();
 
   /**
    * Shown since it last finished closing; not reactive, only decides whether an exit is awaited.
@@ -66,6 +77,8 @@
     }
 
     if (open && !element.open) {
+      // A sheet last let go by a pull starts from where it rests, not where the finger left it.
+      panel?.style.removeProperty('transform');
       element.showModal();
       lockScroll();
 
@@ -131,11 +144,64 @@
       dismiss();
     }
   }
+
+  /** A pull on a phone's sheet by its top, under way; not state, the panel's transform is set directly as Vaul does. */
+  let pull: { pointer: number; start: number; last: number; at: number; velocity: number } | null =
+    null;
+
+  /** Only a phone's sheet is pulled: elsewhere the panel is a centred dialog with nothing to pull it down to. */
+  const pullable = () =>
+    placement === 'sheet' && window.matchMedia?.('(width < 48rem)').matches === true;
+
+  function grab(event: PointerEvent) {
+    if (!panel || !event.isPrimary || event.button !== 0 || !pullable()) return;
+    if (event.target instanceof Element && event.target.closest('button, a, input')) return;
+
+    pull = {
+      pointer: event.pointerId,
+      start: event.clientY,
+      last: event.clientY,
+      at: event.timeStamp,
+      velocity: 0
+    };
+    (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
+    panel.classList.add('pulled');
+  }
+
+  function follow(event: PointerEvent) {
+    if (!pull || !panel || event.pointerId !== pull.pointer) return;
+
+    const elapsed = event.timeStamp - pull.at;
+
+    if (elapsed > 0) pull.velocity = (event.clientY - pull.last) / elapsed;
+    pull.last = event.clientY;
+    pull.at = event.timeStamp;
+    panel.style.transform = `translateY(${followed(event.clientY - pull.start)}px)`;
+  }
+
+  function release(event: PointerEvent) {
+    if (!pull || !panel || event.pointerId !== pull.pointer) return;
+
+    const offset = pull.last - pull.start;
+    const goes =
+      event.type === 'pointerup' && releasesSheet(offset, panel.offsetHeight, pull.velocity);
+
+    pull = null;
+    panel.classList.remove('pulled');
+
+    if (goes) {
+      dismiss();
+    } else {
+      panel.style.removeProperty('transform');
+    }
+  }
 </script>
 
 <dialog
   class:wide
   class:top={anchor === 'top'}
+  class:large={size === 'large'}
+  class:grouped
   bind:this={element}
   class="dialog {placement}"
   aria-labelledby={titleId}
@@ -143,16 +209,29 @@
   onpointerdown={pressBackdrop}
   onclick={dismissOnBackdrop}
 >
-  <div class="panel">
-    <header class="header">
-      <h2 class="title" class:ds-clipped={hideTitle} id={titleId}>{title}</h2>
+  <div class="panel" bind:this={panel}>
+    <!-- A sheet is pulled down by its top, grabber and title, never by its content, which scrolls. The close button
+         stays the way out that can be seen and reached by keyboard. -->
+    <div
+      class="top-edge"
+      role="presentation"
+      onpointerdown={grab}
+      onpointermove={follow}
+      onpointerup={release}
+      onpointercancel={release}
+    >
+      {#if placement === 'sheet'}<div class="grabber" aria-hidden="true"></div>{/if}
 
-      <IconButton label={closeLabel} onclick={dismiss}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
-        </svg>
-      </IconButton>
-    </header>
+      <header class="header">
+        <h2 class="title" class:ds-clipped={hideTitle} id={titleId}>{title}</h2>
+
+        <IconButton label={closeLabel} onclick={dismiss}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m6 6 12 12M18 6 6 18" stroke-linecap="round" />
+          </svg>
+        </IconButton>
+      </header>
+    </div>
 
     <div class="body">
       {#if open || closing}
@@ -279,6 +358,57 @@
     border-start-end-radius: var(--radius-xl);
     padding-bottom: env(safe-area-inset-bottom, 0);
     padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
+    /* Settles back from a pull that did not let it go; a pull in progress follows the finger with no lag. */
+    transition: transform var(--duration-enter) var(--ease-spatial);
+  }
+
+  .sheet .panel:global(.pulled) {
+    transition: none;
+  }
+
+  /* The pull starts on the sheet's top, so the browser must not take that drag for a scroll of the page. */
+  .sheet .top-edge {
+    touch-action: none;
+    user-select: none;
+  }
+
+  /* The sheet's handle, as iOS and Material draw it: says "this pulls down" before anyone tries. */
+  .grabber {
+    inline-size: 2.25rem;
+    block-size: 0.3125rem;
+    margin: var(--space-2) auto 0;
+    border-radius: var(--radius-full);
+    background: var(--border-strong);
+  }
+
+  .sheet .header {
+    padding-block-start: var(--space-2);
+  }
+
+  /* iOS's large detent: the whole height but a strip of the page above it, so it still reads as a sheet over it. */
+  .sheet.large .panel {
+    block-size: calc(100dvh - max(env(safe-area-inset-top, 0px), var(--space-3)) - var(--space-3));
+    max-height: none;
+  }
+
+  .large .body {
+    flex: 1;
+  }
+
+  .grouped .panel {
+    background: var(--surface);
+  }
+
+  /* A phone shows a scrollbar only while scrolling; a reserved gutter only narrows the sheet. */
+  @media (width < 48rem) {
+    .sheet .body {
+      scrollbar-gutter: auto;
+      scrollbar-width: none;
+    }
+
+    .sheet .body::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   .stage {
@@ -331,6 +461,19 @@
       max-height: calc(100dvh - var(--space-16));
       border-radius: var(--radius-xl);
       padding-bottom: 0;
+    }
+
+    /* A dialog here, with nothing to pull: no handle, and its height is what it holds again. */
+    .grabber {
+      display: none;
+    }
+
+    .sheet .header {
+      padding-block-start: var(--space-4);
+    }
+
+    .sheet.large .panel {
+      block-size: auto;
     }
     .sheet.top .panel {
       max-height: calc(88dvh - var(--space-8));

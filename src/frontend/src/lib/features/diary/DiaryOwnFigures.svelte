@@ -75,6 +75,14 @@
    * them and by correcting them later.
    */
   let { fields = $bindable() }: { fields: OwnFiguresText } = $props();
+
+  const uid = $props.id();
+
+  const macros = [
+    { key: 'protein', label: m['diary.protein'] },
+    { key: 'carbohydrate', label: m['diary.carbohydrate'] },
+    { key: 'fat', label: m['diary.fat'] }
+  ] as const;
 </script>
 
 <Field label={m['diary.add.ownLabel']()}>
@@ -99,46 +107,50 @@
     />
   {/snippet}
 </Field>
-<div class="macros">
-  <Field label={m['diary.protein']()} optionalText={m['diary.optional']()}>
-    {#snippet children({ id, describedBy })}
+<!-- The macros as a health app's form takes them, one row each with its name, its field and its unit: three fields
+     side by side at 320 px left "Kohlenhydrate" no room. -->
+<fieldset class="macros">
+  <legend class="legend">{m['diary.add.ownMacros']()}</legend>
+  {#each macros as macro (macro.key)}
+    <div class="macro">
+      <label for="{uid}-{macro.key}">{macro.label()}</label>
       <TextInput
-        {id}
-        {describedBy}
-        value={fields.protein}
+        id="{uid}-{macro.key}"
+        value={fields[macro.key]}
         inputmode="decimal"
-        oninput={(value) => (fields.protein = value)}
+        oninput={(value) => (fields[macro.key] = value)}
       />
-    {/snippet}
-  </Field>
-  <Field label={m['diary.carbohydrate']()} optionalText={m['diary.optional']()}>
-    {#snippet children({ id, describedBy })}
-      <TextInput
-        {id}
-        {describedBy}
-        value={fields.carbohydrate}
-        inputmode="decimal"
-        oninput={(value) => (fields.carbohydrate = value)}
-      />
-    {/snippet}
-  </Field>
-  <Field label={m['diary.fat']()} optionalText={m['diary.optional']()}>
-    {#snippet children({ id, describedBy })}
-      <TextInput
-        {id}
-        {describedBy}
-        value={fields.fat}
-        inputmode="decimal"
-        oninput={(value) => (fields.fat = value)}
-      />
-    {/snippet}
-  </Field>
-</div>
+      <span class="unit" aria-hidden="true">g</span>
+    </div>
+  {/each}
+</fieldset>
 
 <style>
   .macros {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-inline-size: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .legend {
+    margin-block-end: var(--space-2);
+    padding: 0;
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .macro {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(7rem, 1fr));
+    grid-template-columns: minmax(0, 1fr) 7rem auto;
+    align-items: center;
     gap: var(--space-3);
+  }
+
+  .unit {
+    color: var(--text-muted);
   }
 </style>

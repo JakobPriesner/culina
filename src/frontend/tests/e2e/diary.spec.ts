@@ -179,7 +179,7 @@ test.describe('food diary @offline', () => {
         .getByRole('region', { name: 'Mittagessen' })
         .getByRole('button', { name: /Eintragen/ })
         .click();
-      await page.getByRole('button', { name: 'Eigenes' }).click();
+      await page.getByRole('button', { name: 'Eigene Angaben' }).click();
       await page.getByLabel('Was war es?').fill('Café-Lunch');
       await page.getByLabel('Kilokalorien').fill('650');
       await page.getByRole('dialog').getByRole('button', { name: 'Eintragen' }).click();
@@ -233,7 +233,7 @@ test.describe('food diary @offline', () => {
       .getByRole('region', { name: 'Frühstück' })
       .getByRole('button', { name: /Eintragen/ })
       .click();
-    await page.getByRole('button', { name: 'Eigenes' }).click();
+    await page.getByRole('button', { name: 'Eigene Angaben' }).click();
     await page.getByLabel('Was war es?').fill('Porridge');
     await page.getByLabel('Kilokalorien').fill('380');
     await page.getByRole('dialog').getByRole('button', { name: 'Eintragen' }).click();
