@@ -47,6 +47,12 @@ internal sealed partial class RecipeIntakeWorker(IServiceScopeFactory scopes, In
                     {
                         await jobs.FailAsync(work.Id, "RecipeIntake.TimedOut", stoppingToken).ConfigureAwait(false);
                     }
+                    catch (OperationCanceledException)
+                    {
+                        // A deploy, not the job's fault: left leased, it would sit at "reading" for fifteen minutes.
+                        await jobs.ReleaseAsync(work.Id, CancellationToken.None).ConfigureAwait(false);
+                        throw;
+                    }
                     catch (Exception exception) when (exception is not OperationCanceledException)
                     {
                         ImportFailed(logger, exception, work.Id);

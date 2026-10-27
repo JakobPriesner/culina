@@ -46,6 +46,8 @@ public interface IRecipeIntakeJobs
     Task ReviewAsync(Guid id, Guid userId, CancellationToken token);
     /// <summary>Claims queued work or a lease abandoned by a stopped server.</summary>
     Task<IntakeWork?> ClaimAsync(CancellationToken token);
+    /// <summary>Gives back a claim the stopping server cut short, uncounted, so the next start picks it up at once.</summary>
+    Task ReleaseAsync(Guid id, CancellationToken token);
     /// <summary>Persists progress and the latest draft; false once nobody wants it (reviewed meanwhile), so the work stops.</summary>
     Task<bool> ProgressAsync(Guid id, JobStage stage, Contracts.Recipes.Drafts.Response? draft, CancellationToken token);
     /// <summary>Ends a composer draft at ready, with its draft and no recipe; notifies only when no page is attending it.</summary>
