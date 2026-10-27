@@ -108,6 +108,31 @@ describe('StepText', () => {
     ]);
   });
 
+  it("numbers a list from the author's first number", () => {
+    const from3 = render(StepText, {
+      props: { step: step([{ kind: 'text', text: '3. salt\n4. pepper' }]), scaling }
+    });
+
+    expect(from3.container.querySelector('ol')?.getAttribute('start')).toBe('3');
+
+    const from1 = render(StepText, {
+      props: { step: step([{ kind: 'text', text: '1. salt\n2. pepper' }]), scaling }
+    });
+
+    expect(from1.container.querySelector('ol')?.hasAttribute('start')).toBe(false);
+  });
+
+  it('keeps an indented continuation inside its item, on its own line', () => {
+    const { container } = render(StepText, {
+      props: { step: step([{ kind: 'text', text: '- salt\n  to taste\n- pepper' }]), scaling }
+    });
+
+    expect([...container.querySelectorAll('ul li')].map((one) => one.textContent)).toEqual([
+      'salt\nto taste',
+      'pepper'
+    ]);
+  });
+
   it('leaves a link inert where the whole step is the control', () => {
     const markdown = { kind: 'text' as const, text: 'see [the source](https://example.com)' };
 

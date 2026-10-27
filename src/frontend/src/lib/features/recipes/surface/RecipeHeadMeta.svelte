@@ -5,6 +5,8 @@
   import { preferences } from '$shell/preferences.svelte';
   import { metaLineFor } from '../recipeMeta';
   import type { NutritionLink } from './nutritionLink';
+  import { createScaling } from './scaled.svelte';
+  import StepText from './StepText.svelte';
   import { sourceLink } from '../sourceLink';
   import type { RecipeReading } from '../types';
 
@@ -53,6 +55,12 @@
       .join(m['recipes.meta.separator']())
   );
 
+  // A description holds no ingredient references; StepText only needs a scaling to type-check.
+  const scaling = createScaling(
+    () => recipe,
+    () => recipe.yieldAmount
+  );
+
   // Host only, not the full URL; no line at all when the address isn't an ordinary web address.
   const original = $derived(sourceLink(recipe.sourceUrl));
 </script>
@@ -68,7 +76,10 @@
 </p>
 
 {#if recipe.description}
-  <p class="description">{recipe.description}</p>
+  <!-- Markdown like a step: the author's line breaks, lists, emphasis and links survive. -->
+  <div class="description">
+    <StepText step={{ segments: [{ kind: 'text', text: recipe.description }] }} {scaling} />
+  </div>
 {/if}
 
 {#if cookbooks.length > 0 && !cooking}
@@ -101,6 +112,13 @@
     color: var(--text-muted);
     margin-top: var(--space-3);
     max-width: var(--measure);
+  }
+
+  /* Paragraphs and lists carry no margins of their own (see StepText). */
+  .description {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
   }
 
   /* A link in the line, not a control beside it: it wraps with the words and keeps their colour. */
