@@ -485,9 +485,13 @@
    * paint its exit.
    */
   @supports (overlay: auto) and (transition-behavior: allow-discrete) {
+    /*
+     * A dialog on a wide screen appears where it stands, a fade and a slight grow, as a macOS sheet or alert does:
+     * rising into place read as something swiped up from below that was never there.
+     */
     .dialog {
-      --dialog-travel: var(--space-2);
-      --dialog-scale: 0.985;
+      --dialog-travel: 0px;
+      --dialog-scale: 0.97;
       opacity: 0;
       transform: translateY(var(--dialog-travel)) scale(var(--dialog-scale));
       transition:
@@ -528,10 +532,21 @@
       }
     }
 
+    /*
+     * A phone's sheet slides in from below the screen and back out, solid all the way, as an iOS sheet does: it
+     * comes from the edge it is pulled back down to. Only the dimming behind it fades.
+     */
     @media (width < 48rem) {
       .sheet {
-        --dialog-travel: var(--space-8);
+        --dialog-travel: 100%;
         --dialog-scale: 1;
+        opacity: 1;
+      }
+
+      @starting-style {
+        .sheet[open] {
+          opacity: 1;
+        }
       }
     }
   }
