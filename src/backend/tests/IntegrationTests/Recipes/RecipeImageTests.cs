@@ -2,9 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using IntegrationTests.Fixtures;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
+using SkiaSharp;
 
 namespace IntegrationTests.Recipes;
 
@@ -165,11 +163,7 @@ public class RecipeImageTests(PostgresFixture postgres)
 
         var served = await client.GetAsync($"/api/v1/recipes/{recipeId}/image?w=400", Token);
 
-        using var decoded = Image.Load(served.Bytes.Span);
-
-        Assert.Null(decoded.Metadata.ExifProfile);
-        Assert.Null(decoded.Metadata.XmpProfile);
-        Assert.Null(decoded.Metadata.IptcProfile);
+        Assert.Empty(TestImages.MetadataIn(served.Bytes.ToArray()));
     }
 
     [Fact]
@@ -178,15 +172,16 @@ public class RecipeImageTests(PostgresFixture postgres)
         // Tags are dropped on re-encode, so the EXIF rotation must already be applied to the pixels.
         var (client, recipeId) = await SeedAsync();
 
-        await UploadAsync(client, recipeId, HeldUpright(), "plate.jpg", "image/jpeg");
+        // 6: stored wide, to be turned a quarter clockwise for display.
+        await UploadAsync(client, recipeId, TestImages.TaggedPhotograph(200, 100, 6), "plate.jpg", "image/jpeg");
 
         var served = await client.GetAsync($"/api/v1/recipes/{recipeId}/image?w=400", Token);
 
-        using var decoded = Image.Load(served.Bytes.Span);
+        var size = TestImages.SizeOf(served.Bytes.ToArray());
 
         Assert.True(
-            decoded.Height > decoded.Width,
-            $"Served {decoded.Width}x{decoded.Height}; the upright photograph came back on its side.");
+            size.Height > size.Width,
+            $"Served {size.Width}x{size.Height}; the upright photograph came back on its side.");
     }
 
     [Fact]
@@ -207,25 +202,14 @@ public class RecipeImageTests(PostgresFixture postgres)
     }
 
     [Fact]
-    public async Task Upload_ShouldRefuseAnImageWhoseOneFrameIsTooLargeInMemory_RatherThanFail()
+    public async Task Upload_ShouldTakeASixteenBitPng_AtEightBitsAChannel()
     {
-        // 16-bit channels quadruple decode memory; the allocator's refusal must surface as an image error, not a 500.
+        // Every image is decoded at four bytes a pixel, so a deep PNG costs no more memory than the pixel ceiling allows.
         var (client, recipeId) = await SeedAsync();
 
-        var response = await UploadAsync(client, recipeId, DeepPng(6000, 6000), "deep.png", "image/png");
+        var response = await UploadAsync(client, recipeId, TestImages.DeepPng(600, 400), "deep.png", "image/png");
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("recipes.image_too_many_pixels", response.ProblemCode);
-    }
-
-    private static byte[] DeepPng(int width, int height)
-    {
-        using var image = new Image<Rgba64>(width, height);
-        using var buffer = new MemoryStream();
-
-        image.Save(buffer, new PngEncoder { BitDepth = PngBitDepth.Bit16, ColorType = PngColorType.RgbWithAlpha });
-
-        return buffer.ToArray();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     [Fact]
@@ -234,43 +218,14 @@ public class RecipeImageTests(PostgresFixture postgres)
         // A GIF can declare many full-canvas frames; only the first may be decoded.
         var (client, recipeId) = await SeedAsync();
 
-        await UploadAsync(client, recipeId, Animated(), "dancing.gif", "image/gif");
+        await UploadAsync(client, recipeId, TestImages.AnimatedGif(), "dancing.gif", "image/gif");
         var served = await client.GetAsync($"/api/v1/recipes/{recipeId}/image?w=400", Token);
 
-        using var decoded = Image.Load(served.Bytes.Span);
+        using var decoded = SKBitmap.Decode(served.Bytes.ToArray());
+        var pixel = decoded.GetPixel(0, 0);
 
-        Assert.Single(decoded.Frames);
-    }
-
-    private static byte[] Animated()
-    {
-        using var image = new Image<Rgba32>(64, 64, Color.Red);
-        using var buffer = new MemoryStream();
-
-        image.Frames.CreateFrame(Color.Green);
-        image.Frames.CreateFrame(Color.Blue);
-        image.Save(buffer, new SixLabors.ImageSharp.Formats.Gif.GifEncoder());
-
-        return buffer.ToArray();
-    }
-
-    /// <summary>A photograph stored as a camera does: wide pixels plus the EXIF tag to turn them.</summary>
-    private static byte[] HeldUpright()
-    {
-        using var image = new Image<Rgba32>(200, 100);
-        using var buffer = new MemoryStream();
-
-        var exif = new SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifProfile();
-
-        // 6: rotate a quarter turn clockwise to display.
-        exif.SetValue(
-            SixLabors.ImageSharp.Metadata.Profiles.Exif.ExifTag.Orientation,
-            (ushort)6);
-
-        image.Metadata.ExifProfile = exif;
-        image.Save(buffer, new SixLabors.ImageSharp.Formats.Jpeg.JpegEncoder());
-
-        return buffer.ToArray();
+        // The first frame is red, the second green; a lossy WebP keeps the colour close, not exact.
+        Assert.True(pixel.Red > 200 && pixel.Green < 60, $"Served {pixel}; expected the first frame's red.");
     }
 
     [Fact]

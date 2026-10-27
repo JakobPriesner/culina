@@ -18,7 +18,7 @@ found=$(dotnet list package --vulnerable --include-transitive --format json |
     | map(select(.vulnerabilities)) | .[] | .id as $id
     | .vulnerabilities[] | "\(.advisoryurl) \($id) \(.severity)"' | sort -u)
 
-suppressed=$(grep -o '<NuGetAuditSuppress Include="[^"]*"' Directory.Packages.props |
+suppressed=$({ grep -o '<NuGetAuditSuppress Include="[^"]*"' Directory.Packages.props || true; } |
   sed 's/.*Include="//; s/"$//' | sort -u)
 
 open=$(comm -23 <(echo "$found" | cut -d' ' -f1 | sed '/^$/d' | sort -u) <(echo "$suppressed" | sed '/^$/d'))

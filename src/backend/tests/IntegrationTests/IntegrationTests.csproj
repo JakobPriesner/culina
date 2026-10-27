@@ -11,7 +11,7 @@
     <PackageReference Include="Testcontainers.PostgreSql" />
     <!-- The image tests generate real PNGs to prove the decoder is what decides
          a file is an image, not its content type. -->
-    <PackageReference Include="SixLabors.ImageSharp" />
+    <PackageReference Include="SkiaSharp" />
   </ItemGroup>
 
   <!-- The search evaluation's library and judged queries: data, so that adding

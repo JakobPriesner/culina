@@ -1,17 +1,9 @@
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using Application.Abstractions;
 using Application.Abstractions.Settings;
 using Domain.Recipes;
 using Domain.Shared;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Gif;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.Formats.Webp;
-using SixLabors.ImageSharp.Memory;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 
 namespace Infrastructure.Storage;
 
@@ -20,24 +12,32 @@ namespace Infrastructure.Storage;
 /// <param name="files">Where the renditions live: a volume or a bucket.</param>
 internal sealed class ImageStore(StorageSettings settings, IImageFiles files) : IImageStore
 {
-    /// <summary>A ceiling on decoded pixels, checked before resizing: the decompression-bomb guard.</summary>
+    /// <summary>
+    /// A ceiling on decoded pixels, checked before decoding: the decompression-bomb guard. Every image is decoded at
+    /// four bytes a pixel whatever its source depth, so this also bounds the decoder's memory (256 MB).
+    /// </summary>
     private const int MaxPixels = 8000 * 8000;
-
-    /// <summary>First frame only: every frame of an animated or multi-page image is a full-canvas allocation.</summary>
-    private static readonly DecoderOptions FirstFrameOnly = new()
-    {
-        MaxFrames = 1,
-        Configuration = Bounded()
-    };
-
-    /// <summary>The largest single decoder buffer in megabytes; pixel count alone does not bound memory (16-bit PNGs).</summary>
-    private const int MostBufferMegabytes = 256;
 
     /// <summary>How many images may be decoded at once, bounding the decoder's memory across concurrent uploads.</summary>
     private static readonly SemaphoreSlim Decoding = new(2, 2);
 
     /// <summary>The longest side of a picture sent to an assistant, about what providers scale down to anyway.</summary>
     private const int LongestReadingSide = 2048;
+
+    /// <summary>
+    /// Only the formats Culina accepts, checked from the bytes before anything is decoded: a TIFF, BMP, ICO or HEIF is
+    /// refused as unreadable, so no other decoder ever sees an upload.
+    /// </summary>
+    private static readonly SKEncodedImageFormat[] Accepted =
+    [
+        SKEncodedImageFormat.Jpeg,
+        SKEncodedImageFormat.Png,
+        SKEncodedImageFormat.Webp,
+        SKEncodedImageFormat.Gif
+    ];
+
+    /// <summary>Trilinear: a cubic filter in Skia does not prefilter, so a phone photo shrunk tenfold would alias.</summary>
+    private static readonly SKSamplingOptions Downscaling = new(SKFilterMode.Linear, SKMipmapMode.Linear);
 
     public async Task<Result<StoredImage>> StoreAsync(
         Stream content,
@@ -57,9 +57,11 @@ internal sealed class ImageStore(StorageSettings settings, IImageFiles files) : 
                 return ImageErrors.TooLarge(settings.MaxImageBytes);
             }
 
-            buffered.Position = 0;
-
-            return await ReEncodeAsync(buffered, cancellationToken).ConfigureAwait(false);
+            return await DecodeAsync(
+                    buffered.GetBuffer().AsMemory(0, (int)buffered.Length),
+                    StoreRenditionsAsync,
+                    cancellationToken)
+                .ConfigureAwait(false);
         }
     }
 
@@ -72,15 +74,8 @@ internal sealed class ImageStore(StorageSettings settings, IImageFiles files) : 
             return ImageErrors.TooLarge(settings.MaxImageBytes);
         }
 
-        var buffered = MemoryMarshal.TryGetArray(content, out var segment)
-            ? new MemoryStream(segment.Array!, segment.Offset, segment.Count, writable: false)
-            : new MemoryStream(content.ToArray(), writable: false);
-
-        await using (buffered.ConfigureAwait(false))
-        {
-            return await DecodeAsync(buffered, image => ForReadingAsync(image, cancellationToken), cancellationToken)
-                .ConfigureAwait(false);
-        }
+        return await DecodeAsync(content, picture => Task.FromResult(ForReading(picture)), cancellationToken)
+            .ConfigureAwait(false);
     }
 
     public async Task<Result> CopyToAsync(
@@ -111,14 +106,19 @@ internal sealed class ImageStore(StorageSettings settings, IImageFiles files) : 
         return Result.Success();
     }
 
-    private Task<Result<StoredImage>> ReEncodeAsync(
-        Stream buffered,
-        CancellationToken cancellationToken) =>
-        DecodeAsync(buffered, image => StoreRenditionsAsync(image, cancellationToken), cancellationToken);
-
-    private async Task<StoredImage> StoreRenditionsAsync(Image image, CancellationToken cancellationToken)
+    private async Task<StoredImage> StoreRenditionsAsync(Decoded picture)
     {
-        var renditions = await RenderAsync(image, cancellationToken).ConfigureAwait(false);
+        List<Rendition> renditions = [];
+
+        foreach (var width in ImageWidths.All)
+        {
+            // Bounded by width alone, and never upscaled: an enlarged small photo only costs bytes.
+            using var rendition = picture.Draw(picture.Fit(width, int.MaxValue), SKColors.Transparent);
+            using var encoded = rendition.Encode(SKEncodedImageFormat.Webp, 82);
+
+            renditions.Add(new Rendition(width, encoded.ToArray()));
+        }
+
         var hash = Convert.ToHexStringLower(SHA256.HashData(renditions[^1].Bytes));
 
         foreach (var rendition in renditions)
@@ -127,91 +127,67 @@ internal sealed class ImageStore(StorageSettings settings, IImageFiles files) : 
             await files.WriteAsync(KeyFor(hash, rendition.Width), rendition.Bytes).ConfigureAwait(false);
         }
 
-        return new StoredImage(hash, image.Width, image.Height, renditions[^1].Bytes.Length);
+        return new StoredImage(hash, picture.Upright.Width, picture.Upright.Height, renditions[^1].Bytes.Length);
     }
 
     /// <summary>A JPEG a model can read, flattened onto white so transparent screenshots stay legible.</summary>
-    private static async Task<RecipePicture> ForReadingAsync(Image image, CancellationToken cancellationToken)
+    private static RecipePicture ForReading(Decoded picture)
     {
-        image.Mutate(context =>
-        {
-            context.BackgroundColor(Color.White);
+        using var flattened = picture.Draw(picture.Fit(LongestReadingSide, LongestReadingSide), SKColors.White);
+        using var encoded = flattened.Encode(SKEncodedImageFormat.Jpeg, 90);
 
-            if (image.Width > LongestReadingSide || image.Height > LongestReadingSide)
-            {
-                context.Resize(new ResizeOptions
-                {
-                    Size = new Size(LongestReadingSide, LongestReadingSide),
-                    Mode = ResizeMode.Max
-                });
-            }
-        });
-
-        var encoded = new MemoryStream();
-
-        await using (encoded.ConfigureAwait(false))
-        {
-            await image
-                .SaveAsync(encoded, new JpegEncoder { Quality = 90, SkipMetadata = true }, cancellationToken)
-                .ConfigureAwait(false);
-
-            return new RecipePicture(encoded.ToArray(), "image/jpeg");
-        }
+        return new RecipePicture(encoded.ToArray(), "image/jpeg");
     }
 
-    /// <summary>Opens an untrusted image, the one way into the decoder: header first, first frame only, bounded buffers, limited concurrency.</summary>
+    /// <summary>Opens an untrusted image, the one way into the decoder: format and header first, first frame only, limited concurrency.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code", Justification = "SkiaSharp annotates SKCodec.Create as never null, but it returns null for any format it cannot read.")]
     private static async Task<Result<TOut>> DecodeAsync<TOut>(
-        Stream buffered,
-        Func<Image, Task<TOut>> use,
+        ReadOnlyMemory<byte> content,
+        Func<Decoded, Task<TOut>> use,
         CancellationToken cancellationToken)
         where TOut : notnull
     {
-        ImageInfo header;
+        using var data = SKData.CreateCopy(content.Span);
 
-        try
-        {
-            // Header only: a few KB of PNG can declare 50000x50000 pixels, and decoding it would be the attack.
-            header = await Image.IdentifyAsync(FirstFrameOnly, buffered, cancellationToken).ConfigureAwait(false);
-        }
-        catch (Exception failure) when (failure is UnknownImageFormatException or InvalidImageContentException)
+        // Decoding is the format check: content type and extension are attacker-supplied.
+        using var codec = SKCodec.Create(data);
+
+        if (codec is null || !Accepted.Contains(codec.EncodedFormat))
         {
             return ImageErrors.Unreadable;
         }
 
-        if ((long)header.Width * header.Height > MaxPixels)
+        // Header only: a few KB of PNG can declare 50000x50000 pixels, and decoding it would be the attack.
+        if ((long)codec.Info.Width * codec.Info.Height > MaxPixels)
         {
             return ImageErrors.TooManyPixels;
         }
-
-        buffered.Position = 0;
 
         await Decoding.WaitAsync(cancellationToken).ConfigureAwait(false);
 
         try
         {
-            // Decoding is the format check: content type and extension are attacker-supplied.
-            using var image = await Image.LoadAsync(FirstFrameOnly, buffered, cancellationToken).ConfigureAwait(false);
+            // No colour space: the pixels are taken as they are and the ICC profile is never parsed or written back.
+            var info = new SKImageInfo(codec.Info.Width, codec.Info.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
+            using var pixels = new SKBitmap();
 
-            // Phones store orientation as an EXIF tag, which the re-encoding drops, so turn it into pixels first.
-            image.Mutate(context => context.AutoOrient());
+            if (!pixels.TryAllocPixels(info))
+            {
+                return ImageErrors.TooManyPixels;
+            }
 
-            // Then only pixels: ImageSharp's JPEG encoder writes EXIF (with coordinates) even with SkipMetadata,
-            // so the profiles are dropped explicitly. The ICC profile goes too: its entries are parsed lazily, on
-            // first read (GHSA-gwg2-r3hj-4w44), and dropping it means nothing after decoding ever can read them.
-            image.Metadata.ExifProfile = null;
-            image.Metadata.IccProfile = null;
-            image.Metadata.XmpProfile = null;
-            image.Metadata.IptcProfile = null;
+            // The first frame only: every frame of an animated GIF or WebP is a full-canvas decode.
+            if (codec.GetPixels(info, pixels.GetPixels()) != SKCodecResult.Success)
+            {
+                return ImageErrors.Unreadable;
+            }
 
-            return Result<TOut>.Success(await use(image).ConfigureAwait(false));
-        }
-        catch (Exception failure) when (OverTheCeiling(failure))
-        {
-            return ImageErrors.TooManyPixels;
-        }
-        catch (Exception failure) when (failure is UnknownImageFormatException or InvalidImageContentException)
-        {
-            return ImageErrors.Unreadable;
+            pixels.SetImmutable();
+            using var image = SKImage.FromBitmap(pixels);
+
+            // Only pixels go on from here: EXIF (with coordinates), XMP and IPTC stay in the upload, and the encoders
+            // write none. Phones store orientation as an EXIF tag, so it is turned into pixels when drawing.
+            return Result<TOut>.Success(await use(new Decoded(image, codec.EncodedOrigin)).ConfigureAwait(false));
         }
         finally
         {
@@ -219,71 +195,58 @@ internal sealed class ImageStore(StorageSettings settings, IImageFiles files) : 
         }
     }
 
-    /// <summary>A buffer the allocator refused; decoders wrap it as unreadable content, resizing throws it as is.</summary>
-    private static bool OverTheCeiling(Exception failure) =>
-        failure is InvalidMemoryOperationException
-        || failure.InnerException is InvalidMemoryOperationException;
-
-    /// <summary>
-    /// Only the formats Culina accepts, not Configuration.Default's every format: a TIFF, BMP or TGA is refused as
-    /// unreadable, and the TIFF decoder with its advisories is never registered. JPEG and WebP also carry the encoders
-    /// the renditions use.
-    /// </summary>
-    private static Configuration Bounded()
-    {
-        var configuration = new Configuration(
-            new JpegConfigurationModule(),
-            new PngConfigurationModule(),
-            new WebpConfigurationModule(),
-            new GifConfigurationModule());
-
-        configuration.MemoryAllocator = MemoryAllocator.Create(
-            new MemoryAllocatorOptions { AllocationLimitMegabytes = MostBufferMegabytes });
-
-        return configuration;
-    }
-
-    private static async Task<List<Rendition>> RenderAsync(
-        Image image,
-        CancellationToken cancellationToken)
-    {
-        List<Rendition> renditions = [];
-
-        foreach (var width in ImageWidths.All)
-        {
-            using var resized = image.Clone(context => context.Resize(new ResizeOptions
-            {
-                Size = new Size(width, 0),
-                Mode = ResizeMode.Max,
-                // Max never upscales: an enlarged small photo only costs bytes.
-                Sampler = KnownResamplers.Lanczos3
-            }));
-
-            var encoded = new MemoryStream();
-
-            await using (encoded.ConfigureAwait(false))
-            {
-                await resized
-                    .SaveAsync(
-                        encoded,
-                        new WebpEncoder
-                        {
-                            Quality = 82,
-                            // Drops metadata: EXIF can carry where the owner's kitchen is.
-                            SkipMetadata = true
-                        },
-                        cancellationToken)
-                    .ConfigureAwait(false);
-
-                renditions.Add(new Rendition(width, encoded.ToArray()));
-            }
-        }
-
-        return renditions;
-    }
-
     /// <summary>Two levels of hash prefixes, so no folder grows huge; the same key on disk and in a bucket, so one can be copied into the other.</summary>
     private static string KeyFor(string hash, int width) => $"{hash[..2]}/{hash[2..4]}/{hash}-{width}.webp";
 
     private sealed record Rendition(int Width, byte[] Bytes);
+
+    /// <summary>A decoded first frame and the way the camera said it should be turned.</summary>
+    private sealed record Decoded(SKImage Image, SKEncodedOrigin Origin)
+    {
+        /// <summary>The size once turned upright: EXIF orientations 5 to 8 swap width and height.</summary>
+        public SKSizeI Upright { get; } = Origin >= SKEncodedOrigin.LeftTop
+            ? new SKSizeI(Image.Height, Image.Width)
+            : new SKSizeI(Image.Width, Image.Height);
+
+        /// <summary>The upright size scaled down to fit the box, keeping the aspect ratio and never enlarging.</summary>
+        public SKSizeI Fit(int maxWidth, int maxHeight)
+        {
+            var scale = Math.Min(1d, Math.Min(maxWidth / (double)Upright.Width, maxHeight / (double)Upright.Height));
+
+            return new SKSizeI(
+                Math.Max(1, (int)Math.Round(Upright.Width * scale)),
+                Math.Max(1, (int)Math.Round(Upright.Height * scale)));
+        }
+
+        /// <summary>The picture upright, at the given size, over the given background.</summary>
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Maintainability", "CA1508:Avoid dead conditional code", Justification = "SkiaSharp annotates SKSurface.Create as never null, but it returns null when the pixels cannot be allocated.")]
+        public SKImage Draw(SKSizeI size, SKColor background)
+        {
+            using var surface = SKSurface.Create(
+                    new SKImageInfo(size.Width, size.Height, SKColorType.Rgba8888, SKAlphaType.Premul))
+                ?? throw new InvalidOperationException($"No {size.Width}x{size.Height} surface could be allocated.");
+
+            var canvas = surface.Canvas;
+
+            canvas.Clear(background);
+            canvas.Scale(size.Width / (float)Upright.Width, size.Height / (float)Upright.Height);
+            canvas.Concat(Orientation(Origin, Image.Width, Image.Height));
+            canvas.DrawImage(Image, 0, 0, Downscaling);
+
+            return surface.Snapshot();
+        }
+
+        /// <summary>Maps the stored pixels onto the upright picture; Skia's own SkEncodedOriginToMatrix, which SkiaSharp does not expose.</summary>
+        private static SKMatrix Orientation(SKEncodedOrigin origin, int width, int height) => origin switch
+        {
+            SKEncodedOrigin.TopRight => new SKMatrix(-1, 0, width, 0, 1, 0, 0, 0, 1),
+            SKEncodedOrigin.BottomRight => new SKMatrix(-1, 0, width, 0, -1, height, 0, 0, 1),
+            SKEncodedOrigin.BottomLeft => new SKMatrix(1, 0, 0, 0, -1, height, 0, 0, 1),
+            SKEncodedOrigin.LeftTop => new SKMatrix(0, 1, 0, 1, 0, 0, 0, 0, 1),
+            SKEncodedOrigin.RightTop => new SKMatrix(0, -1, height, 1, 0, 0, 0, 0, 1),
+            SKEncodedOrigin.RightBottom => new SKMatrix(0, -1, height, -1, 0, width, 0, 0, 1),
+            SKEncodedOrigin.LeftBottom => new SKMatrix(0, 1, 0, -1, 0, width, 0, 0, 1),
+            _ => SKMatrix.Identity
+        };
+    }
 }
