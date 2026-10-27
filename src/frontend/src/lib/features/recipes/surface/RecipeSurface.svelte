@@ -251,7 +251,6 @@
 
   @media (width < 52rem) {
     .surface {
-      position: relative;
       gap: var(--space-4);
     }
   }

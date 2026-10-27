@@ -96,7 +96,7 @@
     font-size: var(--text-xl);
   }
 
-  /* On a phone the title takes the whole line and the actions sit under it as a toolbar; on a photograph they float over the picture instead. */
+  /* On a phone the title takes the whole line and the actions sit under it as a toolbar, never over the photograph. */
   @media (width < 52rem) {
     .titleRow {
       grid-template-columns: minmax(0, 1fr);
