@@ -154,7 +154,8 @@
 
     if (!ok) {
       toaster.show({
-        message: () => (mealPlan.error ? explain(mealPlan.error) : m['plan.recipe.failed']()),
+        message: () =>
+          mealPlan.writeError ? explain(mealPlan.writeError) : m['plan.recipe.failed'](),
         tone: 'danger'
       });
 

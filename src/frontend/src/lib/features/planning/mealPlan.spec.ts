@@ -215,6 +215,32 @@ describe('dragging meals quickly', () => {
     expect(titles({ from: monday, days }, monday)).toEqual(['Curry']);
     expect(titles({ from: monday, days }, tuesday)).toEqual(['Soup']);
   });
+
+  it('keeps the week on screen when a move, a plan or an unplan is refused', async () => {
+    const start = week({ [monday]: [meal('Curry')], [tuesday]: [] });
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: Request) =>
+        input.method === 'GET'
+          ? json(start)
+          : json({ title: 'Nope', status: 500, code: 'request.failed' }, 500)
+      )
+    );
+
+    await mealPlan.load('h1', monday);
+
+    expect(await mealPlan.move('h1', 'entry-Curry', { date: tuesday })).toBe(false);
+    expect(await mealPlan.plan('h1', { date: monday, recipeId: 'recipe-Soup' })).toBe(false);
+    expect(await mealPlan.unplan('h1', 'entry-Curry')).toBe(false);
+
+    // The page shows an error screen for `error`; a write that failed is a toast, not a lost week.
+    expect(mealPlan.error).toBeNull();
+    expect(mealPlan.writeError).not.toBeNull();
+    expect(titles({ from: monday, days: mealPlan.days as PlannedDay[] }, monday)).toEqual([
+      'Curry'
+    ]);
+  });
 });
 
 describe('paging quickly between weeks', () => {
