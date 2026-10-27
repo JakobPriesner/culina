@@ -175,7 +175,7 @@ be used by somebody who copied it.
 
 | Variable | Default | |
 | --- | --- | --- |
-| `ForwardedHeaders__KnownProxies` | empty | In the app. Comma-separated addresses. |
+| `ForwardedHeaders__KnownProxies` | empty | In the app. Comma-separated addresses. With this and `KnownNetworks` both empty, `X-Forwarded-*` headers are ignored, whoever sends them. |
 | `ForwardedHeaders__KnownNetworks` | empty | In the app. Comma-separated CIDR ranges, for a proxy whose address is not knowable in advance — anything in a container network. Nothing wider than a `/8` (IPv4) or a `/32` (IPv6) is accepted; `172.16.0.0/12` covers every Docker bridge network. |
 | `ForwardedHeaders__DangerouslyTrustWideNetworks` | `false` | Not on the settings screen: set it where the deployment is configured. `true` accepts a `KnownNetworks` entry wider than that, `0.0.0.0/0` included — every client inside it can then claim any address. Almost never what you want. |
 

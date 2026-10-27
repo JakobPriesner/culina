@@ -29,6 +29,24 @@ public class RateLimitTests(PostgresFixture postgres)
     }
 
     [Fact]
+    public async Task SignIn_ShouldBeRefused_WhenEachAttemptClaimsADifferentAddress_AndNoProxyIsConfigured()
+    {
+        await postgres.ResetAsync(Token);
+        using var factory = new CulinaApiFactory(
+            postgres,
+            new Dictionary<string, string> { ["RateLimits:LoginPerIpPerMinute"] = "2" });
+        using var client = factory.NewApiClient();
+
+        await SignInFromAsync(client, "203.0.113.1");
+        await SignInFromAsync(client, "203.0.113.2");
+        var third = await SignInFromAsync(client, "203.0.113.3");
+
+        // Trusted from anyone, the header would be a fresh address and a fresh allowance per guess.
+        Assert.Equal(HttpStatusCode.TooManyRequests, third.StatusCode);
+        Assert.Equal("request.rate_limited", third.ProblemCode);
+    }
+
+    [Fact]
     public async Task Registration_ShouldStillBeAllowed_AfterTheSignUpPageReadThePolicyMoreTimesThanTheLimit()
     {
         await postgres.ResetAsync(Token);
@@ -144,6 +162,18 @@ public class RateLimitTests(PostgresFixture postgres)
 
         // The test host's cookies are not Secure, so the session cookie has no __Host- prefix.
         request.Headers.TryAddWithoutValidation("Cookie", $"culina.session={Guid.NewGuid():n}");
+
+        return client.SendAsync(request, Token);
+    }
+
+    private static Task<ApiResponse> SignInFromAsync(ApiClient client, string claimedAddress)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/sessions")
+        {
+            Content = JsonContent.Create(new { email = "ada@example.com", password = "a guess" })
+        };
+
+        request.Headers.TryAddWithoutValidation("X-Forwarded-For", claimedAddress);
 
         return client.SendAsync(request, Token);
     }

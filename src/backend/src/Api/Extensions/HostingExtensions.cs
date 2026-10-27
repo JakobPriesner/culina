@@ -186,6 +186,14 @@ internal static class HostingExtensions
         ArgumentNullException.ThrowIfNull(app);
 
         var settings = app.Services.GetRequiredService<ForwardedHeadersSettings>();
+
+        // No proxy named means no proxy: the middleware checks the sender only when a list has an entry,
+        // and with both empty it would take any client's X-Forwarded-For, voiding every per-address limit.
+        if (settings.KnownProxies.Count == 0 && settings.KnownNetworks.Count == 0)
+        {
+            return app;
+        }
+
         var options = new ForwardedHeadersOptions
         {
             ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
