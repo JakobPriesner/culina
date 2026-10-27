@@ -12,6 +12,7 @@
   import { register } from '$features/auth/registration.svelte';
   import { session } from '$features/auth/session.svelte';
   import { createSubmission } from '$features/auth/submission.svelte';
+  import { tips } from '$features/onboarding/tips.svelte';
   import DatabaseFields from '$features/server/DatabaseFields.svelte';
   import LimitFields from '$features/server/LimitFields.svelte';
   import ProxyFields from '$features/server/ProxyFields.svelte';
@@ -118,14 +119,25 @@
   async function createAccount(event: SubmitEvent) {
     event.preventDefault();
 
+    let landedIn: string | null = null;
+
     const succeeded = await submission.run(async () => {
       const outcome = await register({ email, displayName, password, householdName });
 
+      if ('code' in outcome) {
+        return outcome;
+      }
+
+      landedIn = outcome.householdId;
+
       // Registering signs you in; a second password prompt would be pointless.
-      return 'code' in outcome ? outcome : session.signIn(email, password);
+      return session.signIn(email, password);
     });
 
     if (succeeded) {
+      // The first account always gets a kitchen, so the tour of it starts there, as after signing up.
+      if (landedIn) tips.startTour();
+
       await goto(resolve('/(app)'), { replaceState: true });
     }
   }

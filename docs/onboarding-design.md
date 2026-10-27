@@ -34,8 +34,9 @@ keys move between scenes, as in cook mode (`cooking/stepGestures`); the dots jum
 | Cook with your hands free | on duty | A phone in cook mode: the step, its timer (run fast), Read aloud (the device's own voice), Next, and "I made it". |
 | Let's go | celebrating | The new-recipe page's doors (`?start=paste`, `?start=photo`, `?start=idea` where drafting is on, else the plain form, and importing from an app), or "Look around first". |
 
-It opens by itself once, right after a new cook's first household: the step after signing up (`/welcome`), or
-an invitation that lands in one. Everyone can take it again from the account menu or Settings. Cooks who were
+It opens by itself once, right after a new cook's first household: the step after signing up (`/welcome`), an
+invitation that lands in one, or the account step of a fresh instance's setup (`/setup`), whose first account
+always gets one. Everyone can take it again from the account menu or Settings. Cooks who were
 here before it existed are not interrupted by it: an inline offer on the library was tried and dropped, because
 it pushed the library's search and cards down for people who did not ask for anything.
 

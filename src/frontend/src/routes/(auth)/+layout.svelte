@@ -154,6 +154,28 @@
     font-size: var(--text-xs);
     color: var(--text-muted);
   }
+  /* Side by side, the frame holds to the viewport: the story stays put and only the form scrolls,
+     so a long form (setup) never carries the picture away with it. */
+  @media (width >= 64rem) and (height > 32rem) {
+    .frame {
+      height: 100dvh;
+    }
+    .main {
+      grid-template-rows: minmax(0, 1fr);
+      align-items: stretch;
+      min-height: 0;
+    }
+    .form-side {
+      display: flex;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+    /* Auto margins rather than centring, so a form taller than the column starts at its top
+       instead of being cut off above it. */
+    .form-content {
+      margin-block: auto;
+    }
+  }
   @media (max-width: 63.999rem) {
     .main {
       gap: var(--space-8);
