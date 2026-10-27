@@ -57,3 +57,31 @@ describe('the nutrition figure in the meta line', () => {
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 });
+
+describe('the description', () => {
+  it("keeps the author's line breaks and sets a list as a list", () => {
+    show({
+      recipe: { ...recipe, description: 'Crisp and quick.\nGood cold.\n\n- salt\n- pepper' }
+    });
+
+    const description = document.querySelector('.description')!;
+
+    expect(description.querySelector('p')?.textContent).toBe('Crisp and quick.\nGood cold.');
+    expect([...description.querySelectorAll('ul li')].map((one) => one.textContent)).toEqual([
+      'salt',
+      'pepper'
+    ]);
+  });
+
+  it('renders emphasis and links', () => {
+    show({
+      recipe: { ...recipe, description: 'From **grandma**, see [the blog](https://example.com)' }
+    });
+
+    expect(screen.getByText('grandma').tagName).toBe('STRONG');
+    expect(screen.getByRole('link', { name: 'the blog' })).toHaveAttribute(
+      'href',
+      'https://example.com'
+    );
+  });
+});

@@ -7,9 +7,10 @@
   /**
    * One step as Markdown with ingredients written in at the scaled amount; the step stores
    * references, so text and list can't disagree. Parsed over the references: see `stepMarkdown.ts`.
+   * Also sets plain Markdown such as a recipe description: pass one text segment.
    */
   interface Props {
-    step: Step;
+    step: Pick<Step, 'segments'>;
     scaling: Scaling;
     /** Off while cooking: the whole step is the control, and a button inside a button is invalid HTML. */
     interactive?: boolean;
@@ -49,7 +50,8 @@
       />
     </p>
   {:else if block.ordered}
-    <ol class="list">
+    <!-- The author's own first number; omitted at 1, the default. -->
+    <ol class="list" start={block.start === 1 ? undefined : block.start}>
       {#each block.items as item, position (position)}
         <li>
           <StepInline
@@ -102,6 +104,11 @@
     margin: 0;
     padding-left: var(--space-6);
     line-height: var(--leading-relaxed);
+  }
+
+  /* An indented line under an item continues it on its own line. */
+  .list li {
+    white-space: pre-wrap;
   }
 
   .list li + li {

@@ -110,6 +110,46 @@ describe('parseStep', () => {
     expect(block?.kind === 'list' && block.items.map(shape)).toEqual(['salt', 'pepper']);
   });
 
+  it.each(['•', '·', '▪', '–', '—'])('reads an imported %s bullet as a list', (bullet) => {
+    const [block] = parseStep([text(`${bullet} salt\n${bullet} pepper`)]);
+
+    expect(block?.kind === 'list' && !block.ordered).toBe(true);
+    expect(block?.kind === 'list' && block.items.map(shape)).toEqual(['salt', 'pepper']);
+  });
+
+  it('leaves a dash that is part of a word alone', () => {
+    expect(inline('–5 °C overnight')).toBe('–5 °C overnight');
+  });
+
+  it('keeps a reference that opens a list item', () => {
+    const [block] = parseStep([text('- '), butter, text(' softened')]);
+
+    expect(block?.kind === 'list' && block.items.map(shape)).toEqual(['@butter softened']);
+  });
+
+  it.each([
+    ['3. salt\n4. pepper', 3],
+    ['1. salt\n2. pepper', 1],
+    ['- salt\n- pepper', 1]
+  ])('starts %s where the author did', (markdown, start) => {
+    const [block] = parseStep([text(markdown)]);
+
+    expect(block?.kind === 'list' && block.start).toBe(start);
+  });
+
+  it('continues an item on an indented line', () => {
+    const [block, ...rest] = parseStep([text('- salt\n  to taste\n- pepper')]);
+
+    expect(rest).toEqual([]);
+    expect(block?.kind === 'list' && block.items.map(shape)).toEqual(['salt\nto taste', 'pepper']);
+  });
+
+  it('ends a list on an unindented line', () => {
+    const blocks = parseStep([text('- salt\n- pepper\nThen stir.')]);
+
+    expect(blocks.map((block) => block.kind)).toEqual(['list', 'paragraph']);
+  });
+
   it('starts a new list when the marker changes kind', () => {
     const blocks = parseStep([text('Prep:\n- salt\n1. pepper')]);
 
