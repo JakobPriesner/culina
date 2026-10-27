@@ -143,7 +143,7 @@ address bar once read. Links point only at `Site__Url`, never at the request's
 | A pixel limit is enforced before decoding | Met | The header is read first: a byte limit does not bound a pixel count. `Upload_ShouldRefuseAnImageTooLargeToDecode_WithoutDecodingIt` |
 | An animated image decodes one frame | Met | The pixel limit is one frame's, and each frame of a GIF, WebP, APNG or TIFF is a full canvas: only the first is ever decoded. `Upload_ShouldKeepOnlyTheFirstFrame_OfAnAnimatedImage` |
 | Metadata is removed | Met | `Served_ShouldCarryNoMetadataFromTheOriginal`. A photograph taken in a kitchen carries where that kitchen is |
-| Only the accepted formats are decoded | Met | The decoder configuration registers JPEG, PNG, WebP and GIF, not every ImageSharp format, so a TIFF or BMP is refused as unreadable. `Upload_ShouldRefuseATiff_BecauseOnlyTheAcceptedFormatsAreDecoded` |
+| Only the accepted formats are decoded | Met | The store reads the format from the bytes and decodes only JPEG, PNG, WebP and GIF, not every format Skia knows, so a TIFF, BMP or ICO is refused as unreadable before any decoder runs. `Upload_ShouldRefuseATiff_BecauseOnlyTheAcceptedFormatsAreDecoded` |
 | An archive restore is bounded and reads a malformed archive without failing halfway | Met | 64 MB per upload, 2,000 recipes per restore, and the per-person archive budget. Each recipe is its own transaction so one odd recipe cannot block the rest; a step pointing outside its recipe's ingredients keeps its text instead of throwing after earlier recipes were written. `Restore_ShouldRefuse_AnArchiveWithMoreRecipesThanOneRestoreWrites`, `ArchiveRestore_ShouldShareTheArchiveBudget_WithTakingOne`, `Restore_ShouldKeepTheText_WhenAStepPointsAtANegativeIngredientPosition` |
 | Files are not served from a caller-controlled path | Met | The stored name is a content hash and a width from a fixed list. `Served_ShouldRefuseAWidthItDoesNotKeep` |
 | Images are private | Met | `Cache-Control: private`, and the access check runs before the file is opened. `Served_ShouldCarryAContentHashETag_AndBePrivate`, `Upload_ShouldBeRefused_ForARecipeInAnotherHousehold` |
@@ -247,15 +247,6 @@ it looks: there is no `unsafe-inline`, no `unsafe-eval`, and scripts are
 (`require-trusted-types-for 'script'`, with the three policy names allowed
 listed in `SecurityHeaders.TrustedTypesPolicies`), so a string cannot reach
 `innerHTML` or the service worker's registration without passing a policy.
-
-**ImageSharp 3.1.12 advisories are suppressed, not fixed.** GHSA-gwg2-r3hj-4w44
-(ICC), GHSA-j3p4-wp97-rph4 (histogram equalisation), GHSA-j9gm-c75j-xc9q and
-GHSA-jjfr-hcj7-qf5w (TIFF CCITT encoders) and GHSA-wmxv-xphr-5c9g (BigTIFF
-decoder) are fixed only in 4.1.2+, which needs a paid licence key. Each is
-unreachable: TIFF is not registered, nothing encodes TIFF or equalises
-histograms, and the ICC profile is dropped after load and never read. The
-suppressions live in `Directory.Packages.props` with the reason per advisory.
-Revisit if ImageSharp is replaced or licensed.
 
 ## What this review did not cover
 

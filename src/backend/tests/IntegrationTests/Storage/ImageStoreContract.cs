@@ -1,11 +1,6 @@
-using System.Runtime.InteropServices;
-using System.Security.Cryptography;
 using Application.Abstractions;
 using Domain.Recipes;
 using IntegrationTests.Fixtures;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
 using TestSupport;
 
 namespace IntegrationTests.Storage;
@@ -114,28 +109,9 @@ public abstract class ImageStoreContract
         (await Store.CopyToAsync(hash, width, served, Token).ConfigureAwait(false)).ShouldBeSuccess();
         served.Position = 0;
 
-        using var image = await Image.LoadAsync(served, Token).ConfigureAwait(false);
-
-        Assert.True(image.Width <= width);
+        Assert.True(TestImages.SizeOf(served.ToArray()).Width <= width);
     }
 
     /// <summary>Noise, so its renditions are large enough that writing one takes a while.</summary>
-    protected static byte[] NoisyPng()
-    {
-        using var image = new Image<Rgb24>(2000, 1500);
-
-        image.ProcessPixelRows(rows =>
-        {
-            for (var y = 0; y < rows.Height; y++)
-            {
-                RandomNumberGenerator.Fill(MemoryMarshal.AsBytes(rows.GetRowSpan(y)));
-            }
-        });
-
-        using var buffer = new MemoryStream();
-
-        image.Save(buffer, new PngEncoder());
-
-        return buffer.ToArray();
-    }
+    protected static byte[] NoisyPng() => TestImages.NoisyPng(2000, 1500);
 }

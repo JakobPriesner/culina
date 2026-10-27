@@ -7,7 +7,6 @@ using Application.Abstractions.Settings;
 using Infrastructure.Import;
 using IntegrationTests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
-using SixLabors.ImageSharp;
 
 namespace IntegrationTests.Assistance;
 
@@ -376,7 +375,7 @@ public class DraftStreamTests(PostgresFixture postgres)
         using var provider = new StubProvider(Written);
         using var world = await ConnectedAsync(provider, reading: true);
         var original = TestImages.LocatedPhotograph(3000, 1000);
-        Assert.NotNull(Image.Identify(original).Metadata.ExifProfile);
+        Assert.Contains("EXIF", TestImages.MetadataIn(original));
 
         using var form = new MultipartFormDataContent();
         var file = new ByteArrayContent(original);
@@ -397,8 +396,7 @@ public class DraftStreamTests(PostgresFixture postgres)
         AssertCarriesNothingButPixels(sent);
 
         // No larger than the provider would read it anyway.
-        using var decoded = Image.Load(sent.Bytes);
-        Assert.Equal(2048, decoded.Width);
+        Assert.Equal(2048, TestImages.SizeOf(sent.Bytes).Width);
     }
 
     /// <summary>The pictures in the last request, as the provider received them.</summary>
@@ -420,11 +418,7 @@ public class DraftStreamTests(PostgresFixture postgres)
     {
         Assert.Equal("image/jpeg", picture.MediaType);
 
-        using var decoded = Image.Load(picture.Bytes);
-
-        Assert.Null(decoded.Metadata.ExifProfile);
-        Assert.Null(decoded.Metadata.XmpProfile);
-        Assert.Null(decoded.Metadata.IptcProfile);
+        Assert.Empty(TestImages.MetadataIn(picture.Bytes));
     }
 
     [Fact]
