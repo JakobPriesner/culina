@@ -240,12 +240,14 @@
     font-size: var(--text-sm);
   }
 
-  /* Three columns, one figure each, under a short label. */
+  /* Three columns, one figure each, under a short label, parted from the day's number by a hairline. */
   .macros {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: var(--space-4);
     margin: var(--space-3) 0 0;
+    padding-block-start: var(--space-4);
+    border-block-start: 1px solid var(--border);
   }
 
   .macro {

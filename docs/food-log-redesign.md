@@ -385,3 +385,20 @@ Not done, and worth a look on a real phone:
 - swiping the week strip;
 - the planned meal's energy in its row;
 - dark mode (built only from tokens, but not looked at).
+
+### 7.1 Desktop, second pass (27 October 2026)
+
+Jakob found the desktop page "not so well designed". At 1440×900 it sat in a
+64rem frame of its own, off the navbar's edge; "+ Eintragen" was squeezed
+beside the title in the narrow column; the summary floated with nothing to hold
+it; and an empty day was four loose headings. Changed:
+
+- **The shell's frame.** From 64rem the page starts on the navbar's edge like
+  Woche and Konto. The day's title runs across both columns with
+  "+ Eintragen" at its end, and the meals column stops at 52rem.
+- **One card for the day's numbers.** The week strip and the summary sit on
+  one sticky raised card. A hairline parts the macros from the day's number.
+- **Every meal is a card, its heading the first row.** This revises "an empty
+  meal is its heading alone": the heading now sits inside the raised surface,
+  so an empty meal is one row high (principle 6) and lines up with the full
+  ones, not a white box holding nothing.
