@@ -64,7 +64,9 @@
   data-plan-row={row || undefined}
 >
   <div class="top">
-    <h2 class="name">
+    <!-- A tap on the day's name adds to it, as its "+" does; the "+" stays the way in for a keyboard. -->
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+    <h2 class="name" onclick={onadd}>
       <span class="label">{dayName(day.date, preferences.locale)}</span>
       <span class="date">{dayDate(day.date, preferences.locale)}</span>
     </h2>
@@ -196,6 +198,7 @@
     font-size: var(--text-base);
     font-weight: var(--weight-semibold);
     line-height: var(--leading-tight);
+    cursor: pointer;
   }
 
   .date {

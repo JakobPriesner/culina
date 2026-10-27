@@ -7,7 +7,8 @@
    * A grouped list, the way a health record draws one (docs/food-log-redesign.md §4.4): one raised card whose first
    * row is its heading, with an optional value and an optional action at its end, then its rows with hairlines between
    * them. Rows are `ListRow`s. A section with nothing in it is its heading row alone, one row high: the heading's action
-   * says "add", and the card keeps it in line with the full sections beside it.
+   * says "add", and the card keeps it in line with the full sections beside it. The whole heading row is the action's
+   * target: a tap on the title does what its button does.
    */
   interface Props {
     title: string;
@@ -53,7 +54,15 @@
     justify-content: space-between;
     gap: var(--space-4);
     min-block-size: var(--control-lg);
+    position: relative;
     padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4);
+  }
+
+  /* The action's button reaches across its heading row; the title and the subtotal are text, nothing under it. */
+  .end > :global(button)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
   }
 
   .end {
