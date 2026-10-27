@@ -18,6 +18,7 @@ public sealed class ExpiredSessionSweeperTests : IDisposable
     private readonly RecordingLogs logs = new();
     private readonly ILoggerFactory loggers;
     private readonly FailingOnceStore store = new();
+    private readonly WatchedPurge purge = new();
     private readonly ServiceProvider services;
     private readonly ExpiredSessionSweeper sweeper;
 
@@ -27,7 +28,7 @@ public sealed class ExpiredSessionSweeperTests : IDisposable
         services = new ServiceCollection()
             .AddScoped<ISessionStore>(_ => store)
             .AddScoped<IInvitationRepository, NoInvitations>()
-            .AddScoped<IIntakePurge, NoPurge>()
+            .AddScoped<IIntakePurge>(_ => purge)
             .BuildServiceProvider();
         sweeper = new ExpiredSessionSweeper(
             services.GetRequiredService<IServiceScopeFactory>(),
@@ -48,6 +49,20 @@ public sealed class ExpiredSessionSweeperTests : IDisposable
         Assert.Equal(1921, line.EventId);
         Assert.Contains("database is restarting", line.Exception, StringComparison.Ordinal);
         Assert.False(sweeper.ExecuteTask!.IsCompleted);
+
+        await sweeper.StopAsync(cancellationToken);
+    }
+
+    [Fact]
+    public async Task Sweeper_ShouldStillPurgeFinishedIntake_WhenSweepingSessionsThrows()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+
+        await sweeper.StartAsync(cancellationToken);
+
+        // Otherwise one failing step would leave the rest undone until the next day's tick.
+        await purge.Purged.Task.WaitAsync(Patience, cancellationToken);
+        Assert.Equal(1, store.Sweeps);
 
         await sweeper.StopAsync(cancellationToken);
     }
@@ -89,10 +104,16 @@ public sealed class ExpiredSessionSweeperTests : IDisposable
         logs.Dispose();
     }
 
-    private sealed class NoPurge : IIntakePurge
+    private sealed class WatchedPurge : IIntakePurge
     {
-        public Task<IntakePurged> PurgeAsync(DateTimeOffset now, CancellationToken cancellationToken) =>
-            Task.FromResult(new IntakePurged(0, 0));
+        public TaskCompletionSource Purged { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<IntakePurged> PurgeAsync(DateTimeOffset now, CancellationToken cancellationToken)
+        {
+            Purged.TrySetResult();
+
+            return Task.FromResult(new IntakePurged(0, 0));
+        }
     }
 
     /// <summary>Nothing to sweep: these tests are about the session store failing.</summary>
