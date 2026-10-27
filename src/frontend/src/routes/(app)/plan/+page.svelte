@@ -3,10 +3,11 @@
   import { MediaQuery } from 'svelte/reactivity';
 
   import { page } from '$app/state';
-  import { Button, EmptyState, ErrorState } from '$ds';
+  import { Button, ErrorState } from '$ds';
 
   import CarriedMeal from '$features/planning/CarriedMeal.svelte';
   import CoachTip from '$features/onboarding/CoachTip.svelte';
+  import OlliSays from '$features/onboarding/OlliSays.svelte';
   import {
     asDate,
     mealPlan,
@@ -41,7 +42,6 @@
   import { session } from '$features/auth/session.svelte';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
-  import Olli from '$shell/olli/Olli.svelte';
   import Page from '$shell/Page.svelte';
   import { preferences } from '$shell/preferences.svelte';
   import { toaster } from '$shell/toaster.svelte';
@@ -227,12 +227,14 @@
   }
 </script>
 
-{#snippet peeking()}<Olli pose="peeking" />{/snippet}
 {#snippet tip()}
-  <CoachTip id="plan" pose="thinking" title={m['tips.plan.title']()}>
-    <p>{m['tips.plan.drag']()}</p>
-    <p>{m['tips.plan.shop']()}</p>
-  </CoachTip>
+  <!-- Moving meals means nothing before there is one, and the empty week has its own Olli. -->
+  {#if mealPlan.meals.length > 0}
+    <CoachTip id="plan" pose="thinking" title={m['tips.plan.title']()}>
+      <p>{m['tips.plan.drag']()}</p>
+      <p>{m['tips.plan.shop']()}</p>
+    </CoachTip>
+  {/if}
 {/snippet}
 <svelte:head><title>{title}</title></svelte:head>
 
@@ -307,17 +309,19 @@
           {#if shopping.status === 'loading' || shopping.status === 'idle'}
             <!-- Which of the two is not known before the list is read. -->
           {:else if shopping.items.length === 0}
-            <EmptyState
-              title={m['plan.empty.title']()}
-              body={m['plan.empty.description']()}
-              art={peeking}
-            >
-              {#snippet action()}
-                <Button variant="primary" onclick={() => addOn(firstOpenDay)}
-                  >{m['plan.empty.action']()}</Button
-                >
-              {/snippet}
-            </EmptyState>
+            <!-- Olli under the days and talking about them, in line with them: centred in the column, a page-sized
+                 empty state floated below the rows it was about, often below the fold. -->
+            <div class="empty-week" class:wide={wide.current}>
+              <OlliSays pose="peeking" size={wide.current ? 'md' : 'sm'}>
+                <h2 class="empty-title">{m['plan.empty.title']()}</h2>
+                <p>{m['plan.empty.description']()}</p>
+                <div class="empty-action">
+                  <Button variant="primary" onclick={() => addOn(firstOpenDay)}
+                    >{m['plan.empty.action']()}</Button
+                  >
+                </div>
+              </OlliSays>
+            </div>
           {:else}
             <p class="nothing-planned">
               {m['plan.empty.title']()}
@@ -389,6 +393,45 @@
 
   .tip-after {
     margin-top: var(--space-6);
+  }
+
+  .empty-week {
+    margin-top: var(--space-6);
+  }
+
+  /* Olli at the bubble's top, as in a coach tip: the button makes the bubble taller than the pot. */
+  .empty-week :global(.says) {
+    align-items: flex-start;
+  }
+
+  .empty-week :global(.bubble) {
+    max-width: 34rem;
+  }
+
+  /* The tail at the pot's middle: the small one on a phone, so the bubble keeps the width to read in. */
+  .empty-week :global(.bubble::before) {
+    top: 1.4rem;
+  }
+
+  .empty-week.wide :global(.bubble::before) {
+    top: 2.4rem;
+  }
+
+  .empty-title {
+    margin-bottom: var(--space-1);
+    font-family: var(--font-editorial);
+    font-size: var(--text-xl);
+    font-weight: var(--weight-regular);
+    letter-spacing: -0.02em;
+  }
+
+  .empty-week p {
+    color: var(--text-muted);
+    text-wrap: pretty;
+  }
+
+  .empty-action {
+    margin-top: var(--space-3);
   }
 
   .nothing-planned {
