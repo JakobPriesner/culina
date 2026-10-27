@@ -153,10 +153,16 @@
     {:else}
       <Field label={m['diary.amount.howMuch']()}>
         {#snippet children({ id, describedBy })}
-          <TextInput {id} {describedBy} value={typedAmount} inputmode="decimal" oninput={typed} />
+          <!-- With grams the only unit there is no choice to show, so the unit stands beside the number. -->
+          <span class="amount">
+            <TextInput {id} {describedBy} value={typedAmount} inputmode="decimal" oninput={typed} />
+            {#if subject?.kind === 'food' && subject.units.length === 0}
+              <span class="unit" aria-hidden="true">g</span>
+            {/if}
+          </span>
         {/snippet}
       </Field>
-      {#if subject?.kind === 'food'}
+      {#if subject?.kind === 'food' && subject.units.length > 0}
         <div class="chips" role="group" aria-label={m['diary.amount.unit']()}>
           <FilterChip selected={unit === 'g'} onclick={() => (unit = 'g')}>g</FilterChip>
           {#each subject.units as one (one.unit)}
@@ -223,5 +229,30 @@
     display: flex;
     justify-content: flex-end;
     gap: var(--space-2);
+  }
+
+  .amount {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .amount > :global(:first-child) {
+    flex: 1;
+  }
+
+  .unit {
+    color: var(--text-muted);
+  }
+
+  /* On a phone the verb fills the bottom of the sheet, where the thumb is, instead of waiting in a corner. */
+  @media (width < 48rem) {
+    .actions {
+      flex: 1;
+    }
+
+    .actions > :global(:last-child) {
+      flex: 1;
+    }
   }
 </style>

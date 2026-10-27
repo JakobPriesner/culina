@@ -16,6 +16,10 @@
     hideTitle?: boolean;
     /** See `Dialog`: `top` keeps a growing panel's top edge still on wide screens. */
     anchor?: 'centre' | 'top';
+    /** See `Dialog`: `large` is a phone's full-height sheet, for one that searches. */
+    size?: 'fit' | 'large';
+    /** See `Dialog`: the page's colour behind `ListSection` cards. */
+    grouped?: boolean;
     onclose?: () => void;
   }
 

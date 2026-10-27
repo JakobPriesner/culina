@@ -102,6 +102,19 @@
         "--strictPort"
       ],
       "port": 5176
+    },
+    {
+      "name": "culina-frontend-5177",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--dir",
+        "src/frontend",
+        "dev",
+        "--port",
+        "5177",
+        "--strictPort"
+      ],
+      "port": 5177
     }
   ]
 }
