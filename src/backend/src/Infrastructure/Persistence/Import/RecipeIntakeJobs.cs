@@ -111,19 +111,25 @@ internal sealed class RecipeIntakeJobs(DbExecutor db, IntakeChanges changes, App
         """,
         new { Id = id, UserId = userId }, token);
 
+    // A finished draft gets more tries than reading it took (saving is cheap and the work is done), but not
+    // endless ones: a save that takes the process down with it would otherwise be claimed every fifteen minutes.
     public async Task<IntakeWork?> ClaimAsync(CancellationToken token)
     {
-        await ChangeAsync("update recipe_intake_jobs set stage='failed', error_code='RecipeIntake.Interrupted', lease_until=null where stage not in ('ready','failed','reviewed') and attempts>=2 and stage<>'saving' and lease_until<now() returning id, user_id", null, token).ConfigureAwait(false);
+        await ChangeAsync("update recipe_intake_jobs set stage='failed', error_code='RecipeIntake.Interrupted', lease_until=null where stage not in ('ready','failed','reviewed') and (attempts>=5 or (attempts>=2 and stage<>'saving')) and lease_until<now() returning id, user_id", null, token).ConfigureAwait(false);
         var row = await db.QuerySingleOrDefaultAsync<WorkRow>("""
             update recipe_intake_jobs set lease_until=now()+interval '15 minutes', attempts=attempts+1, updated_at=now()
             where id=(select id from recipe_intake_jobs where stage not in ('ready','failed','reviewed')
-                and (lease_until is null or lease_until<now()) and (attempts<2 or stage='saving') order by created_at for update skip locked limit 1)
+                and (lease_until is null or lease_until<now()) and (attempts<2 or (stage='saving' and attempts<5)) order by created_at for update skip locked limit 1)
             returning id,user_id,household_id,material::text,draft::text,stage
             """, null, token).ConfigureAwait(false);
         return row is null ? null : new IntakeWork(row.Id, row.UserId, row.HouseholdId,
             JsonSerializer.Deserialize<IntakeMaterial>(row.Material, Json)! with { Photos = await PhotosAsync(row.Id, token).ConfigureAwait(false) },
             row.Stage == "saving" && row.Draft is not null ? JsonSerializer.Deserialize<Draft>(row.Draft, Json) : null);
     }
+
+    public Task ReleaseAsync(Guid id, CancellationToken token) => db.ExecuteAsync(
+        "update recipe_intake_jobs set lease_until=null, attempts=greatest(attempts-1,0) where id=@Id and stage not in ('ready','failed','reviewed')",
+        new { Id = id }, token);
 
     public async Task<bool> ProgressAsync(Guid id, JobStage stage, Draft? draft, CancellationToken token) => await ChangeAsync(
         "update recipe_intake_jobs set stage=@Stage, draft=coalesce(@Draft::jsonb,draft), updated_at=now() where id=@Id and stage not in ('ready','failed','reviewed') returning id, user_id",
