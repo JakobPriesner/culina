@@ -44,35 +44,61 @@ internal sealed class ExpiredSessionSweeper(
         await using (scope.ConfigureAwait(false))
         {
             var now = time.GetUtcNow();
-            var sessions = scope.ServiceProvider.GetRequiredService<ISessionStore>();
-            var invitations = scope.ServiceProvider.GetRequiredService<IInvitationRepository>();
+            var services = scope.ServiceProvider;
 
-            var removed = await sessions
-                .DeleteExpiredAsync(now, cancellationToken)
-                .ConfigureAwait(false);
+            // Each on its own: one that fails must not leave the others undone until tomorrow.
+            await StepAsync(() => SweepSessionsAsync(services, now, cancellationToken)).ConfigureAwait(false);
+            await StepAsync(() => SweepInvitationsAsync(services, now, cancellationToken)).ConfigureAwait(false);
+            await StepAsync(() => PurgeIntakeAsync(services, now, cancellationToken)).ConfigureAwait(false);
+        }
+    }
 
-            if (removed > 0)
-            {
-                IdentityLogs.SweptSessions(logger, removed);
-            }
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Design", "CA1031:Do not catch general exception types", Justification = "One failed step is logged, and the steps after it still run.")]
+    private async Task StepAsync(Func<Task> step)
+    {
+        try
+        {
+            await step().ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            IdentityLogs.SweepFailed(logger, exception);
+        }
+    }
 
-            var lapsed = await invitations
-                .DeleteExpiredAsync(now, cancellationToken)
-                .ConfigureAwait(false);
+    private async Task SweepSessionsAsync(IServiceProvider services, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var removed = await services.GetRequiredService<ISessionStore>()
+            .DeleteExpiredAsync(now, cancellationToken)
+            .ConfigureAwait(false);
 
-            if (lapsed > 0)
-            {
-                IdentityLogs.SweptInvitations(logger, lapsed);
-            }
+        if (removed > 0)
+        {
+            IdentityLogs.SweptSessions(logger, removed);
+        }
+    }
 
-            var purged = await scope.ServiceProvider.GetRequiredService<IIntakePurge>()
-                .PurgeAsync(now, cancellationToken)
-                .ConfigureAwait(false);
+    private async Task SweepInvitationsAsync(IServiceProvider services, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var lapsed = await services.GetRequiredService<IInvitationRepository>()
+            .DeleteExpiredAsync(now, cancellationToken)
+            .ConfigureAwait(false);
 
-            if (purged.Jobs + purged.Notifications > 0)
-            {
-                IdentityLogs.SweptIntake(logger, purged.Jobs, purged.Notifications);
-            }
+        if (lapsed > 0)
+        {
+            IdentityLogs.SweptInvitations(logger, lapsed);
+        }
+    }
+
+    private async Task PurgeIntakeAsync(IServiceProvider services, DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var purged = await services.GetRequiredService<IIntakePurge>()
+            .PurgeAsync(now, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (purged.Jobs + purged.Notifications > 0)
+        {
+            IdentityLogs.SweptIntake(logger, purged.Jobs, purged.Notifications);
         }
     }
 }
