@@ -28,9 +28,12 @@ describe("the app's shell", () => {
   });
 
   it('allows exactly its own inline scripts and styles', () => {
-    expect(policy).toContain(`script-src 'self' ${sha('boot()')} ${sha('start()')};`);
+    expect(policy).toContain(
+      `script-src 'self' ${sha('boot()')} ${sha('start()')} 'wasm-unsafe-eval';`
+    );
     expect(policy).toContain(`style-src 'self' ${sha('body{margin:0}')};`);
     expect(policy).not.toContain('unsafe-inline');
+    expect(policy).not.toContain("'unsafe-eval'");
     expect(policy).toContain("require-trusted-types-for 'script'");
   });
 

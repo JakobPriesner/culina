@@ -41,6 +41,12 @@
           <span class="quiet">
             {[
               m['nutrition.package.per100']({ kcal: formatNumber(food.energyKcal) }),
+              // Open Food Facts' values carry its name wherever they show (ODbL attribution).
+              food.source === 'openFoodFacts'
+                ? m['nutrition.package.sourceOff']()
+                : food.source === 'openFoodFactsEdited'
+                  ? m['nutrition.package.sourceOffEdited']()
+                  : null,
               food.own ? null : m['nutrition.package.inherited']()
             ]
               .filter(Boolean)

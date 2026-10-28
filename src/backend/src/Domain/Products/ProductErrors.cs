@@ -23,6 +23,36 @@ public static class ProductErrors
         "This household already named that barcode. Read it and send its ETag as If-Match to change it.",
         ErrorType.PreconditionRequired);
 
+    /// <summary>The instance does not look barcodes up at Open Food Facts: its administrator switched it off.</summary>
+    public static readonly Error CatalogueOff = new(
+        "products.catalogue_off",
+        "This server does not look products up at Open Food Facts.",
+        ErrorType.NotFound);
+
+    /// <summary>Open Food Facts does not know the barcode, or knows it without a name.</summary>
+    public static readonly Error NotInCatalogue = new(
+        "products.not_in_catalogue",
+        "Open Food Facts does not know that barcode.",
+        ErrorType.NotFound);
+
+    /// <summary>The server is keeping under Open Food Facts' request limit; asking again in a minute works.</summary>
+    public static readonly Error CatalogueBusy = new(
+        "products.catalogue_busy",
+        "Open Food Facts was asked too often just now. Try again in a minute.",
+        ErrorType.RateLimited);
+
+    /// <summary>Open Food Facts did not answer, or not in a way that could be read.</summary>
+    public static readonly Error CatalogueUnavailable = new(
+        "products.catalogue_unavailable",
+        "Open Food Facts could not be reached. Try again later.",
+        ErrorType.Unavailable);
+
+    /// <summary>A search at Open Food Facts needs words: two letters at least, at most 100.</summary>
+    public static readonly FieldError InvalidCatalogueQuery = new(
+        "q",
+        "products.invalid_query",
+        "Search with 2 to 100 characters.");
+
     /// <summary>A product needs a name, at most <see cref="HouseholdProduct.MaxNameLength"/> characters.</summary>
     public static readonly FieldError InvalidName = new(
         "name",

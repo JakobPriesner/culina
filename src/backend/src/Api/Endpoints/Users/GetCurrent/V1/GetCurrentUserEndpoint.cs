@@ -22,7 +22,7 @@ internal sealed class GetCurrentUserEndpoint : IEndpoint
                     .ConfigureAwait(false);
 
                 return result.Match(
-                    // Households and assistant availability are in the body, so they go in the tag too.
+                    // Households, assistant availability and the product lookup are in the body, so they go in the tag too.
                     user => ETag.Ok(
                         context,
                         user,
@@ -30,7 +30,8 @@ internal sealed class GetCurrentUserEndpoint : IEndpoint
                         user.UserId,
                         ETag.Fingerprint(user.Households
                             .Select(HouseholdPart)
-                            .Append(AssistancePart(user.Assistance)))),
+                            .Append(AssistancePart(user.Assistance))
+                            .Append($"openFoodFacts:{user.OpenFoodFacts}"))),
                     CustomResults.Problem);
             })
             .WithName("getCurrentUserV1")

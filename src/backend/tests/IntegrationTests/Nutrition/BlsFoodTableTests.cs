@@ -117,6 +117,92 @@ public partial class BlsFoodTableTests
         Assert.NotEmpty(Table.Search("Müsli", 10));
     }
 
+    [Theory]
+    [InlineData("Milch fettarm")]
+    [InlineData("fettarme Milch")]
+    [InlineData("milch, FETTARM (1,5 %)")]
+    public void Search_ShouldFindEveryWord_InAnyOrder_WhateverThePunctuation(string query)
+    {
+        // Act
+        var codes = Table.Search(query, 20).Select(food => food.Code).ToList();
+
+        // Assert: "Milch fettarm, frisch, 1,5 % Fett, pasteurisiert" and "H-Milch fettarm, 1,5 % Fett, …".
+        Assert.Contains("M111200", codes);
+        Assert.Contains("M113200", codes);
+    }
+
+    [Fact]
+    public void Search_ShouldPutNamesFirst_WhoseFirstWordIsTheFirstTyped()
+    {
+        // Act
+        var first = Table.Search("Milch fettarm", 20)[0];
+
+        // Assert: before the shorter "H-Milch fettarm, 1,5 % Fett, ultrahocherhitzt".
+        Assert.Equal("M111200", first.Code);
+    }
+
+    [Fact]
+    public void Search_ShouldNeedEveryWord()
+    {
+        // Act & Assert
+        Assert.DoesNotContain(Table.Search("Milch fettarm", 50), food => !food.NameDe.Contains("fettarm", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Search_ShouldFindAWordInsideACompound()
+    {
+        // Act & Assert: "Vollmilch frisch, 3,5 % Fett, pasteurisiert".
+        Assert.Contains(Table.Search("frische Milch", 20), food => food.Code == "M111300");
+    }
+
+    [Theory]
+    [InlineData("Hahnchen")]
+    [InlineData("Haehnchen")]
+    public void Search_ShouldFindUmlauts_TypedEitherWay(string query)
+    {
+        // Act & Assert
+        Assert.Equal(Table.Search("Hähnchen", 20), Table.Search(query, 20));
+        Assert.Contains(Table.Search(query + " Brustfilet", 20), food => food.Code == "V416100");
+    }
+
+    [Theory]
+    [InlineData("Bananne", "F503100")]
+    [InlineData("Joghrut", "M141300")]
+    [InlineData("Kartofel", "K110100")]
+    [InlineData("Hänchenbrustfilet", "Y562032")]
+    public void Search_ShouldForgiveASmallTypo(string query, string code)
+    {
+        // Act & Assert
+        Assert.Contains(Table.Search(query, 50), food => food.Code == code);
+    }
+
+    [Theory]
+    [InlineData("Haferflocken", "C133000")]
+    [InlineData("Hähnchenbrustfilet", "V416100")]
+    [InlineData("Weizenmehl", "C213100")]
+    public void Search_ShouldFindTwoWordsOfAName_TypedAsOne(string query, string code)
+    {
+        // Act: "Hafer Flocken", "Hähnchen Brustfilet, roh", "Weizen Mehl, Type 812".
+        var first = Table.Search(query, 20)[0];
+
+        // Assert
+        Assert.Equal(code, first.Code);
+    }
+
+    [Fact]
+    public void Search_ShouldNotFindAWordAcrossTwoJoined()
+    {
+        // Act & Assert: "Blutwürste erwärmt" holds "tee" only where its words meet.
+        Assert.DoesNotContain(Table.Search("Tee", 50), food => food.Code == "Y024113");
+    }
+
+    [Fact]
+    public void Search_ShouldNotForgiveATypoInAShortWord()
+    {
+        // Act & Assert: "Ei" is not "Eis", "Reis" is not "Reiz".
+        Assert.DoesNotContain(Table.Search("Reiz", 50), food => SearchText.FoldAe(food.NameDe).Contains("reis", StringComparison.Ordinal));
+    }
+
     [Fact]
     public void Search_ShouldLimitTheResult_AndFindNothingForABlankQuery()
     {

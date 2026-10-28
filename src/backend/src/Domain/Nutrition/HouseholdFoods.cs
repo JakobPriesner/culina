@@ -64,6 +64,28 @@ public static class HouseholdFoods
             : NutritionErrors.InvalidFood;
     }
 
+    /// <summary>
+    /// Where a food's values came from: Open Food Facts when they are the ones it gave for the barcode, edited when the
+    /// person changed any of them on the way (kilojoules aside, which follow from kilocalories) or what it gave is no
+    /// longer known, else the label.
+    /// </summary>
+    /// <param name="per100Grams">The values the person saved.</param>
+    /// <param name="fromCatalogue">Whether the person took them over from Open Food Facts.</param>
+    /// <param name="offered">What Open Food Facts gave for the barcode, as far as the server still knows.</param>
+    public static string SourceOf(Nutrients per100Grams, bool fromCatalogue, Nutrients? offered)
+    {
+        ArgumentNullException.ThrowIfNull(per100Grams);
+
+        if (!fromCatalogue)
+        {
+            return HouseholdFoodSources.Package;
+        }
+
+        return offered is not null && per100Grams with { EnergyKj = null } == offered with { EnergyKj = null }
+            ? HouseholdFoodSources.OpenFoodFacts
+            : HouseholdFoodSources.OpenFoodFactsEdited;
+    }
+
     // Nothing negative, no more of a part than of the whole, and no more than 100 g can hold.
     private static bool IsPlausible(Nutrients values) =>
         values.EnergyKcal is > 0 and <= MostKcal &&
@@ -72,4 +94,17 @@ public static class HouseholdFoods
             .All(grams => grams is null or (>= 0 and <= MostGrams)) &&
         !(values.SaturatedFat > values.Fat) &&
         !(values.Sugars > values.Carbohydrate);
+}
+
+/// <summary>Where a household food's values come from, as stored and as the client reads them.</summary>
+public static class HouseholdFoodSources
+{
+    /// <summary>Typed from the package's label.</summary>
+    public const string Package = "package";
+
+    /// <summary>Taken over from Open Food Facts as it gave them.</summary>
+    public const string OpenFoodFacts = "openFoodFacts";
+
+    /// <summary>Taken over from Open Food Facts and corrected by the person.</summary>
+    public const string OpenFoodFactsEdited = "openFoodFactsEdited";
 }

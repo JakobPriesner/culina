@@ -7,8 +7,11 @@ import { join, relative } from 'node:path';
  * carry no secret and reflect nothing, so build-time copies keep that rule intact: the server only picks between files that exist.
  */
 
-/** Text only (images and fonts are compressed already). No size floor: a 1 kB one cost 14 kB in the service worker's first download. */
-const compressible = /\.(?:js|mjs|css|svg|json|webmanifest|txt|xml)$/;
+/**
+ * Text, and WebAssembly (the barcode decoder's 1.1 MB is 0.36 MB as Brotli); images and fonts are compressed already. No size
+ * floor: a 1 kB one cost 14 kB in the service worker's first download.
+ */
+const compressible = /\.(?:js|mjs|css|svg|json|webmanifest|txt|xml|wasm)$/;
 
 export interface Compressed {
   readonly file: string;

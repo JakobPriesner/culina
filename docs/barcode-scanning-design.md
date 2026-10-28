@@ -20,7 +20,7 @@ Labels used below:
 | Scanning while cooking "crosses off prep items" | Cooking has no per-ingredient tick. Lines are read, never checked. | Needs a small new state: an ingredient line marked *got out*, kept for the cook session. This plan proposes it (§4.2). |
 | Scanning while cooking "surfaces cook times" | Nothing anywhere stores a product's cook time. | Open Food Facts (OFF) has no structured cooking time (**Assumption**, check before phase 4). The only reliable source is the household: the first time someone scans *Barilla Spaghetti n.5*, they can note "9 min", and every later scan shows it. |
 | "Open Food Facts API" | `nutrition-design.md` §M rejects *any* runtime API ("the first unsolicited outbound call") and the OFF barcode database. | OFF can only be an **opt-in** instance setting, off by default. Without it, a code is known only once the household has named it (§3). |
-| ZXing WASM fallback | Document CSP is `script-src 'self' 'nonce-…'` with Trusted Types. | Compiling WebAssembly needs `'wasm-unsafe-eval'` in `script-src`. **Decision needed** (§5.1). |
+| ZXing WASM fallback | Document CSP is `script-src 'self' 'nonce-…'` with Trusted Types. | Compiling WebAssembly needs `'wasm-unsafe-eval'` in `script-src`. Decided 2026-10-27: added (§5.1). |
 
 None of this blocks the feature. It changes which parts are cheap and which
 need a decision first.
@@ -199,6 +199,25 @@ The alternative with no CSP change is to type the digits under the
 viewfinder, without camera decoding on iPhones. That works, but it is not what
 the bead means by scanning.
 
+**As built (`culina-v2-nb65.6.3`).** Jakob chose the ponyfill on 2026-10-27.
+`barcode-detector` 3.2.2 and `zxing-wasm` 3.1.3 are exact dependencies; the
+second is the version the first was built against, and only there for its
+`.wasm` (a unit test fails if the two drift apart). `scanner.ts` tries
+`nativeDetector()` first, then `fallbackDetector()`, which imports
+`barcode-detector/ponyfill` dynamically and compiles the reader before the
+camera opens. Where neither works (no camera, offline before the decoder was
+ever fetched, a policy that refuses WebAssembly), the digits are typed. The
+reader `.wasm` (1.1 MB, 0.36 MB as Brotli) is a Vite `?url` asset served from
+`/_app/immutable/assets/`, handed to the ponyfill through `locateFile`. The
+library's default `locateFile` names jsdelivr; `build-tools/selfHostedWasm.ts`
+removes that address at build time and fails the build if a CDN address is
+left. The build precompresses `.wasm`, and the service worker does not install
+it up front, so a phone with its own decoder never downloads it. The document's
+`script-src` is `'self' 'nonce-…' 'wasm-unsafe-eval'` (`SecurityHeaders.cs`),
+and the app's own shell (`build-tools/nativeShell.ts`) carries the same source,
+since WKWebView has no `BarcodeDetector`. `'unsafe-eval'` stays absent, which the
+security header tests assert as a quoted token.
+
 Timing note: `package.json` and `pnpm-lock.yaml` currently have someone's
 dependency update staged. Adding the package waits until that lands, or the
 two lockfile changes collide.
@@ -210,6 +229,36 @@ shown on the server settings page next to the AI providers. It would carry the
 same honesty as those: "Culina will ask openfoodfacts.org about each new
 barcode; the code leaves your server." Without it, everything works from
 household memory. The first scan of each product costs one typed name.
+
+**As built (27–28 October 2026, decided by Jakob).** One admin switch, no
+per-person opt-in: `GET/PUT /api/v1/settings/products` (`openFoodFacts`, plus
+an optional `contact` sent in the User-Agent; without one Culina names its
+project page, so nothing personal leaves the server), stored as the instance
+settings group `products`, with no restart. **On by default**, reversing the
+recommendation above: Jakob, 28 October, "the scanner should not require
+entering everything, but ask Open Food Facts, and only when it is not found
+the user enters the data". An instance whose administrator saved it off stays
+off. `/users/me` says `openFoodFacts` so the client offers nothing when it is
+off. Two reference
+endpoints, kept apart from the household's memory instead of folded into it:
+`GET /api/v1/products/{gtin}` (`world.openfoodfacts.org/api/v2/product`, cached
+in `product_lookups`, migration 0058: hits 30 days, misses 7, an old answer
+served when OFF is busy or away) and `GET /api/v1/products?q=` (one search on
+request, via `search.openfoodfacts.org`, filtered to `en:germany`; the older
+`cgi/search.pl` ranked "Fromage Blanc" first for "skyr"). The server keeps under
+12 product reads and 8 searches a minute. Each answer carries `doubts`
+(`CatalogueProduct.Doubts`: no energy, macros missing, 4/4/9 mismatch over
+±20 %, kJ/kcal mismatch, impossible values) and the product page `url` for the
+attribution. Taking a product over is `POST /households/{id}/foods` with `gtin`
+and `fromCatalogue`: the food is kept with `source` `openFoodFacts`, or
+`openFoodFactsEdited` when the values differ from the cached answer, and the
+household's product memory learns the code when it did not know it, so the
+next scan is one step. `GET .../products/{gtin}` returns that `food`. The
+diary's Eintragen sheet is the first place a scan is reachable
+(`DiaryProduct.svelte`). Not built yet: OFF attribution in the recipe
+breakdown and the diary entry's detail (they still say "from the package"), and
+the "Datenquellen" page. The ODbL question to reuse@openfoodfacts.org
+(`culina-v2-b3hl.18`) is still open.
 
 ## 6. Camera ergonomics
 
@@ -255,7 +304,7 @@ Each is its own bead under `culina-v2-nb65.6`, in this order:
 2. **Scan sheet with the native detector and typed digits** (frontend):
    camera, lock, torch, haptics, purpose store, unknown → name it. No decisions
    needed. iPhones get the typed-digits path until phase 3.
-3. **Fallback decoder**: after §5.1 is decided.
+3. **Fallback decoder**: built, see §5.1.
 4. **Recipe context**: matching, *got out* state in the cook session, cook-time
    timer.
 5. **Shopping context**: continuous add, count, scan button on the front page,

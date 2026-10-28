@@ -40,7 +40,40 @@ describe('the household’s memory of a barcode', () => {
       cookMinutes: 9,
       note: null,
       householdId: 'h1',
-      version: 1
+      version: 1,
+      food: null
+    });
+  });
+
+  it('carries the household food kept for the package, so a scan in the diary logs it', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        json({
+          ...barilla,
+          food: {
+            id: 'f1',
+            code: 'h:f1',
+            name: 'Barilla Spaghetti n.5',
+            energyKj: 1521,
+            energyKcal: 359,
+            protein: 13,
+            own: true,
+            gtin: '8076800195057',
+            source: 'openFoodFacts'
+          }
+        })
+      )
+    );
+
+    const result = await lookupProduct('h1', '8076800195057');
+
+    expect(result.ok && result.value?.food).toMatchObject({
+      code: 'h:f1',
+      energyKcal: 359,
+      fat: null,
+      gtin: '8076800195057',
+      source: 'openFoodFacts'
     });
   });
 

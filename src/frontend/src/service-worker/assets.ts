@@ -11,7 +11,11 @@ const linkedByTheDocument = new Set([
   `${base}/manifest.webmanifest`
 ]);
 
-const shell = [...build, ...files.filter((file) => linkedByTheDocument.has(file))];
+// Every build file but the barcode decoder's WebAssembly: 1.1 MB that only a browser without a decoder of its own fetches.
+const shell = [
+  ...build.filter((file) => !file.endsWith('.wasm')),
+  ...files.filter((file) => linkedByTheDocument.has(file))
+];
 
 const hashedBuildFiles = new Set(build);
 

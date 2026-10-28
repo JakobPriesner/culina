@@ -19,23 +19,36 @@ export interface HouseholdFood {
   readonly salt: number | null;
   /** Whether this household typed it; one it inherits from otherwise, and only that one removes it. */
   readonly own: boolean;
+  /** The barcode of the package it came from, when it was scanned. */
+  readonly gtin: string | null;
+  /** Typed from the label, or taken over from Open Food Facts (as given, or corrected). */
+  readonly source: FoodSource;
+}
+
+export type FoodSource = 'package' | 'openFoodFacts' | 'openFoodFactsEdited';
+
+/** The package a food comes from, when it was scanned: its barcode, and whether its values came from Open Food Facts. */
+export interface Scanned {
+  readonly gtin: string;
+  readonly fromCatalogue: boolean;
 }
 
 /** What a label gives per 100 g: the kilocalories, and whatever else it prints. */
-export type Label = Omit<HouseholdFood, 'id' | 'code' | 'own' | 'energyKj'> & {
+export type Label = Omit<HouseholdFood, 'id' | 'code' | 'own' | 'energyKj' | 'gtin' | 'source'> & {
   readonly energyKj: number | null;
 };
 
-type Wire = { [K in keyof HouseholdFood]?: HouseholdFood[K] | null } & {
+type Wire = { [K in Exclude<keyof HouseholdFood, 'source'>]?: HouseholdFood[K] | null } & {
   id: string;
   code: string;
   name: string;
   energyKj: number;
   energyKcal: number;
   own: boolean;
+  source?: string;
 };
 
-const toFood = (wire: Wire): HouseholdFood => ({
+export const toFood = (wire: Wire): HouseholdFood => ({
   id: wire.id,
   code: wire.code,
   name: wire.name,
@@ -47,7 +60,9 @@ const toFood = (wire: Wire): HouseholdFood => ({
   sugars: wire.sugars ?? null,
   protein: wire.protein ?? null,
   salt: wire.salt ?? null,
-  own: wire.own
+  own: wire.own,
+  gtin: wire.gtin ?? null,
+  source: (wire.source ?? 'package') as FoodSource
 });
 
 /** A household food as the correction sheet offers it beside the table's. */
@@ -102,11 +117,12 @@ class HouseholdFoodStore {
     this.#loadedFor = null;
   }
 
-  async add(householdId: string, label: Label): Promise<Result<HouseholdFood>> {
+  /** Keeps a label; with `scanned`, the food of that package, which the next scan of its barcode finds. */
+  async add(householdId: string, label: Label, scanned?: Scanned): Promise<Result<HouseholdFood>> {
     const result = await request(() =>
       http.POST('/api/v1/households/{householdId}/foods', {
         params: { path: { householdId } },
-        body: label
+        body: { ...label, ...scanned }
       })
     );
 

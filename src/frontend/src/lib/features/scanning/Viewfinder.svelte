@@ -2,7 +2,7 @@
   import { Button } from '$ds';
   import { m } from '$shell/i18n';
 
-  import { nativeDetector, startScanner, type CameraFailure, type Scanner } from './scanner';
+  import { chooseDetector, startScanner, type CameraFailure, type Scanner } from './scanner';
 
   /**
    * The rear camera with a frame to aim into, which reads barcodes until it is locked on one. It mounts while the
@@ -28,24 +28,31 @@
       return;
     }
 
-    const detect = nativeDetector();
-
-    if (!detect) {
-      status = 'unsupported';
-
-      return;
-    }
+    const element = video;
 
     let leaving = false;
     let locked = false;
     let started: Scanner | undefined;
 
-    void startScanner(video, detect, (code) => {
-      if (!locked) {
-        locked = true;
-        ondetect(code);
+    // The fallback decoder is fetched on first use, so the sheet may have closed by the time it is ready.
+    void chooseDetector().then(async (detect) => {
+      if (leaving) {
+        return;
       }
-    }).then((result) => {
+
+      if (!detect) {
+        status = 'unsupported';
+
+        return;
+      }
+
+      const result = await startScanner(element, detect, (code) => {
+        if (!locked) {
+          locked = true;
+          ondetect(code);
+        }
+      });
+
       if (!result.ok) {
         status = result.reason;
 

@@ -133,10 +133,28 @@ public class SecurityHeadersTests(PostgresFixture postgres)
                 TestContext.Current.CancellationToken);
 
             var policy = Policy(response);
-            // Either disables the rest of the policy, so their absence is asserted.
-            Assert.DoesNotContain("unsafe-inline", policy, StringComparison.Ordinal);
-            Assert.DoesNotContain("unsafe-eval", policy, StringComparison.Ordinal);
+            // Either disables the rest of the policy, so their absence is asserted. Quoted, because
+            // 'wasm-unsafe-eval' is allowed and contains the bare word.
+            Assert.DoesNotContain("'unsafe-inline'", policy, StringComparison.Ordinal);
+            Assert.DoesNotContain("'unsafe-eval'", policy, StringComparison.Ordinal);
         }
+    }
+
+    [Fact]
+    public async Task DocumentResponses_ShouldAllowCompilingWebAssembly_ForTheBarcodeFallback()
+    {
+        using var client = postgres.Api.CreateClient();
+
+        using var response = await client.GetAsync(
+            new Uri("/health/live", UriKind.Relative),
+            TestContext.Current.CancellationToken);
+
+        // Compiling WebAssembly only; string eval stays refused (above), and scripts still need the
+        // nonce.
+        var directive = Policy(response)
+            .Split("; ")
+            .Single(part => part.StartsWith("script-src ", StringComparison.Ordinal));
+        Assert.Matches(@"^script-src 'self' 'nonce-[^']+' 'wasm-unsafe-eval'$", directive);
     }
 
     [Fact]

@@ -840,6 +840,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the product lookup settings
+         * @description Instance administrator only.
+         */
+        get: operations["getProductSettingsV1"];
+        /**
+         * Change the product lookup settings
+         * @description Instance administrator only. On by default: a barcode no household named, and a name search a person asks for, are sent from this server to openfoodfacts.org, with `contact` (or Culina's project page when there is none) in the User-Agent. Off, nothing leaves the server. Takes effect at once, with no restart.
+         */
+        put: operations["updateProductSettingsV1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/settings/assistance": {
         parameters: {
             query?: never;
@@ -1752,7 +1776,7 @@ export interface paths {
         };
         /**
          * Search foods
-         * @description Foods of the Bundeslebensmittelschlüssel whose German or English name fits `q`, best first: names that start with it, then names with a word that starts with it, then names that contain it. Not household data, so any signed-in person may ask. No paging: at most `limit` (default 20, at most 50). energyKcal is per 100 g and tells apart the many foods of one name.
+         * @description Foods of the Bundeslebensmittelschlüssel whose German or English name holds every word of `q`, in any order: a word of the name that starts with it, else one that contains it (three letters or more), else one a small typo away (one edit from five letters, two from nine). Two words of a name also count joined, so "Haferflocken" finds "Hafer Flocken". Umlauts may be typed as ä, ae or a; punctuation is ignored. Best first: by the worst-fitting word, then names whose first word fits the first word of `q`, then shorter names. Not household data, so any signed-in person may ask. No paging: at most `limit` (default 20, at most 50). energyKcal is per 100 g and tells apart the many foods of one name.
          */
         get: operations["getFoodsV1"];
         put?: never;
@@ -1870,7 +1894,7 @@ export interface paths {
         put?: never;
         /**
          * Add a food from a package
-         * @description Keeps a food with the values its package's label gives per 100 g, cited as "from the package". Kilocalories are required; kilojoules follow from them when left out, and any other value left out is unknown, never zero. A food is not edited: remove it and add it again. Any member may add.
+         * @description Keeps a food with the values its package's label gives per 100 g, cited as "from the package". Kilocalories are required; kilojoules follow from them when left out, and any other value left out is unknown, never zero. A food is not edited: remove it and add it again. Any member may add. With `gtin` it is the food of that package, and the household's product memory learns the code when it did not know it; with `fromCatalogue` its values were taken over from Open Food Facts.
          */
         post: operations["createHouseholdFoodV1"];
         delete?: never;
@@ -1942,6 +1966,46 @@ export interface paths {
          * @description Removes this household's own row; a household it inherits from keeps its own, so an heir that removes a row it overrode sees the ancestor's again. Requires `If-Match` with the version you last read (428 without, 412 when the row moved on). 204, also when it is already gone.
          */
         delete: operations["removeHouseholdProductV1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products/{gtin}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Look a barcode up at Open Food Facts
+         * @description What Open Food Facts says the product is, per 100 g, with `doubts` to check before taking it over. Reference data, not household data: ask the household's memory (`/households/{householdId}/products/{gtin}`) first, since what a household said wins. The server asks Open Food Facts at most once a month per code (a week for a code it does not know) and keeps under its request limit. 404 `products.catalogue_off` when the administrator switched the lookup off (`openFoodFacts` on `/users/me` says so), 404 `products.not_in_catalogue` when Open Food Facts does not know the code, 429 `products.catalogue_busy`, 503 `products.catalogue_unavailable`.
+         */
+        get: operations["getCatalogueProductV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/products": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Open Food Facts by name
+         * @description Up to 20 products sold in Germany whose name fits `q` (2 to 100 characters), best fit first. One request to Open Food Facts per call, and it allows only a few a minute: call it when a person asks, never while they type. A result lacks its pack size; `/products/{gtin}` gives the whole product when one is chosen. Same errors as `/products/{gtin}`, and 400 `products.invalid_query`.
+         */
+        get: operations["searchCatalogueV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3711,6 +3775,16 @@ export interface components {
              * @description Salt in grams.
              */
             salt?: number | null;
+            /**
+             * @description The barcode of the package, when it was scanned. The household's product memory then knows the code too, so the
+             *     next scan finds this food; a code the household already named keeps its name.
+             */
+            gtin?: string | null;
+            /**
+             * @description Whether the values were taken over from Open Food Facts for `gtin`. The server compares them with what it
+             *     was given and keeps the food as `openFoodFacts`, or `openFoodFactsEdited` when they differ.
+             */
+            fromCatalogue?: boolean;
         };
         /** @description A food of the Bundeslebensmittelschlüssel, as a search result. */
         NutritionFoodSummary: {
@@ -3801,6 +3875,13 @@ export interface components {
             salt?: number | null;
             /** @description Whether the household asking typed it; otherwise one it inherits from did, and only that one removes it. */
             own: boolean;
+            /** @description The barcode of the package it came from, when it was scanned. */
+            gtin?: string | null;
+            /**
+             * @description Where its values come from: `package` (typed from the label), `openFoodFacts` (taken over as Open Food
+             *     Facts gave them; show its attribution), `openFoodFactsEdited` (taken over and corrected).
+             */
+            source: string;
         };
         /** @description The foods a household can choose from beyond the table: its own and those of the households it inherits from. */
         NutritionHouseholdFoodsResponse: {
@@ -4003,6 +4084,82 @@ export interface components {
                 detail: string;
             }[] | null;
         };
+        /**
+         * @description A packaged product as Open Food Facts describes it, per 100 g (or 100 ml). Crowd-sourced under the ODbL: show it
+         *     with its source and `url`, and keep it only when a person confirms it.
+         */
+        ProductsCatalogueProductDetail: {
+            /** @description The barcode in its normalised form. */
+            gtin: string;
+            /** @description The product's name, German where it has one. */
+            name: string;
+            /** @description Its brand. */
+            brand?: string | null;
+            /** @description What the pack says it holds, as printed: "450 g". */
+            quantity?: string | null;
+            /**
+             * Format: double
+             * @description The pack's contents in grams or millilitres, when known as a number.
+             */
+            packGrams?: number | null;
+            /**
+             * Format: double
+             * @description One serving in grams or millilitres, when the label names one.
+             */
+            servingGrams?: number | null;
+            /**
+             * Format: double
+             * @description Energy in kilojoules.
+             */
+            energyKj?: number | null;
+            /**
+             * Format: double
+             * @description Energy in kilocalories.
+             */
+            energyKcal?: number | null;
+            /**
+             * Format: double
+             * @description Fat in grams.
+             */
+            fat?: number | null;
+            /**
+             * Format: double
+             * @description Saturated fat in grams.
+             */
+            saturatedFat?: number | null;
+            /**
+             * Format: double
+             * @description Carbohydrate in grams.
+             */
+            carbohydrate?: number | null;
+            /**
+             * Format: double
+             * @description Sugars in grams.
+             */
+            sugars?: number | null;
+            /**
+             * Format: double
+             * @description Protein in grams.
+             */
+            protein?: number | null;
+            /**
+             * Format: double
+             * @description Salt in grams.
+             */
+            salt?: number | null;
+            /**
+             * @description What to check before taking it over: `noEnergy`, `macrosMissing`, `energyMismatch` (kcal and
+             *     macros disagree, often per-serving values), `unitMismatch` (kJ and kcal disagree), `impossible`.
+             */
+            doubts: string[];
+            /** @description The product's page at Open Food Facts, for the attribution. */
+            url: string;
+        };
+        /** @description What an explicit search at Open Food Facts found. */
+        ProductsCatalogueProductsResponse: {
+            /** @description The products, best fit first. Their pack size is not known here: read one by its barcode for that. */
+            items: components["schemas"]["ProductsCatalogueProductDetail"][];
+        };
         /** @description What a household says a barcode is, as the household's memory holds it. */
         ProductsProductDetail: {
             /** @description The barcode in its normalised form: digits only, a UPC-A padded to 13. */
@@ -4036,6 +4193,7 @@ export interface components {
              * @description The version of the row, sent back as `If-Match` to change or remove it.
              */
             version: number;
+            food?: (null) | components["schemas"]["NutritionHouseholdFoodDetail"];
         };
         /** @description Every barcode a household, and the households it inherits from, have named. */
         ProductsProductsResponse: {
@@ -5877,6 +6035,13 @@ export interface components {
             /** @description Whether mail actually goes out: switched on, complete, and with a public address. */
             sending: boolean;
         };
+        /** @description Whether this server looks barcodes up at Open Food Facts. */
+        SettingsGetProductsResponse: {
+            /** @description Whether a barcode nobody named, and an explicit name search, are asked at Open Food Facts. */
+            openFoodFacts: boolean;
+            /** @description The address sent in the User-Agent so Open Food Facts can reach whoever runs this server. */
+            contact?: string | null;
+        };
         /** @description Who may create an account on this instance. */
         SettingsGetRegistrationResponse: {
             /** @description Whether anyone may create an account. */
@@ -6203,6 +6368,13 @@ export interface components {
             fromAddress: string;
             /** @description The sender's name, as inboxes show it. */
             fromName: string;
+        };
+        /** @description Whether to look barcodes up at Open Food Facts. */
+        SettingsUpdateProductsRequest: {
+            /** @description Whether a barcode nobody named, and an explicit name search, are asked at Open Food Facts. */
+            openFoodFacts: boolean;
+            /** @description An email or web address for the User-Agent, as Open Food Facts asks, at most 200 characters; without one, Culina's project page is sent. */
+            contact?: string | null;
         };
         /** @description The registration policy to apply. */
         SettingsUpdateRegistrationRequest: {
@@ -6870,6 +7042,11 @@ export interface components {
             /** @description The households they belong to. */
             households: components["schemas"]["UsersGetCurrentHouseholdMembership"][];
             assistance: components["schemas"]["UsersGetCurrentAssistanceAvailability"];
+            /**
+             * @description Whether this instance looks scanned barcodes up at Open Food Facts, and offers one explicit name search there.
+             *     On unless the administrator switched it off; off, the client offers only the household's own memory.
+             */
+            openFoodFacts: boolean;
             /**
              * Format: int64
              * @description The entity version, for If-Match on an update.
@@ -9655,6 +9832,95 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SettingsUpdateRegistrationResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getProductSettingsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsGetProductsResponse"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    updateProductSettingsV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingsUpdateProductsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SettingsGetProductsResponse"];
                 };
             };
             /** @description Bad Request */
@@ -13256,6 +13522,140 @@ export interface operations {
             };
             /** @description Precondition Required */
             428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    getCatalogueProductV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gtin: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductsCatalogueProductDetail"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+        };
+    };
+    searchCatalogueV1: {
+        parameters: {
+            query?: {
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductsCatalogueProductsResponse"];
+                };
+            };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["ProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

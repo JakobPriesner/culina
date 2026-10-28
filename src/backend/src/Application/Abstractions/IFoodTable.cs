@@ -13,8 +13,8 @@ public interface IFoodTable
     Food? Find(string code);
 
     /// <summary>
-    /// Foods whose German or English name fits what was typed, best first: names that start with it,
-    /// then names with a word that starts with it, then names that contain it, shorter names first.
+    /// Foods whose German or English name holds every word typed, in any order, with umlauts typed
+    /// either way and a small typo forgiven; best first, shorter names first.
     /// </summary>
     /// <param name="query">What was typed; blank finds nothing.</param>
     /// <param name="limit">How many foods at most.</param>

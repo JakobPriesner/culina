@@ -67,6 +67,15 @@ public sealed record HouseholdFoodDetail
 
     /// <summary>Whether the household asking typed it; otherwise one it inherits from did, and only that one removes it.</summary>
     public required bool Own { get; init; }
+
+    /// <summary>The barcode of the package it came from, when it was scanned.</summary>
+    public string? Gtin { get; init; }
+
+    /// <summary>
+    /// Where its values come from: <c>package</c> (typed from the label), <c>openFoodFacts</c> (taken over as Open Food
+    /// Facts gave them; show its attribution), <c>openFoodFactsEdited</c> (taken over and corrected).
+    /// </summary>
+    public required string Source { get; init; }
 }
 
 /// <summary>The foods a household can choose from beyond the table: its own and those of the households it inherits from.</summary>
@@ -105,6 +114,18 @@ public sealed record CreateHouseholdFoodRequest
 
     /// <summary>Salt in grams.</summary>
     public decimal? Salt { get; init; }
+
+    /// <summary>
+    /// The barcode of the package, when it was scanned. The household's product memory then knows the code too, so the
+    /// next scan finds this food; a code the household already named keeps its name.
+    /// </summary>
+    public string? Gtin { get; init; }
+
+    /// <summary>
+    /// Whether the values were taken over from Open Food Facts for <c>gtin</c>. The server compares them with what it
+    /// was given and keeps the food as <c>openFoodFacts</c>, or <c>openFoodFactsEdited</c> when they differ.
+    /// </summary>
+    public bool FromCatalogue { get; init; }
 }
 
 /// <summary>Foods that fit what was typed.</summary>
