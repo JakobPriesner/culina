@@ -1,6 +1,7 @@
 using Application.Abstractions;
 using Application.Abstractions.Messaging;
 using Application.Households;
+using Application.Nutrition;
 using Application.Telemetry;
 using Contracts.Products;
 using Domain.Products;
@@ -16,7 +17,8 @@ public sealed record GetProductQuery(Guid HouseholdId, Guid UserId, string Code)
 
 internal sealed class GetProductQueryHandler(
     IHouseholdRepository households,
-    IProductRepository products)
+    IProductRepository products,
+    IHouseholdFoodRepository ownFoods)
     : IQueryHandler<GetProductQuery, ProductDetail>
 {
     public async Task<Result<ProductDetail>> Handle(GetProductQuery query, CancellationToken cancellationToken)
@@ -43,8 +45,14 @@ internal sealed class GetProductQueryHandler(
         var library = await HouseholdAccess.LibraryAsync(households, householdId, cancellationToken).ConfigureAwait(false);
         var found = await products.FindAsync(library, gtin, cancellationToken).ConfigureAwait(false);
 
-        return found is null
-            ? ProductErrors.Unknown
-            : found.ToContract();
+        if (found is null)
+        {
+            return ProductErrors.Unknown;
+        }
+
+        // What the household kept from the pack's label, so a scan in the diary logs it in one step.
+        var food = await ownFoods.FindByGtinAsync(library, gtin.Value, cancellationToken).ConfigureAwait(false);
+
+        return found.ToContract() with { Food = food?.ToContract(householdId) };
     }
 }

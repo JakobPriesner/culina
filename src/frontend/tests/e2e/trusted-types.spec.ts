@@ -12,7 +12,7 @@ import { expect, test } from '@playwright/test';
 const policy = (nonce: string) =>
   [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}'`,
+    `script-src 'self' 'nonce-${nonce}' 'wasm-unsafe-eval'`,
     `style-src 'self' 'nonce-${nonce}'`,
     "style-src-attr 'unsafe-hashes' 'sha256-S8qMpvofolR8Mpjy4kQvEm7m1q8clzU4dfDH0AmvZjo='",
     "img-src 'self' data: blob:",

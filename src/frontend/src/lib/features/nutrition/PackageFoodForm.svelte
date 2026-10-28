@@ -4,7 +4,7 @@
   import type { AppError } from '$api';
   import { Button, Field, TextInput } from '$ds';
   import { explain } from '$shell/explain';
-  import { m } from '$shell/i18n';
+  import { formatNumber, m } from '$shell/i18n';
 
   import type { Label } from './stores/householdFoods.svelte';
 
@@ -16,11 +16,13 @@
   interface Props {
     /** What the field starts with: the ingredient as written. */
     name: string;
+    /** Values to start from, such as what Open Food Facts gave, for the person to check and correct. */
+    initial?: { readonly [K in Exclude<keyof Label, 'name'>]?: number | null };
     onsave: (label: Label) => Promise<AppError | null>;
     oncancel: () => void;
   }
 
-  let { name, onsave, oncancel }: Props = $props();
+  let { name, initial, onsave, oncancel }: Props = $props();
 
   const parts = [
     'energyKcal',
@@ -47,16 +49,19 @@
   };
 
   let typedName = $state(untrack(() => name));
-  let typed = $state<Record<Part, string>>({
-    energyKcal: '',
-    energyKj: '',
-    fat: '',
-    saturatedFat: '',
-    carbohydrate: '',
-    sugars: '',
-    protein: '',
-    salt: ''
-  });
+  /** A value as it is typed: a decimal comma in German, nothing for unknown. */
+  const textOf = (value: number | null | undefined): string =>
+    value == null ? '' : formatNumber(value, { maximumFractionDigits: 2, useGrouping: false });
+
+  let typed = $state<Record<Part, string>>(
+    untrack(
+      () =>
+        Object.fromEntries(parts.map((part) => [part, textOf(initial?.[part])])) as Record<
+          Part,
+          string
+        >
+    )
+  );
   let saving = $state(false);
   let failure = $state<string | null>(null);
 

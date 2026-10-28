@@ -22,6 +22,7 @@ using Infrastructure.Persistence.Migrations;
 using Infrastructure.Persistence.Nutrition;
 using Infrastructure.Persistence.Planning;
 using Infrastructure.Persistence.Products;
+using Infrastructure.Products;
 using Infrastructure.Persistence.Recipes;
 using Infrastructure.Persistence.Searches;
 using Infrastructure.Persistence.Shopping;
@@ -97,6 +98,8 @@ public static class DependencyInjection
             .AddScoped<ISettingsStore<AssistanceSettings>, PostgresSettingsStore<AssistanceSettings>>()
             .AddSingleton<MailSettings>()
             .AddScoped<ISettingsStore<MailSettings>, PostgresSettingsStore<MailSettings>>()
+            .AddSingleton<ProductSettings>()
+            .AddScoped<ISettingsStore<ProductSettings>, PostgresSettingsStore<ProductSettings>>()
             .AddHostedService<InstanceSettingsLoader>();
 
     // A bucket when one is configured, the image directory otherwise; the same store either way.
@@ -205,6 +208,8 @@ public static class DependencyInjection
             .AddScoped<INutritionCorrectionRepository, NutritionCorrectionRepository>()
             .AddScoped<IHouseholdFoodRepository, HouseholdFoodRepository>()
             .AddScoped<IProductRepository, ProductRepository>()
+            .AddSingleton(services => OpenFoodFactsHttp.Create(services.GetRequiredService<TimeProvider>()))
+            .AddScoped<IProductCatalogue, OpenFoodFactsCatalogue>()
             .AddScoped<IIngredientNameRepository, IngredientNameRepository>()
             .AddScoped<INutritionWeightRepository, NutritionWeightRepository>()
             .AddScoped<IRecipeSourceRepository, RecipeSourceRepository>()

@@ -1,6 +1,8 @@
+using Api.Endpoints.Products.GetCatalogueProduct.V1;
 using Api.Endpoints.Products.GetProduct.V1;
 using Api.Endpoints.Products.ListProducts.V1;
 using Api.Endpoints.Products.RemoveProduct.V1;
+using Api.Endpoints.Products.SearchCatalogue.V1;
 using Api.Endpoints.Products.SetProduct.V1;
 
 namespace Api.Endpoints.Products;
@@ -13,5 +15,7 @@ internal static class ProductsEndpoints
             .AddSingleton<IEndpoint, ListProductsEndpoint>()
             .AddSingleton<IEndpoint, GetProductEndpoint>()
             .AddSingleton<IEndpoint, SetProductEndpoint>()
-            .AddSingleton<IEndpoint, RemoveProductEndpoint>();
+            .AddSingleton<IEndpoint, RemoveProductEndpoint>()
+            .AddSingleton<IEndpoint, GetCatalogueProductEndpoint>()
+            .AddSingleton<IEndpoint, SearchCatalogueEndpoint>();
 }

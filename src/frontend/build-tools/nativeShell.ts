@@ -45,7 +45,8 @@ export function finishShell(html: string): string {
 
   const policy = [
     "default-src 'self'",
-    `script-src 'self' ${scripts.join(' ')}`.trim(),
+    // As on the website: the barcode fallback compiles WebAssembly (WKWebView has no decoder of its own).
+    ['script-src', "'self'", ...scripts, "'wasm-unsafe-eval'"].join(' '),
     `style-src 'self' ${styles.join(' ')}`.trim(),
     `style-src-attr 'unsafe-hashes' '${announcerStyleHash}'`,
     // Photos arrive as object URLs (lib/app/nativeImages.ts), never from the server directly.

@@ -26,6 +26,12 @@ public sealed record Response
     /// </summary>
     public required AssistanceAvailability Assistance { get; init; }
 
+    /// <summary>
+    /// Whether this instance looks scanned barcodes up at Open Food Facts, and offers one explicit name search there.
+    /// On unless the administrator switched it off; off, the client offers only the household's own memory.
+    /// </summary>
+    public required bool OpenFoodFacts { get; init; }
+
     /// <summary>The entity version, for If-Match on an update.</summary>
     public required long Version { get; init; }
 }

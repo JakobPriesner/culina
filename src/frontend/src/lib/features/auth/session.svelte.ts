@@ -221,10 +221,12 @@ class SessionStore {
       return;
     }
 
-    // The offline copy outlives deploys and may lack `inheritsFrom`; such a household inherits nothing.
+    // The offline copy outlives deploys and may lack `inheritsFrom` or `openFoodFacts`; such a household inherits
+    // nothing, and such a server looks nothing up.
     this.#user = {
       ...me.value,
-      households: me.value.households.map((h) => ({ ...h, inheritsFrom: h.inheritsFrom ?? [] }))
+      households: me.value.households.map((h) => ({ ...h, inheritsFrom: h.inheritsFrom ?? [] })),
+      openFoodFacts: me.value.openFoodFacts ?? false
     };
     this.#status = 'authenticated';
     writeDevice(bootHintKey, 'app');

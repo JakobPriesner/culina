@@ -35,7 +35,9 @@ internal sealed class CreateHouseholdFoodEndpoint : IEndpoint
                                 request.Carbohydrate,
                                 request.Sugars,
                                 request.Protein,
-                                request.Salt)),
+                                request.Salt),
+                            request.Gtin,
+                            request.FromCatalogue),
                         cancellationToken)
                     .ConfigureAwait(false);
 
@@ -49,7 +51,9 @@ internal sealed class CreateHouseholdFoodEndpoint : IEndpoint
             .WithDescription(
                 "Keeps a food with the values its package's label gives per 100 g, cited as \"from the package\". "
                 + "Kilocalories are required; kilojoules follow from them when left out, and any other value left "
-                + "out is unknown, never zero. A food is not edited: remove it and add it again. Any member may add.")
+                + "out is unknown, never zero. A food is not edited: remove it and add it again. Any member may add. "
+                + "With `gtin` it is the food of that package, and the household's product memory learns the code "
+                + "when it did not know it; with `fromCatalogue` its values were taken over from Open Food Facts.")
             .Produces<HouseholdFoodDetail>(StatusCodes.Status201Created)
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status401Unauthorized)

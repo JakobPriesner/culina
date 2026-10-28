@@ -5,6 +5,9 @@ namespace Infrastructure.Persistence.Nutrition;
 
 internal sealed class HouseholdFoodRepository(DbExecutor executor) : IHouseholdFoodRepository
 {
+    private const string Columns =
+        "id, household_id, name, energy_kj, energy_kcal, fat, saturated_fat, carbohydrate, sugars, protein, salt, gtin, source";
+
     public async Task<IReadOnlyList<HouseholdFood>> ForLibraryAsync(
         IReadOnlyList<Guid> library,
         CancellationToken cancellationToken)
@@ -12,8 +15,8 @@ internal sealed class HouseholdFoodRepository(DbExecutor executor) : IHouseholdF
         ArgumentNullException.ThrowIfNull(library);
 
         var rows = await executor.QueryAsync<FoodRow>(
-            """
-            select id, household_id, name, energy_kj, energy_kcal, fat, saturated_fat, carbohydrate, sugars, protein, salt
+            $"""
+            select {Columns}
             from household_foods
             where household_id = any(@library)
             order by name, created_at;
@@ -21,45 +24,50 @@ internal sealed class HouseholdFoodRepository(DbExecutor executor) : IHouseholdF
             new { library = library.ToArray() },
             cancellationToken).ConfigureAwait(false);
 
-        return
-        [
-            .. rows.Select(row => new HouseholdFood(
-                row.Id,
-                new Food(
-                    HouseholdFoods.CodeOf(row.Id),
-                    row.Name,
-                    row.Name,
-                    new Nutrients(
-                        row.EnergyKj,
-                        row.EnergyKcal,
-                        row.Fat,
-                        row.SaturatedFat,
-                        row.Carbohydrate,
-                        row.Sugars,
-                        row.Protein,
-                        row.Salt)),
-                row.HouseholdId))
-        ];
+        return [.. rows.Select(row => row.ToFood())];
     }
 
-    public Task AddAsync(Guid householdId, Guid id, Food food, DateTimeOffset now, CancellationToken cancellationToken)
+    public async Task<HouseholdFood?> FindByGtinAsync(
+        IReadOnlyList<Guid> library,
+        string gtin,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(library);
+
+        var row = await executor.QuerySingleOrDefaultAsync<FoodRow>(
+            $"""
+            select {Columns}
+            from household_foods
+            where household_id = any(@library) and gtin = @gtin
+            order by array_position(@library, household_id), created_at desc
+            limit 1;
+            """,
+            new { library = library.ToArray(), gtin },
+            cancellationToken).ConfigureAwait(false);
+
+        return row?.ToFood();
+    }
+
+    public Task AddAsync(HouseholdFood food, DateTimeOffset now, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(food);
 
-        var values = food.Per100Grams;
+        var values = food.Food.Per100Grams;
 
         return executor.ExecuteAsync(
             """
             insert into household_foods
-                (id, household_id, name, energy_kj, energy_kcal, fat, saturated_fat, carbohydrate, sugars, protein, salt, created_at)
+                (id, household_id, name, energy_kj, energy_kcal, fat, saturated_fat, carbohydrate, sugars, protein, salt,
+                 gtin, source, created_at)
             values
-                (@id, @householdId, @name, @energyKj, @energyKcal, @fat, @saturatedFat, @carbohydrate, @sugars, @protein, @salt, @now);
+                (@id, @householdId, @name, @energyKj, @energyKcal, @fat, @saturatedFat, @carbohydrate, @sugars, @protein, @salt,
+                 @gtin, @source, @now);
             """,
             new
             {
-                id,
-                householdId,
-                name = food.NameDe,
+                food.Id,
+                food.HouseholdId,
+                name = food.Food.NameDe,
                 values.EnergyKj,
                 values.EnergyKcal,
                 values.Fat,
@@ -68,6 +76,8 @@ internal sealed class HouseholdFoodRepository(DbExecutor executor) : IHouseholdF
                 values.Sugars,
                 values.Protein,
                 values.Salt,
+                food.Gtin,
+                food.Source,
                 now
             },
             cancellationToken);
@@ -109,5 +119,21 @@ internal sealed class HouseholdFoodRepository(DbExecutor executor) : IHouseholdF
         public decimal? Protein { get; init; }
 
         public decimal? Salt { get; init; }
+
+        public string? Gtin { get; init; }
+
+        public string Source { get; init; } = HouseholdFoodSources.Package;
+
+        public HouseholdFood ToFood() =>
+            new(
+                Id,
+                new Food(
+                    HouseholdFoods.CodeOf(Id),
+                    Name,
+                    Name,
+                    new Nutrients(EnergyKj, EnergyKcal, Fat, SaturatedFat, Carbohydrate, Sugars, Protein, Salt)),
+                HouseholdId,
+                Gtin,
+                Source);
     }
 }

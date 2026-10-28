@@ -17,7 +17,8 @@ public sealed record GetCurrentUserQuery(Guid UserId);
 internal sealed class GetCurrentUserQueryHandler(
     IUserRepository users,
     IHouseholdRepository households,
-    AssistanceSettings assistance)
+    AssistanceSettings assistance,
+    ProductSettings products)
     : IQueryHandler<GetCurrentUserQuery, Response>
 {
     public async Task<Result<Response>> Handle(
@@ -52,7 +53,7 @@ internal sealed class GetCurrentUserQueryHandler(
                     .ConfigureAwait(false);
 
                 return Result<Response>.Success(
-                    user.ToGetCurrentResponse(isAdmin, memberships, ancestors, assistance));
+                    user.ToGetCurrentResponse(isAdmin, memberships, ancestors, assistance, products.LooksUp));
             },
             error => Task.FromResult(Result<Response>.Failure(error))).ConfigureAwait(false);
 
@@ -68,7 +69,8 @@ internal static class CurrentUserMappings
         bool isAdmin,
         IReadOnlyList<Household> households,
         IReadOnlyDictionary<Guid, IReadOnlyList<InheritedHousehold>> ancestors,
-        AssistanceSettings assistance)
+        AssistanceSettings assistance,
+        bool openFoodFacts)
     {
         ArgumentNullException.ThrowIfNull(user);
         ArgumentNullException.ThrowIfNull(households);
@@ -85,6 +87,7 @@ internal static class CurrentUserMappings
             Households = [.. households.Select(household =>
                 household.ToMembership(user.Id, ancestors[household.Id]))],
             Assistance = assistance.ToAvailability(),
+            OpenFoodFacts = openFoodFacts,
             Version = user.Version
         };
     }

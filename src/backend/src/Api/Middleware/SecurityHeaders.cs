@@ -56,13 +56,14 @@ internal static class SecurityHeaders
     /// </summary>
     /// <remarks>
     /// The nonce covers styles too: without it <c>style-src 'self'</c> blocks inline styles, which
-    /// the dev server (no policy) hides.
+    /// the dev server (no policy) hides. <c>wasm-unsafe-eval</c> lets the barcode fallback compile
+    /// its WebAssembly (served from <c>/_app/</c>); it permits no <c>eval</c> of strings.
     /// </remarks>
     internal static string DocumentContentSecurityPolicy(string nonce) =>
         string.Join(
             "; ",
             "default-src 'self'",
-            $"script-src 'self' 'nonce-{nonce}'",
+            $"script-src 'self' 'nonce-{nonce}' 'wasm-unsafe-eval'",
             $"style-src 'self' 'nonce-{nonce}'",
             $"style-src-attr 'unsafe-hashes' '{AnnouncerStyleHash}'",
             "img-src 'self' data: blob:",

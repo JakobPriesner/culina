@@ -34,8 +34,8 @@ internal sealed class GetFoodsEndpoint : IEndpoint
                     {
                         var result = await handler.Handle(asked, cancellationToken).ConfigureAwait(false);
 
-                        // Reference data: the answer changes only with the shipped table, and a cache keys
-                        // on the URL, so the data version is the whole tag.
+                        // Reference data: the answer changes only with the shipped table and how it is
+                        // searched, and a cache keys on the URL, so the data version is the whole tag.
                         return result.Match(
                             foods => ETag.Ok(context, foods, NutritionData.Version),
                             CustomResults.Problem);
@@ -46,9 +46,13 @@ internal sealed class GetFoodsEndpoint : IEndpoint
             .WithTags(Tags.Nutrition)
             .WithSummary("Search foods")
             .WithDescription(
-                "Foods of the Bundeslebensmittelschlüssel whose German or English name fits `q`, "
-                + "best first: names that start with it, then names with a word that starts with it, "
-                + "then names that contain it. Not household data, so any signed-in person may ask. "
+                "Foods of the Bundeslebensmittelschlüssel whose German or English name holds every word "
+                + "of `q`, in any order: a word of the name that starts with it, else one that contains "
+                + "it (three letters or more), else one a small typo away (one edit from five letters, "
+                + "two from nine). Two words of a name also count joined, so \"Haferflocken\" finds "
+                + "\"Hafer Flocken\". Umlauts may be typed as ä, ae or a; punctuation is ignored. Best "
+                + "first: by the worst-fitting word, then names whose first word fits the first word "
+                + "of `q`, then shorter names. Not household data, so any signed-in person may ask. "
                 + "No paging: at most `limit` (default 20, at most 50). energyKcal is per 100 g and "
                 + "tells apart the many foods of one name.")
             .WithRepeatableQueryParameters(["q", "limit"], [], ["limit"])

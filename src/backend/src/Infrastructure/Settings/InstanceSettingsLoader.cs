@@ -24,6 +24,9 @@ internal sealed class InstanceSettingsLoader(IServiceScopeFactory scopeFactory) 
 
             await LoadAsync<MailSettings>(scope.ServiceProvider, cancellationToken)
                 .ConfigureAwait(false);
+
+            await LoadAsync<ProductSettings>(scope.ServiceProvider, cancellationToken)
+                .ConfigureAwait(false);
         }
     }
 

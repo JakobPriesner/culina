@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Reflection;
 using Application.Abstractions;
 using Domain.Nutrition;
-using Domain.Search;
 
 namespace Infrastructure.Nutrition;
 
@@ -19,13 +18,12 @@ internal sealed class BlsFoodTable : IFoodTable
     private const int Columns = 11;
 
     private readonly Dictionary<string, Food> byCode;
-    private readonly List<Searchable> searchable;
+    private readonly FoodSearch search;
 
     private BlsFoodTable(List<Food> foods)
     {
         byCode = foods.ToDictionary(food => food.Code, StringComparer.Ordinal);
-        searchable = [.. foods.Select(food =>
-            new Searchable(food, SearchText.FoldAe(food.NameDe), SearchText.FoldAe(food.NameEn)))];
+        search = new FoodSearch(foods);
     }
 
     /// <inheritdoc />
@@ -83,21 +81,7 @@ internal sealed class BlsFoodTable : IFoodTable
     {
         ArgumentNullException.ThrowIfNull(query);
 
-        var typed = SearchText.FoldAe(query);
-
-        if (typed.Length == 0 || limit <= 0)
-        {
-            return [];
-        }
-
-        return [.. searchable
-            .Select(one => (one.Food, Rank: one.Rank(typed)))
-            .Where(one => one.Rank.Tier is not null)
-            .OrderBy(one => one.Rank.Tier)
-            .ThenBy(one => one.Rank.Length)
-            .ThenBy(one => one.Food.Code, StringComparer.Ordinal)
-            .Take(limit)
-            .Select(one => one.Food)];
+        return search.Find(query, limit);
     }
 
     private static Food ParseLine(string line, int number)
@@ -140,31 +124,4 @@ internal sealed class BlsFoodTable : IFoodTable
 
     private static InvalidOperationException Defect(int line, string what) =>
         new($"{ResourceName}, line {line}: {what}.");
-
-    private sealed record Searchable(Food Food, string De, string En)
-    {
-        /// <summary>How well the better of the two names fits: 0 starts with it, 1 a word starts with it, 2 contains it.</summary>
-        internal (int? Tier, int Length) Rank(string typed)
-        {
-            var de = RankOf(De, typed);
-            var en = RankOf(En, typed);
-
-            return de.Tier is null ? en : en.Tier is null ? de : de.CompareTo(en) <= 0 ? de : en;
-        }
-
-        private static (int? Tier, int Length) RankOf(string name, string typed)
-        {
-            if (name.StartsWith(typed, StringComparison.Ordinal))
-            {
-                return (0, name.Length);
-            }
-
-            if (name.Contains(' ' + typed, StringComparison.Ordinal))
-            {
-                return (1, name.Length);
-            }
-
-            return name.Contains(typed, StringComparison.Ordinal) ? (2, name.Length) : (null, 0);
-        }
-    }
 }

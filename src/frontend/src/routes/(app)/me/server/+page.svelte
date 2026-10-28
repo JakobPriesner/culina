@@ -12,6 +12,7 @@
   import SaveStatus from '$features/server/SaveStatus.svelte';
   import SecureCookiesField from '$features/server/SecureCookiesField.svelte';
   import SessionFields from '$features/server/SessionFields.svelte';
+  import ProductLookupFields from '$features/server/ProductLookupFields.svelte';
   import PushRelayFields from '$features/server/PushRelayFields.svelte';
   import TelemetryFields from '$features/server/TelemetryFields.svelte';
   import { server, type SaveOutcome } from '$features/server/stores/server.svelte';
@@ -176,6 +177,11 @@
     {/each}
   </div>
 {/if}
+
+<!-- Outside the settings above: saved at once, with no restart. -->
+<SettingsSection title={m['server.products']()} description={m['server.products.hint']()}>
+  <ProductLookupFields />
+</SettingsSection>
 
 <!-- Outside the settings above: needs no restart and must work while the configuration cannot be read. -->
 <SettingsSection title={m['server.recovery']()} description={m['server.recovery.hint']()} bare>

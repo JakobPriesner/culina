@@ -1,7 +1,11 @@
+import type { BarcodeFormat } from 'barcode-detector/ponyfill';
+// A URL into the app's own build (`/_app/…`); the file itself is fetched only by the fallback decoder.
+import readerWasm from 'zxing-wasm/reader/zxing_reader.wasm?url';
+
 /**
  * The camera and the decoder behind the scan sheet (`docs/barcode-scanning-design.md` §6). Everything here talks to the
  * browser; the sheet only hears "locked on this code". `detect` is the one seam where a decoder plugs in: the browser's
- * own `BarcodeDetector` today, and the fallback for browsers without one when that is decided (§5.1).
+ * own `BarcodeDetector` where there is one, and ZXing compiled to WebAssembly where there is not (§5.1).
  */
 
 /** Reads one video frame: the digits of the barcode in it, or null when there is none. */
@@ -29,12 +33,12 @@ interface NativeDetector {
 type NativeDetectorConstructor = new (options: { formats: string[] }) => NativeDetector;
 
 /** What groceries carry; QR is out, no grocery identity lives in one. */
-const formats = ['ean_13', 'ean_8', 'upc_a', 'upc_e'];
+const formats: BarcodeFormat[] = ['ean_13', 'ean_8', 'upc_a', 'upc_e'];
 
 /** Decoding stays at about eight attempts a second: a barcode needs width, not speed, and a mid-range phone keeps up. */
 const frameGapMs = 125;
 
-/** The browser's own decoder, or null where it has none (every iPhone, Firefox); there the digits are typed. */
+/** The browser's own decoder, or null where it has none (every iPhone, Firefox). */
 export function nativeDetector(): Detect | null {
   const Constructor = (globalThis as { BarcodeDetector?: NativeDetectorConstructor })
     .BarcodeDetector;
@@ -46,6 +50,43 @@ export function nativeDetector(): Detect | null {
   const detector = new Constructor({ formats });
 
   return async (video) => (await detector.detect(video))[0]?.rawValue ?? null;
+}
+
+/**
+ * ZXing compiled to WebAssembly, for browsers without a decoder of their own. It is imported only here, so it never
+ * weighs on a cold load, and its .wasm comes from the app's own build: the library would otherwise fetch it from a CDN.
+ * Null where there is no camera, or where the decoder cannot load (offline before it was ever fetched, or a policy
+ * without 'wasm-unsafe-eval').
+ */
+export async function fallbackDetector(): Promise<Detect | null> {
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return null;
+  }
+
+  try {
+    // The ponyfill bundles its own copy of zxing-wasm's code, so the module is prepared through it, not through zxing-wasm.
+    const { BarcodeDetector, prepareZXingModule } = await import('barcode-detector/ponyfill');
+
+    // Compiled now rather than on the first frame, so a decoder that cannot load shows as one before the camera opens.
+    await prepareZXingModule({
+      overrides: {
+        locateFile: (file: string, prefix: string) =>
+          file.endsWith('.wasm') ? readerWasm : prefix + file
+      },
+      fireImmediately: true
+    });
+
+    const detector = new BarcodeDetector({ formats });
+
+    return async (video) => (await detector.detect(video))[0]?.rawValue ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** The browser's own decoder first, then ZXing; null means the digits are typed. */
+export async function chooseDetector(): Promise<Detect | null> {
+  return nativeDetector() ?? (await fallbackDetector());
 }
 
 /**

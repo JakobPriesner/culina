@@ -83,12 +83,14 @@ using Application.Settings.GetAssistanceModels;
 using Application.Settings.GetAssistanceUsage;
 using Application.Settings.GetDatabase;
 using Application.Settings.GetMail;
+using Application.Settings.GetProducts;
 using Application.Settings.GetRegistration;
 using Application.Settings.GetServer;
 using Application.Settings.SendMailTest;
 using Application.Settings.UpdateAssistance;
 using Application.Settings.UpdateDatabase;
 using Application.Settings.UpdateMail;
+using Application.Settings.UpdateProducts;
 using Application.Settings.UpdateRegistration;
 using Application.Settings.UpdateServer;
 using Application.Setup.Get;
@@ -260,6 +262,10 @@ public static class DependencyInjection
             // Instance settings
             .AddScoped<IQueryHandler<GetRegistrationSettingsQuery,
                 Contracts.Settings.GetRegistration.Response>, GetRegistrationSettingsQueryHandler>()
+            .AddScoped<IQueryHandler<GetProductSettingsQuery,
+                Contracts.Settings.GetProducts.Response>, GetProductSettingsQueryHandler>()
+            .AddScoped<ICommandHandler<UpdateProductSettingsCommand,
+                Contracts.Settings.GetProducts.Response>, UpdateProductSettingsCommandHandler>()
             .AddScoped<ICommandHandler<UndoCookedCommand>, UndoCookedCommandHandler>()
             .AddScoped<ICommandHandler<SetFoodCorrectionCommand>, SetFoodCorrectionCommandHandler>()
             .AddScoped<ICommandHandler<RemoveFoodCorrectionCommand>, RemoveFoodCorrectionCommandHandler>()
@@ -276,6 +282,8 @@ public static class DependencyInjection
             .AddScoped<IQueryHandler<ListProductsQuery, Contracts.Products.ProductsResponse>, ListProductsQueryHandler>()
             .AddScoped<ICommandHandler<SetProductCommand, Contracts.Products.ProductDetail>, SetProductCommandHandler>()
             .AddScoped<ICommandHandler<RemoveProductCommand>, RemoveProductCommandHandler>()
+            .AddScoped<IQueryHandler<GetCatalogueProductQuery, Contracts.Products.CatalogueProductDetail>, GetCatalogueProductQueryHandler>()
+            .AddScoped<IQueryHandler<SearchCatalogueQuery, Contracts.Products.CatalogueProductsResponse>, SearchCatalogueQueryHandler>()
             .AddScoped<IQueryHandler<GetShoppingListQuery,
                 Contracts.Shopping.Response>, GetShoppingListQueryHandler>()
             .AddScoped<ICommandHandler<AddShoppingItemCommand,

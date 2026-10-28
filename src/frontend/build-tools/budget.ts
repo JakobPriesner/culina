@@ -15,7 +15,9 @@ import type { Dictionary, Manifest } from './routePreloads.ts';
 export const budgets = {
   firstLoadBytes: 80 * 1024,
   heaviestRouteBytes: 340 * 1024,
-  totalJavaScriptBytes: 525 * 1024,
+  // 550 since 28 October 2026: the barcode fallback decoder (barcode-detector, about 14 kB) and the diary's scan and
+  // search, loaded only when a package is scanned; the first load did not change.
+  totalJavaScriptBytes: 550 * 1024,
   totalStyleBytes: 73 * 1024
 } as const;
 

@@ -4,6 +4,7 @@ using Application.Households;
 using Application.Telemetry;
 using Contracts.Nutrition;
 using Domain.Nutrition;
+using Domain.Products;
 using Domain.Shared;
 
 namespace Application.Nutrition;
@@ -11,8 +12,14 @@ namespace Application.Nutrition;
 /// <summary>The foods a household can choose beyond the table: its own, and those of the households it inherits from.</summary>
 public sealed record GetHouseholdFoodsQuery(Guid HouseholdId, Guid UserId);
 
-/// <summary>Keeps a food typed from a package's label, per 100 g.</summary>
-public sealed record CreateHouseholdFoodCommand(Guid HouseholdId, Guid UserId, string Name, Nutrients Per100Grams);
+/// <summary>Keeps a food typed from a package's label, per 100 g, or taken over from Open Food Facts for a barcode.</summary>
+public sealed record CreateHouseholdFoodCommand(
+    Guid HouseholdId,
+    Guid UserId,
+    string Name,
+    Nutrients Per100Grams,
+    string? Gtin = null,
+    bool FromCatalogue = false);
 
 /// <summary>Removes one of the household's foods, and every choice of it.</summary>
 public sealed record DeleteHouseholdFoodCommand(Guid HouseholdId, Guid UserId, Guid FoodId);
@@ -56,6 +63,9 @@ internal sealed class GetHouseholdFoodsQueryHandler(
 internal sealed class CreateHouseholdFoodCommandHandler(
     IHouseholdRepository households,
     IHouseholdFoodRepository ownFoods,
+    IProductRepository products,
+    IProductCatalogue catalogue,
+    IUnitOfWork unitOfWork,
     TimeProvider time)
     : ICommandHandler<CreateHouseholdFoodCommand, HouseholdFoodDetail>
 {
@@ -73,22 +83,81 @@ internal sealed class CreateHouseholdFoodCommandHandler(
 
         var id = Guid.CreateVersion7();
 
-        var result = await allowed
-            .Bind(() => HouseholdFoods.Create(id, command.Name, command.Per100Grams))
-            .Match(
-                async food =>
-                {
-                    await ownFoods
-                        .AddAsync(command.HouseholdId, id, food, time.GetUtcNow(), cancellationToken)
-                        .ConfigureAwait(false);
+        // A barcode is optional, but one that is sent must be one.
+        var package = command.Gtin is null
+            ? Result<Package>.Success(new Package(null))
+            : Gtin.Create(command.Gtin).Map(gtin => new Package(gtin));
 
-                    return Result<HouseholdFoodDetail>.Success(
-                        new HouseholdFood(id, food, command.HouseholdId).ToContract(command.HouseholdId));
-                },
+        var result = await allowed
+            .Bind(() => package)
+            .Bind(scanned => HouseholdFoods.Create(id, command.Name, command.Per100Grams).Map(food => (scanned, food)))
+            .Match(
+                async made => Result<HouseholdFoodDetail>.Success(
+                    await KeepAsync(command, id, made.food, made.scanned.Gtin, cancellationToken).ConfigureAwait(false)),
                 error => Task.FromResult(Result<HouseholdFoodDetail>.Failure(error))).ConfigureAwait(false);
 
         return tracked.Record(result);
     }
+
+    private async Task<HouseholdFoodDetail> KeepAsync(
+        CreateHouseholdFoodCommand command,
+        Guid id,
+        Food food,
+        Gtin? gtin,
+        CancellationToken cancellationToken)
+    {
+        // What the person was shown, not a fresh ask: the values are compared with what they confirmed.
+        var offered = gtin is not null && command.FromCatalogue
+            ? await catalogue.RememberedAsync(gtin, cancellationToken).ConfigureAwait(false)
+            : null;
+        var kept = new HouseholdFood(
+            id,
+            food,
+            command.HouseholdId,
+            gtin?.Value,
+            HouseholdFoods.SourceOf(food.Per100Grams, gtin is not null && command.FromCatalogue, offered?.Per100Grams));
+
+        await unitOfWork.InTransactionAsync(
+            async token =>
+            {
+                await ownFoods.AddAsync(kept, time.GetUtcNow(), token).ConfigureAwait(false);
+
+                // The barcode becomes known to the household's memory as well, so a scan in the shop or the kitchen
+                // finds it by name; a code it already named keeps that name (AlreadyNamed is fine here).
+                if (Named(food, gtin, offered) is { } product)
+                {
+                    _ = await products.AddAsync(command.HouseholdId, command.UserId, product, token).ConfigureAwait(false);
+                }
+
+                return true;
+            },
+            cancellationToken).ConfigureAwait(false);
+
+        return kept.ToContract(command.HouseholdId);
+    }
+
+    private static HouseholdProduct? Named(Food food, Gtin? gtin, CatalogueProduct? offered)
+    {
+        if (gtin is null)
+        {
+            return null;
+        }
+
+        // The pack's size only when it is a weight or a volume a recipe line would write.
+        var named = HouseholdProduct.Create(
+            gtin.Value,
+            food.NameDe,
+            food.NameDe,
+            offered?.PackGrams,
+            offered?.PackGrams is null ? null : offered.PackUnit,
+            null,
+            null);
+
+        return named.Match<HouseholdProduct?>(product => product, _ => null);
+    }
+
+    /// <summary>The package a food was typed from, when its barcode was scanned.</summary>
+    private sealed record Package(Gtin? Gtin);
 }
 
 internal sealed class DeleteHouseholdFoodCommandHandler(
@@ -139,7 +208,9 @@ internal static class HouseholdFoodMappings
             Sugars = values.Sugars,
             Protein = values.Protein,
             Salt = values.Salt,
-            Own = food.HouseholdId == asking
+            Own = food.HouseholdId == asking,
+            Gtin = food.Gtin,
+            Source = food.Source
         };
     }
 }

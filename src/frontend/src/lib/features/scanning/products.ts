@@ -1,4 +1,5 @@
 import { http, ok, request, type Result } from '$api';
+import { toFood, type HouseholdFood } from '$features/nutrition/stores/householdFoods.svelte';
 
 /** What a household says a barcode is: a mapping from a pack to an ingredient, never what is at home. */
 export interface Product {
@@ -15,6 +16,8 @@ export interface Product {
   /** The household whose memory it is: the one asked, or one it inherits from. */
   readonly householdId: string;
   readonly version: number;
+  /** The food the household kept from the pack's label, with its values; null when nobody typed or took them over. */
+  readonly food: HouseholdFood | null;
 }
 
 interface Wire {
@@ -27,6 +30,7 @@ interface Wire {
   note?: string | null;
   householdId: string;
   version: number;
+  food?: Parameters<typeof toFood>[0] | null;
 }
 
 const toProduct = (wire: Wire): Product => ({
@@ -38,7 +42,8 @@ const toProduct = (wire: Wire): Product => ({
   cookMinutes: wire.cookMinutes ?? null,
   note: wire.note ?? null,
   householdId: wire.householdId,
-  version: wire.version
+  version: wire.version,
+  food: wire.food ? toFood(wire.food) : null
 });
 
 const unknown = 'products.unknown';

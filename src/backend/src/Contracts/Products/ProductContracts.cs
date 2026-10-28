@@ -54,6 +54,12 @@ public sealed record ProductDetail
 
     /// <summary>The version of the row, sent back as <c>If-Match</c> to change or remove it.</summary>
     public required long Version { get; init; }
+
+    /// <summary>
+    /// The household food kept for this barcode with its values per 100 g, nearest household first; null when nobody
+    /// typed or took over its label yet. Only the single read carries it, not the list.
+    /// </summary>
+    public Nutrition.HouseholdFoodDetail? Food { get; init; }
 }
 
 /// <summary>Every barcode a household, and the households it inherits from, have named.</summary>

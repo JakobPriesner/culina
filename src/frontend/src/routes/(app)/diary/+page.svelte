@@ -467,6 +467,10 @@
     adding = null;
     pickingRecipe = true;
   }}
+  onpickrecipe={(picked) => {
+    adding = null;
+    recipe(picked);
+  }}
   onfood={food}
   ontyped={(figures) => void typed(figures)}
   onclose={close}

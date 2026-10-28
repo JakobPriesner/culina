@@ -10,11 +10,11 @@ public static class NutritionData
     public const string SourceVersion = "4.0";
 
     /// <summary>
-    /// Raise when <c>bls.tsv</c> or the rules in <see cref="NutritionGrams"/> change; a change to
-    /// <see cref="FoodNames"/>, <see cref="TypicalWeights"/> or <see cref="FoodVariants"/> raises
-    /// <see cref="Version"/> through its own version.
+    /// Raise when <c>bls.tsv</c>, the rules in <see cref="NutritionGrams"/> or how <c>GET /foods</c>
+    /// searches the table change; a change to <see cref="FoodNames"/>, <see cref="TypicalWeights"/> or
+    /// <see cref="FoodVariants"/> raises <see cref="Version"/> through its own version.
     /// </summary>
-    private const int ExtractAndRulesVersion = 5;
+    private const int ExtractAndRulesVersion = 6;
 
     /// <summary>
     /// What an ETag over a nutrition figure includes, so a deploy with new data is never answered
