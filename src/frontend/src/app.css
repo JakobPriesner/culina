@@ -95,8 +95,29 @@ p {
   text-wrap: pretty;
 }
 
+/*
+ * Two kinds of tappable text, and only two (culina-v2-6ilt.10): a link goes somewhere, in the accent and underlined
+ * (this rule); `.text-action` does something here, in the accent and a medium weight, underlined only on hover. A
+ * dotted underline stays reserved for "tap to change the unit".
+ */
 a {
   color: var(--accent);
+}
+
+.text-action {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.text-action:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 img {

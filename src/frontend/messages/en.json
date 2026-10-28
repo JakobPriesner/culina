@@ -1867,7 +1867,7 @@
   "nutrition.summary.coverage": "{counted} of {lines} ingredient lines counted.",
   "nutrition.breakdown.basis": "Amounts for {yield}. Energy {per}.",
   "editor.groupName": "Name of group {number}",
-  "editor.groupNamePlaceholder": "Unnamed group",
+  "editor.groupNamePlaceholder": "Group {number}",
   "editor.removeGroup": "Remove empty group {number}",
   "editor.addGroup": "+ Group",
   "editor.addIngredientToGroup": "Add ingredient to group {number}",
@@ -2619,5 +2619,7 @@
   "plan.recipe.short": "Plan",
   "shopping.addToList.short": "Shop",
   "shopping.onList.short": "On the list",
-  "me.diary.saved": "Saved"
+  "me.diary.saved": "Saved",
+  "editor.addIngredientPlain": "Add ingredient",
+  "editor.addIngredientToNamed": "Add ingredient to “{name}”"
 }

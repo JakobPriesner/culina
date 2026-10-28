@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { shelfTitle } from '$features/cookbooks/shelfTitle';
   import { resolve } from '$app/paths';
 
   import { m } from '$shell/i18n';
@@ -88,7 +89,8 @@
     {#each cookbooks as shelf, index (shelf.id)}
       <a
         class="hit-target"
-        href={resolve('/(app)/cookbooks/[cookbookId]', { cookbookId: shelf.id })}>{shelf.name}</a
+        href={resolve('/(app)/cookbooks/[cookbookId]', { cookbookId: shelf.id })}
+        >{shelfTitle(shelf.name)}</a
       >{#if index < cookbooks.length - 1}<span aria-hidden="true">, </span>{/if}
     {/each}
   </p>

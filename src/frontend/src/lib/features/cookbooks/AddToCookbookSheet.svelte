@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { shelfTitle } from './shelfTitle';
   import { untrack } from 'svelte';
 
   import { Button, Checkbox, Sheet } from '$ds';
@@ -87,7 +88,7 @@
             <!-- A self-filling shelf is shown but not offered: hiding it would leave people hunting,
                  and the disabled tick says whether the recipe is on it. -->
             <Checkbox
-              label={cookbook.name}
+              label={shelfTitle(cookbook.name)}
               checked={cookbooks.contains(recipeId, cookbook.id)}
               disabled={cookbook.kind === 'smart'}
               onchange={(on) => void toggle(cookbook.id, cookbook.name, on)}

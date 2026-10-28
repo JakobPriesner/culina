@@ -68,12 +68,10 @@
     align-self: center;
   }
 
-  /* A strip of its own (a bare floating button cut a hole in the method), not at the inline end where the ingredient column is; sticks above the shell's bottom inset. */
+  /* On a desktop the title's actions offer cooking where the reading starts, so this waits at the end of the recipe
+     instead of floating over the steps (culina-v2-6ilt.17). */
   @media screen {
     .cook-action {
-      position: sticky;
-      bottom: max(var(--bottom-inset), env(safe-area-inset-bottom, 0px));
-      z-index: var(--z-sticky);
       align-self: stretch;
       margin-block-end: var(--space-8);
     }
@@ -82,17 +80,6 @@
       position: relative;
       margin-block-end: 0;
       padding-block: var(--space-4);
-    }
-
-    /* A short edge fade, like a toolbar's scroll edge: solid only below the button's middle, so the recipe
-       stays readable up to the button instead of disappearing behind a band (it once covered ~110px). */
-    .cook-action .foot::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      z-index: -1;
-      background: linear-gradient(to top, var(--surface) 35%, transparent);
-      pointer-events: none;
     }
   }
 
@@ -110,6 +97,17 @@
     .cook-action .foot {
       position: relative;
       margin-block-end: 0;
+    }
+
+    /* A short edge fade, like a toolbar's scroll edge: solid only below the button's middle, so the recipe
+       stays readable up to the button instead of disappearing behind a band (it once covered ~110px). */
+    .cook-action .foot::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: linear-gradient(to top, var(--surface) 35%, transparent);
+      pointer-events: none;
     }
 
     .cook-action .foot:global(.docked) {

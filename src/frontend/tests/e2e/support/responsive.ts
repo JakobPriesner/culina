@@ -380,13 +380,16 @@ export async function responsiveData(
     // A visitor with a share link and no account: the app asks who is signed in and is told nobody.
     signedOut = false,
     // An imported recipe's shape: the lines split into named groups, the second holding the apples.
-    twoGroups = false
+    twoGroups = false,
+    // The recipe's own name on its page; the long default tests wrapping, a short one the usual first screen.
+    title = longName
   } = {}
 ) {
   await overlayScrollbars(page);
 
   const detail = {
     ...recipe,
+    title,
     yieldAmount: nutritionVariant === 'whole' ? 1 : recipe.yieldAmount,
     steps: (stepCount > 0
       ? Array.from({ length: stepCount }, (_, i) => ({

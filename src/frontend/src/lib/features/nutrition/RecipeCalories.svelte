@@ -7,7 +7,16 @@
   import { labelNumber, nbsp } from './format';
   import { perWords } from './headline';
 
-  let { recipe }: { recipe: RecipeSummary } = $props();
+  interface Props {
+    recipe: RecipeSummary;
+    /**
+     * Offers the ⓘ that says what "mind." and "ca." mean. A grid of cards leaves it out: thirty identical buttons
+     * (and tab stops) said it thirty times. The featured card above the grid and the recipe's own page say it once.
+     */
+    explained?: boolean;
+  }
+
+  let { recipe, explained = true }: Props = $props();
   const basis = $derived(
     perWords({
       per: recipe.yieldKind === 'pieces' ? 'piece' : 'serving',
@@ -31,7 +40,7 @@
   <!-- No number at all: "mind. 139 kcal" for a dish whose beef was not counted still reads as a light one. -->
   <span class="calories partial">
     <span>{m['nutrition.calories.mostlyMissing']()}</span>
-    <CalorieInfo atLeast mostlyMissing {basis} />
+    {#if explained}<CalorieInfo atLeast mostlyMissing {basis} />{/if}
   </span>
 {:else if recipe.calories}
   <span class="calories" class:partial={recipe.calories.atLeast}>
@@ -42,7 +51,13 @@
         estimated={recipe.calories.estimated}
       />{labelNumber('energy', recipe.calories)}{nbsp}kcal <span class="per">{per}</span>
     </span>
-    <CalorieInfo atLeast={recipe.calories.atLeast} estimated={recipe.calories.estimated} {basis} />
+    {#if explained}
+      <CalorieInfo
+        atLeast={recipe.calories.atLeast}
+        estimated={recipe.calories.estimated}
+        {basis}
+      />
+    {/if}
   </span>
 {/if}
 

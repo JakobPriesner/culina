@@ -27,11 +27,15 @@
 </div>
 
 <style>
-  /* 16:9, capped so a wide screen does not fill the first screenful; it shrinks the box rather than cropping the bottom, since the subject is central. */
+  /*
+   * 16:9, capped so a wide screen does not fill the first screenful: at most a quarter of the window (24rem on a tall
+   * one), so the ingredients start on a laptop's first screen (culina-v2-6ilt.17). It shrinks the box rather than
+   * cropping the bottom, since the subject is central.
+   */
   .hero {
     display: grid;
     aspect-ratio: 16 / 9;
-    max-height: 24rem;
+    max-height: min(24rem, 25vh);
     /* Explicit: max-height transfers through the aspect ratio into a max-width, so auto would make the box narrow instead of short. */
     width: 100%;
     overflow: hidden;

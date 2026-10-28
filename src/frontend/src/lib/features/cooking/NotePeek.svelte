@@ -71,12 +71,12 @@
   {:else if note}
     <aside class="peek" aria-label={m['notes.title']()}>
       <p class="note">{note}</p>
-      <button type="button" class="edit hit-target reach" onclick={() => void write()}>
+      <button type="button" class="edit text-action hit-target reach" onclick={() => void write()}>
         {m['notes.peek.edit']()}
       </button>
     </aside>
   {:else}
-    <button type="button" class="add hit-target reach" onclick={() => void write()}>
+    <button type="button" class="add text-action hit-target reach" onclick={() => void write()}>
       + {m['notes.peek.add']()}
     </button>
   {/if}
@@ -120,17 +120,6 @@
     display: flex;
     align-items: center;
     gap: var(--space-3);
-  }
-
-  .edit,
-  .add {
-    padding: 0;
-    border: 0;
-    background: none;
-    color: var(--accent);
-    font: inherit;
-    font-weight: var(--weight-medium);
-    cursor: pointer;
   }
 
   .add {

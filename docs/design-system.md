@@ -138,6 +138,12 @@ paper surface, a small cooking mark, and a ruled heading area. Card links have a
 visible directional affordance and a whole-card keyboard focus ring. The feature
 link uses the feature foreground for both text and focus in light and dark mode.
 
+**Two kinds of tappable text** (culina-v2-6ilt.10): a link goes somewhere and is accent and underlined (the
+global `a` rule); `.text-action` does something here and is accent and medium weight, underlined on hover ("Wie
+gestern", "+ Notiz für nächstes Mal", "Rezept planen"). A dotted underline means "tap to change the unit" only.
+A cookbook an import made is named "<app> · yyyy-MM-dd" on the server, the same in every language; `shelfTitle`
+writes that date in the reader's own format on screen.
+
 **Settings save as they are set** (decided 28 October 2026, culina-v2-6ilt.6): switches, segmented
 controls and selects on change; a text or number field when it is left or Enter is pressed, with a
 quiet "Gespeichert" or the error and a retry under its group, never a toast. Mail and Server are the

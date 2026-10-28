@@ -77,7 +77,7 @@
     <div class="details">
       <div class="facts">
         {#if meta}<p class="meta">{meta}</p>{/if}
-        <RecipeCalories {recipe} />
+        <RecipeCalories {recipe} explained={false} />
       </div>
       <span class="open" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">

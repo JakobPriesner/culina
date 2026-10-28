@@ -17,6 +17,10 @@
     cooked?: { readonly count: number; readonly lastMadeAt: string | null } | null;
     onaddtocookbook?: () => void;
     onaddtoplan?: () => void;
+    /** Desktop puts starting (or going back to) cooking among the title's actions; see `RecipeActions`. */
+    onstartcooking?: () => void;
+    resuming?: boolean;
+    onmadeit?: () => void;
     onshare?: () => void;
     oncopy?: () => void;
     ondelete?: () => void;
@@ -36,6 +40,9 @@
     cooked = null,
     onaddtocookbook,
     onaddtoplan,
+    onstartcooking,
+    resuming = false,
+    onmadeit,
     onshare,
     oncopy,
     ondelete,
@@ -61,6 +68,9 @@
       {listed}
       {onaddtocookbook}
       {onaddtoplan}
+      {onstartcooking}
+      {resuming}
+      {onmadeit}
       {onshare}
       {oncopy}
       {ondelete}

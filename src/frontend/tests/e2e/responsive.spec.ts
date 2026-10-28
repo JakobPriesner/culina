@@ -456,6 +456,36 @@ test.describe('responsive production layouts @offline', () => {
       const titleBox = (await title.boundingBox())!;
       expect(hero.width).toBeCloseTo(surface.width, 0);
       expect(titleBox.y).toBeGreaterThanOrEqual(hero.y + hero.height);
+      // At most a third of the window tall, servings, tags and notes in one band, the ingredients on the first
+      // screen, and nothing floating over the steps (culina-v2-6ilt.17).
+      expect(hero.height).toBeLessThanOrEqual(height / 4 + 1);
+      await expect(page.locator('article.surface > .cook-action')).not.toBeInViewport();
+      await expectReflow(page);
+    });
+  }
+
+  for (const [width, height] of [
+    [1280, 800],
+    [1440, 900]
+  ] as const) {
+    test(`a recipe's ingredients start on the first screen at ${width}x${height}`, async ({
+      page
+    }, testInfo) => {
+      test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport.');
+      await page.setViewportSize({ width, height });
+      // A name of the usual length: the long default runs to three lines at this size, which no layout keeps short.
+      await responsiveData(page, 'de', { activeCooking: false, title: 'Sonntagsbrot mit Saaten' });
+      await page.goto(`/recipes/${recipeId}`);
+
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+      // Servings, tags and notes share one band between hairlines (culina-v2-6ilt.17).
+      const servings = (await page.locator('article.surface .details > .servings').boundingBox())!;
+      const tags = (await page.locator('article.surface .details > .tags').boundingBox())!;
+      expect(Math.abs(tags.y + tags.height / 2 - (servings.y + servings.height / 2))).toBeLessThan(
+        8
+      );
+      const ingredients = page.getByRole('heading', { name: 'Zutaten', exact: true });
+      await expect(ingredients).toBeInViewport({ ratio: 1 });
       await expectReflow(page);
     });
   }
@@ -468,7 +498,7 @@ test.describe('responsive production layouts @offline', () => {
     await page.goto(`/recipes/${recipeId}`);
 
     const title = page.getByRole('heading', { level: 1 });
-    const servings = page.locator('article.surface > .servings');
+    const servings = page.locator('article.surface > .details > .servings');
     // The recipe's own cooking action leads back; the floating pill stays off its page.
     const resume = page.getByRole('button', { name: 'Weiterkochen' });
     await expect(title).toBeVisible();
@@ -858,13 +888,30 @@ async function expectStartCookingReachable(page: Page, width: number, height: nu
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(`/recipes/${recipeId}`);
 
-  const start = page.getByRole('button', { name: 'Kochen starten', exact: true });
   const action = page.locator('article.surface > .cook-action > footer.foot');
+
+  // A desktop offers cooking beside the title, where the reading starts, and the end of the recipe keeps its own
+  // action in place rather than floating it over the steps (culina-v2-6ilt.17).
+  if (width >= 1024) {
+    const inTitle = page
+      .locator('article.surface > .head')
+      .getByRole('button', { name: 'Kochen starten', exact: true });
+    await expect(inTitle).toBeInViewport({ ratio: 1 });
+    expect(
+      await action.evaluate((element) => getComputedStyle(element.parentElement!).position)
+    ).toBe('static');
+    const body = (await page.locator('article.surface > .body').boundingBox())!;
+    expect((await action.boundingBox())!.y).toBeGreaterThanOrEqual(body.y + body.height - 1);
+    await expectReflow(page);
+    await inTitle.click();
+    await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/cook`));
+    return;
+  }
+
+  const start = page.getByRole('button', { name: 'Kochen starten', exact: true });
   await expect(start).toBeVisible();
   await expect(start).toBeInViewport({ ratio: 1 });
-  expect(await action.evaluate((element) => getComputedStyle(element).position)).toBe(
-    width < 1024 ? 'fixed' : 'relative'
-  );
+  expect(await action.evaluate((element) => getComputedStyle(element).position)).toBe('fixed');
 
   const actionBox = (await action.boundingBox())!;
   const bottom = width < 1024 ? (await page.locator('nav.bottom').boundingBox())!.y : height;

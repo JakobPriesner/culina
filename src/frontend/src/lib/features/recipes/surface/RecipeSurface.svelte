@@ -163,6 +163,9 @@
     {listed}
     {onaddtocookbook}
     {onaddtoplan}
+    onstartcooking={canCook ? onstartcooking : undefined}
+    {resuming}
+    onmadeit={canCook ? onmadeit : undefined}
     {onshare}
     {oncopy}
     {ondelete}
@@ -171,16 +174,20 @@
     {cooked}
   />
 
-  <SurfaceServings {recipe} {servings} {scaling} {onservings} onscaleto={() => scaleByAmount()} />
+  <!-- One row on a desktop (servings, tags, notes), so the ingredients start on a laptop's first screen; each its own
+       band below that. -->
+  <div class="details">
+    <SurfaceServings {recipe} {servings} {scaling} {onservings} onscaleto={() => scaleByAmount()} />
 
-  {#if !cooking}
-    <RecipeTags recipeId={recipe.id} tags={recipe.tags} />
-  {/if}
+    {#if !cooking}
+      <RecipeTags recipeId={recipe.id} tags={recipe.tags} />
+    {/if}
 
-  <!-- After the servings band, not under the title: on a phone that keeps the servings on the first screen. -->
-  {#if whereabouts && !cooking}
-    <div class="whereabouts">{@render whereabouts()}</div>
-  {/if}
+    <!-- After the servings band, not under the title: on a phone that keeps the servings on the first screen. -->
+    {#if whereabouts && !cooking}
+      <div class="whereabouts">{@render whereabouts()}</div>
+    {/if}
+  </div>
 
   <div class="body">
     <IngredientsPanel
@@ -232,6 +239,56 @@
     gap: var(--space-8);
   }
 
+  /* Below a desktop the wrapper is not there for layout: servings, tags and notes are bands of the surface. */
+  .details {
+    display: contents;
+  }
+
+  /*
+   * A desktop reads servings, tags and notes as one band between hairlines (the servings band's own), so the head is
+   * one row shorter by two and the ingredients start on a 1280x800 screen (culina-v2-6ilt.17). Anything too long for
+   * the row (a written note, many tags) wraps under it rather than squeezing the servings.
+   */
+  @media screen and (min-width: 64rem) {
+    .surface:not(.cooking) {
+      gap: var(--space-6);
+    }
+
+    .surface:not(.cooking) .details {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-3) var(--space-4);
+      padding-block: var(--space-3);
+      border-block: 1px solid var(--border);
+    }
+
+    .surface:not(.cooking) .details > :global(.servings) {
+      padding-block: 0;
+      border-block: none;
+    }
+
+    /* Takes what the row has left and wraps inside it, rather than dropping whole to a line of its own. */
+    .surface:not(.cooking) .details > .whereabouts {
+      display: flex;
+      flex: 1 1 0;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-3);
+      min-width: min(100%, 16rem);
+    }
+
+    /* In a row their stacked spacing would only push them off the line. */
+    .surface:not(.cooking) .details > .whereabouts > :global(*:not(.peek)) {
+      margin-block: 0;
+      padding-block: 0;
+    }
+
+    .surface:not(.cooking) .details > .whereabouts > :global(.peek) {
+      flex-basis: 100%;
+    }
+  }
+
   /* Two columns; widths come from `--side-column`/`--card-padding` so heading rows and steps agree. */
   .body {
     display: grid;
@@ -262,7 +319,8 @@
       align-items: start;
     }
 
-    .photographed > :global(*) {
+    .photographed > :global(*),
+    .photographed > .details > :global(*) {
       grid-column: 1 / -1;
     }
 
@@ -273,7 +331,7 @@
     }
 
     .photographed > :global(.head),
-    .photographed > :global(.servings) {
+    .photographed > .details > :global(.servings) {
       grid-column: 2;
     }
   }

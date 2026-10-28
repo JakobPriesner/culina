@@ -52,7 +52,9 @@ describe('the ingredient groups', () => {
     renderWithProviders(IngredientGroups, { props: props(named) });
 
     expect(screen.getAllByRole('combobox', { name: 'Ingredient' })).toHaveLength(1);
-    expect(screen.getByRole('button', { name: /Add ingredient to group 1/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Add ingredient to “For the dough”/ })
+    ).toBeInTheDocument();
   });
 
   it('adds a line to the group whose add row was used', async () => {
@@ -60,7 +62,9 @@ describe('the ingredient groups', () => {
 
     renderWithProviders(IngredientGroups, { props: given });
 
-    await userEvent.click(screen.getByRole('button', { name: /Add ingredient to group 1/ }));
+    await userEvent.click(
+      screen.getByRole('button', { name: /Add ingredient to “For the dough”/ })
+    );
 
     const field = screen.getAllByRole('combobox', { name: 'Ingredient' })[0]!;
 

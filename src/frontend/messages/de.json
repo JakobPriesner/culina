@@ -1867,7 +1867,7 @@
   "nutrition.summary.coverage": "{counted} von {lines} Zutatenzeilen gezählt.",
   "nutrition.breakdown.basis": "Mengen für {yield}. Energie {per}.",
   "editor.groupName": "Name der Gruppe {number}",
-  "editor.groupNamePlaceholder": "Gruppe ohne Namen",
+  "editor.groupNamePlaceholder": "Gruppe {number}",
   "editor.removeGroup": "Leere Gruppe {number} entfernen",
   "editor.addGroup": "+ Gruppe",
   "editor.addIngredientToGroup": "Zutat zu Gruppe {number} hinzufügen",
@@ -2619,5 +2619,7 @@
   "plan.recipe.short": "Planen",
   "shopping.addToList.short": "Einkaufen",
   "shopping.onList.short": "Auf der Liste",
-  "me.diary.saved": "Gespeichert"
+  "me.diary.saved": "Gespeichert",
+  "editor.addIngredientPlain": "Zutat hinzufügen",
+  "editor.addIngredientToNamed": "Zutat zu „{name}“ hinzufügen"
 }

@@ -324,8 +324,10 @@
           {:else}
             <p class="nothing-planned">
               {m['plan.empty.title']()}
-              <Button size="sm" variant="ghost" onclick={() => addOn(firstOpenDay)}
-                >{m['plan.empty.action']()}</Button
+              <button
+                type="button"
+                class="text-action hit-target reach"
+                onclick={() => addOn(firstOpenDay)}>{m['plan.empty.action']()}</button
               >
             </p>
           {/if}

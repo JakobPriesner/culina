@@ -355,5 +355,10 @@
     .administration::before {
       content: none;
     }
+
+    /* Starts where "Einstellungen" does; the row layout's centring would put it mid-column. */
+    .administration .legend {
+      align-self: stretch;
+    }
   }
 </style>
