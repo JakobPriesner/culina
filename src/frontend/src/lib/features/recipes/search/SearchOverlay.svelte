@@ -315,6 +315,7 @@
     border: 1px solid var(--border-strong);
     border-radius: var(--radius-lg);
     background: var(--surface-raised);
+    --field-surface: var(--field-surface-inset);
     color: var(--text);
     font: inherit;
     font-size: var(--text-lg);

@@ -41,9 +41,9 @@
 
 <!-- The loop's next steps (plan, shop) and editing stay outside the menu; the occasional ones go in it, and deleting comes last there, apart and in red. -->
 {#if hasActions}
-  <div class="actions">
+  <div class="actions" class:edit-in-menu={inMenu && editable}>
     {#if onaddtoplan}
-      <Button label={m['plan.recipe.action']()} onclick={onaddtoplan}>
+      <Button onclick={onaddtoplan}>
         {#snippet icon()}
           <svg
             viewBox="0 0 24 24"
@@ -59,15 +59,13 @@
           </svg>
         {/snippet}
 
-        {m['plan.recipe.action']()}
+        <span class="long">{m['plan.recipe.action']()}</span>
+        <span class="short">{m['plan.recipe.short']()}</span>
       </Button>
     {/if}
 
     {#if onaddtolist}
-      <Button
-        label={listed ? m['shopping.onList']() : m['shopping.addToList']()}
-        onclick={onaddtolist}
-      >
+      <Button onclick={onaddtolist}>
         {#snippet icon()}
           <svg
             viewBox="0 0 24 24"
@@ -86,32 +84,37 @@
           </svg>
         {/snippet}
 
-        {listed ? m['shopping.onList']() : m['shopping.addToList']()}
+        <span class="long">{listed ? m['shopping.onList']() : m['shopping.addToList']()}</span>
+        <span class="short"
+          >{listed ? m['shopping.onList.short']() : m['shopping.addToList.short']()}</span
+        >
       </Button>
     {/if}
 
     <!-- A link, so the editor can open in a second tab. -->
     {#if editable}
-      <Button
-        label={m['editor.edit']()}
-        href={resolve('/(app)/recipes/[recipeId]/edit', { recipeId })}
-      >
-        {#snippet icon()}
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z" />
-            <path d="m15 6 3 3" />
-          </svg>
-        {/snippet}
+      <span class="edit"
+        ><Button
+          label={m['editor.edit']()}
+          href={resolve('/(app)/recipes/[recipeId]/edit', { recipeId })}
+        >
+          {#snippet icon()}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z" />
+              <path d="m15 6 3 3" />
+            </svg>
+          {/snippet}
 
-        {m['editor.edit']()}
-      </Button>
+          {m['editor.edit']()}
+        </Button></span
+      >
     {/if}
 
     {#if inMenu}
@@ -125,6 +128,28 @@
             </svg>
           </IconButton>
         {/snippet}
+
+        <!-- Only on the narrowest phones, where the pencil beside the menu no longer fits the row. -->
+        {#if editable}
+          <span class="narrow-edit">
+            <a class="item" href={resolve('/(app)/recipes/[recipeId]/edit', { recipeId })}>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z" />
+                <path d="m15 6 3 3" />
+              </svg>
+
+              {m['editor.edit']()}
+            </a>
+          </span>
+        {/if}
 
         {#if onaddtocookbook}
           <button class="item" type="button" onclick={onaddtocookbook}>
@@ -218,20 +243,45 @@
 {/if}
 
 <style>
+  /* Wraps rather than running off the screen when a label is longer (on the list) or text is enlarged. */
   .actions {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-2);
   }
 
-  /* Three labelled buttons need the room; narrower, each collapses to a circle (a capsule with no label) like the menu's, and its aria-label stays the full name. */
+  /* The name follows what is on screen: the long wording, or the short one that fits a phone beside the others. */
+  .short {
+    display: none;
+  }
+
+  /*
+   * Narrower, the loop's two next steps keep a short word (an icon alone left "basket" and "calendar" to guess at) and
+   * editing collapses to a circle like the menu's, its aria-label the full name.
+   */
   @media (width < 64rem) {
+    .long {
+      display: none;
+    }
+
+    .short {
+      display: inline;
+    }
+
+    /* Whole words on one line (no mid-word breaks), with the side room a short word needs rather than a sentence's. */
     .actions :global(.button) {
+      flex-shrink: 0;
+      padding-inline: var(--space-3);
+      white-space: nowrap;
+    }
+
+    .edit :global(.button) {
       width: var(--control-md);
       padding-inline: 0;
     }
 
-    .actions :global(.button .label) {
+    .edit :global(.button .label) {
       display: none;
     }
   }
@@ -239,6 +289,21 @@
   @media (width < 52rem) {
     .actions {
       gap: var(--space-1);
+    }
+  }
+
+  .narrow-edit {
+    display: none;
+  }
+
+  /* Two short labels and two circles need about 383px; narrower (a 360 or 320px phone), editing joins the menu, first in it. */
+  @media (width < 24rem) {
+    .edit-in-menu .edit {
+      display: none;
+    }
+
+    .narrow-edit {
+      display: contents;
     }
   }
 

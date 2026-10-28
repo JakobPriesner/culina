@@ -84,6 +84,8 @@
 
   /* Height of the floating header; AppShell overrides with the measured value, this is today's figure so markup is placed right before it lands. */
   --header-inset: 5.625rem;
+  /* Where a pinned side column sticks; AppShell restates it against the measured header. */
+  --pinned-top: calc(var(--header-inset) + var(--layout-page-space));
   /*
    * The serif is Culina's voice for content: page titles, recipe and cookbook names, sections inside a recipe.
    * `ui-serif` is New York on Apple platforms, drawn to sit beside SF and with lining figures; Georgia elsewhere.

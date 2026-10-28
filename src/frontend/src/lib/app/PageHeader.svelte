@@ -23,16 +23,22 @@
 </header>
 
 <style>
+  /*
+   * The page's one action stays at the end of the title's line at every width, never a full-width bar of its own. The
+   * title starts from nothing and grows, so only a group that cannot fit beside a short title (several tools, or
+   * enlarged text) wraps under it.
+   */
   .page-header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
     flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
     gap: var(--space-4) var(--space-6);
     margin-bottom: var(--space-6);
   }
   .heading {
-    min-width: 0;
+    flex: 1 1 0;
+    min-width: min(100%, 8rem);
   }
   h1 {
     font-family: var(--font-editorial);
@@ -48,18 +54,13 @@
     font-size: var(--text-sm);
     line-height: var(--leading-relaxed);
   }
+  /* As tall as the title's first line, so the action centres on it whatever sits below. */
   .actions {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     flex-wrap: wrap;
     gap: var(--space-3);
-  }
-  @media (max-width: 30rem) {
-    .actions {
-      width: 100%;
-    }
-    .actions :global(.button) {
-      flex: 1 1 auto;
-    }
+    min-height: calc(var(--text-3xl) * var(--leading-tight));
   }
 </style>

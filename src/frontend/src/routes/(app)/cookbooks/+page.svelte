@@ -7,7 +7,7 @@
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
   import Olli from '$shell/olli/Olli.svelte';
-  import LibraryActions from '$shell/LibraryActions.svelte';
+  import PageAction from '$shell/PageAction.svelte';
   import PageHeader from '$shell/PageHeader.svelte';
   import Page from '$shell/Page.svelte';
   import { toaster } from '$shell/toaster.svelte';
@@ -67,7 +67,13 @@
 </script>
 
 {#snippet peeking()}<Olli pose="peeking" />{/snippet}
-{#snippet newCookbook()}<LibraryActions oncreatecookbook={() => (making = true)} />{/snippet}
+{#snippet newCookbook()}
+  <PageAction
+    text={m['cookbooks.new.short']()}
+    label={m['cookbooks.new.action']()}
+    onclick={() => (making = true)}
+  />
+{/snippet}
 <svelte:head><title>{m['cookbooks.title']()}</title></svelte:head>
 
 <Page>

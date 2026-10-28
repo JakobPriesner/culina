@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+
   import { IconButton } from '$ds';
 
   import { m } from '$shell/i18n';
@@ -30,6 +32,8 @@
     sought?: boolean;
     /** On a wide screen: a row of the week, its meals side by side (docs/woche-design.md §5.5). */
     row?: boolean;
+    /** A line of the day's own from elsewhere, under its meals: today's diary. */
+    extra?: Snippet;
   }
 
   let {
@@ -46,7 +50,8 @@
     onlines,
     ontolist,
     sought = false,
-    row = false
+    row = false,
+    extra
   }: Props = $props();
 
   const landing = $derived(drag.landing?.date === day.date ? drag.landing : null);
@@ -128,6 +133,8 @@
   {/if}
 
   <PlanDayNutrition meals={day.meals} {householdId} />
+
+  {#if extra}<div class="extra">{@render extra()}</div>{/if}
 </li>
 
 <style>
@@ -287,6 +294,10 @@
   .row :global([data-plan-nutrition]) {
     grid-column: 2;
     grid-row: 2;
+  }
+
+  .row .extra {
+    grid-column: 2;
   }
 
   .row .add {

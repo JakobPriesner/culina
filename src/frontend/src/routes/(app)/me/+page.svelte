@@ -75,8 +75,8 @@
   </SettingsSection>
 {/if}
 
-<!-- No heading: the button says what it does. -->
-<SettingsSection description={m['me.signOut.body']()} bare>
+<!-- No heading: the button says what it does. In a group like every other setting, not loose on the page. -->
+<SettingsSection description={m['me.signOut.body']()} panel>
   <Button onclick={signOut}>{m['auth.signOut']()}</Button>
 </SettingsSection>
 

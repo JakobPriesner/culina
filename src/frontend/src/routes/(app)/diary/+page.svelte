@@ -48,6 +48,7 @@
   import { explain } from '$shell/explain';
   import { formatDate, m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
+  import PageAction from '$shell/PageAction.svelte';
   import { toaster } from '$shell/toaster.svelte';
 
   /**
@@ -331,9 +332,7 @@
         <!-- The page's one accent: in from the top, for the meal the clock suggests; each meal's own "+" below stays quiet. -->
         <!-- Not beside a failed day's "Erneut versuchen", which is then the one to press. -->
         {#if settings?.enabled && !(diary.status === 'failed' && !day)}
-          <Button size="sm" variant="primary" onclick={() => add(mealByClock())}
-            >+ {m['diary.log']()}</Button
-          >
+          <PageAction text={m['diary.log']()} onclick={() => add(mealByClock())} />
         {/if}
       </header>
 

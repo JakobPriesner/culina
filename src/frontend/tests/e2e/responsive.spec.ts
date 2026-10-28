@@ -186,11 +186,13 @@ test.describe('responsive production layouts @offline', () => {
     const button = (await next.boundingBox())!;
     expect(button.y + button.height).toBeLessThanOrEqual(page.viewportSize()!.height);
     await expect(page.locator('nav.bottom')).toBeHidden();
-    const stop = page.locator('article.cooking > footer');
-    await stop.scrollIntoViewIfNeeded();
-    const stopBox = (await stop.boundingBox())!;
-    const controls = (await page.locator('.controls:has(.moves)').boundingBox())!;
-    expect(stopBox.y + stopBox.height).toBeLessThanOrEqual(controls.y);
+    // Stopping lives in the kitchen sheet, not at the recipe's end under the step controls (culina-v2-6ilt.2).
+    await expect(page.locator('article.cooking > footer')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Küchensteuerung' }).click();
+    await expect(
+      page.getByRole('dialog').getByRole('button', { name: 'Kochen beenden' })
+    ).toBeInViewport({ ratio: 1 });
+    await page.keyboard.press('Escape');
     await next.click();
     await expect(page.getByText('Schritt 2 von 4', { exact: true })).toBeVisible();
     await expectReflow(page);

@@ -56,14 +56,14 @@
     <MembersPanel householdId={household.householdId} />
   </SettingsSection>
 
-  <SettingsSection title={m['me.invite.title']()} description={m['me.invite.body']()} bare>
+  <SettingsSection title={m['me.invite.title']()} description={m['me.invite.body']()} panel>
     <InvitePanel householdId={household.householdId} />
   </SettingsSection>
 
   <SettingsSection
     title={m['household.inherit.title']()}
     description={m['household.inherit.body']()}
-    bare
+    panel
   >
     <InheritancePanel householdId={household.householdId} />
   </SettingsSection>
@@ -72,7 +72,7 @@
     <TrashPanel householdId={household.householdId} />
   </SettingsSection>
 
-  <SettingsSection title={m['archive.title']()} description={m['archive.hint']()} bare>
+  <SettingsSection title={m['archive.title']()} description={m['archive.hint']()} panel>
     <ArchivePanel householdId={household.householdId} />
   </SettingsSection>
 
@@ -80,7 +80,7 @@
     <SettingsSection
       title={m['household.delete.section']()}
       description={m['household.delete.hint']()}
-      bare
+      panel
     >
       <DeleteHouseholdPanel householdId={household.householdId} name={household.name} />
     </SettingsSection>

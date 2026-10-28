@@ -71,12 +71,12 @@
   {:else if note}
     <aside class="peek" aria-label={m['notes.title']()}>
       <p class="note">{note}</p>
-      <button type="button" class="edit" onclick={() => void write()}>
+      <button type="button" class="edit hit-target reach" onclick={() => void write()}>
         {m['notes.peek.edit']()}
       </button>
     </aside>
   {:else}
-    <button type="button" class="add" onclick={() => void write()}>
+    <button type="button" class="add hit-target reach" onclick={() => void write()}>
       + {m['notes.peek.add']()}
     </button>
   {/if}

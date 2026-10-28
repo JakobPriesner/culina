@@ -10,8 +10,9 @@
   import { currentDate } from './today.svelte';
 
   /**
-   * Today's diary in one line under the Today card, for people who keep one: where the meal is cooked, a tap from
-   * logging it. Energy and protein only (docs/diary-design.md §9.6); the page has the rest.
+   * Today's diary in one line inside Woche's today, for people who keep one: where the meal is cooked, a tap from
+   * logging it, and no row of its own above the week. Energy and protein only (docs/diary-design.md §9.6); the page
+   * has the rest.
    */
   const today = $derived(currentDate());
 
@@ -42,14 +43,15 @@
 {/if}
 
 <style>
+  /* Flush with the day's own lines; a hover tint shows it is a way to the diary. */
   .line {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
+    gap: var(--space-2);
     min-height: var(--control-sm);
-    margin: calc(var(--space-6) * -1 + var(--space-2)) 0 var(--space-6);
-    padding: var(--space-2) var(--space-4);
-    border-radius: var(--radius-lg);
+    margin-inline: calc(var(--space-2) * -1);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-md);
     color: var(--text-muted);
     font-size: var(--text-sm);
     text-decoration: none;
@@ -61,24 +63,10 @@
     color: var(--text);
   }
 
-  /* A phone: the sentence fits one line, and the day below it comes closer, so the first day is not pushed down. */
-  @media (max-width: 30rem), (max-height: 32rem) {
-    .line {
-      margin-bottom: var(--space-3);
-    }
-  }
-
-  @media (max-width: 30rem) {
-    .line {
-      gap: var(--space-2);
-      padding-inline: var(--space-2);
-    }
-  }
-
   .icon {
     flex-shrink: 0;
-    width: var(--space-6);
-    height: var(--space-6);
+    width: var(--space-4);
+    height: var(--space-4);
   }
 
   .what {

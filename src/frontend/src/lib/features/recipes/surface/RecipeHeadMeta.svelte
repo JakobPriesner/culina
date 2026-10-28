@@ -86,7 +86,9 @@
   <p class="shelves">
     <span class="shelves-label">{m['cookbooks.recipe.inLabel']()}</span>
     {#each cookbooks as shelf, index (shelf.id)}
-      <a href={resolve('/(app)/cookbooks/[cookbookId]', { cookbookId: shelf.id })}>{shelf.name}</a
+      <a
+        class="hit-target"
+        href={resolve('/(app)/cookbooks/[cookbookId]', { cookbookId: shelf.id })}>{shelf.name}</a
       >{#if index < cookbooks.length - 1}<span aria-hidden="true">, </span>{/if}
     {/each}
   </p>

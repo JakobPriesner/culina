@@ -437,10 +437,10 @@ describe('how the ingredients are arranged', () => {
 });
 
 describe('cooking a recipe', () => {
-  it('offers to stop without the word the controls use for having made it', () => {
-    render({ emphasis: 'cook', onstopcooking: () => {} });
+  it('leaves stopping to the kitchen sheet, not the end of the recipe under the step controls', () => {
+    render({ emphasis: 'cook' });
 
-    expect(screen.getByRole('button', { name: 'Stop cooking' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Stop cooking' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Done cooking' })).not.toBeInTheDocument();
   });
 

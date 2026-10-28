@@ -10,6 +10,7 @@
     --surface-overlay: #ffffff;
     --surface-overlay-glass: #ffffff;
     --surface-accent-subtle: #eeeeee;
+    --surface-accent-strong: #dddddd;
     --surface-highlight: #dddddd;
     --surface-highlight-band: color-mix(in srgb, var(--accent) 14%, transparent);
     --surface-hover: #eeeeee;
@@ -31,7 +32,7 @@
     --border-accent: var(--c-olive-300);
 
     --field-surface: #ffffff;
-    --field-surface-disabled: #ffffff;
+    --field-surface-inset: #ffffff;
     --field-border: #333333;
     --field-border-hover: #444444;
     --field-border-focus: #244a17;
@@ -97,6 +98,7 @@
     --surface-overlay: #000000;
     --surface-overlay-glass: #000000;
     --surface-accent-subtle: #151e12;
+    --surface-accent-strong: #263220;
     --surface-highlight: #263323;
     --surface-highlight-band: color-mix(in srgb, var(--accent) 14%, transparent);
     --surface-hover: #171717;
@@ -120,7 +122,7 @@
     --border-accent: var(--c-olive-600);
 
     --field-surface: #000000;
-    --field-surface-disabled: #000000;
+    --field-surface-inset: #000000;
     --field-border: #888888;
     --field-border-hover: #a3a3a3;
     --field-border-focus: var(--c-olive-300);

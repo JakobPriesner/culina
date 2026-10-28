@@ -396,6 +396,7 @@
     padding: var(--space-2) var(--space-3);
     border-radius: var(--radius-md);
     background: var(--surface-raised);
+    --field-surface: var(--field-surface-inset);
     font-size: var(--text-sm);
   }
 

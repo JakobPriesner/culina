@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Select, Sheet } from '$ds';
+  import { Button, Select, Sheet } from '$ds';
   import type { RecipeReading } from '$features/recipes/types';
   import { m } from '$shell/i18n';
   import CookingPipToggle from './CookingPipToggle.svelte';
@@ -7,15 +7,20 @@
   import { kitchenWakeLock as wakeLock } from './kitchen.svelte';
   import { kitchenLighting } from './lighting.svelte';
 
-  /** The kitchen's own settings: lighting, staying awake, and where cooking shows up. */
+  /** The kitchen's own settings: lighting, staying awake, and where cooking shows up; and the way to stop. */
   interface Props {
     open: boolean;
     /** Nothing but the title until the recipe being cooked has arrived. */
     recipe: RecipeReading | null;
     onclose: () => void;
+    /**
+     * Ends the session without a record ("made it" is the controls' last step). Here rather than at the recipe's end,
+     * where the step controls covered it until the very bottom of the page.
+     */
+    onstop?: () => void;
   }
 
-  let { open, recipe, onclose }: Props = $props();
+  let { open, recipe, onclose, onstop }: Props = $props();
 </script>
 
 <Sheet {open} title={m['kitchen.controls']()} closeLabel={m['picker.close']()} {onclose}>
@@ -41,10 +46,21 @@
       <CookingPipToggle {recipe} />
       <CookingRemoteToggle {recipe} />
     </div>
+    {#if onstop}
+      <div class="stop">
+        <Button variant="ghost" onclick={onstop}>{m['cooking.abandon']()}</Button>
+      </div>
+    {/if}
   {/if}
 </Sheet>
 
 <style>
+  /* Apart from the settings above it: it ends the session rather than adjusting it. */
+  .stop {
+    padding-block-start: var(--space-3);
+    border-top: 1px solid var(--border);
+  }
+
   .auto-scroll-hint {
     color: var(--text-muted);
     font-size: var(--text-sm);

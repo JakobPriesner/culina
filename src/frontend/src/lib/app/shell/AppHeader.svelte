@@ -10,9 +10,7 @@
   import { connection } from '../connection.svelte';
   import { headerAccessory } from '../headerAccessory.svelte';
   import { m } from '$shell/i18n';
-  import { offersNewRecipe } from '../navigation';
   import Navigation from '../Navigation.svelte';
-  import NewRecipeLink from '../NewRecipeLink.svelte';
   import AccountMenu from './AccountMenu.svelte';
   import HeaderBrand from './HeaderBrand.svelte';
   import NavigationProgress from './NavigationProgress.svelte';
@@ -26,12 +24,10 @@
 
   let { searchable, height = $bindable() }: Props = $props();
 
-  /** An empty library's own invitation is the one way to create there, so the header does not offer a second, equally loud one. */
+  /** Nothing to search in an empty library; its own invitation is the way on. */
   const emptyLibrary = $derived(
     recipes.status === 'ready' && recipes.items.length === 0 && !libraryView.filtered
   );
-
-  const creating = $derived(offersNewRecipe(page.url.pathname) && !emptyLibrary);
 
   /** Lists stay put on a household change; a page for one thing (route with a param) belongs to the old household, so go to the library. */
   function switched() {
@@ -51,10 +47,6 @@
 
     <!-- Re-enables pointer events: the account menu opens inside and would inherit the header's "none". -->
     <div class="actions">
-      <!-- Creating comes first, so search and the account stay pinned to the edge whether or not a page offers it. -->
-      {#if creating}
-        <NewRecipeLink />
-      {/if}
       <!-- Without a household too: the account menu is the one way to settings. -->
       {#if session.user}
         <div class="tools">

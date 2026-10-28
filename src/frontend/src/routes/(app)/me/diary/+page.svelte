@@ -1,6 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { http, request } from '$api';
+  import { http, request, type AppError } from '$api';
   import { Button, Field, Modal, SegmentedControl, Switch, TextInput } from '$ds';
   import { diary } from '$features/diary/stores/diary.svelte';
   import { diarySettings } from '$features/diary/stores/diarySettings.svelte';
@@ -13,8 +13,10 @@
 
   /**
    * The food diary's settings (docs/diary-design.md §5, §8): one switch whose single sentence is the agreement, the
-   * person's own targets, and how the day's headline reads. Switching off asks whether to delete the entries too;
-   * deleting everything otherwise takes a typed word, the one place an undo is not offered instead.
+   * person's own targets, and how the day's headline reads. Everything saves as it is set, like every setting outside
+   * Mail and Server (docs/design-system.md): a target when its field is left or Enter pressed, with a quiet "Saved"
+   * or the error and a retry under the group. Switching off asks whether to delete the entries too; deleting
+   * everything otherwise takes a typed word, the one place an undo is not offered instead.
    */
   const settings = $derived(diarySettings.settings);
 
@@ -27,6 +29,8 @@
   let kcal = $state('');
   let protein = $state('');
   let saving = $state(false);
+  /** What the last save from the targets group did, said under it. */
+  let targets = $state<'idle' | 'saved' | AppError>('idle');
   let askingOff = $state(false);
   let erasing = $state(false);
   let confirmWord = $state('');
@@ -45,11 +49,34 @@
 
   const lowTarget = $derived((whole(kcal) ?? Infinity) < 1200);
 
-  async function save(change: {
-    enabled?: boolean;
-    headline?: 'eaten' | 'remaining';
-    eraseEntries?: boolean;
-  }) {
+  const stored = (target: number | null | undefined) => (target ? String(target) : '');
+
+  /** Leaving a target's field saves it, unless nothing changed. */
+  function commit() {
+    if (
+      kcal.trim() === stored(settings?.kcalTarget) &&
+      protein.trim() === stored(settings?.proteinTarget)
+    ) {
+      return;
+    }
+
+    void save({}, true);
+  }
+
+  function enterCommits(event: KeyboardEvent) {
+    if (event.key === 'Enter' && event.target instanceof HTMLInputElement) {
+      event.target.blur();
+    }
+  }
+
+  async function save(
+    change: {
+      enabled?: boolean;
+      headline?: 'eaten' | 'remaining';
+      eraseEntries?: boolean;
+    },
+    inTargets = false
+  ) {
     saving = true;
 
     const failure = await diarySettings.save({
@@ -62,7 +89,9 @@
 
     saving = false;
 
-    if (failure) {
+    if (inTargets) {
+      targets = failure ?? 'saved';
+    } else if (failure) {
       toaster.show({ message: () => explain(failure), tone: 'danger' });
     } else if (change.eraseEntries) {
       diary.reset();
@@ -116,13 +145,17 @@
 {#if diarySettings.enabled}
   <SettingsSection title={m['me.diary.targets']()} description={m['me.diary.targets.body']()}>
     <SettingsRow label={m['me.diary.kcalTarget']()} description={m['me.diary.kcalTarget.hint']()}>
-      <TextInput
-        id="{fieldId}-kcal"
-        label={m['me.diary.kcalTarget']()}
-        value={kcal}
-        inputmode="numeric"
-        oninput={(text) => (kcal = text)}
-      />
+      <!-- Listens for its field's blur and Enter; the field is the control. -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="commit" onfocusout={commit} onkeydown={enterCommits}>
+        <TextInput
+          id="{fieldId}-kcal"
+          label={m['me.diary.kcalTarget']()}
+          value={kcal}
+          inputmode="numeric"
+          oninput={(text) => (kcal = text)}
+        />
+      </div>
     </SettingsRow>
     {#if lowTarget}
       <!-- A calm sentence and a way to help, never a refusal (docs/diary-design.md §5). -->
@@ -134,13 +167,17 @@
       </p>
     {/if}
     <SettingsRow label={m['me.diary.proteinTarget']()}>
-      <TextInput
-        id="{fieldId}-protein"
-        label={m['me.diary.proteinTarget']()}
-        value={protein}
-        inputmode="numeric"
-        oninput={(text) => (protein = text)}
-      />
+      <!-- Listens for its field's blur and Enter; the field is the control. -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="commit" onfocusout={commit} onkeydown={enterCommits}>
+        <TextInput
+          id="{fieldId}-protein"
+          label={m['me.diary.proteinTarget']()}
+          value={protein}
+          inputmode="numeric"
+          oninput={(text) => (protein = text)}
+        />
+      </div>
     </SettingsRow>
     <SettingsRow label={m['me.diary.headline']()} description={m['me.diary.headline.hint']()}>
       <SegmentedControl
@@ -150,13 +187,18 @@
           { id: 'eaten', label: m['me.diary.headline.eaten']() },
           { id: 'remaining', label: m['me.diary.headline.remaining']() }
         ]}
-        onselect={(id) => void save({ headline: id as 'eaten' | 'remaining' })}
+        onselect={(id) => void save({ headline: id as 'eaten' | 'remaining' }, true)}
       />
     </SettingsRow>
     <div class="actions">
-      <Button variant="primary" loading={saving} onclick={() => void save({})}
-        >{m['diary.save']()}</Button
-      >
+      {#if targets === 'saved'}
+        <p class="saved" role="status">{m['me.diary.saved']()}</p>
+      {:else if targets !== 'idle'}
+        <div class="failed" role="alert">
+          <p>{explain(targets)}</p>
+          <Button size="sm" onclick={() => void save({}, true)}>{m['error.retry']()}</Button>
+        </div>
+      {/if}
       <Button variant="ghost" href={resolve('/(app)/diary')}>{m['me.diary.open']()}</Button>
     </div>
   </SettingsSection>
@@ -213,7 +255,27 @@
   .actions {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: var(--space-2);
     padding: var(--space-4);
+  }
+
+  .saved {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+  }
+
+  .failed {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-danger);
+    font-size: var(--text-sm);
+  }
+
+  /* The control column sizes to its field. */
+  .commit {
+    display: contents;
   }
 </style>

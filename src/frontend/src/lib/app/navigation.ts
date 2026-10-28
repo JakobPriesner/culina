@@ -18,11 +18,6 @@ export interface Destination {
 const startsWith = (prefix: string) => (pathname: string) =>
   pathname === prefix || pathname.startsWith(`${prefix}/`);
 
-const library = resolve('/(app)');
-
-/** Where the shell offers a new recipe: only where what it makes belongs to what is on screen, i.e. the library. Not on cookbooks (own add-to-shelf control), the week, shopping or one recipe, nor in the editor, importer or cook screen, where it would leave unsaved work. */
-export const offersNewRecipe = (pathname: string): boolean => pathname === library;
-
 /** Settings are not a workflow: the account menu leads there, and lights up while they are on screen. */
 export const inSettings = startsWith('/me');
 

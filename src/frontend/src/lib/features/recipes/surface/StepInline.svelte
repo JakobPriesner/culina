@@ -50,7 +50,7 @@
 {#each nodes as node, index (index)}{#if node.kind === 'text'}{node.text}{:else if node.kind === 'ingredient'}{@const amount =
       scaling.show(node.quantity).text}{#if interactive}<button
         bind:this={buttonRefs[index]}
-        class="ingredient"
+        class="ingredient hit-target"
         class:is-highlighted={highlighted === node.ingredientId || activeQuickLook === index}
         type="button"
         aria-haspopup="dialog"

@@ -147,7 +147,7 @@ test.describe('food diary @offline', () => {
     const nav = page.locator('nav.bottom');
     await expect(nav.getByRole('link')).toHaveCount(4);
     await expect(nav.getByRole('link', { name: 'Ernährung' })).toBeVisible();
-    await expect(page.getByText('Ernährung: heute noch nichts eingetragen')).toHaveCount(0);
+    await expect(page.getByText('Noch nichts eingetragen')).toHaveCount(0);
 
     await nav.getByRole('link', { name: 'Ernährung' }).click();
     await expect(page.getByRole('button', { name: 'Einschalten' })).toBeVisible();
@@ -166,7 +166,8 @@ test.describe('food diary @offline', () => {
       const nav = page.locator('nav.bottom');
       const tab = nav.getByRole('link', { name: 'Ernährung' });
       await expectWholeWords(nav.getByRole('link'));
-      await expect(page.getByText('Ernährung: heute noch nichts eingetragen')).toBeVisible();
+      // The day's line lives in Woche's today (culina-v2-6ilt.9), not above the recipes.
+      await expect(page.getByText('Noch nichts eingetragen')).toHaveCount(0);
 
       await tab.click();
       await expect(page).toHaveURL(/\/diary$/);

@@ -171,6 +171,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     background: var(--surface-raised);
+    --field-surface: var(--field-surface-inset);
   }
 
   .label {

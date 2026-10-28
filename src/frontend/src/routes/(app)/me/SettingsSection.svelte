@@ -10,11 +10,13 @@
     /** Omitted when the section is the only one and the page header says it. */
     title?: string;
     description?: string;
-    /** Drops the enclosure for already-composed content. */
+    /** Drops the enclosure, for a list that draws its own grouped card. */
     bare?: boolean;
+    /** A composed panel (a form, a sentence and a button) inside the enclosure, at the rows' inset. */
+    panel?: boolean;
   }
 
-  let { children, title, description, bare = false }: Props = $props();
+  let { children, title, description, bare = false, panel = false }: Props = $props();
 </script>
 
 <section class="section">
@@ -29,7 +31,7 @@
     </div>
   {/if}
 
-  <div class="body" class:bare>{@render children()}</div>
+  <div class="body" class:bare class:panel>{@render children()}</div>
 </section>
 
 <style>
@@ -68,13 +70,22 @@
     container-type: inline-size;
   }
 
+  /* Fields inside the white enclosure take the inset fill; a bare section's sit on the page and stay white. */
+  .body:not(.bare) {
+    --field-surface: var(--field-surface-inset);
+  }
+
+  .panel {
+    padding: var(--space-4);
+  }
+
   /* The divider lives with the enclosure: a row cannot know its neighbours across a component boundary. */
-  .body:not(.bare) > :global(* + *) {
+  .body:not(.bare, .panel) > :global(* + *) {
     border-top: 1px solid var(--border);
   }
 
   /* A note between or after rows: same inset as a row, no divider of its own, so it reads as part of the row above. */
-  .body:not(.bare) > :global(p) {
+  .body:not(.bare, .panel) > :global(p) {
     padding: 0 var(--space-4) var(--space-4);
     border-top: none;
   }

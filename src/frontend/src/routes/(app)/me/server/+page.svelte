@@ -190,7 +190,7 @@
 </SettingsSection>
 
 <!-- Outside the settings above: needs no restart and must work while the configuration cannot be read. -->
-<SettingsSection title={m['server.recovery']()} description={m['server.recovery.hint']()} bare>
+<SettingsSection title={m['server.recovery']()} description={m['server.recovery.hint']()} panel>
   <IssueRecoveryCodePanel />
 </SettingsSection>
 

@@ -36,6 +36,11 @@
 
   const barInset = $derived(barHidden ? 0 : barHeight);
 
+  /** What is under way leaves with the bar on a phone; a wide screen has no bar, so it stays. */
+  const dockAway = $derived(barHidden && barHeight > 0);
+
+  const dockInset = $derived(dockAway ? 0 : dockHeight);
+
   /**
    * Height of the floating header, for pages that put content on its line; measured because it follows the wordmark's font metrics.
    * Unset until measured so the token's figure holds the place in SSR rather than a zero.
@@ -57,7 +62,7 @@
    * (320x568 at 200%: 521px of chrome around 47px of recipe).
    */
   const crowded = $derived(
-    viewportHeight > 0 && (headerHeight ?? 0) + dockHeight + barInset > viewportHeight / 2
+    viewportHeight > 0 && (headerHeight ?? 0) + dockInset + barInset > viewportHeight / 2
   );
 </script>
 
@@ -72,7 +77,7 @@
   class:focused-cooking={focusedCooking}
   class:reading-recipe={readingRecipe}
   style:--bar-inset="{barInset}px"
-  style:--bottom-inset="{dockHeight + barInset}px"
+  style:--bottom-inset="{dockInset + barInset}px"
   style:--header-inset={headerHeight === undefined ? null : `${headerHeight}px`}
 >
   <SkipLink />
@@ -83,7 +88,9 @@
     {@render children()}
   </main>
 
-  <ShellDock bind:height={dockHeight}>{@render dock?.()}</ShellDock>
+  <ShellDock bind:height={dockHeight} away={dockAway} onfocusin={() => (barHidden = false)}
+    >{@render dock?.()}</ShellDock
+  >
 
   <BottomBar bind:height={barHeight} bind:hidden={barHidden} />
 
@@ -94,7 +101,8 @@
 
 <style>
   .shell {
-    /* Where a column pinned beside a scrolling one sticks: where it already starts, so it never moves. */
+    /* Where a column pinned beside a scrolling one sticks: where it already starts, so it never moves. Restated here,
+       not only inherited from scales.css, so it follows the measured --header-inset set on this element. */
     --pinned-top: calc(var(--header-inset) + var(--layout-page-space));
 
     display: grid;

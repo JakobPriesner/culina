@@ -50,7 +50,8 @@ source say so. The rest are marked as recalled or as inference.
   (`lib/app/navigation.ts`).
 - **Header tools:** search (⌘K, Ctrl-K, `/` on every page) and the account
   menu (settings, ⌘,).
-- **The header "+"** (`NewRecipeLink`) appears only on the library.
+- **The library's "+ Rezept"** (`PageAction`) sits in its title row, not the
+  header (culina-v2-6ilt.13).
 - **ShellDock** sits above the dock. It already holds the persistent "now"
   state: import progress, and the *NowCookingBar* to resume cooking.
 
@@ -75,7 +76,7 @@ source say so. The rest are marked as recalled or as inference.
 
 | # | Finding | Where |
 | --- | --- | --- |
-| F1 | **No global add.** Adding a shopping item, planning, or creating a recipe means navigating first. The "+" means "new recipe" only on the library. Search can navigate but never act. | `NewRecipeLink`, `offersNewRecipe` |
+| F1 | **No global add.** Adding a shopping item, planning, or creating a recipe means navigating first. The "+" means "new recipe" only on the library. Search can navigate but never act. | `PageAction` on the library |
 | F2 | **Planning works two ways.** `PlanRecipeSheet` (from a recipe, home or cookbook) has day, slot, servings, leftovers and shop, then a toast. The week's own "+" (`PlanRecipePicker`) plans at once, with no servings, no toast and no undo. | `features/planning` |
 | F3 | **A recipe reaches the list three ways.** `AddToListSheet` reviews ingredients at the planned servings. `ShoppingRecipePicker` adds in one tap at the recipe's own yield, with no review. Cookbook and week add in bulk. | `features/recipes/detail`, `features/shopping` |
 | F4 | **Einkauf never links back to Woche.** Woche reaches the list through the shop bar, a toast and a badge. | `ShoppingMeals.svelte` |

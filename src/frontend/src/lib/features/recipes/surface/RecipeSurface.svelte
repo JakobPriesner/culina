@@ -47,7 +47,6 @@
     editable?: boolean;
     /** Cookbooks it is on; shown here, edited by the dock. */
     cookbooks?: readonly { readonly id: string; readonly name: string }[];
-    onstopcooking?: () => void;
     /** "I made it" without cook mode; see `CookingAction`. */
     onmadeit?: () => void;
     /** How often this person made it and when last, for the meta line like a recipe card's. */
@@ -84,7 +83,6 @@
     photo,
     editable = false,
     cookbooks = [],
-    onstopcooking,
     onmadeit,
     cooked = null,
     onstep,
@@ -224,7 +222,7 @@
     {/await}
   {/if}
 
-  <CookingAction {cooking} {canCook} {resuming} {onstartcooking} {onstopcooking} {onmadeit} />
+  <CookingAction {cooking} {canCook} {resuming} {onstartcooking} {onmadeit} />
 </article>
 
 <style>
