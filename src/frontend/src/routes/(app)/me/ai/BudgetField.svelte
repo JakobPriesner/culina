@@ -15,5 +15,5 @@
 </script>
 
 <SettingsRow {label}>
-  <DollarField {label} {value} placeholder={m['ai.budget.none']()} {onchange} />
+  <DollarField unlabelled {label} {value} placeholder={m['ai.budget.none']()} {onchange} />
 </SettingsRow>

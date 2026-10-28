@@ -212,6 +212,94 @@ test.describe('food diary @offline', () => {
     });
   }
 
+  for (const width of [320, 390]) {
+    for (const scale of [1, 1.5]) {
+      test(`the week's days are comfortable targets and the macros stay whole words (${width}px, text x${scale})`, async ({
+        page
+      }) => {
+        await page.setViewportSize({ width, height: 844 });
+        await responsiveData(page, 'de', { activeCooking: false });
+        await diaryServer(page, true);
+        await page.addInitScript((factor) => {
+          document.addEventListener('DOMContentLoaded', () => {
+            document.documentElement.style.fontSize = `${factor * 100}%`;
+          });
+        }, scale);
+        await page.goto('/diary');
+        await expect(page.getByRole('heading', { level: 1, name: 'Heute' })).toBeVisible();
+
+        await expectWholeWords(page.locator('.macros dt'));
+        await expectReflow(page);
+
+        const strip = page.getByRole('group', { name: /^Woche vom/ });
+        const boxes = await strip.locator('button.day').evaluateAll((all) =>
+          all.map((el) => {
+            const { left, right, width } = el.getBoundingClientRect();
+            return { left, right, width };
+          })
+        );
+        expect(boxes).toHaveLength(7);
+        // About 44px each: 320px only fits that with the week's arrows out of the row of days.
+        for (const box of boxes) expect(box.width).toBeGreaterThanOrEqual(42);
+        for (const [index, box] of boxes.entries()) {
+          if (index > 0) expect(box.left).toBeGreaterThanOrEqual(boxes[index - 1]!.right - 0.5);
+        }
+        expect(boxes[0]!.left).toBeGreaterThanOrEqual(0);
+        expect(boxes[6]!.right).toBeLessThanOrEqual(width);
+      });
+    }
+  }
+
+  test('Back from an amount returns to the search as it was left, focus on the food chosen', async ({
+    page
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await responsiveData(page, 'de', { activeCooking: false });
+    await diaryServer(page, true);
+    await page.route('**/api/v1/foods?**', (route) =>
+      route.fulfill({
+        json: {
+          items: Array.from({ length: 20 }, (_, index) => ({
+            code: `B${index}`,
+            nameDe: `Haferprodukt ${index + 1}`,
+            energyKcal: 100 + index,
+            units: []
+          }))
+        }
+      })
+    );
+    await page.goto('/diary');
+
+    await page
+      .getByRole('region', { name: 'Mittagessen' })
+      .getByRole('button', { name: /Eintragen/ })
+      .click();
+    const search = page.getByRole('searchbox');
+    await search.fill('Hafer');
+
+    const last = page.getByRole('button', { name: /Haferprodukt 18/ });
+    await last.scrollIntoViewIfNeeded();
+    const scrolled = await page.locator('.results').evaluate((el) => el.scrollTop);
+    expect(scrolled).toBeGreaterThan(0);
+    await last.click();
+
+    const amount = page.getByRole('dialog', { name: 'Haferprodukt 18' });
+    await amount.getByRole('button', { name: 'Zurück' }).click();
+    await expect(amount).toBeHidden();
+
+    await expect(search).toHaveValue('Hafer');
+    await expect(last).toBeFocused();
+    expect(await page.locator('.results').evaluate((el) => el.scrollTop)).toBe(scrolled);
+    await expect(page.getByRole('dialog', { name: /Mittagessen/ })).toBeVisible();
+
+    await last.click();
+    await page
+      .getByRole('dialog', { name: 'Haferprodukt 18' })
+      .getByRole('button', { name: 'Schließen' })
+      .click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+  });
+
   test("the week strip opens yesterday, and yesterday's breakfast repeats today in one tap", async ({
     page
   }) => {
@@ -283,9 +371,10 @@ test.describe('food diary @offline', () => {
       'false'
     );
     await expect(
-      page.getByText('Deine Einträge sind Gesundheitsdaten und nur für dich sichtbar.', {
-        exact: false
-      })
+      // Printed once in the row; the switch keeps a clipped copy as its description.
+      page
+        .getByRole('paragraph')
+        .filter({ hasText: 'Deine Einträge sind Gesundheitsdaten und nur für dich sichtbar.' })
     ).toBeVisible();
 
     await page.getByRole('switch', { name: 'Ernährung' }).click();

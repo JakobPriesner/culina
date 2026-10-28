@@ -357,7 +357,11 @@ Calendar, Outlook, Fantastical and the meal planners in §3 informed the answers
 ### 10.2 What is always in view on a phone
 
 - One opaque bar inside the floating header (`headerAccessory`) holds
-  Plan | Liste and ‹ Heute ›. Heute rests (disabled) while today is already
+  Plan | Liste and, from 30rem (a phone on its side, a tablet), ‹ Heute ›. On a
+  phone upright (under 30rem) ‹ Heute › cannot share the bar, and a second
+  pinned row would take a quarter of the screen, so it sits in the page head
+  beside the dates and scrolls away with it. The head there is two rows: the
+  title with Tage | Woche, then ‹ Heute › and the dates (`culina-v2-y6ti.10`). Heute rests (disabled) while today is already
   shown, so it never moves.
 - The header's scrim covers the bar and fades out below it. It used to fade
   over the switch, which was a sticky element of the page under the shell's

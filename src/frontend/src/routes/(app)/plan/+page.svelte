@@ -64,10 +64,10 @@
   const listBeside = new MediaQuery('(min-width: 80rem)', false);
 
   /**
-   * Too narrow for back, today and forward beside Plan | Liste (320px): a second pinned row would take a quarter of
-   * the screen, so there they sit by the title and scroll away.
+   * Too narrow for back, today and forward beside Plan | Liste (a phone upright): a second pinned row would take a
+   * quarter of the screen, so there they sit beside the dates and scroll away.
    */
-  const narrow = new MediaQuery('(width < 23rem)', false);
+  const narrow = new MediaQuery('(width < 30rem)', false);
 
   /** Where back, today and forward go: the header bar, unless the list is beside the week or the phone is narrow. */
   const travelInBar = $derived(!listBeside.current && !narrow.current);

@@ -573,4 +573,33 @@ test.describe('Woche @offline', () => {
     expect(header.height).toBeLessThan(120);
     await page.screenshot({ path: test.info().outputPath('home-wide.png') });
   });
+
+  for (const [width, height, firstDayBelow] of [
+    [320, 700, 430],
+    [390, 844, 400],
+    [720, 540, 340],
+    [844, 390, 330]
+  ] as const) {
+    test(`the plan's first day starts early at ${width}x${height}`, async ({ page }) => {
+      await page.setViewportSize({ width, height });
+      await responsiveData(page, 'de', { activeCooking: false });
+      await diaryOn(page);
+      await page.goto('/plan');
+      await settled(page);
+      await page.getByRole('button', { name: 'Alles klar' }).click();
+      await page.evaluate(() => window.scrollTo(0, 0));
+
+      const first = page.locator('[data-plan-day]').first();
+      expect((await first.boundingBox())!.y).toBeLessThan(firstDayBelow);
+
+      // Back and forward stay with the dates they move, at 390; the header bar keeps Plan | Liste.
+      if (width === 390) {
+        const dates = (await page
+          .getByRole('button', { name: /Zu einem Datum springen/ })
+          .boundingBox())!;
+        const next = (await page.getByRole('button', { name: 'Einen Tag weiter' }).boundingBox())!;
+        expect(Math.abs(dates.y - next.y)).toBeLessThan(dates.height);
+      }
+    });
+  }
 });

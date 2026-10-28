@@ -22,6 +22,8 @@
     void diarySettings.load();
   });
 
+  const fieldId = $props.id();
+
   let kcal = $state('');
   let protein = $state('');
   let saving = $state(false);
@@ -98,8 +100,9 @@
 <svelte:head><title>{m['me.diary']()}</title></svelte:head>
 
 <SettingsSection>
-  <SettingsRow label={m['me.diary.switch']()}>
+  <SettingsRow label={m['me.diary.switch']()} description={m['me.diary.consent']()}>
     <Switch
+      hideLabel
       checked={diarySettings.enabled}
       label={m['me.diary.switch']()}
       description={m['me.diary.consent']()}
@@ -112,18 +115,14 @@
 
 {#if diarySettings.enabled}
   <SettingsSection title={m['me.diary.targets']()} description={m['me.diary.targets.body']()}>
-    <SettingsRow label={m['me.diary.kcalTarget']()}>
-      <Field label={m['me.diary.kcalTarget']()} hint={m['me.diary.kcalTarget.hint']()}>
-        {#snippet children({ id, describedBy })}
-          <TextInput
-            {id}
-            {describedBy}
-            value={kcal}
-            inputmode="numeric"
-            oninput={(text) => (kcal = text)}
-          />
-        {/snippet}
-      </Field>
+    <SettingsRow label={m['me.diary.kcalTarget']()} description={m['me.diary.kcalTarget.hint']()}>
+      <TextInput
+        id="{fieldId}-kcal"
+        label={m['me.diary.kcalTarget']()}
+        value={kcal}
+        inputmode="numeric"
+        oninput={(text) => (kcal = text)}
+      />
     </SettingsRow>
     {#if lowTarget}
       <!-- A calm sentence and a way to help, never a refusal (docs/diary-design.md §5). -->
@@ -135,17 +134,13 @@
       </p>
     {/if}
     <SettingsRow label={m['me.diary.proteinTarget']()}>
-      <Field label={m['me.diary.proteinTarget']()}>
-        {#snippet children({ id, describedBy })}
-          <TextInput
-            {id}
-            {describedBy}
-            value={protein}
-            inputmode="numeric"
-            oninput={(text) => (protein = text)}
-          />
-        {/snippet}
-      </Field>
+      <TextInput
+        id="{fieldId}-protein"
+        label={m['me.diary.proteinTarget']()}
+        value={protein}
+        inputmode="numeric"
+        oninput={(text) => (protein = text)}
+      />
     </SettingsRow>
     <SettingsRow label={m['me.diary.headline']()} description={m['me.diary.headline.hint']()}>
       <SegmentedControl
@@ -208,9 +203,9 @@
 </Modal>
 
 <style>
+  /* Notes inside a card take the rows' inset from SettingsSection. */
   .honest,
   .floor {
-    margin: var(--space-2) 0 0;
     color: var(--text-muted);
     font-size: var(--text-sm);
   }
@@ -219,6 +214,6 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
-    margin-block-start: var(--space-4);
+    padding: var(--space-4);
   }
 </style>

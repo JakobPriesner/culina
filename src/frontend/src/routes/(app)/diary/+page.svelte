@@ -192,8 +192,8 @@
     close();
   }
 
+  /** The search stays open under the amount, so Back finds it as it was left; closing leaves both. */
   function food(choice: FoodChoice) {
-    adding = null;
     pending = { kind: 'food', choice };
     subject = choice.subject;
   }
@@ -202,6 +202,11 @@
     pickingRecipe = false;
     pending = { kind: 'recipe', recipe: picked };
     subject = { kind: 'recipe', title: picked.title };
+  }
+
+  function back() {
+    subject = null;
+    pending = null;
   }
 
   function open(entry: DiaryEntry) {
@@ -472,10 +477,7 @@
     adding = null;
     pickingRecipe = true;
   }}
-  onpickrecipe={(picked) => {
-    adding = null;
-    recipe(picked);
-  }}
+  onpickrecipe={recipe}
   onfood={food}
   ontyped={(figures) => void typed(figures)}
   onclose={close}
@@ -498,6 +500,7 @@
   {busy}
   onsave={(answer) => void answered(answer)}
   onremove={(entry) => void remove(entry)}
+  onback={adding === null ? undefined : back}
   onclose={close}
 />
 

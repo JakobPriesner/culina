@@ -15,6 +15,7 @@
   import { m } from '$shell/i18n';
 
   import type { AmountSubject } from './DiaryAmountSheet.svelte';
+  import DiaryBack from './DiaryBack.svelte';
   import DiaryOwnFigures, {
     noFigures,
     typedFigures,
@@ -273,10 +274,7 @@
 >
   {#if view === 'own'}
     <div class="own">
-      <button class="back" type="button" onclick={() => (view = 'pick')}>
-        <Chevron direction="back" />
-        {m['diary.add.back']()}
-      </button>
+      <DiaryBack onclick={() => (view = 'pick')} />
       <h3 class="own-title">{m['diary.add.own']()}</h3>
       <p class="note">{m['diary.add.ownHint']()}</p>
       <DiaryOwnFigures bind:fields={own} />
@@ -556,27 +554,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-4);
-  }
-
-  .back {
-    display: inline-flex;
-    align-items: center;
-    align-self: flex-start;
-    gap: var(--space-1);
-    min-block-size: var(--control-sm);
-    margin-inline-start: calc(-1 * var(--space-2));
-    padding: 0 var(--space-2);
-    border: 0;
-    border-radius: var(--radius-md);
-    background: transparent;
-    color: var(--accent);
-    font: inherit;
-    font-weight: var(--weight-medium);
-    cursor: pointer;
-  }
-
-  .back:focus-visible {
-    outline: 2px solid var(--border-focus);
   }
 
   .own-title {

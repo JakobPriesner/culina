@@ -38,7 +38,24 @@
         {resuming ? m['cooking.resume']() : m['recipe.startCooking']()}
       </Button>
       {#if onmadeit}
-        <Button size="lg" onclick={onmadeit}>{m['cooking.madeIt']()}</Button>
+        <!-- Quieter than starting: on a phone just the check, named for a screen reader. -->
+        <Button size="lg" label={m['cooking.madeIt']()} onclick={onmadeit}>
+          {#snippet icon()}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="12" cy="12" r="9" />
+              <path d="m8.5 12.5 2.5 2.5 4.5-5" />
+            </svg>
+          {/snippet}
+
+          {m['cooking.madeIt']()}
+        </Button>
       {/if}
     {/if}
   </footer>
@@ -134,6 +151,17 @@
 
     .foot :global(.button) {
       flex: 1;
+      white-space: nowrap;
+    }
+
+    .foot :global(.button.secondary) {
+      flex: none;
+      width: var(--control-lg);
+      padding-inline: 0;
+    }
+
+    .foot :global(.button.secondary .label) {
+      display: none;
     }
   }
 

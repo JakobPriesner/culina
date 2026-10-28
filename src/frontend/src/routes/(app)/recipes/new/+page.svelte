@@ -178,10 +178,14 @@
       {:else}
         <OtherWaysIn
           onpaste={(intent) => {
+            creating.abandon();
             pasteIntent = intent;
             pasting = true;
           }}
-          ondescribe={() => (describing = true)}
+          ondescribe={() => {
+            creating.abandon();
+            describing = true;
+          }}
         />
       {/if}
     {/if}

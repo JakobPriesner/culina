@@ -1,6 +1,7 @@
 <script lang="ts">
   import FourStates from '$ds/__fixtures__/FourStates.svelte';
   import Overlays from '$ds/__fixtures__/Overlays.svelte';
+  import FieldSurfaces from './FieldSurfaces.svelte';
   import OlliGallery from './OlliGallery.svelte';
   import DraftProgress from '$features/assistance/DraftProgress.svelte';
   import Olli from '$shell/olli/Olli.svelte';
@@ -230,6 +231,11 @@
     </div>
   </section>
 
+  <section id="field-surfaces">
+    <h2>Field surfaces</h2>
+    <FieldSurfaces />
+  </section>
+
   <section>
     <h2>Overlays and containers</h2>
     <Overlays />
@@ -270,7 +276,7 @@
 
 <style>
   .gallery {
-    max-width: var(--measure);
+    max-width: max(var(--measure), 72rem);
     margin: 0 auto;
     padding: var(--space-8) var(--space-4) var(--space-24);
     display: flex;

@@ -1,0 +1,13 @@
+/*
+ * PROPOSAL, pending design review: a field slightly tinted towards cream instead of white.
+ * Imported by the gallery only; nothing in the app applies it. Putting the class on any wrapper
+ * is the whole change, since every field reads --field-surface.
+ */
+
+.field-cream-proposal {
+  --field-surface: color-mix(in srgb, var(--c-white) 82%, var(--c-amber-200));
+}
+
+[data-mode='dark'] .field-cream-proposal {
+  --field-surface: var(--c-forest-850);
+}

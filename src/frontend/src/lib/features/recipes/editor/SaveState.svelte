@@ -16,13 +16,14 @@
   let { tone, text }: Props = $props();
 </script>
 
-<p class="state {tone}" role="status">
+<p class="state {tone}" role="status" title={text}>
   <span class="dot" aria-hidden="true"></span>
   <span class="text">{text}</span>
 </p>
 
 <style>
   .state {
+    position: relative;
     display: flex;
     align-items: center;
     gap: var(--space-2);
@@ -74,6 +75,20 @@
   .conflict .text,
   .failed .text {
     white-space: normal;
+  }
+
+  /* On a phone the steady states are the dot alone, so the recipe's name keeps the rail; the word stays for a screen reader and as the tooltip. A state that needs a decision keeps its words. */
+  @media (width < 64rem) {
+    .idle .text,
+    .saved .text,
+    .saving .text {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
   }
 
   @keyframes breathe {

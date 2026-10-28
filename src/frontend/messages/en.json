@@ -2611,5 +2611,7 @@
   "server.registration.maxUsers": "Most accounts",
   "server.registration.maxUsersHint": "Registration stops once this many accounts exist. A whole number from 1 to 100000.",
   "server.registration.save": "Save",
-  "server.registration.saved": "Saved."
+  "server.registration.saved": "Saved.",
+  "recipes.refreshFailed": "Could not refresh. Showing what was loaded earlier.",
+  "editor.titleRequired": "Give it a title. That is all a recipe needs."
 }

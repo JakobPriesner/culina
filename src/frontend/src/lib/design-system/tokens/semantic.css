@@ -35,6 +35,15 @@
   --border-focus: var(--c-olive-600);
   --border-accent: var(--c-olive-300);
 
+  /* Fields: one set for every typed or chosen control, so a field's surface can change in one place. */
+  --field-surface: var(--c-white);
+  --field-surface-disabled: var(--c-sand-150);
+  --field-border: var(--c-sand-400);
+  --field-border-hover: var(--c-sand-500);
+  --field-border-focus: var(--c-olive-600);
+  --field-border-error: var(--c-rust-600);
+  --field-text-disabled: var(--c-sand-500);
+
   --accent: var(--c-olive-600);
   --accent-hover: var(--c-olive-700);
   --accent-active: var(--c-olive-700);

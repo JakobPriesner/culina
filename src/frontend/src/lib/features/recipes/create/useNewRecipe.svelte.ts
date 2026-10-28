@@ -31,7 +31,17 @@ export function useNewRecipe(page: Page) {
   /** Made by a first attempt, so a retry updates it rather than making another. */
   let created: Recipe | null = null;
 
-  onDestroy(() => submission.dispose());
+  /** Bumped when the user goes elsewhere, so a create that finishes late does not take the page back to its editor. */
+  let attempt = 0;
+
+  function abandon() {
+    attempt++;
+  }
+
+  onDestroy(() => {
+    abandon();
+    submission.dispose();
+  });
 
   async function forgetShare() {
     if (page.shareId) await forgetSharedRecipe(page.shareId).catch(() => {});
@@ -60,9 +70,12 @@ export function useNewRecipe(page: Page) {
     }
 
     const title = named || m['import.paste.untitled']();
+    let mine = 0;
     let id: string | null = null;
 
     const ok = await submission.run(async () => {
+      // Claimed only once the submission really runs, so a repeated press does not cancel the one in flight.
+      mine = ++attempt;
       const outcome = await createOnce(householdId, () =>
         recipes.create(householdId, title, undefined, pasted?.sourceUrl)
       );
@@ -72,12 +85,13 @@ export function useNewRecipe(page: Page) {
       }
 
       id = outcome.id;
-      created = outcome;
+      // A recipe made after the user went elsewhere stays what it is; a later import starts its own.
+      if (mine === attempt) created = outcome;
 
       return pasted ? recipes.update({ ...outcome, ...recipePatchFromPaste(pasted) }) : null;
     });
 
-    if (ok && id) {
+    if (ok && id && mine === attempt) {
       await openEditor(householdId, id, title);
     }
 
@@ -93,9 +107,12 @@ export function useNewRecipe(page: Page) {
     }
 
     const title = written.title?.trim() || page.title().trim() || m['import.paste.untitled']();
+    let mine = 0;
     let id: string | null = null;
 
     const ok = await submission.run(async () => {
+      // Claimed only once the submission really runs, so a repeated press does not cancel the one in flight.
+      mine = ++attempt;
       const outcome = await createOnce(householdId, () =>
         recipes.create(householdId, title, written.draftId, sourceUrl || undefined)
       );
@@ -105,7 +122,8 @@ export function useNewRecipe(page: Page) {
       }
 
       id = outcome.id;
-      created = outcome;
+      // A recipe made after the user went elsewhere stays what it is; a later import starts its own.
+      if (mine === attempt) created = outcome;
 
       return recipes.update({
         ...outcome,
@@ -115,12 +133,12 @@ export function useNewRecipe(page: Page) {
 
     if (ok) drafts.dismiss();
 
-    if (ok && id) {
+    if (ok && id && mine === attempt) {
       await openEditor(householdId, id, title);
     }
 
     return ok;
   }
 
-  return { submission, start, startFromDraft, forgetShare };
+  return { submission, start, startFromDraft, forgetShare, abandon };
 }

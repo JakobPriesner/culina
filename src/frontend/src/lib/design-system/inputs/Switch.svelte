@@ -5,10 +5,19 @@
     label: string;
     description?: string;
     disabled?: boolean;
+    /** For a row that already prints the label and explanation: they still name and describe the switch, without a second visible copy. */
+    hideLabel?: boolean;
     onchange?: (checked: boolean) => void;
   }
 
-  let { checked = $bindable(), label, description, disabled = false, onchange }: Props = $props();
+  let {
+    checked = $bindable(),
+    label,
+    description,
+    disabled = false,
+    hideLabel = false,
+    onchange
+  }: Props = $props();
 
   const id = $props.id();
   const labelId = `${id}-label`;
@@ -16,7 +25,7 @@
 </script>
 
 <div class="row" class:disabled>
-  <span class="text">
+  <span class="text" class:ds-clipped={hideLabel}>
     <!-- Not a <label for>: a role="switch" button is not labelable, so the association is explicit.
          -->
     <span class="label" id={labelId}>{label}</span>

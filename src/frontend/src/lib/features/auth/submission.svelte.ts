@@ -53,14 +53,25 @@ export function createSubmission(): Submission {
     }, 1000);
   }
 
-  /** Focus goes to the first wrong field, so nobody hunts for it. */
-  function focusFirstError(error: AppError) {
-    const first = error.fields.find((cause) => cause.field && cause.field in fieldIds);
-    const id = first?.field ? fieldIds[first.field] : undefined;
+  /** Focus goes to the first wrong field in page order (the server lists causes in its own order), so nobody hunts for it. */
+  function focusFirstError(error: AppError, startedOn: Element | null) {
+    const document = globalThis.document;
+    const active = document?.activeElement;
 
-    if (id) {
-      globalThis.document?.getElementById(id)?.focus();
+    // Somebody who moved on while the request was out keeps their place.
+    if (active && active !== document.body && active !== startedOn) {
+      return;
     }
+
+    const wrong = error.fields
+      .map((cause) => (cause.field ? fieldIds[cause.field] : undefined))
+      .flatMap((id) => (id ? [document.getElementById(id)] : []))
+      .filter((control) => control !== null);
+
+    wrong.sort((a, b) =>
+      a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1
+    );
+    wrong[0]?.focus();
   }
 
   return {
@@ -96,6 +107,7 @@ export function createSubmission(): Submission {
         return false;
       }
 
+      const startedOn = globalThis.document?.activeElement ?? null;
       inFlight = true;
       failure = null;
       progress.start();
@@ -115,7 +127,7 @@ export function createSubmission(): Submission {
         startCountdown(error.retryAfterSeconds);
       }
 
-      focusFirstError(error);
+      focusFirstError(error, startedOn);
 
       return false;
     },

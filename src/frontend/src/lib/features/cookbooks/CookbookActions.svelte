@@ -75,33 +75,11 @@
     </Button>
   {/if}
 
-  <!-- What a shelf is for in the week: one of its recipes on a day. -->
-  <div class="compact">
-    <Button label={m['cookbooks.plan.action']()} onclick={onplan}>
-      {#snippet icon()}
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <rect x="3.5" y="5.5" width="17" height="15" rx="2" />
-          <path d="M8 3.5v4M16 3.5v4M3.5 10h17" />
-          <path d="m9 15 2 2 4-4" />
-        </svg>
-      {/snippet}
-
-      {m['cookbooks.plan.action']()}
-    </Button>
-  </div>
-
-  <!-- A whole shelf at once only for a chosen one: a self-filling shelf can hold dozens. -->
-  {#if !automatic}
-    <div class="shopping compact">
-      <Button label={m['cookbooks.shopping.add']()} loading={addingToList} onclick={onaddtolist}>
+  <!-- One unit, so the circles on a phone wrap together under the main action rather than leaving the menu alone on a row. -->
+  <div class="secondary">
+    <!-- What a shelf is for in the week: one of its recipes on a day. -->
+    <div class="compact">
+      <Button label={m['cookbooks.plan.action']()} onclick={onplan}>
         {#snippet icon()}
           <svg
             viewBox="0 0 24 24"
@@ -112,47 +90,53 @@
             stroke-linejoin="round"
             aria-hidden="true"
           >
-            <path d="M4 8h16l-1.4 10a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7Z" />
-            <path d="M9 8 12 3l3 5" />
+            <rect x="3.5" y="5.5" width="17" height="15" rx="2" />
+            <path d="M8 3.5v4M16 3.5v4M3.5 10h17" />
+            <path d="m9 15 2 2 4-4" />
           </svg>
         {/snippet}
 
-        {m['cookbooks.shopping.add']()}
+        {m['cookbooks.plan.action']()}
       </Button>
     </div>
-  {/if}
 
-  <ActionMenu minWidth="13rem">
-    {#snippet trigger({ popovertarget })}
-      <IconButton bordered label={m['cookbooks.moreActions']()} {popovertarget}>
-        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <circle cx="12" cy="5" r="1.6" />
-          <circle cx="12" cy="12" r="1.6" />
-          <circle cx="12" cy="19" r="1.6" />
-        </svg>
-      </IconButton>
-    {/snippet}
-
+    <!-- A whole shelf at once only for a chosen one: a self-filling shelf can hold dozens. -->
     {#if !automatic}
-      <button class="item" type="button" onclick={onedit}>
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z" />
-          <path d="m15 6 3 3" />
-        </svg>
+      <div class="shopping compact">
+        <Button label={m['cookbooks.shopping.add']()} loading={addingToList} onclick={onaddtolist}>
+          {#snippet icon()}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 8h16l-1.4 10a2 2 0 0 1-2 1.7H7.4a2 2 0 0 1-2-1.7Z" />
+              <path d="M9 8 12 3l3 5" />
+            </svg>
+          {/snippet}
 
-        {m['cookbooks.edit.title']()}
-      </button>
+          {m['cookbooks.shopping.add']()}
+        </Button>
+      </div>
+    {/if}
 
-      {#if arrangeable}
-        <button class="item" type="button" onclick={onarrange}>
+    <ActionMenu minWidth="13rem">
+      {#snippet trigger({ popovertarget })}
+        <IconButton bordered label={m['cookbooks.moreActions']()} {popovertarget}>
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <circle cx="12" cy="5" r="1.6" />
+            <circle cx="12" cy="12" r="1.6" />
+            <circle cx="12" cy="19" r="1.6" />
+          </svg>
+        </IconButton>
+      {/snippet}
+
+      {#if !automatic}
+        <button class="item" type="button" onclick={onedit}>
           <svg
             viewBox="0 0 24 24"
             fill="none"
@@ -162,33 +146,52 @@
             stroke-linejoin="round"
             aria-hidden="true"
           >
-            <path d="M8 4v16M4 8l4-4 4 4M16 20V4M12 16l4 4 4-4" />
+            <path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17v3Z" />
+            <path d="m15 6 3 3" />
           </svg>
 
-          {m['cookbooks.arrange.action']()}
+          {m['cookbooks.edit.title']()}
         </button>
+
+        {#if arrangeable}
+          <button class="item" type="button" onclick={onarrange}>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M8 4v16M4 8l4-4 4 4M16 20V4M12 16l4 4 4-4" />
+            </svg>
+
+            {m['cookbooks.arrange.action']()}
+          </button>
+        {/if}
+
+        <hr class="separator" />
       {/if}
 
-      <hr class="separator" />
-    {/if}
+      <button class="item danger" type="button" onclick={ondelete}>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13" />
+          <path d="M10 11v5M14 11v5" />
+        </svg>
 
-    <button class="item danger" type="button" onclick={ondelete}>
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="1.8"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13" />
-        <path d="M10 11v5M14 11v5" />
-      </svg>
-
-      {m['cookbooks.delete.action']()}
-    </button>
-  </ActionMenu>
+        {m['cookbooks.delete.action']()}
+      </button>
+    </ActionMenu>
+  </div>
 </div>
 
 <style>
@@ -197,6 +200,12 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
+    gap: var(--space-2);
+  }
+
+  .secondary {
+    display: flex;
+    align-items: center;
     gap: var(--space-2);
   }
 

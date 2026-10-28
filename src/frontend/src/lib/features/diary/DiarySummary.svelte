@@ -240,11 +240,14 @@
     font-size: var(--text-sm);
   }
 
-  /* Three columns, one figure each, under a short label, parted from the day's number by a hairline. */
+  /*
+   * One figure each under its label, parted from the day's number by a hairline. Each takes what its longest word
+   * needs and the rest is shared, so "Kohlenhydrate" stays whole; with larger text the last wraps to a second row.
+   */
   .macros {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: var(--space-4);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3) var(--space-4);
     margin: var(--space-3) 0 0;
     padding-block-start: var(--space-4);
     border-block-start: 1px solid var(--border);
@@ -253,12 +256,13 @@
   .macro {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
     gap: var(--space-1);
-    min-inline-size: 0;
   }
 
   dt {
     font-size: var(--text-xs);
+    overflow-wrap: normal;
   }
 
   dd {

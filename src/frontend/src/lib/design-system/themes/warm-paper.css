@@ -32,6 +32,15 @@
   --border-focus: var(--c-olive-600);
   --border-accent: var(--c-olive-300);
 
+  /* Fields: one set for every typed or chosen control, so a field's surface can change in one place. */
+  --field-surface: var(--c-white);
+  --field-surface-disabled: var(--c-sand-150);
+  --field-border: var(--c-sand-400);
+  --field-border-hover: var(--c-sand-500);
+  --field-border-focus: var(--c-olive-600);
+  --field-border-error: var(--c-rust-600);
+  --field-text-disabled: var(--c-sand-500);
+
   --accent: var(--c-olive-600);
   --accent-hover: var(--c-olive-700);
   --accent-active: var(--c-olive-700);
@@ -114,6 +123,15 @@
   --border-focus: var(--c-mint-400);
   /* Darker, not lighter: a pale hairline around a dark fill is a cut-out, not an edge. */
   --border-accent: var(--c-forest-600);
+
+  /* Fields: one set for every typed or chosen control, so a field's surface can change in one place. */
+  --field-surface: var(--c-forest-900);
+  --field-surface-disabled: var(--c-forest-975);
+  --field-border: var(--c-forest-500);
+  --field-border-hover: var(--c-forest-400);
+  --field-border-focus: var(--c-mint-400);
+  --field-border-error: #f08a85;
+  --field-text-disabled: var(--c-forest-400);
 
   /* Lighter than the light-mode accent: the same hue on a dark ground reads as muddy. */
   --accent: var(--c-mint-400);

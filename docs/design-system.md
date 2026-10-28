@@ -221,6 +221,23 @@ Status     --danger --danger-hover --success --warning  (+ -subtle variants)
 Effects    --shadow-card  --shadow-overlay  --scrim
 ```
 
+#### Field tokens
+
+Every typed or chosen control (`.ds-control` in `inputs/control.css`, and the stepper) reads one set,
+never `--surface-raised` or `--border-strong` directly:
+
+```
+--field-surface  --field-surface-disabled  --field-text-disabled
+--field-border   --field-border-hover      --field-border-focus  --field-border-error
+```
+
+They resolve to the current look (white field, strong sand border, olive ring). A different field
+surface is one override on a wrapper, with no component edited:
+`.group { --field-surface: <colour>; }`. The gallery's "Field surfaces" section (`/design`, gallery
+builds only) shows the current white field beside a tinted cream one on the page, on a white sheet and
+inside a cream group, at rest, focused, invalid and disabled, in light and dark. **The cream field is a
+proposal pending design review**; nothing in the app uses it.
+
 Scales live in `scales.css` and are theme-independent:
 
 ```

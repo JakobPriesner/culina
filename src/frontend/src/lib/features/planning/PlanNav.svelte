@@ -114,6 +114,13 @@
     padding-inline: var(--space-3);
   }
 
+  /* A phone: the capsule and the dates share one row at 390px. */
+  @media (max-width: 30rem) {
+    .today {
+      padding-inline: var(--space-2);
+    }
+  }
+
   /* Resting, not gone: the capsule keeps its shape and the label its place. */
   .today:disabled {
     color: var(--text-subtle);
