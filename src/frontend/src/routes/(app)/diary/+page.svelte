@@ -339,34 +339,38 @@
 
       {#if !settings || settings.enabled}
         <div class="aside">
-          <WeekStrip
-            days={week}
-            selected={date}
-            {today}
-            label={m['diary.week.label']({
-              date: formatDate(new Date(`${monday}T12:00:00`), { day: 'numeric', month: 'long' })
-            })}
-            onselect={show}
-            previousLabel={m['diary.week.previous']()}
-            nextLabel={m['diary.week.next']()}
-            onprevious={() => show(addDays(date, -7))}
-            onnext={() => show(addDays(date, 7))}
-            nextDisabled={monday >= mondayOfDate(today)}
-          />
+          <div class="calendar">
+            <WeekStrip
+              days={week}
+              selected={date}
+              {today}
+              label={m['diary.week.label']({
+                date: formatDate(new Date(`${monday}T12:00:00`), { day: 'numeric', month: 'long' })
+              })}
+              onselect={show}
+              previousLabel={m['diary.week.previous']()}
+              nextLabel={m['diary.week.next']()}
+              onprevious={() => show(addDays(date, -7))}
+              onnext={() => show(addDays(date, 7))}
+              nextDisabled={monday >= mondayOfDate(today)}
+            />
+          </div>
 
           {#if settings?.enabled && !day && diary.status !== 'failed'}
-            <div class="loading-summary" aria-hidden="true">
+            <div class="figures loading-summary" aria-hidden="true">
               <Skeleton width="10rem" height="2.5rem" shape="block" />
               <Skeleton width="100%" height="0.375rem" shape="block" />
               <Skeleton width="14rem" height="1rem" />
             </div>
           {:else if settings?.enabled && day}
-            <DiarySummary
-              {day}
-              kcalTarget={settings?.kcalTarget ?? null}
-              proteinTarget={settings?.proteinTarget ?? null}
-              headline={settings?.headline === 'remaining' ? 'remaining' : 'eaten'}
-            />
+            <div class="figures">
+              <DiarySummary
+                {day}
+                kcalTarget={settings?.kcalTarget ?? null}
+                proteinTarget={settings?.proteinTarget ?? null}
+                headline={settings?.headline === 'remaining' ? 'remaining' : 'eaten'}
+              />
+            </div>
           {/if}
         </div>
       {/if}
@@ -508,7 +512,8 @@
   .log {
     display: grid;
     gap: var(--space-6);
-    max-inline-size: var(--measure);
+    inline-size: 100%;
+    max-inline-size: 45rem;
     margin-inline: auto;
   }
 
@@ -521,7 +526,7 @@
 
   .day {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
     gap: var(--space-4);
   }
@@ -572,6 +577,33 @@
   .source {
     color: var(--text-muted);
     font-size: var(--text-sm);
+  }
+
+  .calendar,
+  .figures {
+    min-inline-size: 0;
+  }
+
+  /* Portrait tablets keep one reading column. The week and its totals share a compact overview instead of
+     stretching seven dates and three figures across the whole page. Phones keep their full-width week. */
+  @media (48rem <= width < 64rem) {
+    .aside {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+      align-items: center;
+      padding: var(--space-4);
+      border-radius: var(--radius-lg);
+      background: var(--surface-raised);
+    }
+
+    .calendar:only-child {
+      grid-column: 1 / -1;
+    }
+
+    .figures {
+      padding-inline-start: var(--space-6);
+      border-inline-start: 1px solid var(--border);
+    }
   }
 
   .source {

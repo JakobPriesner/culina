@@ -66,10 +66,7 @@
     display: inline-flex;
     flex: none;
     align-items: stretch;
-    padding: var(--space-1);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-full);
-    background: var(--surface-sunken);
+    padding: 0;
   }
 
   button {
@@ -111,7 +108,8 @@
   }
 
   .today {
-    padding-inline: var(--space-3);
+    padding-inline: var(--space-2);
+    color: var(--accent);
   }
 
   /* A phone: the capsule and the dates share one row at 390px. */
