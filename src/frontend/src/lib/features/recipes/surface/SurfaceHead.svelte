@@ -71,15 +71,17 @@
 </header>
 
 <style>
-  /* A grid, not a wrapping row, so a long title wraps in its own column instead of pushing the controls down. */
+  /* The title takes the width its text needs: a title that does not fit beside the actions takes the whole line and they wrap under it, instead of leaving it a skinny column that splits words. */
   .titleRow {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-4);
+    gap: var(--space-3) var(--space-4);
   }
 
   .title {
+    flex: 1 1 auto;
+    min-width: 0;
     font-family: var(--font-editorial);
     font-size: var(--text-display);
     font-weight: var(--weight-regular);
@@ -99,6 +101,7 @@
   /* On a phone the title takes the whole line and the actions sit under it as a toolbar, never over the photograph. */
   @media (width < 52rem) {
     .titleRow {
+      display: grid;
       grid-template-columns: minmax(0, 1fr);
       gap: var(--space-3);
     }

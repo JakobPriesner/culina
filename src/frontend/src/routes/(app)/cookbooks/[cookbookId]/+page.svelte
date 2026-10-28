@@ -13,6 +13,7 @@
   import { useCookbookActions } from '$features/cookbooks/useCookbookActions.svelte';
   import { useCookbookShelf } from '$features/cookbooks/useCookbookShelf.svelte';
   import LibraryToolbar from '$features/recipes/filters/LibraryToolbar.svelte';
+  import RefreshFailed from '$features/recipes/library/RefreshFailed.svelte';
   import RecipeGrid from '$features/recipes/RecipeGrid.svelte';
   import RecipePicker from '$features/recipes/RecipePicker.svelte';
   import PlanRecipeSheet from '$features/planning/PlanRecipeSheet.svelte';
@@ -110,7 +111,7 @@
       </div>
     </header>
 
-    {#if shelf.status === 'failed'}
+    {#if shelf.status === 'failed' && shelf.items.length === 0}
       <ErrorState
         title={m['recipes.failed.title']()}
         body={m['recipes.failed.body']()}
@@ -130,6 +131,10 @@
         onedit={() => (actions.ui.renaming = true)}
       />
     {:else}
+      {#if shelf.status === 'failed' || cookbooks.openStatus === 'failed'}
+        <RefreshFailed onretry={list.reload} />
+      {/if}
+
       <RecipeGrid
         recipes={shelf.items}
         query={view.query}

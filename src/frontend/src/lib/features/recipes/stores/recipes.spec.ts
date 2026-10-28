@@ -461,3 +461,49 @@ describe('a refused save', () => {
     expect(recipes.detail?.title).toBe('Orzo');
   });
 });
+
+describe('listing again', () => {
+  it('keeps the same household’s and cookbook’s rows on screen while they refresh', async () => {
+    serverAnswers(() => page([summary('r1', 'Orzo')]));
+    await recipes.list(household, { cookbookId: 'c1' });
+
+    const refreshing = recipes.list(household, { cookbookId: 'c1' });
+
+    expect(recipes.items.map((item) => item.title)).toEqual(['Orzo']);
+    await refreshing;
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps them when the refresh fails', async () => {
+    serverAnswers(() => page([summary('r1', 'Orzo')]));
+    await recipes.list(household, { cookbookId: 'c1' });
+
+    serverAnswers(() => json({ code: 'server.error' }, 500));
+    await recipes.list(household, { cookbookId: 'c1' });
+
+    expect(recipes.status).toBe('failed');
+    expect(recipes.items.map((item) => item.title)).toEqual(['Orzo']);
+  });
+
+  it('never shows another cookbook’s or household’s rows while theirs load', async () => {
+    serverAnswers(() => page([summary('r1', 'Orzo')]));
+    await recipes.list(household, { cookbookId: 'c1' });
+
+    const nextCookbook = recipes.list(household, { cookbookId: 'c2' });
+    expect(recipes.items).toEqual([]);
+    await nextCookbook;
+
+    const nextHousehold = recipes.list('h2', { cookbookId: 'c2' });
+    expect(recipes.items).toEqual([]);
+    await nextHousehold;
+  });
+
+  it('forgets them on sign-out', async () => {
+    serverAnswers(() => page([summary('r1', 'Orzo')]));
+    await recipes.list(household);
+    recipes.reset();
+
+    expect(recipes.items).toEqual([]);
+    expect(recipes.status).toBe('idle');
+  });
+});

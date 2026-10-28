@@ -19,8 +19,8 @@ export class RecipeList {
   #loadingMore = $state(false);
   #moreFailed = $state(false);
 
-  /** Plain, not $state: read before the first await of effect-called methods, where a tracked read would re-run on their own writes. */
-  #householdId: string | null = null;
+  /** Whose rows these are: household and cookbook. Plain, not $state: read before the first await of effect-called methods, where a tracked read would re-run on their own writes. */
+  #context: string | null = null;
 
   /** Which read may write: responses arrive out of order (a short query answers last), so only the newest is applied. */
   #readToken = 0;
@@ -68,9 +68,11 @@ export class RecipeList {
   async list(householdId: string, filters: RecipeFilters = {}): Promise<void> {
     const token = this.#beginRead();
 
-    // Don't show another household's rows under this one's name while loading.
-    if (this.#householdId !== householdId) {
-      this.#householdId = householdId;
+    // Rows of the same household and cookbook stay on screen while they refresh; another context's never do.
+    const context = `${householdId}|${filters.cookbookId ?? ''}`;
+
+    if (this.#context !== context) {
+      this.#context = context;
       this.#listing += 1;
       this.#items = [];
       this.#total = 0;
@@ -191,7 +193,7 @@ export class RecipeList {
 
   reset(): void {
     this.#listing += 1;
-    this.#householdId = null;
+    this.#context = null;
     this.#items = [];
     this.#status = 'idle';
     this.#error = null;

@@ -61,6 +61,20 @@
     color: var(--text);
   }
 
+  /* A phone: the sentence fits one line, and the day below it comes closer, so the first day is not pushed down. */
+  @media (max-width: 30rem), (max-height: 32rem) {
+    .line {
+      margin-bottom: var(--space-3);
+    }
+  }
+
+  @media (max-width: 30rem) {
+    .line {
+      gap: var(--space-2);
+      padding-inline: var(--space-2);
+    }
+  }
+
   .icon {
     flex-shrink: 0;
     width: var(--space-6);

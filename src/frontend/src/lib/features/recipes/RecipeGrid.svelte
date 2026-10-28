@@ -152,6 +152,23 @@
     .rows .card {
       contain-intrinsic-size: auto 5rem;
     }
+
+    /* A row gives the remove button a column of its own beside the text, so it never lies over the title or the calorie button. */
+    .rows .card:has(.remove) {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-2);
+    }
+
+    .rows .card:has(.remove) > :global(.recipe) {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .rows .remove {
+      position: static;
+      flex-shrink: 0;
+    }
   }
 
   @media (min-width: 40rem) {

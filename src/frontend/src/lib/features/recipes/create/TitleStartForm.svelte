@@ -13,8 +13,21 @@
 
   let { title = $bindable(), failure, loading, onsubmit }: Props = $props();
 
+  const titleId = 'new-recipe-title';
+
+  /** Set by submitting nothing; cleared by typing. */
+  let missing = $state(false);
+
   function submit(event: SubmitEvent) {
     event.preventDefault();
+
+    if (!title.trim()) {
+      missing = true;
+      globalThis.document?.getElementById(titleId)?.focus();
+
+      return;
+    }
+
     onsubmit();
   }
 </script>
@@ -22,7 +35,11 @@
 <form class="start" onsubmit={submit} novalidate>
   <FormFailure {failure} />
 
-  <Field label={m['editor.title']()}>
+  <Field
+    id={titleId}
+    label={m['editor.title']()}
+    error={missing && !title.trim() ? m['editor.titleRequired']() : undefined}
+  >
     {#snippet children({ id, describedBy, invalid })}
       <TextInput
         {id}

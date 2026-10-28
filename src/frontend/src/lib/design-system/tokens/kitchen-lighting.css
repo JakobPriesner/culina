@@ -30,6 +30,14 @@
     --border-focus: #244a17;
     --border-accent: var(--c-olive-300);
 
+    --field-surface: #ffffff;
+    --field-surface-disabled: #ffffff;
+    --field-border: #333333;
+    --field-border-hover: #444444;
+    --field-border-focus: #244a17;
+    --field-border-error: #851a15;
+    --field-text-disabled: #444444;
+
     --accent: #244a17;
     --accent-hover: #193810;
     --accent-active: #193810;
@@ -110,6 +118,14 @@
     /* Darker rather than lighter here: the capsule it edges is olive-800, and a
      pale hairline around a dark fill is a cut-out, not an edge. */
     --border-accent: var(--c-olive-600);
+
+    --field-surface: #000000;
+    --field-surface-disabled: #000000;
+    --field-border: #888888;
+    --field-border-hover: #a3a3a3;
+    --field-border-focus: var(--c-olive-300);
+    --field-border-error: #f08a85;
+    --field-text-disabled: #a3a3a3;
 
     /* Lighter than the light-mode accent: the same hue on a dark ground reads as
      muddy, and contrast has to be earned in both directions. */

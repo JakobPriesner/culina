@@ -2,7 +2,7 @@
   import { untrack } from 'svelte';
 
   import type { AppError } from '$api';
-  import { Button, Chevron, Field, TextInput } from '$ds';
+  import { Button, Field, TextInput } from '$ds';
   import PackageFoodForm from '$features/nutrition/PackageFoodForm.svelte';
   import {
     householdFoods,
@@ -19,6 +19,7 @@
   import Viewfinder from '$features/scanning/Viewfinder.svelte';
   import { explain } from '$shell/explain';
   import { haptics } from '$shell/haptics';
+  import DiaryBack from './DiaryBack.svelte';
   import { formatNumber, m } from '$shell/i18n';
 
   import type { FoodChoice } from './DiaryAddSheet.svelte';
@@ -224,10 +225,7 @@
 </script>
 
 <div class="product">
-  <button class="back" type="button" onclick={onback}>
-    <Chevron direction="back" />
-    {m['diary.add.back']()}
-  </button>
+  <DiaryBack onclick={onback} />
 
   {#if phase.kind === 'scanning'}
     <h3>{m['diary.scan.title']()}</h3>
@@ -353,27 +351,6 @@
     margin: 0;
     font-size: var(--text-lg);
     overflow-wrap: anywhere;
-  }
-
-  .back {
-    display: inline-flex;
-    align-items: center;
-    align-self: flex-start;
-    gap: var(--space-1);
-    min-block-size: var(--control-sm);
-    margin-inline-start: calc(-1 * var(--space-2));
-    padding: 0 var(--space-2);
-    border: 0;
-    border-radius: var(--radius-md);
-    background: transparent;
-    color: var(--accent);
-    font: inherit;
-    font-weight: var(--weight-medium);
-    cursor: pointer;
-  }
-
-  .back:focus-visible {
-    outline: 2px solid var(--border-focus);
   }
 
   .values {

@@ -35,7 +35,7 @@
 
   <p class="title" class:untitled={!title} class:away={watch.away}>{title || untitled}</p>
 
-  <div class="state">
+  <div class="state {tone}">
     <SaveState {tone} text={status} />
   </div>
 
@@ -110,6 +110,20 @@
   .state {
     min-width: 0;
     margin-inline-start: auto;
+  }
+
+  /* A sentence about a problem does not squeeze the name: it gets a line of its own under the row. */
+  @media (width < 64rem) {
+    .rail {
+      flex-wrap: wrap;
+    }
+
+    .state.failed,
+    .state.conflict,
+    .state.local {
+      flex: 1 1 100%;
+      margin-inline-start: 0;
+    }
   }
 
   .untitled {

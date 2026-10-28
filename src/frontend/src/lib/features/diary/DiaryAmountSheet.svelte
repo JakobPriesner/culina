@@ -4,6 +4,7 @@
   import type { Unit } from '$features/recipes/units';
   import { m } from '$shell/i18n';
 
+  import DiaryBack from './DiaryBack.svelte';
   import DiaryOwnFigures, {
     figuresOf,
     noFigures,
@@ -47,10 +48,12 @@
     busy?: boolean;
     onsave: (answer: AmountAnswer) => void;
     onremove?: (entry: DiaryEntry) => void;
+    /** Given when the subject came from the search, which stays open beneath: back to it, as it was left. */
+    onback?: () => void;
     onclose: () => void;
   }
 
-  let { subject, meal, busy = false, onsave, onremove, onclose }: Props = $props();
+  let { subject, meal, busy = false, onsave, onremove, onback, onclose }: Props = $props();
 
   const entry = $derived(subject?.kind === 'entry' ? subject.entry : null);
   const isRecipe = $derived(
@@ -129,6 +132,7 @@
 
 <Sheet open={subject !== null} {title} closeLabel={m['app.dismiss']()} {onclose}>
   <div class="body">
+    {#if onback}<DiaryBack onclick={onback} />{/if}
     {#if isTyped}
       <DiaryOwnFigures bind:fields={own} />
     {:else if isRecipe}

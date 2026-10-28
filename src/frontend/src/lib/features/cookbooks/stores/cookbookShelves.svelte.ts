@@ -1,3 +1,5 @@
+import { untrack } from 'svelte';
+
 import { clientError, ErrorCodes, http, request, type AppError } from '$api';
 import type { LoadStatus } from '$shell/stores';
 
@@ -37,6 +39,9 @@ export class Shelves {
 
   // Not $state, for the same reason as `#loaded`.
   #householdId: string | null = null;
+
+  // Which read may write the open cookbook: answers for one already left are dropped.
+  #openRead = 0;
 
   get items(): readonly Cookbook[] {
     return this.#items;
@@ -137,12 +142,26 @@ export class Shelves {
   }
 
   async load(cookbookId: string): Promise<void> {
-    this.#openStatus = 'loading';
+    const read = ++this.#openRead;
+
+    // `load` runs in an $effect: an untracked read, or it would re-run on its own write of `#open`.
+    const kept = untrack(() => this.#open?.id === cookbookId);
+
+    // The same cookbook stays on screen while it refreshes; another one's never does.
+    if (!kept) {
+      this.#open = null;
+    }
+
+    this.#openStatus = kept ? 'ready' : 'loading';
     this.#openError = null;
 
     const result = await request(() =>
       http.GET('/api/v1/cookbooks/{cookbookId}', { params: { path: { cookbookId } } })
     );
+
+    if (read !== this.#openRead) {
+      return;
+    }
 
     if (result.ok) {
       // An answer the client cannot read is a failure with a retry, not a page with no title and nothing in it.
@@ -155,6 +174,11 @@ export class Shelves {
       }
 
       return;
+    }
+
+    // A cookbook that is gone is not kept; any other failure leaves what was shown.
+    if (result.error.status === 404) {
+      this.#open = null;
     }
 
     this.#openError = result.error;
@@ -298,6 +322,7 @@ export class Shelves {
     );
 
     if (result.ok) {
+      this.#open = null;
       this.#error = null;
 
       return true;
@@ -335,6 +360,7 @@ export class Shelves {
     this.#open = null;
     this.#openStatus = 'idle';
     this.#openError = null;
+    this.#openRead += 1;
     this.#status = 'idle';
     this.#error = null;
     this.#cursor = null;

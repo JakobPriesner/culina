@@ -1,18 +1,24 @@
 import { effectiveSort, RecipeQuery } from '$features/recipes/stores/libraryView.svelte';
 import { createRecipeStore } from '$features/recipes/stores/recipes.svelte';
+import { registerStore } from '$shell/stores';
 
 import { cookbooks } from './stores/cookbooks.svelte';
+
+/**
+ * Kept across visits, so coming back to a shelf shows its recipes while they refresh; the list drops
+ * them when the household or cookbook differs, and sign-out resets it.
+ */
+const shelf = createRecipeStore();
+
+registerStore(() => shelf.reset());
 
 interface Page {
   readonly cookbookId: () => string;
   readonly householdId: () => string | null;
 }
 
-/** The recipes on one shelf: the recipe store with a `cookbookId` filter and its own query. */
+/** The recipes on one shelf: a recipe store of its own (not the library's) with a `cookbookId` filter and its own query. */
 export function useCookbookShelf(page: Page) {
-  /** Its own store; filtering the shared one would leave the library filtered after navigating back. */
-  const shelf = createRecipeStore();
-
   /** Its own query for the same reason, on the library's class so a shelf sorts and narrows alike. */
   const view = new RecipeQuery();
 

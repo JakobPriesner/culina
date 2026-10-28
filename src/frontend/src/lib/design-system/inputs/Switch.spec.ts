@@ -35,4 +35,11 @@ describe('Switch', () => {
 
     expect(toggle()).toHaveAccessibleDescription('Anyone with the address can create an account.');
   });
+
+  it('keeps naming the switch when a row above it already prints the label', () => {
+    renderWithProviders(SwitchHarness, { props: { hideLabel: true } });
+
+    expect(toggle()).toBeInTheDocument();
+    expect(screen.getByText('Open registration').parentElement).toHaveClass('ds-clipped');
+  });
 });

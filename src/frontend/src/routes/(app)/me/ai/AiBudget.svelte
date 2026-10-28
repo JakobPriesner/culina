@@ -20,6 +20,7 @@
   <SettingsSection title={m['ai.budget']()} description={m['ai.budget.hint']()}>
     <SettingsRow label={m['ai.enabled']()} description={m['ai.enabled.hint']()}>
       <Switch
+        hideLabel
         checked={draft.enabled}
         label={m['ai.enabled']()}
         onchange={(checked) => settings.setEnabled(checked)}

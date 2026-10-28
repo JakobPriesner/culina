@@ -10,6 +10,7 @@
   import EmptyLibrary from '$features/recipes/library/EmptyLibrary.svelte';
   import { focusSearchOnFind } from '$features/recipes/library/focusSearchOnFind';
   import LibrarySummary from '$features/recipes/library/LibrarySummary.svelte';
+  import RefreshFailed from '$features/recipes/library/RefreshFailed.svelte';
   import PromoteSearchSheet from '$features/recipes/library/PromoteSearchSheet.svelte';
   import { useLibraryList } from '$features/recipes/library/useLibraryList.svelte';
   import {
@@ -105,7 +106,7 @@
     </LibraryToolbar>
   {/if}
 
-  {#if recipes.status === 'failed'}
+  {#if recipes.status === 'failed' && recipes.items.length === 0}
     <ErrorState
       title={m['recipes.failed.title']()}
       body={m['recipes.failed.body']()}
@@ -125,6 +126,10 @@
   {:else if recipes.status === 'ready' && recipes.items.length === 0}
     <EmptyLibrary />
   {:else}
+    {#if recipes.status === 'failed'}
+      <RefreshFailed onretry={list.retry} />
+    {/if}
+
     {#if suggesting}
       <SuggestionDeck
         items={lead.lead}

@@ -73,6 +73,12 @@
     border-top: 1px solid var(--border);
   }
 
+  /* A note between or after rows: same inset as a row, no divider of its own, so it reads as part of the row above. */
+  .body:not(.bare) > :global(p) {
+    padding: 0 var(--space-4) var(--space-4);
+    border-top: none;
+  }
+
   .bare {
     border: none;
     border-radius: 0;

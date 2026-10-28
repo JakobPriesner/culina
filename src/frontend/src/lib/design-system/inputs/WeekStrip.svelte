@@ -48,11 +48,31 @@
 </script>
 
 <div class="strip" role="group" aria-label={label}>
-  <IconButton label={previousLabel} size="sm" onclick={onprevious}>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"
-      ><path d="m15 6-6 6 6 6" stroke-linecap="round" stroke-linejoin="round" /></svg
-    >
-  </IconButton>
+  <div class="weeks">
+    <IconButton label={previousLabel} size="sm" onclick={onprevious}>
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        aria-hidden="true"
+        ><path d="m15 6-6 6 6 6" stroke-linecap="round" stroke-linejoin="round" /></svg
+      >
+    </IconButton>
+
+    <span class="caption" aria-hidden="true">{label}</span>
+
+    <IconButton label={nextLabel} size="sm" disabled={nextDisabled} onclick={onnext}>
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        aria-hidden="true"
+        ><path d="m9 6 6 6-6 6" stroke-linecap="round" stroke-linejoin="round" /></svg
+      >
+    </IconButton>
+  </div>
 
   <ol class="days">
     {#each days as day (day.id)}
@@ -75,28 +95,42 @@
       </li>
     {/each}
   </ol>
-
-  <IconButton label={nextLabel} size="sm" disabled={nextDisabled} onclick={onnext}>
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"
-      ><path d="m9 6 6 6-6 6" stroke-linecap="round" stroke-linejoin="round" /></svg
-    >
-  </IconButton>
 </div>
 
 <style>
   .strip {
     display: flex;
-    align-items: center;
+    flex-direction: column;
     gap: var(--space-1);
+  }
+
+  /* The arrows sit above the days, so all seven share the full width: about 44px each on a 320px phone. */
+  .weeks {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+
+  .caption {
+    color: var(--text-muted);
+    font-size: var(--text-sm);
+    text-align: center;
   }
 
   .days {
     display: grid;
-    flex: 1;
     grid-template-columns: repeat(7, minmax(0, 1fr));
     margin: 0;
     padding: 0;
     list-style: none;
+  }
+
+  /* A phone's page gutter takes more than the days can spare: they reach a little into it, the number stays inside. */
+  @media (max-width: 30rem) {
+    .days {
+      margin-inline: calc(var(--space-2) * -1);
+    }
   }
 
   .day {

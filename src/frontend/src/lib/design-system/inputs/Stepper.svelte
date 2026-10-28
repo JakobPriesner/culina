@@ -104,9 +104,9 @@
     align-self: flex-start;
     align-items: center;
     gap: var(--space-1);
-    border: 1px solid var(--border-strong);
+    border: 1px solid var(--field-border);
     border-radius: var(--radius-full);
-    background: var(--surface-raised);
+    background: var(--field-surface);
   }
 
   .stepper.disabled {

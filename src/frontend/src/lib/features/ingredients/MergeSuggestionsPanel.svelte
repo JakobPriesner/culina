@@ -120,7 +120,6 @@
           <span class="actions">
             <Button
               size="sm"
-              variant="primary"
               disabled={mergingAll}
               label={m['ingredients.suggestions.mergeLabel']({
                 from: suggestion.from.name,

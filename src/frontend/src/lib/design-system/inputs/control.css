@@ -6,9 +6,9 @@
   min-width: 0;
   height: var(--control-md);
   padding-inline: var(--space-4);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--field-border);
   border-radius: var(--radius-md);
-  background: var(--surface-raised);
+  background: var(--field-surface);
   color: var(--text);
   font: inherit;
   transition:
@@ -21,25 +21,25 @@
 }
 
 .ds-control:hover:not(:disabled) {
-  border-color: var(--text-subtle);
+  border-color: var(--field-border-hover);
 }
 
 .ds-control:disabled {
-  background: var(--surface-sunken);
-  color: var(--text-subtle);
+  background: var(--field-surface-disabled);
+  color: var(--field-text-disabled);
   cursor: not-allowed;
 }
 
 /* Colour is never the only signal: the message and aria-invalid say what is wrong. */
 .ds-control[aria-invalid='true'] {
-  border-color: var(--danger);
+  border-color: var(--field-border-error);
 }
 
 /* Ring on the field's own edge, unlike the detached default: two outlines read as misaligned.
    Radius restated because the default focus rule rounds to --radius-sm and the field would change shape. */
 .ds-control:focus-visible {
-  border-color: var(--border-focus);
-  outline: 2px solid var(--border-focus);
+  border-color: var(--field-border-focus);
+  outline: 2px solid var(--field-border-focus);
   outline-offset: 0;
   border-radius: var(--radius-md);
 }
@@ -63,9 +63,9 @@
 
 .ds-control.quiet:hover:not(:disabled) {
   border-color: var(--border);
-  background: var(--surface-raised);
+  background: var(--field-surface);
 }
 
 .ds-control.quiet:focus-visible {
-  background: var(--surface-raised);
+  background: var(--field-surface);
 }

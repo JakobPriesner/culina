@@ -2611,5 +2611,7 @@
   "server.registration.maxUsers": "Höchstzahl an Konten",
   "server.registration.maxUsersHint": "Die Registrierung endet, sobald so viele Konten existieren. Eine ganze Zahl von 1 bis 100000.",
   "server.registration.save": "Speichern",
-  "server.registration.saved": "Gespeichert."
+  "server.registration.saved": "Gespeichert.",
+  "recipes.refreshFailed": "Aktualisieren fehlgeschlagen. Angezeigt wird der zuletzt geladene Stand.",
+  "editor.titleRequired": "Gib ihm einen Titel. Mehr braucht ein Rezept nicht."
 }

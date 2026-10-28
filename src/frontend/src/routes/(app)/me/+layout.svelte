@@ -59,6 +59,16 @@
   const current = $derived(page.url.pathname);
   const active = $derived(categories.find((category) => category.href === current));
 
+  // On a phone the row scrolls sideways: bring the current category into view, as a link opened from elsewhere may be past the edge.
+  let strip = $state<HTMLElement>();
+
+  $effect(() => {
+    void current;
+    strip
+      ?.querySelector('[aria-current]')
+      ?.scrollIntoView?.({ inline: 'center', block: 'nearest' });
+  });
+
   /**
    * A non-administrator on an admin page: say "not yours" here rather than load settings the server refuses,
    * whose refusal would read as a failed load with a useless retry.
@@ -90,7 +100,7 @@
       <!-- Not a heading: it would land between the page's own heading and its sections. -->
       <p class="legend">{m['me.title']()}</p>
 
-      <div class="categories">
+      <div class="categories" bind:this={strip}>
         {#each personal as category (category.href)}
           {@render link(category)}
         {/each}
@@ -127,6 +137,8 @@
 <style>
   .settings {
     display: grid;
+    /* Not the content's width: the scrolling category row would stretch the column past the screen. */
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-8);
     align-items: start;
   }
@@ -136,16 +148,38 @@
     display: none;
   }
 
-  /* Phone: wraps instead of scrolling sideways, so no category hides past the edge. */
+  /*
+   * Phone: one row that scrolls sideways (a pill cut at the edge says there is more) rather than three wrapped rows
+   * above every page. The current category is scrolled into view; the scrollbar is hidden, touch and keyboard still scroll.
+   */
   .categories {
     display: flex;
-    flex-wrap: wrap;
     gap: var(--space-1);
+    padding-block: var(--space-1);
+    overflow-x: auto;
+    scrollbar-width: none;
   }
 
-  /* Phone and tablet: the administrator's pills follow the others in the same row, after a hairline. */
+  .categories::-webkit-scrollbar {
+    display: none;
+  }
+
+  .categories > :global(*) {
+    flex: none;
+  }
+
+  /* Phone and tablet: the administrator's pills follow the others in the same row, after a hairline and their heading. */
   .administration {
     display: contents;
+  }
+
+  .administration .legend {
+    display: block;
+    align-self: center;
+    white-space: nowrap;
+    color: var(--text-subtle);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
   }
 
   .administration::before {
@@ -166,6 +200,7 @@
     color: var(--text-muted);
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
+    white-space: nowrap;
     text-decoration: none;
     transition:
       color var(--duration-fast) var(--ease-out),
@@ -210,7 +245,7 @@
 
   /*
    * Phone, and a tablet whose header has no room for an administrator's six categories: sticky under the header
-   * on an opaque band bled to the gutter (the row wraps to two lines), above the header's layer so its scrim fades
+   * on an opaque band bled to the gutter (one scrolling row), above the header's layer so its scrim fades
    * the page, not the pills.
    */
   @media (max-width: 47.999rem) {
@@ -258,8 +293,8 @@
 
     /* The navbar's own container: the pills need a surface once the page scrolls under them. */
     .settings:not(.crowded) .categories {
-      flex-wrap: nowrap;
       padding: var(--space-1);
+      overflow: visible;
       border: 1px solid var(--border);
       border-radius: var(--radius-full);
       background: var(--surface-nav-glass);
@@ -291,8 +326,8 @@
 
     .categories {
       flex-direction: column;
-      flex-wrap: nowrap;
-      gap: var(--space-1);
+      padding-block: 0;
+      overflow: visible;
     }
 
     /*

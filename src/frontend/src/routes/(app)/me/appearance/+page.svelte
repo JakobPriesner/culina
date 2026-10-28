@@ -39,6 +39,7 @@
 
   <SettingsRow label={m['me.olli']()} description={m['me.olli.hint']()}>
     <Switch
+      hideLabel
       checked={olliSetting.animated}
       label={m['me.olli']()}
       onchange={(checked) => olliSetting.animate(checked)}

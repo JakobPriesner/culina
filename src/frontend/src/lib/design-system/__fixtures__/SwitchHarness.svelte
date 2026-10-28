@@ -4,6 +4,7 @@
   interface Props {
     checked?: boolean;
     description?: string;
+    hideLabel?: boolean;
     onchange?: (checked: boolean) => void;
   }
 

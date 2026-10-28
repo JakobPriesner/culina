@@ -295,3 +295,66 @@ describe('opening a shelf', () => {
     expect(cookbooks.openError?.code).toBe('client.unexpected');
   });
 });
+
+describe('opening a shelf again', () => {
+  const detail = (id: string, name: string) =>
+    json({ ...shelf(id, name), householdId: household, kind: 'manual', version: 1 });
+
+  it('shows the loading state only the first time', async () => {
+    serverAnswers(() => detail('c1', 'Christmas'));
+
+    const first = cookbooks.load('c1');
+
+    expect(cookbooks.openStatus).toBe('loading');
+    await first;
+
+    const again = cookbooks.load('c1');
+
+    // The shelf stays on screen, and the refresh is already on its way.
+    expect(cookbooks.openStatus).toBe('ready');
+    expect(cookbooks.open?.name).toBe('Christmas');
+    await again;
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the shelf and reports the failure when the refresh fails', async () => {
+    serverAnswers(() => detail('c1', 'Christmas'));
+    await cookbooks.load('c1');
+
+    serverAnswers(() => json({ code: 'server.error' }, 500));
+    await cookbooks.load('c1');
+
+    expect(cookbooks.open?.name).toBe('Christmas');
+    expect(cookbooks.openStatus).toBe('failed');
+    expect(cookbooks.openError).not.toBeNull();
+  });
+
+  it('never shows one shelf while another opens', async () => {
+    serverAnswers(() => detail('c1', 'Christmas'));
+    await cookbooks.load('c1');
+
+    serverAnswers(() => detail('c2', 'Weeknights'));
+    const opening = cookbooks.load('c2');
+
+    expect(cookbooks.open).toBeNull();
+    expect(cookbooks.openStatus).toBe('loading');
+    await opening;
+    expect(cookbooks.open?.id).toBe('c2');
+  });
+
+  it('drops a shelf that is gone, and every shelf on sign-out', async () => {
+    serverAnswers(() => detail('c1', 'Christmas'));
+    await cookbooks.load('c1');
+
+    serverAnswers(() => json({ code: 'cookbooks.not_found' }, 404));
+    await cookbooks.load('c1');
+
+    expect(cookbooks.open).toBeNull();
+
+    serverAnswers(() => detail('c1', 'Christmas'));
+    await cookbooks.load('c1');
+    cookbooks.reset();
+
+    expect(cookbooks.open).toBeNull();
+  });
+});
