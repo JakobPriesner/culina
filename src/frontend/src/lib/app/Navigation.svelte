@@ -121,7 +121,7 @@
 
   .bottom .destination {
     min-width: 0;
-    min-height: 3.5rem;
+    min-height: 3rem;
     padding: var(--space-1);
     border-radius: 1.25rem;
     text-align: center;
@@ -154,35 +154,14 @@
     background: var(--surface-selected);
   }
 
+  /* The dock shows icons only; the label stays the link's name for screen readers. */
   .bottom .label {
-    font-size: var(--text-xs);
-    font-weight: var(--weight-medium);
-    line-height: 1.25;
-    /* Whole words only ("Kochbüche/r" read as broken); the narrow-screen sizes below make every label fit. */
-    overflow-wrap: normal;
-  }
-
-  .bottom .destination.active .label {
-    font-weight: var(--weight-semibold);
-  }
-
-  /*
-   * The floating dock leaves a 320px phone 60px for a label, and "Kochbücher" needs about 70 at the usual size. A tighter
-   * dock inside (its 12px margin to the screen edge stays) and the size of a system tab bar's labels (11px) keep every
-   * label whole; mid-word "Kochbüc/her" read as broken.
-   */
-  @media (width < 25rem) {
-    .bottom {
-      gap: 2px;
-      padding: 2px;
-    }
-
-    .bottom .destination {
-      padding-inline: 2px;
-    }
-
-    .bottom .label {
-      font-size: 0.6875rem;
-    }
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 </style>

@@ -415,3 +415,14 @@ it; and an empty day was four loose headings. Changed:
   page's only filled one (HIG Buttons: a prominent style "for the most likely
   action in a view", one or two per view). Each meal's "＋" stays quiet: it is
   the second way in, not a second primary action.
+
+### 7.3 Portrait tablets (28 October 2026)
+
+- Below 64rem, the diary keeps one centered reading column capped at 45rem
+  (720px). Meals remain stacked in their usual order.
+- Between 48rem and 64rem, the week and daily totals share one compact raised
+  card: calendar on the left, totals on the right. A quiet vertical divider
+  groups them without spreading dates or nutrients across the full page.
+- Phones retain the full-width week above the totals; from 64rem the existing
+  sticky summary column remains beside the meals. Text and touch controls keep
+  their normal sizes throughout.
