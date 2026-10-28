@@ -86,7 +86,7 @@
 
     .sourced .source {
       position: sticky;
-      top: var(--space-24);
+      top: var(--pinned-top);
     }
   }
 </style>

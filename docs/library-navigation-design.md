@@ -146,7 +146,9 @@ The header names the parent Recipe book area, while page headings identify Recip
 or Cookbooks. Repeated eyebrow text is removed.
 
 Recipe creation remains the green primary action. Cookbook creation uses the same
-plus icon and control geometry with neutral emphasis. The search, quick filter,
+plus icon and control geometry; since Rezepte and Kochbücher became pages of
+their own it is the green primary on its page as well (28 October 2026, see
+`design-system.md`, "One accent"). The search, quick filter,
 and collection summary share a toolbar; their text-entry, toggle, and informational
 roles remain distinct. A shorter featured recipe introduces the content without
 occupying the entire first screen. The compact sheet remains the scalable mobile

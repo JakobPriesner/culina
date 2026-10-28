@@ -45,7 +45,7 @@
 <style>
   .rail {
     position: sticky;
-    top: var(--space-24);
+    top: var(--pinned-top);
     z-index: var(--z-sticky);
     display: flex;
     align-items: center;

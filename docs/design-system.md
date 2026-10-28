@@ -148,7 +148,19 @@ Food photography is the content. Everything else gets out of its way.
 - **Warm neutrals.** Cream in light, warm charcoal in dark — never blue-black,
   which makes food look grey and dead.
 - **One accent**, reserved for the primary action on a screen. If two things are
-  accented, neither is primary (principle 10).
+  accented, neither is primary (principle 10). Every page applies it the same
+  way:
+  - The page's own action, the one its head offers (*Eintragen*, *Neues
+    Kochbuch*, the library's new-recipe plus, *Rezepte hinzufügen*, *Kochen
+    starten*), is `variant="primary"`. A head action left neutral reads as
+    optional, and the page then has no primary at all.
+  - The same action repeated per item (each meal's or day's "＋") stays quiet:
+    it is the second way in, not a second primary.
+  - While an empty or error state shows its own primary button (*create your
+    first*, *Erneut versuchen*), the head's action steps aside, so one button
+    still leads.
+  - Apple's HIG says the same: a prominent style "for the most likely action
+    in a view", one or two per view.
 - **Photos are the cards.** A recipe card is an image with a title beneath it,
   not a bordered box containing an image inside another rounded rectangle
   (principle 12).

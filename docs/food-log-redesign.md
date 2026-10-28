@@ -402,3 +402,16 @@ it; and an empty day was four loose headings. Changed:
   meal is its heading alone": the heading now sits inside the raised surface,
   so an empty meal is one row high (principle 6) and lines up with the full
   ones, not a white box holding nothing.
+
+### 7.2 Desktop, third pass (28 October 2026)
+
+- **The day's column stands still.** From 64rem the title, "+ Eintragen" and
+  the day's card form one column pinned where it starts (`--pinned-top`, the
+  header's height plus the page's top space), so only the meals scroll. This
+  takes the title back out of the full-width row of §7.1; the longest title,
+  "Donnerstag", still fits beside the button at 20rem.
+- **"+ Eintragen" is the page's primary button.** It had the default neutral
+  style, against §9.2 of `diary-design.md`. It now carries the accent, the
+  page's only filled one (HIG Buttons: a prominent style "for the most likely
+  action in a view", one or two per view). Each meal's "＋" stays quiet: it is
+  the second way in, not a second primary action.

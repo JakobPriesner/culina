@@ -59,17 +59,23 @@
 
     toaster.show({ message: () => m['cookbooks.add.failed'](), tone: 'danger' });
   }
+
+  /** Not while an empty shelf or a failure offers its own primary button: two accents and neither leads. */
+  const offersNew = $derived(
+    cookbooks.status !== 'failed' && !(cookbooks.status === 'ready' && cookbooks.items.length === 0)
+  );
 </script>
 
 {#snippet peeking()}<Olli pose="peeking" />{/snippet}
+{#snippet newCookbook()}<LibraryActions oncreatecookbook={() => (making = true)} />{/snippet}
 <svelte:head><title>{m['cookbooks.title']()}</title></svelte:head>
 
 <Page>
-  <PageHeader title={m['cookbooks.title']()} subtitle={m['cookbooks.subtitle']()}>
-    {#snippet actions()}
-      <LibraryActions oncreatecookbook={() => (making = true)} />
-    {/snippet}
-  </PageHeader>
+  <PageHeader
+    title={m['cookbooks.title']()}
+    subtitle={m['cookbooks.subtitle']()}
+    actions={offersNew ? newCookbook : undefined}
+  />
 
   {#if cookbooks.status === 'failed'}
     <ErrorState
