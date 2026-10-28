@@ -8,6 +8,7 @@
   --surface-raised: var(--c-white);
   --surface-sunken: var(--c-sand-150);
   --surface-glass: color-mix(in srgb, var(--surface) 94%, transparent);
+  --surface-bar-glass: color-mix(in srgb, var(--surface) 72%, transparent);
   --surface-nav-glass: color-mix(in srgb, var(--surface-sunken) 90%, transparent);
   --surface-overlay: var(--c-white);
   /*

@@ -6,6 +6,7 @@
     --surface-raised: #ffffff;
     --surface-sunken: #ffffff;
     --surface-glass: #ffffff;
+    --surface-bar-glass: #ffffff;
     --surface-nav-glass: #ffffff;
     --surface-overlay: #ffffff;
     --surface-overlay-glass: #ffffff;
@@ -94,6 +95,7 @@
     --surface-raised: #000000;
     --surface-sunken: #000000;
     --surface-glass: #000000;
+    --surface-bar-glass: #000000;
     --surface-nav-glass: #000000;
     --surface-overlay: #000000;
     --surface-overlay-glass: #000000;
