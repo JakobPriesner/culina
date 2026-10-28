@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Button, ErrorState } from '$ds';
   import { session } from '$features/auth/session.svelte';
   import IngredientMergesPanel from '$features/ingredients/IngredientMergesPanel.svelte';
   import IngredientNamesPanel from '$features/ingredients/IngredientNamesPanel.svelte';
@@ -17,13 +18,32 @@
   /** The household's ingredient names, kept to one per ingredient, and what it said about them for nutrition. */
   const household = $derived(session.activeHousehold);
 
+  function load(householdId: string) {
+    void ingredientNames.load(householdId);
+    void nouns.load(householdId);
+    void householdFoods.load(householdId);
+  }
+
   $effect(() => {
     if (household) {
-      void ingredientNames.load(household.householdId);
-      void nouns.load(household.householdId);
-      void householdFoods.load(household.householdId);
+      load(household.householdId);
     }
   });
+
+  /**
+   * The names and the nutrition choices come from two separate reads: when both fail the server is out of reach, so
+   * the page says it once with one retry, rather than every section repeating it under its heading.
+   */
+  const unreachable = $derived(
+    household !== null &&
+      ingredientNames.status(household.householdId) === 'failed' &&
+      ingredientFacts.status(household.householdId) === 'failed'
+  );
+
+  function retry(householdId: string) {
+    load(householdId);
+    void ingredientFacts.load(householdId);
+  }
 
   // A merge moves the nutrition choices made for the merged name, so that list is read again.
   const merged = () => household && void ingredientFacts.load(household.householdId);
@@ -31,7 +51,13 @@
 
 <svelte:head><title>{m['me.ingredients']()}</title></svelte:head>
 
-{#if household}
+{#if household && unreachable}
+  <ErrorState title={m['ingredients.failed']()} body={m['error.unexpected.body']()}>
+    {#snippet action()}
+      <Button onclick={() => retry(household.householdId)}>{m['error.retry']()}</Button>
+    {/snippet}
+  </ErrorState>
+{:else if household}
   <SettingsSection
     title={m['ingredients.suggestions.title']()}
     description={m['ingredients.suggestions.body']()}

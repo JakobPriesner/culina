@@ -15,6 +15,14 @@
     listed?: boolean;
     onaddtocookbook?: () => void;
     onaddtoplan?: () => void;
+    /**
+     * Desktop only: the page's one filled action beside the title, where the reading starts, instead of a bar
+     * floating over the steps. Phones keep it docked at the bottom (`CookingAction`).
+     */
+    onstartcooking?: () => void;
+    resuming?: boolean;
+    /** Desktop only, in the menu: cooked without cook mode. */
+    onmadeit?: () => void;
     onshare?: () => void;
     oncopy?: () => void;
     ondelete?: () => void;
@@ -28,20 +36,33 @@
     listed = false,
     onaddtocookbook,
     onaddtoplan,
+    onstartcooking,
+    resuming = false,
+    onmadeit,
     onshare,
     oncopy,
     ondelete
   }: Props = $props();
 
-  const inMenu = $derived(!cooking && Boolean(onaddtocookbook || onshare || oncopy || ondelete));
+  const inMenu = $derived(
+    !cooking && Boolean(onaddtocookbook || onshare || oncopy || ondelete || onmadeit)
+  );
   const hasActions = $derived(
-    !cooking && Boolean(inMenu || onaddtolist || onaddtoplan || editable)
+    !cooking && Boolean(inMenu || onaddtolist || onaddtoplan || editable || onstartcooking)
   );
 </script>
 
 <!-- The loop's next steps (plan, shop) and editing stay outside the menu; the occasional ones go in it, and deleting comes last there, apart and in red. -->
 {#if hasActions}
   <div class="actions" class:edit-in-menu={inMenu && editable}>
+    {#if onstartcooking}
+      <span class="wide-only">
+        <Button variant="primary" onclick={onstartcooking}>
+          {resuming ? m['cooking.resume']() : m['recipe.startCooking']()}
+        </Button>
+      </span>
+    {/if}
+
     {#if onaddtoplan}
       <Button onclick={onaddtoplan}>
         {#snippet icon()}
@@ -151,6 +172,27 @@
           </span>
         {/if}
 
+        {#if onmadeit}
+          <span class="wide-only">
+            <button class="item" type="button" onclick={onmadeit}>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="m8.5 12.5 2.5 2.5 4.5-5" />
+              </svg>
+
+              {m['cooking.madeIt']()}
+            </button>
+          </span>
+        {/if}
+
         {#if onaddtocookbook}
           <button class="item" type="button" onclick={onaddtocookbook}>
             <svg
@@ -257,10 +299,12 @@
   }
 
   /*
-   * Narrower, the loop's two next steps keep a short word (an icon alone left "basket" and "calendar" to guess at) and
-   * editing collapses to a circle like the menu's, its aria-label the full name.
+   * Short of a very wide screen, the loop's two next steps keep a short word (an icon alone left "basket" and
+   * "calendar" to guess at) and editing collapses to a circle like the menu's, its aria-label the full name. On a
+   * desktop that keeps "Kochen starten" and the rest on the title's line, so the ingredients start on the first
+   * screen (culina-v2-6ilt.17).
    */
-  @media (width < 64rem) {
+  @media (width < 100rem) {
     .long {
       display: none;
     }
@@ -292,8 +336,15 @@
     }
   }
 
-  .narrow-edit {
+  .narrow-edit,
+  .wide-only {
     display: none;
+  }
+
+  @media (min-width: 64rem) {
+    .wide-only {
+      display: contents;
+    }
   }
 
   /* Two short labels and two circles need about 383px; narrower (a 360 or 320px phone), editing joins the menu, first in it. */

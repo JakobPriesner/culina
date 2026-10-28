@@ -203,10 +203,14 @@
     gap: var(--space-2);
   }
 
+  /* Wraps rather than running off a 320px screen once text is enlarged and the circles grow with it. */
   .secondary {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-2);
+    min-width: 0;
+    max-width: 100%;
   }
 
   /* A wrapper is sized by its button's longest line unless told otherwise; let it give way so the label wraps at an enlarged text size instead of pushing past the screen. */

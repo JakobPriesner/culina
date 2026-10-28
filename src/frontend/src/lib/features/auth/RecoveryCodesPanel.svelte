@@ -154,7 +154,8 @@
     </form>
   {:else}
     <div>
-      <Button variant={remaining ? 'secondary' : 'primary'} onclick={() => (asking = true)}>
+      <!-- Outlined even with no codes yet: the page's one filled button is the password's (one accent per screen); the sentence above says why it matters. -->
+      <Button onclick={() => (asking = true)}>
         {remaining ? m['me.recovery.recreate']() : m['me.recovery.create']()}
       </Button>
     </div>

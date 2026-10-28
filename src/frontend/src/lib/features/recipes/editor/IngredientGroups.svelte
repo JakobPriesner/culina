@@ -38,6 +38,15 @@
 
   const headed = $derived(groups.length > 1 || groups[0]?.name != null);
 
+  /** The add row names its group as the heading does: by its name, else by the number its placeholder shows. */
+  function addLabel(name: string | null | undefined, index: number) {
+    if (name?.trim()) return m['editor.addIngredientToNamed']({ name: name.trim() });
+
+    return headed
+      ? m['editor.addIngredientToGroup']({ number: index + 1 })
+      : m['editor.addIngredientPlain']();
+  }
+
   async function add() {
     const at = groups.length;
 
@@ -58,7 +67,7 @@
               id="group-{index}-name"
               quiet
               label={m['editor.groupName']({ number: index + 1 })}
-              placeholder={m['editor.groupNamePlaceholder']()}
+              placeholder={m['editor.groupNamePlaceholder']({ number: index + 1 })}
               maxlength={80}
               value={group.name ?? ''}
               oninput={(name) => onrename(index, name)}
@@ -89,7 +98,7 @@
         {focusId}
         scope="g{index}-"
         compact={index < groups.length - 1}
-        moreLabel={m['editor.addIngredientToGroup']({ number: index + 1 })}
+        moreLabel={addLabel(group.name, index)}
       />
     </div>
   {/each}

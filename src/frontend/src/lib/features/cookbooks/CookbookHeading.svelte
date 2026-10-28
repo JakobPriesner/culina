@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { shelfTitle } from './shelfTitle';
   import { resolve } from '$app/paths';
   import { Chevron, Skeleton } from '$ds';
   import { m } from '$shell/i18n';
@@ -25,7 +26,9 @@
     <Skeleton width="16rem" height="2.25rem" />
     <Skeleton width="24rem" height="1.25rem" />
   {:else}
-    <h1 class="title" title={cookbook?.name}>{cookbook?.name ?? ''}</h1>
+    <h1 class="title" title={cookbook ? shelfTitle(cookbook.name) : undefined}>
+      {cookbook ? shelfTitle(cookbook.name) : ''}
+    </h1>
 
     {#if cookbook?.description}
       <p class="subtitle">{cookbook.description}</p>

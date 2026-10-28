@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { shelfTitle } from '$features/cookbooks/shelfTitle';
   import { resolve } from '$app/paths';
   import { page } from '$app/state';
   import { Button, ErrorState } from '$ds';
@@ -54,7 +55,9 @@
   });
 </script>
 
-<svelte:head><title>{cookbook?.name ?? m['cookbooks.title']()}</title></svelte:head>
+<svelte:head
+  ><title>{cookbook ? shelfTitle(cookbook.name) : m['cookbooks.title']()}</title></svelte:head
+>
 
 <Page>
   {#if cookbooks.openStatus === 'failed' && !cookbook && cookbooks.openError?.status === 404}

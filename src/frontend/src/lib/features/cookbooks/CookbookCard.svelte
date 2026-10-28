@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { shelfTitle } from './shelfTitle';
   import { resolve } from '$app/paths';
 
   import { m } from '$shell/i18n';
@@ -22,9 +23,9 @@
     <a
       class="link"
       href={resolve('/(app)/cookbooks/[cookbookId]', { cookbookId: cookbook.id })}
-      aria-label={m['cookbooks.card.open']({ name: cookbook.name })}
+      aria-label={m['cookbooks.card.open']({ name: shelfTitle(cookbook.name) })}
     >
-      {cookbook.name}
+      {shelfTitle(cookbook.name)}
     </a>
   </h3>
 
