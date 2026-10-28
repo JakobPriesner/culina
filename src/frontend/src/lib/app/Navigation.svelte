@@ -142,7 +142,8 @@
   .bottom:not([data-indicator-ready]) .destination.active,
   .bottom :global(.selection-indicator) {
     border-radius: 1.25rem;
-    background: var(--surface-accent-subtle);
+    /* Stronger than the usual subtle tint: with no label, the tile alone says where you are. */
+    background: color-mix(in srgb, var(--accent) 34%, var(--surface-raised));
     box-shadow: none;
   }
 
