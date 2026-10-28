@@ -284,6 +284,7 @@
     padding: var(--space-3) var(--space-4);
     border-radius: var(--radius-lg);
     background: var(--surface-raised);
+    --field-surface: var(--field-surface-inset);
     box-shadow: var(--shadow-card);
   }
 

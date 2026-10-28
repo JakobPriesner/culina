@@ -109,8 +109,13 @@ There is no collection submenu or secondary sidebar. Cookbook detail uses the
 shared navigation too. The [research and current decision](navigation-research.md)
 explain the evidence and the explicit five-destination limit.
 
-`NewRecipeLink` remains a direct link in the header on every signed-in page,
-as an accessible, titled plus control (since October 2026 at every width).
+**A page's one main action sits at the end of its title row**, at every width
+(decided 28 October 2026, culina-v2-6ilt.13): `PageAction`, an accent pill with a
+plus and a short verb ("Rezept", "Kochbuch", "Eintragen"), its accessible name the
+full wording starting with the visible words. The header holds navigation, search
+and the account only; it has no "+". Per-row adds (a day's "+" in Woche, a meal's
+"+" in the diary) stay where they are and add no title-row button. The phone dock
+always shows each destination's label under its icon.
 The logo and main navigation retain their matched translucent backgrounds.
 Current destinations use a raised selection shadow, text emphasis, and
 `aria-current`. Every navigation item is a link, not a modal launcher.
@@ -132,6 +137,13 @@ Photographed recipes retain image-led cards. Recipes without photographs use a
 paper surface, a small cooking mark, and a ruled heading area. Card links have a
 visible directional affordance and a whole-card keyboard focus ring. The feature
 link uses the feature foreground for both text and focus in light and dark mode.
+
+**Settings save as they are set** (decided 28 October 2026, culina-v2-6ilt.6): switches, segmented
+controls and selects on change; a text or number field when it is left or Enter is pressed, with a
+quiet "Gespeichert" or the error and a retry under its group, never a toast. Mail and Server are the
+exceptions: they validate against or restart the server, so they keep an explicit Save with a guard
+for unsaved changes. Every settings section is a grouped card (`SettingsSection`): rows, or with
+`panel` a composed form at the rows' inset; `bare` only for a list that draws its own card.
 
 Shared buttons reserve their label geometry while a centered spinner appears;
 the label remains available to assistive technology. Disabled and pending states
@@ -227,16 +239,19 @@ Every typed or chosen control (`.ds-control` in `inputs/control.css`, and the st
 never `--surface-raised` or `--border-strong` directly:
 
 ```
---field-surface  --field-surface-disabled  --field-text-disabled
---field-border   --field-border-hover      --field-border-focus  --field-border-error
+--field-surface  --field-surface-inset  --field-text-disabled
+--field-border   --field-border-hover   --field-border-focus  --field-border-error
 ```
 
-They resolve to the current look (white field, strong sand border, olive ring). A different field
-surface is one override on a wrapper, with no component edited:
-`.group { --field-surface: <colour>; }`. The gallery's "Field surfaces" section (`/design`, gallery
-builds only) shows the current white field beside a tinted cream one on the page, on a white sheet and
-inside a cream group, at rest, focused, invalid and disabled, in light and dark. **The cream field is a
-proposal pending design review**; nothing in the app uses it.
+Decided 28 October 2026 (culina-v2-6ilt.12): **a field is white on the warm page**, where white says
+"write here", and takes **the inset fill inside a white group** (`Card`, `ListSection`, a settings
+group, a dialog or sheet, a popover), where a white field would vanish into the white. Those containers
+swap one token, `--field-surface: var(--field-surface-inset)`; nothing else changes (border, focus and
+error are the same everywhere). A cream group (`--surface-sunken`) keeps white fields. **A disabled
+field has no fill and a dashed edge**, so it never shares a colour with an enabled one (the navbar's
+sand, once proposed for fields, was exactly the old disabled fill). The gallery's "Field surfaces"
+section (`/design`, gallery builds only) shows the three grounds at rest, focused, invalid and
+disabled, in light and dark.
 
 Scales live in `scales.css` and are theme-independent:
 

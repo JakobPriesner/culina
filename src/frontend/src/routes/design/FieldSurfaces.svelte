@@ -1,10 +1,9 @@
 <script lang="ts">
-  import '$ds/tokens/field-cream-proposal.css';
   import { Button, Field, SearchField, Select, TextInput } from '$ds';
 
   /*
-   * Field surfaces, current white against a proposed tinted cream, on the three grounds a field sits on.
-   * The cream column overrides one token, --field-surface, on a wrapper: that is the point of the contract.
+   * Field surfaces on the three grounds a field sits on (decided 28 Oct, culina-v2-6ilt.12): white on the warm page and
+   * in a cream group, the inset fill inside a white card or sheet, which swaps one token the way Card and Dialog do.
    * Specimens only, exempt from "no hard-coded text" like the rest of the gallery.
    */
   type Mode = 'light' | 'dark';
@@ -15,12 +14,8 @@
   const states: readonly FieldState[] = ['rest', 'focus', 'error', 'disabled'];
   const grounds = [
     { id: 'page', label: 'On the warm page' },
-    { id: 'sheet', label: 'On a white sheet' },
+    { id: 'sheet', label: 'Inside a white card or sheet' },
     { id: 'group', label: 'Inside a cream group' }
-  ] as const;
-  const variants = [
-    { id: 'white', label: 'Current: white field' },
-    { id: 'cream', label: 'Proposed: cream field' }
   ] as const;
   const kinds = [
     'Search',
@@ -57,62 +52,59 @@
   {#each grounds as ground (ground.id)}
     <h3>{ground.label}</h3>
     <div class="ground {ground.id}">
-      {#each variants as variant (variant.id)}
-        <div class="variant" class:field-cream-proposal={variant.id === 'cream'}>
-          <h4>{variant.label}</h4>
-          {#each kinds as kind (kind)}
-            <div class="states">
-              {#each states as state (state)}
-                {@const disabled = state === 'disabled'}
-                {@const error = state === 'error' ? 'Check this one.' : undefined}
-                {#if kind === 'Search'}
-                  {#if state === 'error'}
-                    <p class="none">Search has no error state.</p>
-                  {:else}
-                    <div class:forced={state === 'focus'}>
-                      <SearchField
-                        id={nextId()}
-                        label="Search"
-                        clearLabel="Clear search"
-                        placeholder="Search recipes"
-                        value=""
-                        {disabled}
-                      />
-                    </div>
-                  {/if}
+      <div class="variant">
+        {#each kinds as kind (kind)}
+          <div class="states">
+            {#each states as state (state)}
+              {@const disabled = state === 'disabled'}
+              {@const error = state === 'error' ? 'Check this one.' : undefined}
+              {#if kind === 'Search'}
+                {#if state === 'error'}
+                  <p class="none">Search has no error state.</p>
                 {:else}
                   <div class:forced={state === 'focus'}>
-                    <Field label="{kind}, {state}" {error}>
-                      {#snippet children({ id, describedBy, invalid })}
-                        {#if kind === 'Settings unit'}
-                          <Select
-                            {id}
-                            {describedBy}
-                            {invalid}
-                            {disabled}
-                            value="g"
-                            options={unitOptions}
-                          />
-                        {:else}
-                          <TextInput
-                            {id}
-                            {describedBy}
-                            {invalid}
-                            {disabled}
-                            type={kind === 'Login email' ? 'email' : 'text'}
-                            inputmode={kind === 'Diary amount' ? 'decimal' : undefined}
-                            value={sampleValue(kind)}
-                          />
-                        {/if}
-                      {/snippet}
-                    </Field>
+                    <SearchField
+                      id={nextId()}
+                      label="Search"
+                      clearLabel="Clear search"
+                      placeholder="Search recipes"
+                      value=""
+                      {disabled}
+                    />
                   </div>
                 {/if}
-              {/each}
-            </div>
-          {/each}
-        </div>
-      {/each}
+              {:else}
+                <div class:forced={state === 'focus'}>
+                  <Field label="{kind}, {state}" {error}>
+                    {#snippet children({ id, describedBy, invalid })}
+                      {#if kind === 'Settings unit'}
+                        <Select
+                          {id}
+                          {describedBy}
+                          {invalid}
+                          {disabled}
+                          value="g"
+                          options={unitOptions}
+                        />
+                      {:else}
+                        <TextInput
+                          {id}
+                          {describedBy}
+                          {invalid}
+                          {disabled}
+                          type={kind === 'Login email' ? 'email' : 'text'}
+                          inputmode={kind === 'Diary amount' ? 'decimal' : undefined}
+                          value={sampleValue(kind)}
+                        />
+                      {/if}
+                    {/snippet}
+                  </Field>
+                </div>
+              {/if}
+            {/each}
+          </div>
+        {/each}
+      </div>
     </div>
   {/each}
 </div>
@@ -148,6 +140,7 @@
   }
 
   .ground.sheet {
+    --field-surface: var(--field-surface-inset);
     background: var(--surface-raised);
     border: 1px solid var(--border);
   }

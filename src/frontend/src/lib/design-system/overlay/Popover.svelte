@@ -233,6 +233,7 @@
     /* Concentric with its rows: lg minus this padding is the rows' md. */
     border-radius: var(--radius-lg);
     background: var(--surface-overlay);
+    --field-surface: var(--field-surface-inset);
     color: var(--text);
     box-shadow: var(--shadow-overlay);
     /* Against the screen, so moving the panel never changes its size. */

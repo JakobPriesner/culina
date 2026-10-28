@@ -77,9 +77,9 @@
   "diary.today": "Today",
   "diary.yesterday": "Yesterday",
   "diary.tomorrow": "Tomorrow",
-  "diary.line.today": "Today: {kcal}",
+  "diary.line.today": "Eaten: {kcal}",
   "diary.line.protein": "{grams} protein",
-  "diary.line.nothing": "Nutrition: nothing logged today",
+  "diary.line.nothing": "Nothing logged yet",
   "diary.amount.portions": "Portions",
   "diary.amount.less": "Less",
   "diary.amount.more": "More",
@@ -2613,5 +2613,11 @@
   "server.registration.save": "Save",
   "server.registration.saved": "Saved.",
   "recipes.refreshFailed": "Could not refresh. Showing what was loaded earlier.",
-  "editor.titleRequired": "Give it a title. That is all a recipe needs."
+  "editor.titleRequired": "Give it a title. That is all a recipe needs.",
+  "recipes.new.short": "Recipe",
+  "cookbooks.new.short": "Cookbook",
+  "plan.recipe.short": "Plan",
+  "shopping.addToList.short": "Shop",
+  "shopping.onList.short": "On the list",
+  "me.diary.saved": "Saved"
 }

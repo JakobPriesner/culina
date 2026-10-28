@@ -288,7 +288,6 @@
         onservings={scale}
         {currentStep}
         onstep={move}
-        onstopcooking={() => finish(false)}
         stepNote={(id) => notes.stepNote(id)}
         {stepaction}
       />
@@ -330,7 +329,15 @@
   {/if}
 </Page>
 
-<KitchenSheet open={kitchenOpen} {recipe} onclose={() => (kitchenOpen = false)} />
+<KitchenSheet
+  open={kitchenOpen}
+  {recipe}
+  onclose={() => (kitchenOpen = false)}
+  onstop={() => {
+    kitchenOpen = false;
+    void finish(false);
+  }}
+/>
 <NotesSheet open={notesOpen} {recipeId} step={noteStep} onclose={() => (notesOpen = false)} />
 
 <style>

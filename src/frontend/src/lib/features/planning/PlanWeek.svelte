@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+
   import { m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
 
@@ -27,6 +29,8 @@
     /** The days before today fold into one line, which `onunfold` opens. */
     folded?: boolean;
     onunfold?: () => void;
+    /** Today's own line from elsewhere (the diary), drawn inside today's day rather than as a row above the week. */
+    todayExtra?: Snippet;
   }
 
   let {
@@ -43,7 +47,8 @@
     ontolist,
     seek = null,
     folded = false,
-    onunfold
+    onunfold,
+    todayExtra
   }: Props = $props();
 
   const today = asDate(new Date());
@@ -112,6 +117,7 @@
       {ontolist}
       sought={day.date === seek}
       row={rows}
+      extra={day.date === today ? todayExtra : undefined}
     />
   {/each}
 </ol>

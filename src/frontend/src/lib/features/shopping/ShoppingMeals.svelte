@@ -79,7 +79,7 @@
                 <div class="meal-head">
                   <p class="meal-name">
                     <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- The route is resolved; only the yield is appended. -->
-                    <a href={recipeHref(meal)}>{meal.recipeTitle}</a>
+                    <a class="hit-target reach" href={recipeHref(meal)}>{meal.recipeTitle}</a>
                     {#if slotOf(meal.slot)}<span class="slot">{slotOf(meal.slot)}</span>{/if}
                   </p>
                   {#if meal.done > 0}

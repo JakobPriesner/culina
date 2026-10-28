@@ -78,7 +78,7 @@
               {#if at > 0},
               {/if}<button
                 type="button"
-                class="jump"
+                class="jump hit-target"
                 aria-label={m['editor.goToStep']({ number })}
                 onclick={() => goTo(number)}>{number}</button
               >

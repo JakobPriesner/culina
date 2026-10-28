@@ -121,7 +121,7 @@
 
   .bottom .destination {
     min-width: 0;
-    min-height: 3rem;
+    min-height: 3.5rem;
     padding: var(--space-1);
     border-radius: 1.25rem;
     text-align: center;
@@ -135,15 +135,16 @@
     height: var(--space-6);
   }
 
+  /* Text, not accent: the accent's olive on the accent-mixed tile reads at about 3.9:1, short of a small label's 4.5. */
   .bottom .destination.active {
-    color: var(--accent);
+    color: var(--text);
   }
 
   .bottom:not([data-indicator-ready]) .destination.active,
   .bottom :global(.selection-indicator) {
     border-radius: 1.25rem;
-    /* Stronger than the usual subtle tint: with no label, the tile alone says where you are. */
-    background: color-mix(in srgb, var(--accent) 34%, var(--surface-raised));
+    /* Stronger than the usual subtle tint, so the current destination reads at a glance. */
+    background: var(--surface-accent-strong);
     box-shadow: none;
   }
 
@@ -155,14 +156,35 @@
     background: var(--surface-selected);
   }
 
-  /* The dock shows icons only; the label stays the link's name for screen readers. */
   .bottom .label {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    line-height: 1.25;
+    /* Whole words only ("Kochbüche/r" read as broken); the narrow-screen sizes below make every label fit. */
+    overflow-wrap: normal;
+  }
+
+  .bottom .destination.active .label {
+    font-weight: var(--weight-semibold);
+  }
+
+  /*
+   * The floating dock leaves a 320px phone 60px for a label, and "Kochbücher" needs about 70 at the usual size. A tighter
+   * dock inside (its 12px margin to the screen edge stays) and the size of a system tab bar's labels (11px) keep every
+   * label whole; mid-word "Kochbüc/her" read as broken.
+   */
+  @media (width < 25rem) {
+    .bottom {
+      gap: 2px;
+      padding: 2px;
+    }
+
+    .bottom .destination {
+      padding-inline: 2px;
+    }
+
+    .bottom .label {
+      font-size: 0.6875rem;
+    }
   }
 </style>

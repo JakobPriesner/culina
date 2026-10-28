@@ -25,7 +25,8 @@
 }
 
 .ds-control:disabled {
-  background: var(--field-surface-disabled);
+  border-style: dashed;
+  background: transparent;
   color: var(--field-text-disabled);
   cursor: not-allowed;
 }

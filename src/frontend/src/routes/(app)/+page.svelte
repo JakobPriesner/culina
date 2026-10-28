@@ -26,8 +26,8 @@
   import SuggestionDeck from '$features/recipes/SuggestionDeck.svelte';
   import { m } from '$shell/i18n';
   import Page from '$shell/Page.svelte';
+  import PageAction from '$shell/PageAction.svelte';
   import PageHeader from '$shell/PageHeader.svelte';
-  import DiaryTodayLine from '$features/diary/DiaryTodayLine.svelte';
 
   /** Everything the household can cook; the toolbar owns search and filters, this page owns what to do with the answer. */
   const householdId = $derived(session.activeHouseholdId);
@@ -78,10 +78,24 @@
 
 <svelte:window onkeydown={(event) => focusSearchOnFind(event, searchId)} />
 
-<Page>
-  <PageHeader title={m['recipes.title']()} subtitle={m['recipes.collection.subtitle']()} />
+{#snippet newRecipe()}
+  <PageAction
+    text={m['recipes.new.short']()}
+    label={m['recipes.empty.action']()}
+    href={resolve('/(app)/recipes/new')}
+  />
+{/snippet}
 
-  {#if householdId}<TodayMeal {householdId} /><DiaryTodayLine />{/if}
+<Page>
+  <!-- An empty library's own invitation is the one way to create there, so the header does not offer a second, equally loud one. -->
+  <PageHeader
+    title={m['recipes.title']()}
+    subtitle={m['recipes.collection.subtitle']()}
+    actions={recipes.status === 'ready' && recipes.total === 0 && !filtered ? undefined : newRecipe}
+  />
+
+  <!-- The diary's line lives in Woche's today, where planning and eating meet (culina-v2-6ilt.9), not above the recipes. -->
+  {#if householdId}<TodayMeal {householdId} />{/if}
 
   <!-- An empty library has nothing to search or filter; it shows its invitation instead. -->
   {#if !(recipes.status === 'ready' && recipes.total === 0 && !filtered)}

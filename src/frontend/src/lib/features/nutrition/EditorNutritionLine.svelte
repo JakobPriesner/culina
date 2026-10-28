@@ -57,7 +57,7 @@
         <span aria-hidden="true">{dot}</span>
         <button
           type="button"
-          class="fix"
+          class="fix hit-target"
           aria-label={m['nutrition.change']({ name: ingredient.name })}
           onclick={() => correction.edit(ingredient.id, line.status === 'amountNotInGrams')}
           >{m['nutrition.coverage.line']({ name: ingredient.name, why: shortReason(line) })}</button

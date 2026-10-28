@@ -16,11 +16,11 @@
 
 <svelte:head><title>{m['me.security']()}</title></svelte:head>
 
-<SettingsSection title={m['me.password.title']()} description={m['me.password.body']()} bare>
+<SettingsSection title={m['me.password.title']()} description={m['me.password.body']()} panel>
   <PasswordPanel />
 </SettingsSection>
 
-<SettingsSection title={m['me.recovery.title']()} description={m['me.recovery.body']()} bare>
+<SettingsSection title={m['me.recovery.title']()} description={m['me.recovery.body']()} panel>
   <RecoveryCodesPanel />
 </SettingsSection>
 
@@ -28,6 +28,6 @@
   <DevicesList />
 </SettingsSection>
 
-<SettingsSection title={m['me.agent.title']()} description={m['me.agent.body']()} bare>
+<SettingsSection title={m['me.agent.title']()} description={m['me.agent.body']()} panel>
   <ConnectAgentPanel />
 </SettingsSection>

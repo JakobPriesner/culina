@@ -263,6 +263,7 @@
     display: flex;
     flex-direction: column;
     background: var(--surface-overlay);
+    --field-surface: var(--field-surface-inset);
     box-shadow: var(--shadow-overlay);
     overflow: hidden;
   }

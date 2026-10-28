@@ -135,7 +135,9 @@ test.describe('library refinement @offline', () => {
     await expect(page.locator('.count')).toHaveText('4 recipes');
     await page.getByRole('link', { name: 'Open Sunday morning pancakes' }).scrollIntoViewIfNeeded();
     await expect(navigation.getByRole('link', { name: 'Cookbooks', exact: true })).toBeInViewport();
+    // The page's one action sits in its title row (culina-v2-6ilt.13), so it is back at the top, not pinned while reading.
     const create = page.getByRole('link', { name: 'Add a recipe', exact: true });
+    await page.evaluate(() => window.scrollTo(0, 0));
     await expect(create).toBeInViewport({ ratio: 1 });
     await create.click();
     await expect(page).toHaveURL(/\/recipes\/new$/);

@@ -227,6 +227,8 @@
   }
 </script>
 
+{#snippet diaryToday()}<DiaryTodayLine />{/snippet}
+
 {#snippet tip()}
   <!-- Moving meals means nothing before there is one, and the empty week has its own Olli. -->
   {#if mealPlan.meals.length > 0}
@@ -260,10 +262,6 @@
         onjump={jump}
       />
 
-      <!-- Today is the first day shown whenever it is on screen (the days gone fold away), and its meals carry
-           "Kochen" themselves: a Today card above them would say it twice. -->
-      {#if householdId && start <= today && today <= end}<DiaryTodayLine />{/if}
-
       <!-- Above the week on a phone, where it is read first; beside the list under it, so the rows keep the screen. -->
       {#if !listBeside.current}{@render tip()}{/if}
 
@@ -296,6 +294,7 @@
           onedit={(meal) => (editing = meal)}
           onremove={(meal) => void actions.unplan(meal)}
           onmadeit={(meal) => void actions.madeIt(meal)}
+          todayExtra={householdId ? diaryToday : undefined}
         />
 
         {#if mealPlan.meals.length > 0}

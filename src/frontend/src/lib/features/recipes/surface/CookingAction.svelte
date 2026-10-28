@@ -4,7 +4,7 @@
   import { m } from '$shell/i18n';
   import { dockCookingAction } from './dockCookingAction';
 
-  /** The one action parked at the bottom of the recipe: start cooking, go back to it, or stop. */
+  /** The one action parked at the bottom of the recipe: start cooking or go back to it. Stopping lives in the cook screen's kitchen sheet. */
   interface Props {
     cooking: boolean;
     /** False for a recipe with no steps, which would open cook mode on "Step 1 of 0". */
@@ -12,27 +12,16 @@
     /** A session for this recipe is already open: the way in is back to it, not a new start. */
     resuming?: boolean;
     onstartcooking?: () => void;
-    onstopcooking?: () => void;
     /** Cooked without cook mode (from the page, from memory): one tap records it. */
     onmadeit?: () => void;
   }
 
-  let {
-    cooking,
-    canCook,
-    resuming = false,
-    onstartcooking,
-    onstopcooking,
-    onmadeit
-  }: Props = $props();
+  let { cooking, canCook, resuming = false, onstartcooking, onmadeit }: Props = $props();
 </script>
 
 {#snippet action()}
   <footer class="foot">
-    {#if cooking}
-      <!-- Ends without a record: "made it" is the controls' last step, and saying it twice in two words confused. -->
-      <Button variant="ghost" size="lg" onclick={onstopcooking}>{m['cooking.abandon']()}</Button>
-    {:else if canCook}
+    {#if canCook}
       <!-- At the end of the reading, where the decision is made; floats until its own place is in view. -->
       <Button variant="primary" size="lg" onclick={onstartcooking}>
         {resuming ? m['cooking.resume']() : m['recipe.startCooking']()}
@@ -61,14 +50,11 @@
   </footer>
 {/snippet}
 
-{#if cooking || canCook}
-  {#if cooking}
+<!-- While cooking the step controls own the bottom edge, and stopping is in their kitchen sheet. -->
+{#if !cooking && canCook}
+  <div class="cook-action" use:dockCookingAction>
     {@render action()}
-  {:else}
-    <div class="cook-action" use:dockCookingAction>
-      {@render action()}
-    </div>
-  {/if}
+  </div>
 {/if}
 
 <style>

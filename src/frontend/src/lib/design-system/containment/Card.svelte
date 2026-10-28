@@ -27,6 +27,7 @@
     display: block;
     border-radius: var(--radius-lg);
     background: var(--surface-raised);
+    --field-surface: var(--field-surface-inset);
     box-shadow: var(--shadow-card);
     padding: var(--space-4);
     color: inherit;
