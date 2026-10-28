@@ -38,6 +38,7 @@
 </script>
 
 <header class="header" bind:clientHeight={height}>
+  <div class="edge" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
   <NavigationProgress />
 
   <div class="header-inner">
@@ -64,7 +65,6 @@
     {/if}
   </div>
 </header>
-<div class="fade" aria-hidden="true"></div>
 
 <style>
   .header {
@@ -76,29 +76,51 @@
   }
 
   /*
-   * Hides the page under the pills. Solid for the header's whole height: fading from a third of the way down let a
-   * heading or a line of text read through beside the pills and above a stuck section heading.
+   * Frosts the page under the pills like iOS's scroll edge effect: tinted and blurred at the top, easing
+   * into the sharp page with no edge, so a photo runs on under the header. One blur faded out shows a
+   * blurred copy over the sharp text halfway down; stacked blurs, each weaker and reaching further,
+   * compound into a smooth ramp instead. The tint eases out too, so a dark card gets no pale band.
    */
-  .header::before {
-    content: '';
+  .edge {
     position: absolute;
-    inset: 0;
-    background: var(--surface);
+    inset: 0 0 calc(-1 * var(--space-6));
+    background: linear-gradient(
+      to bottom,
+      var(--surface-bar-glass) 0%,
+      color-mix(in srgb, var(--surface-bar-glass) 75%, transparent) 25%,
+      color-mix(in srgb, var(--surface-bar-glass) 40%, transparent) 50%,
+      color-mix(in srgb, var(--surface-bar-glass) 15%, transparent) 75%,
+      transparent 100%
+    );
   }
 
-  /*
-   * Fades the page out below the header. Its own layer, under the page's sticky level: a heading stuck on the header's
-   * line paints over it and stays crisp, while one its section pushes up still goes under the solid header.
-   * A gradient, not a full-width backdrop-filter, which would blur the empty gutters every scroll frame.
-   */
-  .fade {
-    position: fixed;
-    top: var(--header-inset);
-    inset-inline: 0;
-    z-index: var(--z-sticky);
-    height: var(--space-8);
-    background: linear-gradient(to bottom, var(--surface), transparent);
-    pointer-events: none;
+  .edge i {
+    position: absolute;
+    inset: 0;
+  }
+
+  .edge i:nth-child(1) {
+    backdrop-filter: blur(1px);
+    -webkit-backdrop-filter: blur(1px);
+    mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+  }
+
+  .edge i:nth-child(2) {
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    mask-image: linear-gradient(to bottom, black 40%, transparent 80%);
+  }
+
+  .edge i:nth-child(3) {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    mask-image: linear-gradient(to bottom, black 20%, transparent 60%);
+  }
+
+  .edge i:nth-child(4) {
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    mask-image: linear-gradient(to bottom, black 0%, transparent 40%);
   }
 
   /* Brand, destinations and tools share one row; the tools are on every page so the destinations stay centred. */
@@ -176,13 +198,13 @@
   }
 
   /* Guided cooking is a focused mode with its own way back: no navigation, at any width, so nothing pulls the cook away from the step. */
-  :global(.shell.focused-cooking) :is(.header, .fade) {
+  :global(.shell.focused-cooking) .header {
     display: none;
   }
 
   /* A recipe on a phone brings its own sticky bar (back, title) and needs the height for the photo; the bottom bar still navigates. */
   @media (width < 52rem) {
-    :global(.shell.reading-recipe) :is(.header, .fade) {
+    :global(.shell.reading-recipe) .header {
       display: none;
     }
   }
@@ -209,8 +231,7 @@
       top: auto;
     }
 
-    .header::before,
-    .fade {
+    .edge {
       display: none;
     }
   }
@@ -221,14 +242,12 @@
     top: auto;
   }
 
-  :global(.shell.crowded) .header::before,
-  :global(.shell.crowded) .fade {
+  :global(.shell.crowded) .edge {
     display: none;
   }
 
   @media print {
-    .header,
-    .fade {
+    .header {
       display: none !important;
     }
   }
