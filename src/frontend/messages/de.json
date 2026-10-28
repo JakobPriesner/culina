@@ -2601,5 +2601,15 @@
   "server.products.contact": "Kontakt für Open Food Facts",
   "server.products.contactHint": "Freiwillig: eine E-Mail- oder Webadresse, über die Open Food Facts dich bei Problemen erreicht. Ohne sie nennt Culina seine Projektseite.",
   "server.products.save": "Speichern",
-  "server.products.saved": "Gespeichert."
+  "server.products.saved": "Gespeichert.",
+  "server.registration": "Registrierung",
+  "server.registration.hint": "Wer auf diesem Server ein Konto anlegen darf. Solange die Registrierung geschlossen ist, kann das niemand, auch nicht mit Einladung. Zum Einladen muss sie also offen sein.",
+  "server.registration.open": "Neue Konten erlauben",
+  "server.registration.openHint": "Aus, wie bei jedem neuen Server: Nur das erste Konto kann angelegt werden. An, können sich Leute registrieren, soweit die Einstellungen darunter es erlauben.",
+  "server.registration.invitation": "Einladung verlangen",
+  "server.registration.invitationHint": "An, braucht ein neues Konto einen Einladungscode von einem Haushaltsinhaber. Aus, kann sich jeder registrieren, der den Server findet.",
+  "server.registration.maxUsers": "Höchstzahl an Konten",
+  "server.registration.maxUsersHint": "Die Registrierung endet, sobald so viele Konten existieren. Eine ganze Zahl von 1 bis 100000.",
+  "server.registration.save": "Speichern",
+  "server.registration.saved": "Gespeichert."
 }

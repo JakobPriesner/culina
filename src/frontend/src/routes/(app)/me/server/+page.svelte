@@ -14,6 +14,7 @@
   import SessionFields from '$features/server/SessionFields.svelte';
   import ProductLookupFields from '$features/server/ProductLookupFields.svelte';
   import PushRelayFields from '$features/server/PushRelayFields.svelte';
+  import RegistrationFields from '$features/server/RegistrationFields.svelte';
   import TelemetryFields from '$features/server/TelemetryFields.svelte';
   import { server, type SaveOutcome } from '$features/server/stores/server.svelte';
   import { variables } from '$features/server/types';
@@ -177,6 +178,11 @@
     {/each}
   </div>
 {/if}
+
+<!-- Outside the settings above: saved at once, with no restart. -->
+<SettingsSection title={m['server.registration']()} description={m['server.registration.hint']()}>
+  <RegistrationFields />
+</SettingsSection>
 
 <!-- Outside the settings above: saved at once, with no restart. -->
 <SettingsSection title={m['server.products']()} description={m['server.products.hint']()}>

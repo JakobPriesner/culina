@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/svelte';
+import { screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -41,6 +41,8 @@ const database = {
   writable: true
 };
 
+const registration = { openRegistration: false, requireInvitation: true, maxUsers: 100 };
+
 const me = {
   userId: 'u1',
   email: 'ada@example.com',
@@ -67,6 +69,10 @@ function serverAnswers({ settings = serverSettings, saved = 204 }: Answers = {})
     const request = input as Request;
     const url = request.url;
 
+    if (request.method === 'PUT' && url.includes('/settings/registration')) {
+      return Promise.resolve(json(registration));
+    }
+
     if (request.method === 'PUT') {
       if (saved === 202) startedAt = '2026-09-24T10:00:05Z';
 
@@ -74,6 +80,7 @@ function serverAnswers({ settings = serverSettings, saved = 204 }: Answers = {})
     }
 
     if (url.includes('/setup')) return Promise.resolve(json({ stage: 'complete', startedAt }));
+    if (url.includes('/settings/registration')) return Promise.resolve(json(registration));
     if (url.includes('/settings/database')) return Promise.resolve(json(database));
     if (url.includes('/settings/server')) return Promise.resolve(json(settings));
     if (url.includes('/users/me/settings')) {
@@ -212,5 +219,35 @@ describe('the server settings page', () => {
 
     expect(screen.getAllByText('Enter a whole number.').length).toBeGreaterThan(0);
     expect(fetched.mock.calls.some(([input]) => (input as Request).method === 'PUT')).toBe(false);
+  });
+
+  it('opens registration at once, with no restart', async () => {
+    const fetched = serverAnswers();
+
+    renderWithProviders(ServerPage);
+    await settle();
+
+    const open = screen.getByRole('switch', { name: 'Allow new accounts' });
+    const form = open.closest('form')!;
+
+    // Nobody can register with an invitation either while the server is closed.
+    expect(open).not.toBeChecked();
+    expect(screen.getByRole('switch', { name: 'Require an invitation' })).toBeDisabled();
+
+    await userEvent.click(open);
+    await userEvent.click(within(form).getByRole('button', { name: 'Save' }));
+    await settle();
+
+    const put = fetched.mock.calls
+      .map(([input]) => input as Request)
+      .find((request) => request.method === 'PUT');
+
+    expect(put!.url).toContain('/settings/registration');
+    expect(await put!.clone().json()).toEqual({
+      openRegistration: true,
+      requireInvitation: true,
+      maxUsers: 100
+    });
+    expect(await within(form).findByText('Saved.')).toBeInTheDocument();
   });
 });
