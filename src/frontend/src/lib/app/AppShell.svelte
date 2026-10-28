@@ -94,6 +94,9 @@
 
 <style>
   .shell {
+    /* Where a column pinned beside a scrolling one sticks: where it already starts, so it never moves. */
+    --pinned-top: calc(var(--header-inset) + var(--layout-page-space));
+
     display: grid;
     min-height: 100dvh;
     grid-template-columns: minmax(0, 1fr);

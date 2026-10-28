@@ -5,7 +5,8 @@
   let { oncreatecookbook }: { oncreatecookbook: () => void } = $props();
 </script>
 
-<Button variant="secondary" size="sm" onclick={oncreatecookbook}>
+<!-- The page's one accent, as the library's new-recipe plus is on its page. -->
+<Button variant="primary" size="sm" onclick={oncreatecookbook}>
   {#snippet icon()}
     <svg
       viewBox="0 0 24 24"

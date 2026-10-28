@@ -108,9 +108,10 @@
     border-radius: var(--radius-lg);
   }
 
+  /* Under the header's line, which guided cooking hides (the inset is then zero). */
   .pinned {
     position: sticky;
-    top: var(--space-24);
+    top: calc(var(--header-inset) + var(--space-6));
   }
 
   /*

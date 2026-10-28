@@ -274,10 +274,10 @@
       gap: var(--space-12);
     }
 
-    /* Follows a long archive down the page, clear of the floating header. */
+    /* Stands still beside a long archive, clear of the floating header. */
     .rail {
       position: sticky;
-      top: var(--space-24);
+      top: var(--pinned-top);
     }
 
     .legend {

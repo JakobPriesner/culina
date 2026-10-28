@@ -446,11 +446,16 @@
 
   .list {
     position: sticky;
-    top: var(--header-inset, var(--space-16));
-    max-height: calc(100dvh - var(--header-inset, var(--space-16)) - var(--space-6));
+    top: var(--pinned-top);
+    max-height: calc(100dvh - var(--pinned-top) - var(--space-6));
     overflow-y: auto;
     padding-inline-start: var(--space-8);
     border-inline-start: 1px solid var(--border);
+  }
+
+  /* The pane scrolls itself, so its section headings stick to its own top, not under the shell's header. */
+  .list > :global(*) {
+    --header-inset: 0px;
   }
 
   /* A meal carried over the list: dropping it here puts its shopping on, as a day's outline says it would land there. */

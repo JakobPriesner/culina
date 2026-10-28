@@ -32,7 +32,7 @@
   /* Beside the form where there is room (see EditorLayout), scrolling on its own next to the line being fixed. */
   @media (min-width: 90rem) {
     .intake-source {
-      max-height: calc(100dvh - var(--space-24) - var(--space-6));
+      max-height: calc(100dvh - var(--pinned-top) - var(--space-6));
       overflow-y: auto;
     }
   }

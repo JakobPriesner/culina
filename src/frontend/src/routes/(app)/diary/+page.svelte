@@ -317,50 +317,55 @@
 
 <Page>
   <div class="log">
-    <header class="day">
-      <div>
-        <h1>{dayTitle(date, today)}</h1>
-        <p class="date">{dayDateLine(date, today)}</p>
-      </div>
-      <!-- One way in from the top, for the meal the clock suggests; each meal has its own "+" below. -->
-      {#if settings?.enabled}
-        <Button size="sm" onclick={() => add(mealByClock())}>+ {m['diary.log']()}</Button>
-      {/if}
-    </header>
-
-    {#if !settings || settings.enabled}
-      <div class="aside">
-        <WeekStrip
-          days={week}
-          selected={date}
-          {today}
-          label={m['diary.week.label']({
-            date: formatDate(new Date(`${monday}T12:00:00`), { day: 'numeric', month: 'long' })
-          })}
-          onselect={show}
-          previousLabel={m['diary.week.previous']()}
-          nextLabel={m['diary.week.next']()}
-          onprevious={() => show(addDays(date, -7))}
-          onnext={() => show(addDays(date, 7))}
-          nextDisabled={monday >= mondayOfDate(today)}
-        />
-
-        {#if settings?.enabled && !day && diary.status !== 'failed'}
-          <div class="loading-summary" aria-hidden="true">
-            <Skeleton width="10rem" height="2.5rem" shape="block" />
-            <Skeleton width="100%" height="0.375rem" shape="block" />
-            <Skeleton width="14rem" height="1rem" />
-          </div>
-        {:else if settings?.enabled && day}
-          <DiarySummary
-            {day}
-            kcalTarget={settings?.kcalTarget ?? null}
-            proteinTarget={settings?.proteinTarget ?? null}
-            headline={settings?.headline === 'remaining' ? 'remaining' : 'eaten'}
-          />
+    <div class="side">
+      <header class="day">
+        <div>
+          <h1>{dayTitle(date, today)}</h1>
+          <p class="date">{dayDateLine(date, today)}</p>
+        </div>
+        <!-- The page's one accent: in from the top, for the meal the clock suggests; each meal's own "+" below stays quiet. -->
+        <!-- Not beside a failed day's "Erneut versuchen", which is then the one to press. -->
+        {#if settings?.enabled && !(diary.status === 'failed' && !day)}
+          <Button size="sm" variant="primary" onclick={() => add(mealByClock())}
+            >+ {m['diary.log']()}</Button
+          >
         {/if}
-      </div>
-    {/if}
+      </header>
+
+      {#if !settings || settings.enabled}
+        <div class="aside">
+          <WeekStrip
+            days={week}
+            selected={date}
+            {today}
+            label={m['diary.week.label']({
+              date: formatDate(new Date(`${monday}T12:00:00`), { day: 'numeric', month: 'long' })
+            })}
+            onselect={show}
+            previousLabel={m['diary.week.previous']()}
+            nextLabel={m['diary.week.next']()}
+            onprevious={() => show(addDays(date, -7))}
+            onnext={() => show(addDays(date, 7))}
+            nextDisabled={monday >= mondayOfDate(today)}
+          />
+
+          {#if settings?.enabled && !day && diary.status !== 'failed'}
+            <div class="loading-summary" aria-hidden="true">
+              <Skeleton width="10rem" height="2.5rem" shape="block" />
+              <Skeleton width="100%" height="0.375rem" shape="block" />
+              <Skeleton width="14rem" height="1rem" />
+            </div>
+          {:else if settings?.enabled && day}
+            <DiarySummary
+              {day}
+              kcalTarget={settings?.kcalTarget ?? null}
+              proteinTarget={settings?.proteinTarget ?? null}
+              headline={settings?.headline === 'remaining' ? 'remaining' : 'eaten'}
+            />
+          {/if}
+        </div>
+      {/if}
+    </div>
 
     <div class="meals" class:alone={settings && !settings.enabled}>
       {#if settings && !settings.enabled}
@@ -504,6 +509,7 @@
     margin-inline: auto;
   }
 
+  .side,
   .aside {
     display: flex;
     flex-direction: column;
@@ -537,7 +543,8 @@
     min-inline-size: 0;
   }
 
-  .aside + .meals {
+  /* Below the week and numbers, which the page shows whenever the meals are not alone. */
+  .meals:not(.alone) {
     margin-block-start: var(--space-2);
   }
 
@@ -570,8 +577,8 @@
   }
 
   /*
-   * From 64rem the day's title runs across the page, on the shell's edge like every other page, and its week and
-   * numbers stay beside the meals on one raised card, the meals' own surface (docs/food-log-redesign.md §4.2).
+   * From 64rem the day's title, its week and numbers stand still in their own column, the week and numbers on one
+   * raised card, the meals' own surface (docs/food-log-redesign.md §4.2); only the meals beside them scroll.
    */
   @media (min-width: 64rem) {
     .log {
@@ -582,20 +589,22 @@
       margin-inline: 0;
     }
 
+    .side {
+      position: sticky;
+      inset-block-start: var(--pinned-top);
+    }
+
     .day {
-      grid-column: 1 / -1;
       align-items: center;
     }
 
     .aside {
-      position: sticky;
-      inset-block-start: calc(var(--header-inset, var(--space-16)) + var(--space-4));
       padding: var(--space-6);
       border-radius: var(--radius-lg);
       background: var(--surface-raised);
     }
 
-    .aside + .meals {
+    .meals:not(.alone) {
       margin-block-start: 0;
     }
 

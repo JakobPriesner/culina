@@ -139,7 +139,12 @@ test.describe('an automatic cookbook', () => {
 
   test('is already full the moment it is made', async () => {
     await page.goto('/cookbooks');
-    await page.getByRole('button', { name: /new cookbook|neues kochbuch/i }).click();
+    // A fresh household's shelf is empty: its invitation, not the head's button, makes the first one.
+    await page
+      .getByRole('button', {
+        name: /new cookbook|neues kochbuch|create your first cookbook|erstes kochbuch anlegen/i
+      })
+      .click();
     await page.getByRole('textbox', { name: /^(name)$/i }).fill(name);
 
     await page
