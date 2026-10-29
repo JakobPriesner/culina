@@ -28,6 +28,22 @@
   --radius-lg: 1.25rem;
   --radius-xl: 1.75rem;
   --radius-full: 9999px;
+  /*
+   * The phone's own corner, which a surface floating near it (the dock, an inset sheet) stays concentric with: its
+   * radius is this minus its inset from the edge. A web page cannot ask the display, so this is today's iPhones'
+   * (about 55pt); on a square screen the result is merely a generous corner.
+   */
+  --radius-screen: 3.4rem;
+  /* How far a floating phone surface (the dock, an inset sheet) keeps from the screen's edges. */
+  --screen-inset: var(--space-2);
+
+  /*
+   * Liquid glass: the one blur behind what floats above content (header pills, the phone dock, floating toolbars, a
+   * control on a photo), never content itself. Reduce Transparency and Increase Contrast turn it off
+   * (tokens/accessibility.css); the design-system lint allows no other backdrop-filter. Written unprefixed only: the
+   * minifier adds Safari's prefix, and folds a hand-written pair into the prefix alone, which Chrome ignores.
+   */
+  --glass-filter: blur(20px) saturate(180%);
 
   /*
    * Type, after Apple's text styles: caption 13, footnote/subhead 15, body 17, title 3 20–22.

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Chevron } from '$ds';
+  import EdgeEffect from '$ds/display/EdgeEffect.svelte';
   import { resolve } from '$app/paths';
   import { m } from '$shell/i18n';
 
@@ -14,6 +15,7 @@
 </script>
 
 <div class="bar" class:condensed>
+  <div class="frost"><EdgeEffect edge="top" /></div>
   <a class="back" href={resolve('/(app)')} aria-label={m['recipe.back']()}>
     <span aria-hidden="true"><Chevron direction="back" /></span>
     <span class="back-label">{m['recipe.back']()}</span>
@@ -39,7 +41,8 @@
     }
   }
 
-  .title {
+  .title,
+  .frost {
     display: none;
   }
 
@@ -47,7 +50,8 @@
      let the arrow carry it on a phone. The link's aria-label remains the full
      name, so compact is only visual. The shell's header gives way on a recipe,
      so this bar sticks to the top instead and, once the title has scrolled
-     away, carries it. */
+     away, carries it: an iOS toolbar, a glass circle over the photo, and the
+     scroll edge effect behind it once the page runs underneath. */
   @media (width < 52rem) {
     .bar {
       position: sticky;
@@ -67,20 +71,31 @@
     }
 
     .bar.condensed {
-      background: var(--surface);
-      box-shadow: 0 1px 0 var(--border);
       pointer-events: auto;
     }
 
+    .frost {
+      display: block;
+      opacity: 0;
+      transition: opacity var(--duration-base) var(--ease-out);
+    }
+
+    .condensed .frost {
+      opacity: 1;
+    }
+
     .back {
+      position: relative;
       flex: none;
       display: inline-grid;
       place-items: center;
       width: var(--control-sm);
       min-height: var(--control-sm);
-      border: 1px solid var(--border);
       border-radius: var(--radius-full);
-      background: var(--surface);
+      background: var(--surface-nav-glass);
+      backdrop-filter: var(--glass-filter);
+      box-shadow: var(--shadow-glass);
+      color: var(--text);
       font-size: var(--text-lg);
       pointer-events: auto;
     }
@@ -90,6 +105,7 @@
     }
 
     .title {
+      position: relative;
       display: block;
       min-width: 0;
       overflow: hidden;
@@ -108,7 +124,8 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .title {
+    .title,
+    .frost {
       transition: none;
     }
   }

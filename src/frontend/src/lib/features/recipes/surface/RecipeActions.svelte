@@ -3,6 +3,7 @@
   import { ActionMenu, Button, IconButton } from '$ds';
 
   import { m } from '$shell/i18n';
+  import { preferences } from '$shell/preferences.svelte';
 
   /** Actions beside the title; each is shown only if the page passed its callback. */
   interface Props {
@@ -15,6 +16,8 @@
     listed?: boolean;
     onaddtocookbook?: () => void;
     onaddtoplan?: () => void;
+    /** Already planned for this day: the button says so, and still opens the plan sheet to plan it again. */
+    planned?: Date | null;
     /**
      * Desktop only: the page's one filled action beside the title, where the reading starts, instead of a bar
      * floating over the steps. Phones keep it docked at the bottom (`CookingAction`).
@@ -36,6 +39,7 @@
     listed = false,
     onaddtocookbook,
     onaddtoplan,
+    planned = null,
     onstartcooking,
     resuming = false,
     onmadeit,
@@ -43,6 +47,16 @@
     oncopy,
     ondelete
   }: Props = $props();
+
+  const plannedFor = $derived(
+    planned
+      ? new Intl.DateTimeFormat(preferences.locale, {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short'
+        }).format(planned)
+      : ''
+  );
 
   const inMenu = $derived(
     !cooking && Boolean(onaddtocookbook || onshare || oncopy || ondelete || onmadeit)
@@ -80,8 +94,14 @@
           </svg>
         {/snippet}
 
-        <span class="long">{m['plan.recipe.action']()}</span>
-        <span class="short">{m['plan.recipe.short']()}</span>
+        <span class="long"
+          >{planned
+            ? m['plan.recipe.planned']({ when: plannedFor })
+            : m['plan.recipe.action']()}</span
+        >
+        <span class="short"
+          >{planned ? m['plan.recipe.planned.short']() : m['plan.recipe.short']()}</span
+        >
       </Button>
     {/if}
 

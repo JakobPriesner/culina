@@ -130,7 +130,6 @@
     border-radius: var(--radius-lg);
     background: var(--generating-panel);
     box-shadow: var(--generating-panel-shadow);
-    backdrop-filter: blur(10px);
   }
 
   .art {

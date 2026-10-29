@@ -456,9 +456,8 @@ test.describe('responsive production layouts @offline', () => {
       const titleBox = (await title.boundingBox())!;
       expect(hero.width).toBeCloseTo(surface.width, 0);
       expect(titleBox.y).toBeGreaterThanOrEqual(hero.y + hero.height);
-      // At most a third of the window tall, servings, tags and notes in one band, the ingredients on the first
-      // screen, and nothing floating over the steps (culina-v2-6ilt.17).
-      expect(hero.height).toBeLessThanOrEqual(height / 4 + 1);
+      // At most two fifths of the window tall, so the title opens beneath it, and nothing floating over the steps.
+      expect(hero.height).toBeLessThanOrEqual(height * 0.4 + 1);
       await expect(page.locator('article.surface > .cook-action')).not.toBeInViewport();
       await expectReflow(page);
     });
@@ -468,7 +467,7 @@ test.describe('responsive production layouts @offline', () => {
     [1280, 800],
     [1440, 900]
   ] as const) {
-    test(`a recipe's ingredients start on the first screen at ${width}x${height}`, async ({
+    test(`a recipe's title and details open beneath its photo at ${width}x${height}`, async ({
       page
     }, testInfo) => {
       test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport.');
@@ -478,14 +477,14 @@ test.describe('responsive production layouts @offline', () => {
       await page.goto(`/recipes/${recipeId}`);
 
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-      // Servings, tags and notes share one band between hairlines (culina-v2-6ilt.17).
-      const servings = (await page.locator('article.surface .details > .servings').boundingBox())!;
-      const tags = (await page.locator('article.surface .details > .tags').boundingBox())!;
-      expect(Math.abs(tags.y + tags.height / 2 - (servings.y + servings.height / 2))).toBeLessThan(
-        8
-      );
-      const ingredients = page.getByRole('heading', { name: 'Zutaten', exact: true });
-      await expect(ingredients).toBeInViewport({ ratio: 1 });
+      // Tags follow the head; the servings lead the ingredients they change.
+      const tags = (await page.locator('article.surface > .about > .tags').boundingBox())!;
+      const ingredients = (await page.locator('article.surface .ingredients').boundingBox())!;
+      expect(tags.y).toBeLessThan(ingredients.y);
+      await expect(page.locator('article.surface .ingredients .servings')).toHaveCount(1);
+      // The photo leads; the title and the tags are on the first screen, the ingredients a scroll below.
+      await expect(page.getByRole('heading', { level: 1 })).toBeInViewport({ ratio: 1 });
+      await expect(page.locator('article.surface > .about > .tags')).toBeInViewport({ ratio: 1 });
       await expectReflow(page);
     });
   }
@@ -498,7 +497,8 @@ test.describe('responsive production layouts @offline', () => {
     await page.goto(`/recipes/${recipeId}`);
 
     const title = page.getByRole('heading', { level: 1 });
-    const servings = page.locator('article.surface > .details > .servings');
+    // The stepper, at the top of the ingredients, which come before the tags and the note on a phone.
+    const servings = page.locator('article.surface .ingredients .servings .stepper');
     // The recipe's own cooking action leads back; the floating pill stays off its page.
     const resume = page.getByRole('button', { name: 'Weiterkochen' });
     await expect(title).toBeVisible();
@@ -682,7 +682,7 @@ test.describe('responsive production layouts @offline', () => {
     await expectStartCookingReachable(page, viewport.width, viewport.height);
   });
 
-  test('a phone reading down a recipe gets the bottom bar out of the way, and back on a scroll up', async ({
+  test('a phone reading down a recipe recedes the bottom bar to its icons, and back on a scroll up', async ({
     page
   }, testInfo) => {
     test.skip(testInfo.project.name !== 'desktop', 'Explicit phone viewport.');
@@ -698,13 +698,40 @@ test.describe('responsive production layouts @offline', () => {
 
     await page.mouse.move(200, 400);
     await page.mouse.wheel(0, 300);
-    await expect(bar).not.toBeInViewport();
-    // The start button takes the bar's place at the bottom rather than floating above an empty strip.
-    await expect.poll(async () => (await action.boundingBox())!.y).toBeGreaterThan(above.y + 40);
+    // As an iOS tab bar minimises: smaller, labels gone, every destination still one tap away.
+    await expect(bar).toHaveClass(/compact/);
+    await expect(bar).toBeInViewport({ ratio: 1 });
+    await expect(bar.getByRole('link')).toHaveCount(4);
+    await expect(bar.getByText('Rezepte', { exact: true })).not.toBeInViewport();
+    // The start button follows the bar down rather than floating above an empty strip.
+    await expect.poll(async () => (await action.boundingBox())!.y).toBeGreaterThan(above.y + 8);
 
     await page.mouse.wheel(0, -100);
-    await expect(bar).toBeInViewport({ ratio: 1 });
+    await expect(bar).not.toHaveClass(/compact/);
     await expect.poll(async () => (await action.boundingBox())!.y).toBeCloseTo(above.y, 0);
+  });
+
+  test('a phone searches from a circle beside the bottom bar, a wide screen from the header', async ({
+    page
+  }, testInfo) => {
+    test.skip(testInfo.project.name !== 'desktop', 'Explicit viewports.');
+    await responsiveData(page, 'de');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/cookbooks');
+
+    const search = page.getByRole('button', { name: 'Rezepte durchsuchen', exact: true });
+
+    await expect(search).toHaveCount(1);
+    await expect(search).toBeVisible();
+    const phone = (await search.boundingBox())!;
+    const bar = (await page.locator('nav.bottom').boundingBox())!;
+    // Trailing the destinations, on their line and as tall as their dock.
+    expect(phone.x).toBeGreaterThan(bar.x + bar.width);
+    expect(Math.abs(phone.y + phone.height / 2 - (bar.y + bar.height / 2))).toBeLessThan(2);
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(search).toBeVisible();
+    expect((await search.boundingBox())!.y).toBeLessThan(100);
   });
 
   for (const [width, height] of [
@@ -934,12 +961,15 @@ async function expectStartCookingReachable(page: Page, width: number, height: nu
   await expect(start).toBeInViewport({ ratio: 1 });
   expect((await action.boundingBox())!.y).toBeCloseTo(actionBox.y, 0);
 
-  await page.locator('article.surface > .body').evaluate((element, dockedTop) => {
-    const gap = parseFloat(getComputedStyle(element.parentElement!).rowGap);
-    window.scrollTo(
-      0,
-      window.scrollY + element.getBoundingClientRect().bottom + gap - (dockedTop - 80)
+  await page.locator('article.surface').evaluate((surface, dockedTop) => {
+    const gap = parseFloat(getComputedStyle(surface).rowGap);
+    // The recipe's last line: in one column the body is no box of its own, so its parts are measured.
+    const bottom = Math.max(
+      ...[...surface.querySelectorAll('.body > *')].map(
+        (part) => part.getBoundingClientRect().bottom
+      )
     );
+    window.scrollTo(0, window.scrollY + bottom + gap - (dockedTop - 80));
   }, actionBox.y);
   await expect.poll(async () => (await action.boundingBox())!.y).toBeLessThan(actionBox.y);
   const restingBox = (await action.boundingBox())!;

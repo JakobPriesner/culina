@@ -99,15 +99,10 @@
       margin-block-end: 0;
     }
 
-    /* A short edge fade, like a toolbar's scroll edge: solid only below the button's middle, so the recipe
-       stays readable up to the button instead of disappearing behind a band (it once covered ~110px). */
-    .cook-action .foot::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      z-index: -1;
-      background: linear-gradient(to top, var(--surface) 35%, transparent);
-      pointer-events: none;
+    /* Floating, the buttons stand on the recipe with nothing behind them, as iOS's floating controls do: each is opaque,
+       and the dock's shadow lifts it off the words passing under it. */
+    .cook-action .foot:global(.docked) :global(.button) {
+      box-shadow: var(--shadow-dock);
     }
 
     .cook-action .foot:global(.docked) {

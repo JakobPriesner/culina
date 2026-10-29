@@ -111,10 +111,26 @@
     border-radius: var(--radius-full);
     background: var(--surface-raised);
     /* The knob slides because the movement says which side is on. */
-    transition: transform var(--duration-base) var(--ease-spatial);
+    transition:
+      transform var(--duration-base) var(--ease-spatial),
+      width var(--duration-fast) var(--ease-out),
+      box-shadow var(--duration-fast) var(--ease-out);
   }
 
   .switch[aria-checked='true'] .knob {
     transform: translateX(var(--space-4));
+  }
+
+  /*
+   * Held, the knob stretches toward where it would go and lifts, as an iOS switch's does under a finger: the control
+   * answers the touch before it changes. Checked, it stretches back from the trailing side.
+   */
+  .switch:active:not(:disabled) .knob {
+    width: calc(var(--space-6) + var(--space-2));
+    box-shadow: var(--shadow-card);
+  }
+
+  .switch[aria-checked='true']:active:not(:disabled) .knob {
+    transform: translateX(calc(var(--space-4) - var(--space-2)));
   }
 </style>

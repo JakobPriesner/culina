@@ -11,7 +11,6 @@
     --surface-overlay: #ffffff;
     --surface-overlay-glass: #ffffff;
     --surface-accent-subtle: #eeeeee;
-    --surface-accent-strong: #dddddd;
     --surface-highlight: #dddddd;
     --surface-highlight-band: color-mix(in srgb, var(--accent) 14%, transparent);
     --surface-hover: #eeeeee;
@@ -100,7 +99,6 @@
     --surface-overlay: #000000;
     --surface-overlay-glass: #000000;
     --surface-accent-subtle: #151e12;
-    --surface-accent-strong: #263220;
     --surface-highlight: #263323;
     --surface-highlight-band: color-mix(in srgb, var(--accent) 14%, transparent);
     --surface-hover: #171717;

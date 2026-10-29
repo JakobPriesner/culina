@@ -1936,7 +1936,8 @@
   "plan.title.previous": "Last week",
   "plan.title.other": "Week",
   "cooking.inHousehold": "· in {household}",
-  "recipe.whereabouts.planned": "Planned: {when}",
+  "plan.recipe.planned": "Planned: {when}",
+  "plan.recipe.planned.short": "Planned",
   "plan.today.meal": "Today · {slot}",
   "plan.today.cook": "Cook",
   "editor.addSpottedIngredient": "Add {name} to step {number}",
@@ -2123,7 +2124,7 @@
   "shopping.meals.withdraw": "Take off the list",
   "shopping.meals.withdraw.label": "Take off the list: {title}",
   "shopping.meals.withdrawn": "What {title} still needed is off the list.",
-  "recipe.whereabouts.scale": "As planned: {amount}",
+  "recipe.servings.asPlanned": "As planned: {amount}",
   "plan.recipe.alsoShop": "Put it on the shopping list too",
   "plan.recipe.doneListed": "Added to {day} and to the shopping list.",
   "plan.recipe.doneNotListed": "Added to {day}, but it could not go on the shopping list.",
@@ -2181,7 +2182,6 @@
   "recipe.scaleFrom": "Scale to the {name} you have",
   "cooking.madeIt": "I made it",
   "cooking.madeIt.named": "I made {title}",
-  "recipe.whereabouts.cookedToday": "Cooked today",
   "recipe.lastCooked": "last {when}",
   "editor.linkSpotted": [
     {

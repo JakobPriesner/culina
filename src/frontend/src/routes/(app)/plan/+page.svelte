@@ -65,9 +65,10 @@
 
   /**
    * Too narrow for back, today and forward beside Plan | Liste (a phone upright): a second pinned row would take a
-   * quarter of the screen, so there they sit beside the dates and scroll away.
+   * quarter of the screen, so there they sit beside the dates and scroll away. The bar holds them beside a whole
+   * Plan | Liste, the size it is on the list, from about 34.5rem.
    */
-  const narrow = new MediaQuery('(width < 30rem)', false);
+  const narrow = new MediaQuery('(width < 35rem)', false);
 
   /** Where back, today and forward go: the header bar, unless the list is beside the week or the phone is narrow. */
   const travelInBar = $derived(!listBeside.current && !narrow.current);

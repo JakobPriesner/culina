@@ -32,7 +32,7 @@ controlled in Settings and respects reduced motion.
 | --- | --- | --- |
 | Button press | Subtle compression, no layout change | 120ms |
 | Page change | Content dissolves; shell controls stay steady | 120ms out / 200ms in, no delay |
-| Phone bottom bar | Slides away while reading down, back on any scroll up, at the top and the end; what is under way (cooking, imports) leaves and returns with it | 200ms transform, none with reduced motion |
+| Phone bottom bar | Recedes to its icons while reading down, as an iOS tab bar minimises; full again on any scroll up, at the top and the end; what is under way (cooking, imports) stays above it | 200ms height, none with reduced motion |
 | Filters, quantities, URL fragments | Update in place | No page transition |
 | Modal | Small rise and scale, matching return | 280ms enter / 180ms exit |
 | Mobile sheet | 32px rise from bottom, no scaling | 280ms enter / 180ms exit |

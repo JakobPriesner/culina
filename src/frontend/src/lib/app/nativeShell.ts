@@ -1,6 +1,7 @@
 import { SecureStorage } from '@aparajita/capacitor-secure-storage';
 import { KeepAwake } from '@capacitor-community/keep-awake';
 import { App } from '@capacitor/app';
+import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics';
 
 import { goto } from '$app/navigation';
@@ -10,10 +11,23 @@ import { drainNativeTimers, startNativeTimers } from '$features/cooking/nativeTi
 import { openTappedNotifications } from '$features/import/nativePush';
 import { useNativeWakeLock } from '$features/cooking/wakeLock.svelte';
 
+import { reportNativeDisplay, type DisplaySettings } from './displaySettings';
+import { applyDynamicType } from './dynamicType';
 import { useNativeHaptics, type HapticMoment } from './haptics';
 import { startNativeImages } from './nativeImages';
 
 let started = false;
+
+/** The iOS app's own plugin (native/ios/App/App/CulinaDisplayPlugin.swift): display settings WebKit does not report. */
+interface CulinaDisplayPlugin {
+  get(): Promise<DisplaySettings>;
+  addListener(
+    event: 'change',
+    listener: (settings: DisplaySettings) => void
+  ): Promise<PluginListenerHandle>;
+}
+
+const CulinaDisplay = registerPlugin<CulinaDisplayPlugin>('CulinaDisplay');
 
 /**
  * What the installed app sets up once, before its first route (docs/native-app-design.md, 2.2): where its token is kept,
@@ -48,6 +62,10 @@ export async function startNativeShell(): Promise<void> {
   // eslint-disable-next-line svelte/no-navigation-without-resolve -- a path the server built (`/recipes/imports/{id}`), checked same-origin by openTappedNotifications.
   await openTappedNotifications((path) => void goto(path));
 
+  if (Capacitor.getPlatform() === 'ios') {
+    await followTheIPhone();
+  }
+
   // Before the first route: presses on the lock screen while the app was closed are applied first.
   await startNativeTimers();
   await App.addListener('resume', () => void drainNativeTimers());
@@ -64,6 +82,22 @@ export async function startNativeShell(): Promise<void> {
       void App.exitApp();
     }
   });
+}
+
+/**
+ * The iPhone's text size and its Reduce Transparency and Increase Contrast, which a web page cannot read for itself.
+ * Android's web view already follows the system's font scale and reports contrast through the media query.
+ */
+async function followTheIPhone(): Promise<void> {
+  applyDynamicType(document);
+  await App.addListener('resume', () => void applyDynamicType(document));
+
+  const settings = await CulinaDisplay.get().catch(() => null);
+
+  if (settings) {
+    reportNativeDisplay(settings);
+    await CulinaDisplay.addListener('change', reportNativeDisplay).catch(() => {});
+  }
 }
 
 function feel(moment: HapticMoment): void {

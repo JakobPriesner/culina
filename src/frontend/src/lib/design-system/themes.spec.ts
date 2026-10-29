@@ -45,6 +45,12 @@ const requiredContrast = [
   { foreground: '--text-on-accent', background: '--accent', minimum: forText },
   { foreground: '--text-on-accent', background: '--accent-hover', minimum: forText },
   { foreground: '--accent-contrast', background: '--accent', minimum: forText },
+  // The phone dock's current destination: its icon and label in the accent on the raised lens.
+  { foreground: '--accent', background: '--surface-raised', minimum: forText },
+  // An ingredient named in a step: tinted words on the page, on its pointed-at tint and on its pressed one.
+  { foreground: '--accent', background: '--surface', minimum: forText },
+  { foreground: '--accent', background: '--surface-accent-subtle', minimum: forText },
+  { foreground: '--accent', background: '--surface-highlight', minimum: forText },
   // Non-text: input border, focus ring and status colours, which always accompany a word or icon.
   { foreground: '--accent', background: '--surface', minimum: forNonText },
   // The dot after the name: decoration, but an invisible one is a typo.
@@ -60,9 +66,38 @@ const requiredContrast = [
   { foreground: '--warning', background: '--surface', minimum: forNonText }
 ];
 
+/** Increase Contrast asks more of the quieter pairs: muted text at AAA and edges a person can find. */
+const moreContrast = [
+  { foreground: '--text-muted', background: '--surface', minimum: 7 },
+  { foreground: '--text-muted', background: '--surface-raised', minimum: 7 },
+  { foreground: '--border-strong', background: '--surface', minimum: forText },
+  { foreground: '--field-border', background: '--field-surface', minimum: forText },
+  { foreground: '--border-focus', background: '--surface', minimum: forText }
+];
+
+/**
+ * A contrast block holds only what Increase Contrast changes, so it is read over its mode's block: every check runs
+ * on what the page would really use.
+ */
 const modes = [
-  { name: 'light', selector: (id: string) => `[data-theme='${id}']` },
-  { name: 'dark', selector: (id: string) => `[data-theme='${id}'][data-mode='dark']` }
+  { name: 'light', selector: (id: string) => `[data-theme='${id}']`, pairs: requiredContrast },
+  {
+    name: 'dark',
+    selector: (id: string) => `[data-theme='${id}'][data-mode='dark']`,
+    pairs: requiredContrast
+  },
+  {
+    name: 'light with more contrast',
+    selector: (id: string) => `[data-theme='${id}'][data-mode='light'][data-contrast='more']`,
+    over: (id: string) => `[data-theme='${id}']`,
+    pairs: [...requiredContrast, ...moreContrast]
+  },
+  {
+    name: 'dark with more contrast',
+    selector: (id: string) => `[data-theme='${id}'][data-mode='dark'][data-contrast='more']`,
+    over: (id: string) => `[data-theme='${id}'][data-mode='dark']`,
+    pairs: [...requiredContrast, ...moreContrast]
+  }
 ];
 
 const read = (path: string) => readFile(path, 'utf8');
@@ -112,11 +147,13 @@ describe('the semantic token contract', () => {
 });
 
 describe.each(themeIds)('the %s theme', (themeId) => {
-  describe.each(modes)('in $name mode', ({ selector }) => {
-    const declarations = blockFor(themeId, selector(themeId));
+  describe.each(modes)('in $name mode', ({ selector, over, pairs }) => {
+    const own = blockFor(themeId, selector(themeId));
+    const declarations =
+      own && new Map([...(over ? (blockFor(themeId, over(themeId)) ?? []) : []), ...own]);
 
     it('has a block of its own', () => {
-      expect(declarations, `expected a rule for ${selector(themeId)}`).toBeDefined();
+      expect(own, `expected a rule for ${selector(themeId)}`).toBeDefined();
     });
 
     it('defines every token in the contract', () => {
@@ -130,7 +167,7 @@ describe.each(themeIds)('the %s theme', (themeId) => {
     });
 
     it('defines nothing outside the contract', () => {
-      const extra = [...(declarations?.keys() ?? [])].filter((token) => !contract.includes(token));
+      const extra = [...(own?.keys() ?? [])].filter((token) => !contract.includes(token));
 
       expect(extra, 'no component can read a token that the contract does not declare').toEqual([]);
     });
@@ -143,7 +180,7 @@ describe.each(themeIds)('the %s theme', (themeId) => {
       expect(unresolved).toEqual([]);
     });
 
-    it.each(requiredContrast)(
+    it.each(pairs)(
       '$foreground on $background reaches $minimum:1',
       ({ foreground, background, minimum }) => {
         const first = resolve(declarations?.get(foreground));

@@ -5,6 +5,8 @@
   import { Toaster } from '$ds';
 
   import { session } from '$features/auth/session.svelte';
+  import { libraryView } from '$features/recipes/stores/libraryView.svelte';
+  import { recipes } from '$features/recipes/stores/recipes.svelte';
   import KitchenRuntime from '$features/cooking/KitchenRuntime.svelte';
   import TourHost from '$features/onboarding/TourHost.svelte';
 
@@ -31,15 +33,10 @@
   let dockHeight = $state(0);
   let barHeight = $state(0);
 
-  /** The bottom bar slides away while a page is read downwards; then it covers nothing. */
-  let barHidden = $state(false);
+  /** Measured, so it follows the bottom bar receding to its icons while a page is read downwards. */
+  const barInset = $derived(barHeight);
 
-  const barInset = $derived(barHidden ? 0 : barHeight);
-
-  /** What is under way leaves with the bar on a phone; a wide screen has no bar, so it stays. */
-  const dockAway = $derived(barHidden && barHeight > 0);
-
-  const dockInset = $derived(dockAway ? 0 : dockHeight);
+  const dockInset = $derived(dockHeight);
 
   /**
    * Height of the floating header, for pages that put content on its line; measured because it follows the wordmark's font metrics.
@@ -54,6 +51,13 @@
   const searchable = $derived(
     offersSearch(page.url.pathname) && session.activeHouseholdId !== null
   );
+
+  /** Nothing to search in an empty library; its own invitation is the way on. The shortcut still opens search. */
+  const emptyLibrary = $derived(
+    recipes.status === 'ready' && recipes.items.length === 0 && !libraryView.filtered
+  );
+
+  const findable = $derived(searchable && !emptyLibrary);
 
   let viewportHeight = $state(0);
 
@@ -82,17 +86,15 @@
 >
   <SkipLink />
 
-  <AppHeader {searchable} bind:height={headerHeight} />
+  <AppHeader searchable={findable} bind:height={headerHeight} />
 
   <main class="content" id="content" tabindex="-1">
     {@render children()}
   </main>
 
-  <ShellDock bind:height={dockHeight} away={dockAway} onfocusin={() => (barHidden = false)}
-    >{@render dock?.()}</ShellDock
-  >
+  <ShellDock bind:height={dockHeight}>{@render dock?.()}</ShellDock>
 
-  <BottomBar bind:height={barHeight} bind:hidden={barHidden} />
+  <BottomBar searchable={findable} bind:height={barHeight} />
 
   <Toaster label={m['app.notifications']()} dismissLabel={m['app.dismiss']()} />
 

@@ -27,6 +27,8 @@
     /** Whether the title is still on screen, for a page that repeats it in a sticky bar. */
     ontitleview?: (visible: boolean) => void;
     nutrition?: NutritionLink | null;
+    /** The day of the next meal it is planned for, which the plan action says. */
+    planned?: Date | null;
   }
 
   let {
@@ -47,7 +49,8 @@
     oncopy,
     ondelete,
     ontitleview,
-    nutrition = null
+    nutrition = null,
+    planned = null
   }: Props = $props();
 
   /** The page's sticky bar is about this tall (px); the title counts as gone once it slides under it. */
@@ -68,6 +71,7 @@
       {listed}
       {onaddtocookbook}
       {onaddtoplan}
+      {planned}
       {onstartcooking}
       {resuming}
       {onmadeit}

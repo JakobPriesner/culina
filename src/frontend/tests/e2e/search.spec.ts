@@ -186,7 +186,7 @@ test.describe('search @offline', () => {
     await expect(searchField).toBeFocused();
   });
 
-  test('the header search button leads back up to the library search field', async ({ page }) => {
+  test('the search button leads back up to the library search field', async ({ page }) => {
     await responsiveData(page);
     // Short enough that the library scrolls its search field away on a phone too: at Pixel 7 height it stayed in view.
     await page.setViewportSize({ width: page.viewportSize()!.width, height: 600 });
@@ -197,7 +197,8 @@ test.describe('search @offline', () => {
 
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await expect(searchField).not.toBeInViewport();
-    await page.getByRole('banner').getByRole('button', { name: 'Rezepte durchsuchen' }).click();
+    // In the header on a wide screen, beside the bottom bar on a phone: the one that is showing.
+    await page.getByRole('button', { name: 'Rezepte durchsuchen', exact: true }).click();
 
     await expect(searchField).toBeFocused();
     await expect(searchField).toBeInViewport();

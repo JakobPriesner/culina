@@ -245,15 +245,18 @@
     overflow: clip;
   }
 
-  /* Along the bottom edge, full width, clear of the home indicator; it scrolls inside when long. */
+  /*
+   * Along the bottom edge, inset from the screen's edges and concentric with its corners as `Dialog`'s phone sheet is,
+   * clear of the home indicator; it scrolls inside when long.
+   */
   .panel.sheet {
-    inset: auto 0 0;
-    width: 100%;
+    inset: auto var(--screen-inset) var(--screen-inset);
+    width: auto;
     max-width: none;
     max-height: 85dvh;
     border-width: 0;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    border-radius: calc(var(--radius-screen) - var(--screen-inset));
+    padding-bottom: max(0px, calc(env(safe-area-inset-bottom, 0px) - var(--screen-inset)));
   }
 
   /* Dimmed behind, as a modal sheet is: the page is not what is being worked on while it is up. */
@@ -324,7 +327,7 @@
 
     .panel.sheet {
       opacity: 1;
-      transform: translateY(100%);
+      transform: translateY(calc(100% + var(--screen-inset)));
       transition:
         transform var(--duration-exit) var(--ease-in),
         display var(--duration-exit) allow-discrete,
@@ -362,7 +365,7 @@
 
       .panel.sheet:popover-open {
         opacity: 1;
-        transform: translateY(100%);
+        transform: translateY(calc(100% + var(--screen-inset)));
       }
 
       .panel.sheet:popover-open::backdrop {

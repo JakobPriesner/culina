@@ -312,10 +312,9 @@
     width: 100%;
     min-height: var(--control-lg);
     padding-inline: calc(var(--space-8) + var(--space-3)) var(--space-3);
-    border: 1px solid var(--border-strong);
+    border: 1px solid var(--field-border);
     border-radius: var(--radius-lg);
-    background: var(--surface-raised);
-    --field-surface: var(--field-surface-inset);
+    background: var(--field-surface);
     color: var(--text);
     font: inherit;
     font-size: var(--text-lg);

@@ -5,11 +5,7 @@
   import { session } from '$features/auth/session.svelte';
   import { m } from '$shell/i18n';
 
-  /**
-   * The recipe's tags as pills, each leading to the library filtered by it. After the servings band
-   * rather than under the title, for the reason the whereabouts are: on a phone that keeps the servings
-   * on the first screen.
-   */
+  /** The recipe's tags as pills under its head, each leading to the library filtered by it. */
   interface Props {
     recipeId: string;
     tags: readonly string[];

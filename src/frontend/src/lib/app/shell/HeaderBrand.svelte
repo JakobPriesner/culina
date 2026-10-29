@@ -23,8 +23,7 @@
     padding: var(--space-1) var(--space-4) var(--space-1) var(--space-1);
     border-radius: var(--radius-full);
     background: var(--surface-nav-glass);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: var(--glass-filter);
     box-shadow: var(--shadow-glass);
     pointer-events: auto;
     transition: background-color var(--duration-fast) var(--ease-out);

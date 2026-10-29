@@ -400,6 +400,26 @@
     background: var(--surface);
   }
 
+  /*
+   * A phone's sheet floats inset from the screen's edges with every corner rounded, concentric with the screen's own,
+   * so the page shows around it, as an iOS sheet does. At its large detent it is flush and full width again, as iOS's
+   * is once expanded: the whole height, the task in focus.
+   */
+  @media (width < 48rem) {
+    .sheet:not(.large) {
+      width: calc(100vw - 2 * var(--screen-inset));
+      margin-block-end: var(--screen-inset);
+    }
+
+    .sheet:not(.large) .panel {
+      border-radius: calc(var(--radius-screen) - var(--screen-inset));
+      /* The home indicator's strip, less the gap the sheet already keeps below it. */
+      padding-bottom: max(0px, calc(env(safe-area-inset-bottom, 0px) - var(--screen-inset)));
+      padding-inline: max(0px, calc(env(safe-area-inset-left, 0px) - var(--screen-inset)))
+        max(0px, calc(env(safe-area-inset-right, 0px) - var(--screen-inset)));
+    }
+  }
+
   /* A phone shows a scrollbar only while scrolling; a reserved gutter only narrows the sheet. */
   @media (width < 48rem) {
     .sheet .body {
@@ -539,7 +559,8 @@
      */
     @media (width < 48rem) {
       .sheet {
-        --dialog-travel: 100%;
+        /* Past the gap an inset sheet keeps, so none of it shows before it rises. */
+        --dialog-travel: calc(100% + var(--screen-inset));
         --dialog-scale: 1;
         opacity: 1;
       }

@@ -44,16 +44,16 @@
     </div>
   </header>
 
-  <div class="servings">
-    <Skeleton shape="block" width="8.5rem" height="var(--control-sm)" />
-    <Skeleton shape="block" width="6.5rem" height="var(--control-sm)" />
-  </div>
-
   <div class="body">
     <section class="ingredients" aria-hidden="true">
       <div class="section-head">
         <Skeleton width="6rem" height="1.5rem" />
         <Skeleton shape="block" width="7.5rem" height="var(--control-sm)" />
+      </div>
+
+      <div class="servings">
+        <Skeleton shape="block" width="8.5rem" height="var(--control-sm)" />
+        <Skeleton width="6.5rem" height="1rem" />
       </div>
 
       <div class="ingredient-rows">
@@ -99,7 +99,7 @@
 
   .hero {
     aspect-ratio: 16 / 9;
-    max-height: 24rem;
+    max-height: min(36rem, 40vh);
     width: 100%;
     overflow: hidden;
     border-radius: var(--radius-lg);
@@ -114,7 +114,7 @@
     }
   }
 
-  /* Matches the surface on short screens: the photograph beside the title and servings. */
+  /* Matches the surface on short screens: the photograph beside the title. */
   @media screen and (max-height: 32rem) {
     .photographed {
       display: grid;
@@ -129,15 +129,14 @@
 
     .photographed > .hero {
       grid-column: 1;
-      grid-row: 1 / span 2;
+      grid-row: 1;
       align-self: stretch;
       aspect-ratio: auto;
       min-height: 6rem;
       max-height: 12rem;
     }
 
-    .photographed > .head,
-    .photographed > .servings {
+    .photographed > .head {
       grid-column: 2;
     }
   }
@@ -169,13 +168,15 @@
     max-width: var(--measure);
   }
 
+  /* Matches SurfaceServings: a line under the heading, above a hairline. */
   .servings {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-4);
-    padding-block: var(--space-6);
-    border-block: 1px solid var(--border);
+    padding-bottom: var(--space-4);
+    margin-bottom: var(--space-4);
+    border-bottom: 1px solid var(--border);
   }
 
   .body {

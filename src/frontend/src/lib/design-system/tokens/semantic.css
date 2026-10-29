@@ -16,8 +16,6 @@
    */
   --surface-overlay-glass: color-mix(in srgb, var(--surface-overlay) 92%, transparent);
   --surface-accent-subtle: var(--c-olive-100);
-  /* The current destination's tile in the phone dock: the accent mixed into the dock, so every theme follows. */
-  --surface-accent-strong: color-mix(in srgb, var(--accent) 34%, var(--surface-raised));
   --surface-highlight: var(--c-olive-200);
   --surface-highlight-band: color-mix(in srgb, var(--accent) 14%, transparent);
   --surface-hover: var(--c-sand-100);
@@ -39,12 +37,12 @@
   --border-accent: var(--c-olive-300);
 
   /*
-   * Fields: one set for every typed or chosen control, so a field's surface can change in one place. White on the page
-   * says "write here"; inside a raised group (a card, a sheet) a white field would vanish into the white, so the group
-   * swaps in the inset fill. A disabled field has no fill of its own and a dashed edge (control.css), so it never
-   * shares a colour with an enabled one.
+   * Fields: one set for every typed or chosen control, so a field's surface can change in one place. Every field has
+   * the inset fill, on the page as in a raised group (a card, a sheet), so a field looks the same wherever it sits.
+   * A disabled field has no fill of its own and a dashed edge (control.css), so it never shares a colour with an
+   * enabled one.
    */
-  --field-surface: var(--c-white);
+  --field-surface: var(--c-sand-75);
   --field-surface-inset: var(--c-sand-75);
   --field-border: var(--c-sand-400);
   --field-border-hover: var(--c-sand-500);
@@ -77,7 +75,7 @@
   --generating-2: rgb(255 92 138);
   --generating-3: rgb(176 112 255);
   --generating-4: rgb(84 150 255);
-  --generating-panel: rgb(20 17 14 / 44%);
+  --generating-panel: rgb(20 17 14 / 72%);
   --generating-panel-border: rgb(255 255 255 / 16%);
   --generating-panel-shadow: 0 0.5rem 2rem rgb(20 17 14 / 18%);
 

@@ -56,8 +56,10 @@
     ontitleview?: (visible: boolean) => void;
     /** The nutrition headline for the meta line; absent while unknown, and never shown while cooking. */
     nutrition?: NutritionLink | null;
-    /** Where the recipe is in the loop (planned, on the list), after the servings band; not while cooking. */
-    whereabouts?: Snippet;
+    /** The next meal it is planned for, which its plan action says and the servings offer; not while cooking. */
+    planned?: { readonly day: Date; readonly servings: number } | null;
+    /** Your note on the whole recipe, after the tags; not while cooking. */
+    note?: Snippet;
     /** Your own note on a step, by step id; see `StepList`. */
     stepNote?: (stepId: string) => string;
     /** Controls under the step being cooked; only the cook route supplies them. */
@@ -88,7 +90,8 @@
     onstep,
     ontitleview,
     nutrition = null,
-    whereabouts,
+    planned = null,
+    note,
     stepNote,
     stepaction
   }: Props = $props();
@@ -172,22 +175,16 @@
     {ontitleview}
     {nutrition}
     {cooked}
+    planned={planned?.day ?? null}
   />
 
-  <!-- One row on a desktop (servings, tags, notes), so the ingredients start on a laptop's first screen; each its own
-       band below that. -->
-  <div class="details">
-    <SurfaceServings {recipe} {servings} {scaling} {onservings} onscaleto={() => scaleByAmount()} />
-
-    {#if !cooking}
+  <!-- What it is and what you said about it; how much is with the ingredients, where it stands with the actions. -->
+  {#if !cooking && (recipe.tags.length > 0 || note)}
+    <div class="about">
       <RecipeTags recipeId={recipe.id} tags={recipe.tags} />
-    {/if}
-
-    <!-- After the servings band, not under the title: on a phone that keeps the servings on the first screen. -->
-    {#if whereabouts && !cooking}
-      <div class="whereabouts">{@render whereabouts()}</div>
-    {/if}
-  </div>
+      {@render note?.()}
+    </div>
+  {/if}
 
   <div class="body">
     <IngredientsPanel
@@ -198,7 +195,18 @@
       onhighlight={(id) => (highlighted = id)}
       onTheList={cooking ? undefined : onTheList}
       onscaleto={!cooking && onservings ? scaleByAmount : undefined}
-    />
+    >
+      {#snippet servingsLine()}
+        <SurfaceServings
+          {recipe}
+          {servings}
+          {scaling}
+          {onservings}
+          onscaleto={() => scaleByAmount()}
+          plannedServings={cooking ? null : planned?.servings}
+        />
+      {/snippet}
+    </IngredientsPanel>
 
     <StepList
       steps={recipe.steps}
@@ -239,53 +247,25 @@
     gap: var(--space-8);
   }
 
-  /* Below a desktop the wrapper is not there for layout: servings, tags and notes are bands of the surface. */
-  .details {
-    display: contents;
+  .about {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
   }
 
-  /*
-   * A desktop reads servings, tags and notes as one band between hairlines (the servings band's own), so the head is
-   * one row shorter by two and the ingredients start on a 1280x800 screen (culina-v2-6ilt.17). Anything too long for
-   * the row (a written note, many tags) wraps under it rather than squeezing the servings.
-   */
+  .about > :global(*) {
+    margin-block: 0;
+  }
+
+  .about > :global(.peek) {
+    align-self: stretch;
+  }
+
+  /* Tighter on a desktop, where the tags and the note read as the head's last lines. */
   @media screen and (min-width: 64rem) {
     .surface:not(.cooking) {
       gap: var(--space-6);
-    }
-
-    .surface:not(.cooking) .details {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: var(--space-3) var(--space-4);
-      padding-block: var(--space-3);
-      border-block: 1px solid var(--border);
-    }
-
-    .surface:not(.cooking) .details > :global(.servings) {
-      padding-block: 0;
-      border-block: none;
-    }
-
-    /* Takes what the row has left and wraps inside it, rather than dropping whole to a line of its own. */
-    .surface:not(.cooking) .details > .whereabouts {
-      display: flex;
-      flex: 1 1 0;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: var(--space-3);
-      min-width: min(100%, 16rem);
-    }
-
-    /* In a row their stacked spacing would only push them off the line. */
-    .surface:not(.cooking) .details > .whereabouts > :global(*:not(.peek)) {
-      margin-block: 0;
-      padding-block: 0;
-    }
-
-    .surface:not(.cooking) .details > .whereabouts > :global(.peek) {
-      flex-basis: 100%;
     }
   }
 
@@ -297,10 +277,19 @@
     align-items: start;
   }
 
+  /*
+   * One column: the ingredients come before the tags and the note, so the servings at their top stay on a
+   * phone's first screen, above the docked cooking action. The note still comes before the steps it is for.
+   */
   @media screen and (width < 64rem) {
     .body {
-      grid-template-columns: 1fr;
-      gap: var(--space-8);
+      display: contents;
+    }
+
+    .surface > :global(.hero),
+    .surface > :global(.head),
+    .body > :global(.ingredients) {
+      order: -1;
     }
   }
 
@@ -320,18 +309,17 @@
     }
 
     .photographed > :global(*),
-    .photographed > .details > :global(*) {
+    .photographed > .body > :global(*) {
       grid-column: 1 / -1;
     }
 
     .photographed > :global(.hero) {
       grid-column: 1;
-      grid-row: 1 / span 2;
+      grid-row: 1;
       align-self: stretch;
     }
 
-    .photographed > :global(.head),
-    .photographed > .details > :global(.servings) {
+    .photographed > :global(.head) {
       grid-column: 2;
     }
   }

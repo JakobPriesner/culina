@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte';
+
   import { SectionLabel, SegmentedControl } from '$ds';
 
   import { m } from '$shell/i18n';
@@ -17,9 +19,20 @@
     onTheList?: (name: string) => boolean;
     /** Scales the recipe to what there is of one ingredient, from a tap on its amount. */
     onscaleto?: (ingredientId: string) => void;
+    /** How much is being made, under the heading: it is the ingredients it changes. */
+    servingsLine?: Snippet;
   }
 
-  let { panel, cooking, scaling, highlighted, onhighlight, onTheList, onscaleto }: Props = $props();
+  let {
+    panel,
+    cooking,
+    scaling,
+    highlighted,
+    onhighlight,
+    onTheList,
+    onscaleto,
+    servingsLine
+  }: Props = $props();
 
   const perStep = $derived(panel.perStep);
 
@@ -42,30 +55,34 @@
   aria-label={m['recipe.ingredients']()}
   bind:clientHeight={height}
 >
-  <SectionHead title={m['recipe.ingredients']()}>
-    <!-- Nothing to choose in a recipe with one arrangement. Cooking chooses between this step and all, to prep ahead. -->
-    {#if cooking && panel.divisible && panel.written.length > 0}
-      <SegmentedControl
-        label={m['recipe.ingredientsView.label']()}
-        selected={panel.cookingView}
-        segments={[
-          { id: 'step', label: m['recipe.ingredientsView.thisStep']() },
-          { id: 'all', label: m['recipe.ingredientsView.all']() }
-        ]}
-        onselect={panel.chooseWhileCooking}
-      />
-    {:else if !cooking && panel.divisible && panel.written.length > 0}
-      <SegmentedControl
-        label={m['recipe.ingredientsView.label']()}
-        selected={panel.view}
-        segments={[
-          { id: 'combined', label: m['recipe.ingredientsView.combined']() },
-          { id: 'perStep', label: m['recipe.ingredientsView.perStep']() }
-        ]}
-        onselect={panel.choose}
-      />
-    {/if}
-  </SectionHead>
+  <div class="top">
+    <SectionHead title={m['recipe.ingredients']()}>
+      <!-- Nothing to choose in a recipe with one arrangement. Cooking chooses between this step and all, to prep ahead. -->
+      {#if cooking && panel.divisible && panel.written.length > 0}
+        <SegmentedControl
+          label={m['recipe.ingredientsView.label']()}
+          selected={panel.cookingView}
+          segments={[
+            { id: 'step', label: m['recipe.ingredientsView.thisStep']() },
+            { id: 'all', label: m['recipe.ingredientsView.all']() }
+          ]}
+          onselect={panel.chooseWhileCooking}
+        />
+      {:else if !cooking && panel.divisible && panel.written.length > 0}
+        <SegmentedControl
+          label={m['recipe.ingredientsView.label']()}
+          selected={panel.view}
+          segments={[
+            { id: 'combined', label: m['recipe.ingredientsView.combined']() },
+            { id: 'perStep', label: m['recipe.ingredientsView.perStep']() }
+          ]}
+          onselect={panel.choose}
+        />
+      {/if}
+    </SectionHead>
+
+    {@render servingsLine?.()}
+  </div>
 
   {#if panel.panel.length > 0}
     <!-- Beside the steps this is only the ingredients no step named, so say so. -->
@@ -115,16 +132,16 @@
   }
 
   /*
-   * Beside the steps there is nothing to follow, so it stays put; see `StepList`. Its heading (and the
-   * view switch) keeps the first row, and what no step claims comes after the last step, rather than
-   * a tall card beside a lone heading leaving a void.
+   * Beside the steps there is nothing to follow, so it stays put; see `StepList`. Its heading (with the
+   * view switch and the servings) keeps the first row, and what no step claims comes after the last
+   * step, rather than a tall card beside a lone heading leaving a void.
    */
   @media screen and (width >= 64rem) {
     .perStep {
       display: contents;
     }
 
-    .perStep > :global(.section-head) {
+    .perStep > .top {
       grid-column: 1;
       grid-row: 1;
       padding: var(--card-padding) var(--card-padding) 0;

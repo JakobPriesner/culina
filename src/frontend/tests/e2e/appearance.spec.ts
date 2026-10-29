@@ -72,4 +72,57 @@ test.describe('appearance @offline', () => {
     await expect(dark).toBeChecked();
     await expect(theme.getByRole('radio', { name: /^light$/i })).not.toBeChecked();
   });
+
+  /* Apple's glass gives way to the person's display settings; so does Culina's, before the first paint. */
+  test('Increase Contrast makes the glass solid and the theme stronger', async ({ page }) => {
+    test.skip(test.info().project.name !== 'desktop', 'The header pills are the wide layout.');
+    await responsiveData(page, 'en');
+    await page.goto('/');
+
+    const html = page.locator('html');
+    const nav = page.locator('nav.top');
+
+    // Glass to begin with, so the solid one below is the setting's doing.
+    await expect(nav).toHaveCSS('backdrop-filter', /blur/);
+
+    await page.emulateMedia({ contrast: 'more' });
+    await expect(html).toHaveAttribute('data-contrast', 'more');
+    await expect(nav).toHaveCSS('backdrop-filter', 'none');
+    // The theme's own Increase Contrast block: muted text a step darker than the usual sand-600.
+    await expect
+      .poll(() => html.evaluate((root) => getComputedStyle(root).getPropertyValue('--text-muted')))
+      .toBe('#443f36');
+
+    await page.emulateMedia({ contrast: 'no-preference' });
+    await expect(html).toHaveAttribute('data-contrast', 'normal');
+    await expect(nav).toHaveCSS('backdrop-filter', /blur/);
+  });
+
+  test('Reduce Transparency is applied before the document is ready', async ({ page }) => {
+    await page.addInitScript(() => {
+      // No browser emulates Reduce Transparency yet: answer the query as a device with it on would.
+      const real = window.matchMedia.bind(window);
+
+      window.matchMedia = (query: string) =>
+        query.includes('prefers-reduced-transparency')
+          ? ({ ...real(query), matches: true, media: query } as MediaQueryList)
+          : real(query);
+      document.addEventListener('DOMContentLoaded', () => {
+        Object.assign(window, {
+          transparencyWhenReady: document.documentElement.dataset['transparency']
+        });
+      });
+    });
+    await responsiveData(page, 'en');
+    await page.goto('/');
+
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => (window as unknown as { transparencyWhenReady?: string }).transparencyWhenReady
+        )
+      )
+      .toBe('reduced');
+    await expect(page.locator('nav.nav:visible')).toHaveCSS('backdrop-filter', 'none');
+  });
 });

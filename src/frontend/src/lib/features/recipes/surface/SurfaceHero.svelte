@@ -28,14 +28,15 @@
 
 <style>
   /*
-   * 16:9, capped so a wide screen does not fill the first screenful: at most a quarter of the window (24rem on a tall
-   * one), so the ingredients start on a laptop's first screen (culina-v2-6ilt.17). It shrinks the box rather than
-   * cropping the bottom, since the subject is central.
+   * 16:9, capped so a wide screen does not fill the first screenful: two fifths of the window, up to 36rem, so the
+   * title, its actions and its tags still open beneath it on a laptop. The photo leads the page; the
+   * ingredients follow a scroll down (decided 29 October 2026, replacing culina-v2-6ilt.17's quarter of the window).
+   * It shrinks the box rather than cropping the bottom, since the subject is central.
    */
   .hero {
     display: grid;
     aspect-ratio: 16 / 9;
-    max-height: min(24rem, 25vh);
+    max-height: min(36rem, 40vh);
     /* Explicit: max-height transfers through the aspect ratio into a max-width, so auto would make the box narrow instead of short. */
     width: 100%;
     overflow: hidden;

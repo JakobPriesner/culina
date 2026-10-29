@@ -5,5 +5,6 @@ import UIKit
 class MainViewController: CAPBridgeViewController {
     override open func capacitorDidLoad() {
         bridge?.registerPluginInstance(CulinaTimersPlugin())
+        bridge?.registerPluginInstance(CulinaDisplayPlugin())
     }
 }

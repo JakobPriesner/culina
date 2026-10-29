@@ -298,7 +298,7 @@
       border: 1px solid var(--border);
       border-radius: var(--radius-full);
       background: var(--surface-nav-glass);
-      backdrop-filter: blur(16px);
+      backdrop-filter: var(--glass-filter);
       box-shadow: var(--shadow-card);
     }
   }

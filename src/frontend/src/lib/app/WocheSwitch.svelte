@@ -96,7 +96,10 @@
 {/snippet}
 
 <style>
-  /* Plan | Liste fills the bar; the view's own controls keep their size at its end, and wrap under it on the narrowest phones. */
+  /*
+   * Plan | Liste is one size on both views, whatever sits beside it: it gives way only to a bar narrower than itself,
+   * never to the view's own controls, which keep their size at its end and wrap under it if they must.
+   */
   .switch {
     display: flex;
     flex-wrap: wrap;
@@ -106,8 +109,7 @@
   }
 
   .switch > :global(:first-child) {
-    flex: 1 1 10rem;
-    max-width: 22rem;
+    flex: 0 1 22rem;
   }
 
   .switch > :global(:first-child .segment) {

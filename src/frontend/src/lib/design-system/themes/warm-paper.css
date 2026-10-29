@@ -13,7 +13,6 @@
   --surface-overlay: var(--c-white);
   --surface-overlay-glass: color-mix(in srgb, var(--surface-overlay) 92%, transparent);
   --surface-accent-subtle: var(--c-olive-100);
-  --surface-accent-strong: color-mix(in srgb, var(--accent) 34%, var(--surface-raised));
   --surface-highlight: var(--c-olive-200);
   --surface-highlight-band: color-mix(in srgb, var(--accent) 14%, transparent);
   --surface-hover: var(--c-sand-100);
@@ -35,7 +34,7 @@
   --border-accent: var(--c-olive-300);
 
   /* Fields: one set for every typed or chosen control, so a field's surface can change in one place. */
-  --field-surface: var(--c-white);
+  --field-surface: var(--c-sand-75);
   --field-surface-inset: var(--c-sand-75);
   --field-border: var(--c-sand-400);
   --field-border-hover: var(--c-sand-500);
@@ -62,7 +61,7 @@
   --generating-2: rgb(255 92 138);
   --generating-3: rgb(176 112 255);
   --generating-4: rgb(84 150 255);
-  --generating-panel: rgb(20 17 14 / 44%);
+  --generating-panel: rgb(20 17 14 / 72%);
   --generating-panel-border: rgb(255 255 255 / 16%);
   --generating-panel-shadow: 0 0.5rem 2rem rgb(20 17 14 / 18%);
 
@@ -106,7 +105,6 @@
   --surface-overlay: var(--c-forest-850);
   --surface-overlay-glass: color-mix(in srgb, var(--surface-overlay) 92%, transparent);
   --surface-accent-subtle: var(--c-forest-800);
-  --surface-accent-strong: color-mix(in srgb, var(--accent) 34%, var(--surface-raised));
   --surface-highlight: var(--c-forest-800);
   --surface-highlight-band: color-mix(in srgb, var(--accent) 14%, transparent);
   --surface-hover: var(--c-forest-850);
@@ -129,7 +127,7 @@
   --border-accent: var(--c-forest-600);
 
   /* Fields: one set for every typed or chosen control, so a field's surface can change in one place. */
-  --field-surface: var(--c-forest-900);
+  --field-surface: var(--c-forest-950);
   --field-surface-inset: var(--c-forest-950);
   --field-border: var(--c-forest-500);
   --field-border-hover: var(--c-forest-400);
@@ -157,7 +155,7 @@
   --generating-2: rgb(255 92 138);
   --generating-3: rgb(176 112 255);
   --generating-4: rgb(84 150 255);
-  --generating-panel: rgb(13 20 13 / 52%);
+  --generating-panel: rgb(13 20 13 / 76%);
   --generating-panel-border: rgb(255 255 255 / 16%);
   --generating-panel-shadow: 0 0.5rem 2rem rgb(0 0 0 / 24%);
 
@@ -188,4 +186,49 @@
   --mascot-paper: var(--c-sand-50);
   --mascot-paper-line: var(--c-sand-300);
   --mascot-steam: var(--c-forest-500);
+}
+
+/*
+ * Increase Contrast, per mode: only what it changes. Muted text, hairlines, field edges and the accent move a step
+ * further from the ground, and glass gains a visible edge; tokens/accessibility.css makes the glass itself solid.
+ * The mode is part of the selector so the light block can never win in dark mode.
+ */
+[data-theme='warm-paper'][data-mode='light'][data-contrast='more'] {
+  --text-muted: var(--c-sand-700);
+  --text-subtle: var(--c-sand-600);
+
+  --border: var(--c-sand-400);
+  --border-strong: var(--c-sand-600);
+  --border-focus: var(--c-olive-700);
+
+  --field-border: var(--c-sand-600);
+  --field-border-hover: var(--c-sand-700);
+  --field-border-focus: var(--c-olive-700);
+
+  --accent: var(--c-olive-700);
+  --accent-hover: var(--c-olive-800);
+  --accent-active: var(--c-olive-800);
+
+  --shadow-glass:
+    inset 0 0 0 1px var(--c-sand-400), 0 1px 2px rgb(31 26 22 / 10%), 0 6px 20px rgb(31 26 22 / 10%);
+}
+
+[data-theme='warm-paper'][data-mode='dark'][data-contrast='more'] {
+  --text-muted: #d3d5c9;
+  --text-subtle: var(--c-forest-300);
+
+  --border: var(--c-forest-500);
+  --border-strong: var(--c-forest-400);
+  --border-focus: var(--c-mint-200);
+
+  --field-border: var(--c-forest-400);
+  --field-border-hover: var(--c-forest-300);
+  --field-border-focus: var(--c-mint-200);
+
+  --accent: var(--c-mint-200);
+  --accent-hover: #c6e6cb;
+  --accent-active: var(--c-mint-400);
+
+  --shadow-glass:
+    inset 0 0 0 1px var(--c-forest-500), 0 1px 2px rgb(0 0 0 / 40%), 0 6px 20px rgb(0 0 0 / 40%);
 }
