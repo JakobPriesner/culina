@@ -1,392 +1,108 @@
-# Configuration
-
-Culina reads its settings once, at startup, from three places, each overriding
-the one before it:
-
-1. **The defaults** shipped in `appsettings.json`.
-2. **`culina.json` in `Storage__ConfigPath`** (`/data/config` in the image) —
-   what an administrator saved from the app: the setup screen on first start,
-   and **Settings → Server** afterwards. The app writes this file; you do not
-   have to.
-3. **The environment** (and the command line). A variable set here always
-   wins, and the settings screen shows that setting as fixed, naming the
-   variable, instead of offering an edit that would do nothing.
-
-Saving a change on the settings screen writes it to `culina.json` and
-**restarts Culina in place**: the host is built again from the new
-configuration, which takes a second or two, and every value goes through the
-same startup validation as before. Nothing is applied half-way. The file is
-written readable by the app's own user only, from its first byte, because it
-can hold the database password. If you edited it by hand and it no longer
-reads as a JSON object, saving is refused (`settings.file_unreadable`) and the
-file is left exactly as it is — correct or remove it, then save again.
-
-Everything an administrator changes while the app runs *without* a restart —
-who may register, the assistant — lives in the database instead, and is not
-configuration at all.
-
-**The process refuses to start on invalid configuration.** Every group below is
-validated at startup, so a misconfigured deployment fails immediately and says
-which value is wrong — rather than on the first request that happened to need
-it, three days later. The settings screen asks the same validation before it
-saves, so what it saves is something the next start accepts.
-
-Names use the .NET convention: a double underscore separates the section from
-the key, so `Database__Host` is `Host` in the `Database` section. The table
-column **In the app** marks what the settings screen can change.
-
-## First start
-
-With no database configured anywhere — no `Database__*` variables, nothing in
-`culina.json` — Culina starts a small **setup host** instead of the app. It
-serves the setup screen and nothing else: every other API route answers `503`
-with `settings.setup_required`, `/health/ready` answers `200` so a proxy routes
-to it, and the log says so as a warning. The screen asks for:
-
-1. **The database.** Culina connects before saving anything, and refuses a
-   database it could not run in: nothing answering at the address, a refused
-   user, password or database name, a TLS requirement the server cannot meet,
-   a superuser role, a role that may not install the `citext`, `pg_trgm` and
-   `unaccent` extensions (trusted extensions, which the first migration
-   installs as the application role given `CREATE` on the database), or a role
-   that may not create tables — the last two with the SQL a superuser has to
-   run. A connection that fails is only named by its kind: the server's own
-   message, with the address it tried, is in Culina's log as a warning
-   (event 1960), because anybody may ask for this check during setup and the
-   exact message would tell them what listens on any address. For the same
-   reason one address may try at most ten times a minute — a fixed limit, not
-   one of the `RateLimits__*` settings, which are part of what is being set up
-   — here and in Settings → Server alike (`429 request.rate_limited`).
-   Then it restarts into the real app.
-2. **How people reach it**: secure cookies (on whenever the browser would keep
-   a Secure cookie — on `https://`, and on `http://localhost`) and which proxy
-   to trust (it shows the address requests actually arrive from). Everything
-   else is folded away with its defaults.
-3. **The first account**, which administers the instance.
-
-If the database is configured through the environment, the first step is
-skipped. The production compose file sets only where the database is — host,
-port and name — so the step still asks for the role, the password and TLS, and
-they stay editable under Settings → Server afterwards. **Whoever finishes setup
-first becomes the administrator**, exactly as the first registration always
-did, so finish it before the instance is reachable by anyone else.
-
-## Undoing a setting that locked you out
-
-A setting that stops Culina starting is named in its log. Set that setting's
-variable in the environment — it overrides the file — or delete the key from
-`culina.json` (or the whole file) and restart the container. The classic case
-is turning secure cookies on while Culina is reached over plain `http://`:
-nobody can sign in, and `Cookies__Secure=false` with
-`Cookies__AllowInsecureOutsideDevelopment=true` gets you back in.
-
-## Database
-
-| Variable | Default | In the app | |
-| --- | --- | --- | --- |
-| `Database__Host` | — | yes | **Required**, here or on the setup screen. Host name or address. |
-| `Database__Port` | `5432` | yes | |
-| `Database__Name` | — | yes | **Required**, here or on the setup screen. |
-| `Database__Username` | — | yes | **Required**, here or on the setup screen. The application role. Never a superuser — the migrations do not need one, and a compromised app should not be able to drop the cluster. The setup and settings screens refuse a superuser. |
-| `Database__Password` | — | yes | **Required**, here or on the setup screen. Never logged, never echoed by an endpoint, never in a problem document. Entered in the app, it is stored in `culina.json`, which only the app's own user may read. |
-| `Database__RequireSsl` | `true` | yes | Set to `false` only when the database is on the same private network and nothing else is. |
-| `Database__MaxPoolSize` | `20` | yes | Connections this instance may hold at once. A request holds one only while a statement or transaction runs, not while its response stays open, so twenty serve far more than twenty open requests. Every instance's pool counts against PostgreSQL's `max_connections`. Event ids 1970 and 1971 say when it is getting tight (see `operations.md`). |
-
-Configured as parts rather than one connection string so each part can be
-validated and the password can come from a different place — a Docker secret,
-say — than the rest.
-
-Changing the database in the app connects to the new one first. Culina copies
-nothing between databases: pointing it at an empty one starts an empty
-instance, and the setup screen with it. Leaving the password box empty keeps
-the stored password only while the host, port, database name and user stay
-the same; change any of them and the password has to be typed again, because
-the stored one is only ever sent to the server it was saved for. A value the
-environment pins is tried as pinned, whatever the form sends.
-
-**Culina signs in with SCRAM-SHA-256 only.** It refuses a server that asks for
-the password in clear text or as MD5, or for no password at all (`trust`) —
-`settings.database_insecure_auth` on the settings screen, a failed start
-otherwise — so a server that merely pretends to be PostgreSQL is never handed
-the password. PostgreSQL has defaulted to SCRAM
-since version 14, and the bundled `postgres:18` image uses it. A cluster
-upgraded from an older version may still hold an MD5 password for the role:
-run `SET password_encryption = 'scram-sha-256';` and set the role's password
-again (`ALTER ROLE culina_app PASSWORD '…';`), and make sure `pg_hba.conf`
-says `scram-sha-256` rather than `md5` or `password`.
-
-## Storage
-
-| Variable | Default | |
-| --- | --- | --- |
-| `Storage__ImagePath` | `/data/images` in the image | **Must be a volume**, unless photos go to a bucket (below). Recipe photographs, re-encoded. Not in the database and not rebuildable: without a volume, every photo in the instance disappears on the next deploy and nothing says so. |
-| `Storage__DataProtectionKeyPath` | `/data/keys` in the image | **Must be a volume.** The ASP.NET data-protection key ring, which encrypts the secrets stored in the database. |
-| `Storage__MaxImageBytes` | `10485760` | 10 MB. |
-| `Storage__ConfigPath` | `/data/config` in the image | **Should be a volume.** Where `culina.json` — everything saved from the setup and settings screens — lives. Not required to be writable: without it Culina still starts, and the settings screen shows the settings but says it cannot save them. |
-
-### Photos in an S3-compatible bucket
-
-Optional. With these set, recipe and cook photos are kept in the bucket instead
-of `Storage__ImagePath`, which then needs no volume; the database, the key ring
-and `culina.json` stay where they are. Any S3-compatible service works: AWS S3,
-MinIO, Hetzner Object Storage, Cloudflare R2, Wasabi.
-
-| Variable | Default | |
-| --- | --- | --- |
-| `Storage__S3__Endpoint` | — | The service's `http://` or `https://` address, such as `https://s3.eu-central-1.amazonaws.com` or `https://fsn1.your-objectstorage.com`. |
-| `Storage__S3__Bucket` | — | An existing bucket. Culina does not create it. Keep it private: photos are served through Culina, which checks who may see them. |
-| `Storage__S3__AccessKey` | — | |
-| `Storage__S3__SecretKey` | — | |
-| `Storage__S3__Region` | `us-east-1` | The region requests are signed for. Hetzner: the location, such as `fsn1`. |
-| `Storage__S3__ForcePathStyle` | `false` | `true` puts the bucket in the path instead of the host name. MinIO usually needs it. |
-
-Set Endpoint, Bucket, AccessKey and SecretKey together, or leave all six
-variables unset. If only some are set, Culina refuses to start and names the
-missing one. It does not quietly fall back to a directory nobody mounted.
-
-The keys in the bucket match the paths under `Storage__ImagePath`
-(`ab/cd/abcd…-800.webp`), so to move an existing instance, copy the directory
-into the bucket before switching:
-`aws s3 sync /data/images s3://culina-images/ --endpoint-url …` or
-`mc mirror /data/images host/culina-images`.
-
-A note on the key ring, because the usual warning is the wrong one: Culina's
-session cookie carries an opaque reference, not an encrypted payload, so losing
-the keys signs nobody out. They encrypt the model provider's API key, the key
-push notifications are signed with, and the API tokens of connected recipe
-libraries; without them those have to be entered or connected again.
-`operations.md` covers backing it up and restoring it.
-
-## Cookies
-
-| Variable | Default | |
-| --- | --- | --- |
-| `Cookies__Secure` | `true` | In the app. Only plain-HTTP access justifies `false`. With it true the session cookie takes the `__Host-` prefix, which requires HTTPS — over plain `http://` the browser refuses it and signing in cannot work (`localhost` is the exception browsers make). Changing it signs everybody out once, because the cookie changes name. |
-| `Cookies__AllowInsecureOutsideDevelopment` | `false` | Not in the app. Outside the `Development` environment Culina refuses to start with `Cookies__Secure=false`, and refuses to save it from the app, unless this is `true` — a session cookie in cleartext, without its `__Host-` prefix, is the deployment's risk to accept, not an administrator's switch. Every start with insecure cookies logs a warning (event id 1603). |
-| `Cookies__SessionDays` | `30` | In the app. How long a session survives without activity. Activity slides it, up to `Cookies__MaxSessionDays`. |
-| `Cookies__RenewAfterHours` | `24` | In the app. How long a session may sit unused before the next request extends it and re-issues both cookies. Culina has no refresh token — the cookie is an opaque reference, so this renewal is what takes its place. Lower costs a write per request for nothing; `0` renews on every request and only a test wants that. |
-| `Cookies__MaxSessionDays` | `90` | In the app. How long a session may last at all, counted from signing in, however often it is used; then a fresh sign-in is needed. Without a ceiling a stolen cookie that keeps being used never expires. At least `Cookies__SessionDays`; unset, it is 90 or `Cookies__SessionDays` if that is longer. |
-
-Signing in again from a browser that still holds a session ends that
-session: the new cookie replaces the old one, so the old row would only ever
-be used by somebody who copied it.
-
-## Behind a reverse proxy
-
-| Variable | Default | |
-| --- | --- | --- |
-| `ForwardedHeaders__KnownProxies` | empty | In the app. Comma-separated addresses. With this and `KnownNetworks` both empty, `X-Forwarded-*` headers are ignored, whoever sends them. |
-| `ForwardedHeaders__KnownNetworks` | empty | In the app. Comma-separated CIDR ranges, for a proxy whose address is not knowable in advance — anything in a container network. Nothing wider than a `/8` (IPv4) or a `/32` (IPv6) is accepted; `172.16.0.0/12` covers every Docker bridge network. |
-| `ForwardedHeaders__DangerouslyTrustWideNetworks` | `false` | Not on the settings screen: set it where the deployment is configured. `true` accepts a `KnownNetworks` entry wider than that, `0.0.0.0/0` included — every client inside it can then claim any address. Almost never what you want. |
-
-**One of these is required in production.** Without it the app sees the proxy's
-address as every client's, which makes per-IP rate limiting protect nothing and
-every security log line name the wrong host. Trusting everything is worse: then
-any client can forge its own address. Keep the range as small as it can be. The
-settings screen shows the address requests arrive from, and whether Culina
-already trusts it, which is usually the whole answer.
-
-## Password hashing
-
-Argon2id. Raise `MemoryKib` as far as the host tolerates; existing hashes keep
-verifying and are upgraded transparently on the next successful sign-in. At
-most one hash per processor core runs at a time — every sign-in hashes, an
-unknown address included — so the memory a burst of sign-ins can claim is
-`MemoryKib` times the core count, and further sign-ins wait their turn.
-
-| Variable | Default | |
-| --- | --- | --- |
-| `PasswordHashing__MemoryKib` | `65536` | 64 MB per hash. |
-| `PasswordHashing__Iterations` | `3` | |
-| `PasswordHashing__Parallelism` | `2` | |
-
-## Rate limits
-
-All of these are in the app.
-
-| Variable | Default | |
-| --- | --- | --- |
-| `RateLimits__LoginPerIpPerMinute` | `10` | |
-| `RateLimits__LoginPerAccountPerMinute` | `5` | |
-| `RateLimits__RegisterPerIpPerHour` | `5` | |
-| `RateLimits__InvitationPerIpPerHour` | `10` | Redemptions per address; reading which household a code is for counts separately against the same number. |
-| `RateLimits__SharedRecipesPerIpPerMinute` | `120` | Reads of recipes shared behind a link. |
-| `RateLimits__ImportsPerHour` | `30` | Imports from a web page, per person. |
-| `RateLimits__SourceRequestsPerHour` | `1500` | Requests against a connected recipe library, per person. |
-| `RateLimits__AssistantRequestsPerHour` | `60` | Per person. The only limit here about money rather than load. |
-| `RateLimits__ArchiveExportsPerHour` | `5` | Archives taken, per person: each one streams every photograph in the household. |
-| `RateLimits__RequestsPerSessionPerMinute` | `600` | Every request, per address despite the name. |
-
-Login is limited per address **and** per account: per-address alone lets a
-botnet spread an attack on one account across many addresses, and per-account
-alone lets one address walk a password list across many accounts. An attempt
-is counted before the password is checked, so simultaneous guesses cannot slip
-past the limit. An address the account has signed in from in the last 30 days
-gets a per-account budget of its own, so somebody guessing from elsewhere
-cannot lock the owner out at home; every other address shares the account's.
-
-The limits "per person" count against the signed-in account, whichever device,
-session or address it uses, so signing in again does not buy a fresh
-allowance.
-
-## Importing
-
-| Variable | Default | |
-| --- | --- | --- |
-| `Import__AllowPrivateSourceAddresses` | `false` | In the app. Lets a connected recipe library (a Tandoor) live on a private network: 10/8, 172.16/12, 192.168/16, 100.64/10 and IPv6 unique local addresses. Never loopback, link-local, cloud metadata, `0.0.0.0` or multicast, so a Tandoor on the same machine has to be addressed by its LAN or container-network name. Never applies to importing from a pasted link. |
-
-Everything the server fetches for someone — a pasted link, a connected
-library, a push notification — connects directly and ignores `HTTP_PROXY` and
-`HTTPS_PROXY`: through a proxy, the address checked would be the proxy's, not
-the one it goes on to reach. A connected library on a private address gets only
-"could not be read" back when something fails, even for a wrong token, so the
-error cannot be used to map the network.
-
-## The assistant
-
-Nothing. There is no environment variable for it, and that is deliberate: the
-model, the key, the budget and which capabilities are on are all things an
-administrator changes while the app runs, from **Settings → Assistant**. A key
-that could only be entered by editing a file on the server is a key nobody will
-ever rotate.
-
-Connecting one is choosing a provider and pasting a key. The address and the
-model names live under **Advanced** and are empty by default — Culina knows
-where Google and OpenAI are, and which of their models to use. Set the address
-only if you run a gateway in front of the provider; set a model only if you want
-to pin one rather than follow whatever Culina currently defaults to. Ollama is
-the exception and is asked for its address up front, because a model on your own
-machine is wherever you put it and there is no default that could be right.
-
-**Several providers at once.** Connect as many as you like, then give each job
-to one of them. The four jobs — improving a recipe, writing one from an idea,
-reading one out of a photograph, drawing a picture — do not want the same model:
-reading a cookbook page wants good vision, tidying wording wants something cheap
-that will be asked twenty times an evening, and drawing wants a provider that
-draws at all, which a model on your own hardware does not. A job with no
-provider is not offered, and its button does not appear.
-
-One connection per provider, not per name. Two Ollama boxes, or a direct OpenAI
-key alongside a gateway, would need connections to be named and managed; nobody
-has asked for that yet.
-
-Two things about it belong in a deployment decision rather than a screen, so
-they are said here instead.
-
-**What leaves the server.** With Gemini or OpenAI connected, the text of the
-recipe being worked on, the idea somebody typed, and any photograph they point
-it at are sent to that company to be read. Nothing else is: not your other
-recipes, not your shopping list, not who cooked what. Nothing is sent at all
-until an administrator connects a key and switches a capability on, and an
-instance with none behaves exactly as Culina did before the assistant existed.
-
-With **Ollama** connected, nothing leaves the machine you point it at. That is
-the reason it is supported and the reason it needs no key — a self-hosted recipe
-app talking to a model already running in the same house is the arrangement this
-feature is most obviously for. It does not draw pictures.
-
-**What it costs.** Both hosted providers bill per token, so the settings screen
-tracks tokens and spend per person and per capability, and refuses new requests
-once the monthly ceiling you set is reached. The ceiling is in whatever currency
-your provider bills in; Culina does not convert it, because a number it converted
-would drift from the invoice it exists to predict. A model Culina has no price
-for records its tokens and no cost rather than a guess.
-
-The key is encrypted with the data-protection key ring before it is stored — see
-`Storage__DataProtectionKeyPath` above, and `operations.md` for what losing that
-directory now means.
-
-## Mail
-
-Nothing here either: the mail account is entered under **Settings → Mail**, by
-the administrator, and applies on Save with no restart. Off by default, and an
-instance with mail off behaves exactly as before mail existed — nobody is asked
-to confirm an address, and recovery is by saved or administrator-issued codes.
-
-Give it your provider's SMTP server, port and security (STARTTLS on 587 is the
-usual; TLS from the first byte is usually 465; *none* only for a relay on the
-same machine or network), the user and password Culina signs in with (many
-providers want an app password), and the sender's address and name. **Send a
-test mail** goes to the administrator's own address through what was saved, and
-says what the server answered when it refuses.
-
-Mail needs `Site__Url` (below): every mail carries a link, and Culina will not
-guess its own address from a request's `Host` header, which whoever sends the
-request controls. Without it the switch is refused with `mail.site_url_required`.
-
-While mail is on:
-
-* **New accounts confirm their address** before they can sign in, with a link
-  that works for 48 hours and signs them in when opened. The first account is
-  exempt (it is the one that sets mail up), and so is every account that
-  existed, or was made, while mail was off. Signing in with the right password
-  but an unconfirmed address mails the link again, at most once a minute.
-* **The sign-in page offers a sign-in link**: one use, 15 minutes.
-* **Password forgotten** mails a link with a one-hour recovery code in it; the
-  code can be typed too. Saved and issued codes keep working.
-* **Notices** go to the account's address when a device it has not used before
-  signs in (a kind of device, `Firefox · macOS`, not one machine), when the
-  password changes, when a new set of recovery codes is made, and when the
-  administrator issues one.
-* **Invitations can be mailed** to an address from the household screen.
-
-Mails are queued in the database in the same transaction as whatever they are
-about and sent by a background worker, so a slow or broken mail server never
-fails or delays a request; a mail is retried with growing gaps for about a day,
-then given up on (see `operations.md`). The password and every queued mail are
-encrypted with the data-protection key ring, like the assistant's key. Mails are
-written in the person's chosen language, or their device's when they chose
-none. Links carry their secret after `#`, so it never reaches a server log, a
-proxy or a `Referer`.
-
-## Site
-
-What the instance says about itself to strangers. Both optional, neither in the
-app.
-
-| Variable | Default | |
-| --- | --- | --- |
-| `Site__SecurityContact` | unset | Where a vulnerability report about this instance should go — a `mailto:`, `https://` or `tel:` address you actually read. Set, `/.well-known/security.txt` (RFC 9116) names it; unset, that path is a `404`, because a contact nobody reads is worse than none. |
-| `Site__Url` | unset | This instance's public address, such as `https://culina.example.com`. Gives security.txt its `Canonical:` line, and is where every link in a mail points; mail cannot be switched on without it. |
-
-## App notifications
-
-| Variable | Default | |
-| --- | --- | --- |
-| `Push__RelayUrl` | unset | In the app (Server, "App notifications"). The push relay the iOS and Android apps are notified through, run by whoever publishes them (`deploy/relay/README.md`). `https://` only. Naming one sends each notification's words, never a recipe, a name or this server's address, to that service; unset, the apps get no notifications and say so. Browsers use Web Push and need none of this. |
-
-## Telemetry
-
-| Variable | Default | |
-| --- | --- | --- |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | In the app. Unset means JSON logs on stdout and nothing exported. |
-| `OTEL_EXPORTER_OTLP_PROTOCOL` | `grpc` | In the app. `grpc` (usually port 4317) or `http/protobuf` (usually 4318). The wrong one exports nothing and says nothing. |
-| `OTEL_SERVICE_NAME` | `culina-api` | Names the server in telemetry; what the browser reported is filed under the same name with `-web` in place of an `-api` ending (or after it): `culina-api` and `culina-web` by default, `culina-staging` and `culina-staging-web` for `culina-staging`. Set it to tell two instances apart at one collector. |
-| `OTEL_DOTNET_EXPERIMENTAL_OTLP_EMIT_EVENT_LOG_ATTRIBUTES` | `true` | Not in the app. Exports each log line's event id as `logrecord.event.id`, which the alert rules match on (operations.md, Alerts). The SDK's own default is `false`; Culina turns it on unless you set it. |
-
-The standard OpenTelemetry names, because Culina has no business inventing its
-own configuration vocabulary for something that already has one. The SDK reads
-them through the app's configuration rather than straight from the process
-environment, so an endpoint saved in the app works exactly like the variable —
-and in `culina.json` they sit at the top level, under their own names. Anything
-else the exporter understands (headers for a hosted collector, per-signal
-endpoints) is set as a variable, as before.
-
-## Build-time, for the frontend
-
-These affect what is produced, not what runs, so they matter only if you build
-the image yourself.
-
-| Variable | Effect when unset |
-| --- | --- |
-| `PUBLIC_SITE_URL` | No sitemap. An instance on a private network has no public address and should not invent one. security.txt is not built at all: the server writes it from `Site__SecurityContact`, above. |
-| `VITE_GALLERY` | The design-system gallery is not built in. A release must leave this unset; CI asserts that what ships contains none of it. |
-
-## What is not here
-
-Registration policy — whether the instance accepts new accounts, whether an
-invitation is required, and how many accounts it allows — is not configuration.
-It is a decision an administrator makes while the instance is running, so it
-lives in the database and is changed through the API. An instance that needs a
-restart to stop accepting new accounts is an instance that stays open for the
-length of the restart.
+# Configuration Reference
+
+Culina uses ASP.NET Core configuration bound to strongly-typed options classes and convenience `CULINA_*` environment variables. Precedence (highest to lowest):
+
+1. **Household UI Settings (`app_settings` table)** — AI provider selection, encrypted API keys, and Ollama base URL configured per household in **Einstellungen → KI-Assistent**.
+2. **`CULINA_*` Environment Variables** — Top-level shortcuts mapped in `Program.cs`.
+3. **Standard ASP.NET Core Double-Underscore Variables** — e.g. `Jwt__AccessTokenMinutes=30`, `RateLimiting__AuthPermitLimit=20`.
+4. **`appsettings.json` / `appsettings.{Environment}.json`** — Built-in defaults.
+
+---
+
+## 1. Required Production Variables
+
+In `ASPNETCORE_ENVIRONMENT=Production` (default in the Docker image), startup refuses to boot (`StartupConfigurationValidator`) unless these are set:
+
+| Variable                         | Config Path                      | Validation Rule                                                                     | Purpose                                                                                                      |
+| -------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `POSTGRES_PASSWORD`              | Container entrypoint             | Non-empty                                                                           | Initializes local PostgreSQL 17 user `culina` and injects `ConnectionStrings__DefaultConnection` when unset. |
+| `CULINA_JWT_SECRET`              | `Jwt:SecretKey`                  | ≥ 32 characters (not placeholder)                                                   | HMAC-SHA256 signing key for 15-minute access tokens and OAuth state tokens.                                  |
+| `CULINA_SETTINGS_ENCRYPTION_KEY` | `Security:SettingsEncryptionKey` | ≥ 32 bytes (raw or base64)                                                          | AES-256-GCM master key for encrypting household AI API keys and WebPush VAPID private keys.                  |
+| `CULINA_PUBLIC_ORIGIN`           | `Security:PublicOrigin`          | Valid `http(s)://` origin (non-loopback unless `CULINA_ALLOW_LOOPBACK_ORIGIN=true`) | Canonical origin used for CORS, CSRF validation, WebAuthn RP origin/domain defaults, and OAuth/share URLs.   |
+
+---
+
+## 2. Database & Networking
+
+| Variable                                 | Default                                                                                | Description                                                                                                                      |
+| ---------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `ConnectionStrings__DefaultConnection`   | `Host=localhost;Port=5432;Database=culina;Username=culina;Password=$POSTGRES_PASSWORD` | Override to use an external PostgreSQL 17 instance instead of the bundled server.                                                |
+| `ASPNETCORE_URLS`                        | `http://+:8080`                                                                        | Kestrel listen address inside the container.                                                                                     |
+| `CULINA_ALLOW_LOOPBACK_ORIGIN`           | `false`                                                                                | Permits `http://localhost:*` or `127.0.0.1` as `CULINA_PUBLIC_ORIGIN` in Production (e.g. local trial or SSH tunnel).            |
+| `CULINA_FORWARDED_HEADERS_KNOWN_PROXIES` | _(empty)_                                                                              | Comma/semicolon-separated proxy IPs or CIDRs (`172.16.0.0/12,10.0.0.0/8`) trusted for `X-Forwarded-For` and `X-Forwarded-Proto`. |
+| `Uploads__RootPath`                      | `/app/uploads` (prod) / `./uploads` (dev)                                              | Filesystem directory for recipe WebP images and temporary intake files.                                                          |
+
+---
+
+## 3. Authentication, Passkeys & Rate Limits
+
+| Variable / Path                        | Default                        | Description                                                                               |
+| -------------------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------- |
+| `Jwt__Issuer` / `Jwt__Audience`        | `culina`                       | JWT issuer and audience claims.                                                           |
+| `Jwt__AccessTokenMinutes`              | `15`                           | Access token lifetime (minutes).                                                          |
+| `Jwt__RefreshTokenDays`                | `30`                           | Refresh token sliding lifetime (days), stored in `HttpOnly` cookie `culina_rt`.           |
+| `WebAuthn__ServerDomain`               | Host of `CULINA_PUBLIC_ORIGIN` | WebAuthn Relying Party ID (e.g. `culina.example.com`).                                    |
+| `WebAuthn__ServerName`                 | `Culina`                       | Display name shown in passkey prompts.                                                    |
+| `WebAuthn__Origins__0`                 | `CULINA_PUBLIC_ORIGIN`         | Allowed WebAuthn origins (add `ios:bundle-id` or additional origins via `__1`, `__2`).    |
+| `RateLimiting__GlobalPermitLimit`      | `300` / min                    | Per-user (or per-IP) global API rate limit.                                               |
+| `RateLimiting__AuthPermitLimit`        | `10` / min                     | Per-IP limit on `/api/v1/auth/*` (login, register, passkey, OAuth token).                 |
+| `RateLimiting__AiPermitLimit`          | `20` / min                     | Per-user limit on AI endpoints (intake, assistant, nutrition estimate, image generation). |
+| `RateLimiting__PublicSharePermitLimit` | `60` / min                     | Per-IP limit on `/api/v1/shared/*` and `/api/v1/library-sync/feed/*`.                     |
+
+---
+
+## 4. AI Providers & Search Helper
+
+Instance-level defaults (overridable per household in the UI):
+
+| Variable                       | Config Path                    | Default Models (`FastModel` / `CapableModel`)                                                                  |
+| ------------------------------ | ------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `CULINA_AI_PROVIDER`           | `Ai:DefaultProvider`           | Auto-detected (`claude` → `gemini` → `openai` → `openrouter` → `ollama`)                                       |
+| `CULINA_ANTHROPIC_API_KEY`     | `Ai:Claude:ApiKey`             | `claude-haiku-4-5` / `claude-sonnet-4-6`                                                                       |
+| `CULINA_GEMINI_API_KEY`        | `Ai:Gemini:ApiKey`             | `gemini-3-flash-preview` / `gemini-3.1-pro-preview` (image: `gemini-2.5-flash-image`)                          |
+| `CULINA_OPENAI_API_KEY`        | `Ai:OpenAi:ApiKey`             | `gpt-5.4-mini` / `gpt-5.4`                                                                                     |
+| `CULINA_OPENROUTER_API_KEY`    | `Ai:OpenRouter:ApiKey`         | `google/gemini-3-flash-preview` / `anthropic/claude-sonnet-4-6`                                                |
+| `CULINA_OLLAMA_BASE_URL`       | `Ai:Ollama:BaseUrl`            | `http://localhost:11434` (`gemma4:e4b`)                                                                        |
+| `CULINA_ALLOW_LOOPBACK_OLLAMA` | `Security:AllowLoopbackOllama` | `false` in Production (`true` in Dev). Allows household UI settings to point at loopback/RFC1918 Ollama hosts. |
+| `CULINA_SEARXNG_BASE_URL`      | `Search:SearxngBaseUrl`        | _(optional)_ SearXNG JSON endpoint (`http://searxng:8080`) enabling Olli's `search_web_recipes` tool.          |
+
+---
+
+## 5. Observability & Background Maintenance
+
+| Variable / Path                | Default                      | Description                                                                                                                                                                                                   |
+| ------------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CULINA_METRICS_ENABLED`       | `false`                      | Exposes Prometheus metrics at `GET /metrics`.                                                                                                                                                                 |
+| `CULINA_METRICS_BEARER_TOKEN`  | _(empty)_                    | Optional bearer token required to scrape `GET /metrics`.                                                                                                                                                      |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`  | _(empty)_                    | Exports OpenTelemetry traces (`Culina.Api`, HTTP, EF Core) and metrics via OTLP.                                                                                                                              |
+| `Maintenance__Enabled`         | `true`                       | Runs `DatabaseMaintenanceHostedService` every `IntervalHours` (default `6h`) to prune expired refresh tokens, revocations, idempotency keys (`24h`), intake staging (`24h`), and stale cook sessions (`48h`). |
+| `LibrarySync__IntervalMinutes` | `15`                         | Background polling interval for connected household libraries (`LibrarySyncBackgroundService`).                                                                                                               |
+| `WebPush__Subject`             | `mailto:admin@<origin-host>` | VAPID subject URI for WebPush timer notifications (keys auto-generated and encrypted in `AppMetadata`).                                                                                                       |
+
+---
+
+## 6. Reverse Proxy Examples
+
+### Caddy
+
+```caddyfile
+culina.example.com {
+    reverse_proxy culina:8080 {
+        flush_interval -1 # Required for SSE (/shopping/stream, /assistant/chat/stream, /mcp)
+    }
+}
+```
+
+### Nginx
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_buffering off; # Required for SSE streaming
+    proxy_read_timeout 3600s;
+}
+```

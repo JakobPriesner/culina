@@ -1,811 +1,124 @@
-# Culina — domain model
+# Domain Model
 
-The authoritative description of Culina's entities, their invariants and their
-persistence shape. Every backend bead references this document instead of
-restating it.
+Canonical reference for Culina's entities, invariants, ownership axes, scaling rules, shopping merge logic, and external sync boundaries (`src/backend/Culina.Domain` & `Culina.Infrastructure`).
 
-Layer rules come from `dotnet-project-setup`: the types below live in `Domain`,
-know nothing about HTTP or SQL, and reach the wire only through the
-per-operation DTOs in `Contracts` (`dotnet-layer-mapping`).
+---
 
-## Overview
+## 1. Ownership & Authorization Axes
+
+Culina separates **identity**, **household workspace**, and **cookbook sharing**:
 
 ```
-User ──< HouseholdMember >── Household ──< Recipe
-                                  │          ├──< IngredientGroup ──< RecipeIngredient
-                                  │          ├──< Step ──< StepIngredientRef
-                                  │          └──< RecipeTag >── Tag
-                                  ├──< Cookbook ──< CookbookRecipe >── Recipe
-                                  └── ShoppingList ──< ShoppingListItem ──< ShoppingItemSource
-
-User ──< PersonalNote   ── Recipe     per person, never mutates the recipe
-User ──< CookLogEntry   ── Recipe     "made it", dated
-User ──< CookSession    ── Recipe     resume: current step + servings
+User (1) ──belongs to──> Household (1)
+ │                         ├─ MealPlan / MealPlanEntries
+ │                         ├─ ShoppingLists / ShoppingListItems
+ │                         ├─ PantryItems / PantryStaples
+ │                         ├─ AppSettings (AI keys, Ollama URL)
+ │                         └─ ConnectedLibraries (remote feeds)
+ │
+ ├── Recipe (CreatedByUserId, HouseholdId)
+ │     └─ RecipeShares (per-user view/edit permission)
+ │
+ ├── Cookbook (OwnerId, Visibility: Private | Shared | Household | Public)
+ │     ├─ CookbookMembers (Role: View | Edit | Manage)
+ │     └─ CookbookRecipes (M:N join, OR dynamic SmartFilterQuery)
+ │
+ └── Per-User Private State (UserId-scoped, never shared across household):
+       ├─ UserRecipeRating (1–5 stars + personal notes)
+       ├─ RecipeFavorite, CookHistoryEntry, ActiveCookSession
+       └─ FoodLogEntry, NutritionGoal, WeightEntry, WaterIntakeLog, CustomFoodItem
 ```
 
-Two ownership axes, and keeping them apart is the point of the model:
-
-- **Household-owned**: recipes, tags, the shopping list. Every member sees and
-  edits the same object.
-- **Person-owned**: personal notes, cook log, cook sessions, user settings.
-  Two people in one household can disagree about a recipe without either of
-  them editing it.
-
-## Identity
-
-### User
-
-| Field | Type | Notes |
-| --- | --- | --- |
-| `Id` | `Guid` | v7, time-ordered |
-| `Email` | `Email` (VO) | lowercased, trimmed, unique |
-| `DisplayName` | `DisplayName` (VO) | 1–80 chars, trimmed, not blank |
-| `PasswordHash` | `string` | Argon2id encoded string, never logged |
-| `CreatedAt` | `DateTimeOffset` | |
-| `Version` | `long` | bumped by every write, drives the ETag |
-
-Invariants: email parses and is unique; display name is non-blank after
-trimming. `Email.Create` and `DisplayName.Create` return `Result<T>` — they do
-not throw (`dotnet-result-pattern`).
-
-### UserSettings — person-owned, one row per user
-
-`Language` (`de` | `en` | null — null follows the device and is the default;
-stored as the `locale` column, `system` for null), `Theme` (theme id, default `warm-paper`),
-`Mode` (`light` | `dark` | `system`), `MeasurementSystem` (`metric` | `imperial`,
-v1 stores it and always renders metric — see `scaling-rules.md`).
-
-### Household
-
-`Id`, `Name` (1–80 chars), `CreatedAt`, `Version`, `InheritsFrom?`.
-
-**Inheritance.** A household may inherit one other household. It then sees
-every recipe that one sees — its own, and whatever it inherits in turn — and
-edits none of them. The household's *library* is itself followed by that chain;
-library search, tags, units, ingredient and title completion, suggestions,
-related recipes and cookbook shelves all read the library, while everything
-anybody *did* (cook log, plan, cookbook membership, cook sessions) stays with
-the household it happened in. Cooking an inherited recipe is stamped with the
-household it was cooked in, not the one it belongs to.
-
-- Reading a recipe needs membership of its household **or** of any household
-  that inherits from it (`RecipeAccess.VisibleAsync`).
-- Changing it — update, delete, image, sharing — needs membership of its own
-  household (`RecipeAccess.EditableAsync`).
-- Using it inside one household — plan, shopping list, cookbook, cooking —
-  needs membership of that household and the recipe in its library
-  (`RecipeAccess.VisibleInAsync`).
-- Only an owner of the inheriting household may set it, and only to a household
-  they are in; a loop is refused with `households.inheritance_cycle`. Deleting
-  the parent sets `InheritsFrom` to null.
-- The link remembers who set it (`InheritsSetBy`) and lasts only while they are
-  in the parent. Removed, leaving, or their account deleted: the link is
-  dropped in the same transaction, because it is a foreign key to their
-  membership row of the parent (`on delete set null`). Without that, somebody
-  shown out of a kitchen would go on reading it through a household of their
-  own. Each link answers to its own parent, so in a chain only the links whose
-  setter left are cut. Memberships are therefore saved as changes, never by
-  deleting everybody and inserting them again.
-- The household being inherited from sees every household that reads its
-  recipes, and its owners may cut a direct heir loose
-  (`Household.StopInheritingFrom`) without being in it. One inheriting through
-  another is that one's to cut.
-- A recipe that stops being inherited drops off the heir's cookbook shelves and
-  meal plan. The rows are kept, so it comes back if the inheritance does.
-- To change an inherited recipe, a household copies it (`Recipe.CopyInto`): new
-  ingredient ids, steps pointing at them, and a second image row for the same
-  stored file. Nothing links the copy back.
-
-### HouseholdMember
-
-`HouseholdId`, `UserId`, `Role` (`owner` | `member`), `JoinedAt`.
-Composite primary key `(HouseholdId, UserId)`.
-
-`HouseholdMembershipPolicy` (Domain) owns every membership rule, so no handler
-re-derives them:
-
-- A household always has **at least one owner**. Removing or demoting the last
-  owner returns `households.last_owner`.
-- Only an **owner** may invite, remove members, rename, or delete a household.
-- A member may remove **themselves** (leaving), unless they are the last owner.
-- A user may belong to several households.
-
-### HouseholdInvitation
-
-`Id`, `HouseholdId`, `Code` (32 chars, cryptographically random, URL-safe,
-stored **hashed** — treat it as a credential), `CreatedBy`, `CreatedAt`,
-`ExpiresAt` (default +14 days), `RedeemedBy?`, `RedeemedAt?`.
-
-Single-use. Redeeming an expired, unknown or already-redeemed code returns the
-**same** error (`households.invitation_invalid`) so a code cannot be probed.
-
-### Session
-
-`Id` (the opaque cookie value's identifier), `UserId`, `CreatedAt`,
-`LastSeenAt`, `ExpiresAt`, `CsrfTokenHash`, `IpAddress`, `UserAgent`,
-`RevokedAt?`. Specified by `cookie-auth-and-security`.
-
-## Recipes
-
-### Recipe — household-owned
-
-| Field | Type | Notes |
-| --- | --- | --- |
-| `Id` | `Guid` | |
-| `HouseholdId` | `Guid` | ownership; every query filters on it |
-| `Title` | `string` | 1–200 chars, required — the only required field |
-| `Description` | `string?` | ≤ 2000 chars |
-| `Language` | `de` \| `en` | the language the *content* is written in, independent of UI locale |
-| `Yield` | `Yield` (VO) | `Amount` (decimal, rounded to 3 places, then > 0 and ≤ 1000) + `Kind` (`servings` \| `pieces`) + `Label?` (the recipe's own word, ≤ 40 chars) |
-| `PrepMinutes` | `int?` | 0–10 080 (a week) |
-| `CookMinutes` | `int?` | 0–10 080 (a week) |
-| `ImageId` | `Guid?` | see `RecipeImage` |
-| `CreatedBy` | `Guid` | user id |
-| `CreatedAt` / `UpdatedAt` | `DateTimeOffset` | |
-| `Version` | `long` | ETag / `If-Match` |
+- **Household (`Household`):** Every user belongs to one active household (`User.HouseholdId`).Joining an invite (`HouseholdInvite`) migrates the user's recipes and private state into the target household.
+- **Recipe visibility (`RecipeAccessExtensions`):** A user can view a recipe if it belongs to their household, is in a cookbook they have access to, or is explicitly shared with them via `RecipeShare`. Editing requires ownership, household membership, `RecipeShare(CanEdit)`, or `CookbookMember(Edit | Manage)`.
 
-`TotalMinutes` is derived (`Prep + Cook`), never stored — it is what the time
-filter sorts on, computed in SQL.
-
-**A recipe with only a title is valid.** That is deliberate: it is the
-placeholder for "I want to write this down later". No other field is required,
-so the create form can never become a wall.
+---
 
-`Yield.Kind = pieces` exists so "12 muffins" scales as honestly as
-"4 portions".
-
-### IngredientGroup
-
-`Id`, `RecipeId`, `Name?`, `SortOrder`.
-
-Every recipe has **one group with a null name**, created implicitly. The
-concept is therefore invisible until someone names a group ("For the dough"),
-which is how progressive disclosure is supposed to work — the UI shows no
-grouping affordance until a second group exists.
-
-### RecipeIngredient
-
-| Field | Type | Notes |
-| --- | --- | --- |
-| `Id` | `Guid` | referenced by step tokens and shopping-list sources |
-| `GroupId` | `Guid` | |
-| `SortOrder` | `int` | |
-| `Quantity` | `decimal?` | null is legitimate — "salt" has no amount |
-| `Unit` | `Unit?` | null when the amount is a bare count or absent |
-| `Name` | `string` | 1–120 chars, the *shoppable* noun: "butter" |
-| `Note` | `string?` | ≤ 200 chars, preparation: "finely chopped", "room temperature" |
-
-### Unit
-
-An open vocabulary, carried as a code rather than as an enum.
-
-Thirteen units are **built in** — `g kg ml l tsp tbsp piece clove bunch slice
-can pack pinch` — and they are the ones that *convert*: a kilo is a thousand
-grams for everyone. They are published in the OpenAPI document so a generated
-client shares that table rather than redeclaring it.
-
-Anything else is a unit **a household wrote**, and writing it is the whole of
-adding one. There is no catalogue table and no screen for it: a unit exists
-because something is measured in it, so the list a picker offers and the recipes
-actually written can never disagree. `GET /households/{id}/units` returns both
-halves.
-
-What a household adds joins the **Count** family. It scales with the portions
-and it sums with itself, and it converts to nothing — nobody knows how much a
-`Schuss` is, and a shopping list that claimed to would be inventing the number.
-That is what makes an open vocabulary safe rather than reckless.
-
-Compared case-insensitively, so `Schuss` and `schuss` are one unit, and stored
-as written, so a German noun keeps its capital. Letters and single spaces only:
-`200g` is an amount that lost its space, not a unit.
-
-**`Note` is separate from `Name` on purpose.** "butter, finely chopped" and
-"butter" must merge into one shopping-list line; if the preparation lives in the
-name they never will.
-
-### Ingredient suggestions
-
-There is no ingredient table. An ingredient is whatever somebody types, and
-`GET /households/{id}/ingredients?q=…` only *suggests*:
-
-1. the names this household's recipes already use, ranked by how often, because
-   after a few recipes a kitchen's own words are how these particular people
-   talk about food;
-2. then a short seeded list (`CommonIngredients`, ~120 entries, DE + EN with a
-   shopping section), so an empty kitchen is offered something.
-
-Named in the **recipe's** language, not the reader's: somebody with an English
-app writing down a German recipe wants `Kartoffeln`, and an English word in that
-ingredient list is a word nothing else in it will match.
-
-`CommonIngredients` is not `SectionKeywords` and neither replaces the other.
-That table matches *stems* inside a phrase — `strawberr`, so both "strawberry"
-and "strawberries" find the produce aisle — which is right for guessing and
-wrong for offering. These are names a person would be happy to see typed into
-their recipe, which is right for offering and useless for matching.
-
-### Step
-
-`Id`, `RecipeId`, `SortOrder`, `Text` (1–4000 chars), `DurationSeconds?`.
-
-`Text` stores **inline tokens** referencing ingredients:
-
-```
-Melt [[ingredient:0f1c…]] in the pan and add [[ingredient:7b22…]].
-```
-
-Tokens, not character offsets: offsets rot the instant someone edits a word.
-
-`StepIngredientRef(StepId, RecipeIngredientId)` is a derived index table,
-rebuilt from the text on every save. It exists so "which steps use the yeast?"
-is one indexed query rather than a `LIKE` scan.
-
-**Invariants**
-- Every token in `Text` must reference a `RecipeIngredient` of the *same*
-  recipe. A token pointing elsewhere is rejected with `recipes.unknown_ingredient_reference`.
-- Deleting an ingredient that steps still reference is rejected with
-  `recipes.ingredient_in_use`, naming the first step that still needs it. (The UI unlinks first.)
-- `DurationSeconds` ≤ 86400.
-
-The API never exposes the raw token string. Responses carry **segments**; see
-`api.md`.
-
-**How an author writes one.** In the editor a reference is typed as `@butter`,
-and an `@` opens a picker of the recipe's own ingredients. A name the recipe
-does not have yet is offered as "add it", so writing the method builds the
-ingredient list rather than repeating it. What is typed is what is stored —
-there is no hidden token and no rich-text editor — which is why undo, every
-input method and every screen reader work without help. The pill carrying the
-scaled amount is what *reading* renders.
-
-Nothing is linked that the author did not ask for. An earlier version scanned
-each step for any ingredient name it contained; it cost nothing to use, but it
-was invisible, it matched "oil" inside "olive oil", and there was no way to say
-"not that one". A reference you cannot see is a reference you cannot correct.
-
-### Cookbook — household-owned
-
-`Id`, `HouseholdId`, `Name` (1–80), `Description?` (≤ 500), `Kind`
-(`manual` | `smart`), `Rules`, `CreatedBy`, `CreatedAt`, `UpdatedAt`,
-`Version`. A manual cookbook's membership is
-`CookbookRecipe(CookbookId, RecipeId, AddedAt, AddedBy?)`, composite primary
-key; a smart one has none.
-
-A named shelf somebody chose the contents of — a playlist, not a genre. **This
-is not a tag.** A tag is a *property* of a recipe and classifies it; a cookbook
-is a curation, with a name in prose, a description, a cover and a page of its
-own, and being on one says nothing about the recipe itself. A recipe is *tagged*
-vegetarian; it is *in* Sunday roasts.
-
-Household-owned, like the recipes it points at. A private curation of shared
-recipes breaks the moment somebody leaves, and `CreatedBy` is kept so "Anna's
-Sunday roasts" can say whose idea it was without becoming Anna's property.
-
-**The cookbook is only the shelf.** It never holds its recipes in memory: a
-shopping list is bounded by the week and a plan by seven days, but a cookbook
-has no size, so membership is written through the repository the way meal-plan
-entries are, and read through `GET /recipes?cookbookId=…`.
-
-**Adding a recipe that is already on is a no-op**, enforced by the composite
-key rather than by a check — a double tap and a retried request are both
-ordinary. It keeps the moment it first went on, and the cookbook's `Version` is
-**not** bumped: churning it to report that nothing happened would throw away
-every cached copy.
-
-Order inside a cookbook is `SortOrder`, which reads like a table of contents
-and starts as the order recipes were put on (migration 0043 numbered every
-existing shelf by `AddedAt`). A new recipe goes last. Rearranging replaces the
-whole order at once (`PUT /cookbooks/{id}/recipes`, every recipe on the shelf
-once, `If-Match` required), so a list that no longer covers the shelf is refused
-rather than guessed at. `AddedAt` keeps meaning "when it went on", which the
-suggestion ranker reads. The cover is the first photographed recipes in that
-order, unless somebody chose one (`CoverRecipeId`, migration 0044): then that
-recipe's photograph is the whole cover. A chosen cover draws only while the
-recipe is on the shelf and has a photograph; otherwise the derived cover is
-back on its own, so taking the recipe off, deleting its photo or a smart
-cookbook's rules no longer matching it needs no cleanup. Choosing one that is
-not a photographed recipe on the shelf is `cookbooks.invalid_cover`.
-
-`CookbookRecipe.RecipeId` cascades, as `MealPlanEntry.RecipeId` does: a deleted
-recipe drops off every shelf it was on — hidden while it is in the bin, and gone
-when the bin is purged. **The reverse is deliberately not true
-— deleting a cookbook deletes no food.**
-
-The cover is derived, not chosen: up to four photographed recipes, oldest
-first, so a cover stops moving once there are four. A shelf with nothing
-photographed shows its initial rather than a grey box.
-
-#### A cookbook that fills itself
-
-`Rules` is `Tags` (slugs, all required), `Ingredients` (names, all required,
-matched as substrings) and `MaxMinutes?`. Every rule must hold: the shelves
-worth having are the narrow ones. There is no "any of these" and no nesting — a
-rule builder with brackets in it is a query language somebody has to learn.
-
-**The rules are stored; what matches them is not.** A smart cookbook is a saved
-question, answered whenever it is read — which is the whole of "a recipe written
-this evening is on the right shelf the moment it is saved". There is no job to
-run, nothing to backfill when a rule changes, and no membership table that can
-drift out of step with the recipes it claims to describe. It empties itself the
-same way: edit a recipe out of the rules and it is off, with no row to delete.
-
-The clauses are the same ones `GET /recipes` already applies, so a shelf and the
-filter bar cannot reach different conclusions about the same words. The one
-difference: an ingredient **rule excludes**, where the ingredient *search* ranks
-— on a shelf asking for chicken, a recipe without chicken is not a worse match,
-it is not on the shelf.
-
-`Kind` is chosen when the cookbook is made and never changes, and the two are
-never mixed. They answer "why is this recipe here?" with different kinds of
-answer — "somebody put it there" against "it matches" — and a shelf that was
-both could answer neither, nor say what "take this off" was supposed to mean.
-Putting a recipe on a smart cookbook by hand returns `cookbooks.rules_decide_membership`.
-
-A smart cookbook has no order somebody chose, so it reads newest-first rather
-than by a column that is null for every row on it.
-
-**Measured at the reference workload** (10,000 recipes in one household, ten
-smart and ten chosen shelves; `SmartCookbookLoadTests`, explicit, 2026-10-14 on
-arm64 Docker Desktop). A card's count and cover evaluate the shelf's rules over
-the whole library, once per card. Asked per recipe, that was 5.5 s for a page of
-twenty cookbooks and up to 2.5 s for one smart cookbook. Counting ingredient and
-tag matches once per shelf, set-based (`IngredientSql.Holders`,
-`SmartShelfSql.Carriers`), and reading a chosen shelf from its own rows, brought
-it to p95 113 ms for the page and 15 ms for one cookbook. The recipes on a smart
-shelf (`GET /recipes?cookbookId=`) were already set-based: p95 330 ms for page
-one, 218 ms with words. Budgets, p95: 250 ms for `GET /cookbooks`, 60 ms for one
-cookbook, 500 ms for its recipes.
-
-Cookbooks travel in the household archive (see *The archive*): a chosen shelf
-as the positions of its recipes, a smart one as its rules.
-
-### Tag
-
-`Id`, `HouseholdId`, `Name` (1–40 chars, enforced on the recipe's tag list, at most 25 tags per recipe), `Slug` (lowercased, normalised).
-Household-scoped so each household keeps its own vocabulary and nothing leaks
-between them. `(HouseholdId, Slug)` is unique. `RecipeTag(RecipeId, TagId)`.
-
-### CookPhoto
-
-A picture of one attempt, hung on the `CookLogEntry` that dates it:
-`ImageHash`, `Width`, `Height`, stored as three columns on `cook_log_entries`
-that move together (a check constraint says so).
-
-**Personal, like the note and the log itself.** Two people in one household keep
-separate histories and separate photographs of them. The recipe's own
-`RecipeImage` is the household's and says what the dish is supposed to look
-like; this says what it looked like on a Tuesday, and the two are not the same
-claim.
-
-On the entry rather than in a table of its own, because unlike a recipe's hero
-image there is nothing to replace: one attempt, one photo. The bytes are
-content-addressed and live on the volume, so **a future sweep for unreferenced
-files must read `cook_log_entries.image_hash` as well as
-`recipe_images.content_hash`.** Removing a photo clears the columns and leaves
-the file, which may be another attempt's picture too.
-
-### RecipeImage
-
-`Id`, `RecipeId`, `ContentHash` (SHA-256, content-addressed), `Width`,
-`Height`, `ByteSize`, `ContentType`, `CreatedAt`.
-
-Stored on a filesystem volume, not in the database; three derivative widths
-(400 / 800 / 1600) generated on upload. Serving and validation rules are in the
-image bead. One image per recipe in v1.
-
-## Units
-
-A closed enum in `Domain`, surfaced through OpenAPI so the frontend shares one
-definition (`frontend-api-client`).
-
-| Family | Members | Merge / convert |
-| --- | --- | --- |
-| Mass | `g`, `kg` | freely, canonical `g` |
-| Volume | `ml`, `l` | freely, canonical `ml` |
-| Spoon | `tsp`, `tbsp` | **never** converted to ml |
-| Count | `piece`, `clove`, `bunch`, `slice`, `can`, `pack`, `pinch` | only with the identical unit |
-| None | `null` | only with `null` |
-
-Spoons are deliberately not converted: a US tablespoon is 14.8 ml and a metric
-one is 15 ml, so "converting" silently invents precision the recipe never had.
-Culina keeps spoons as spoons.
-
-## Cooking
-
-### CookSession — person-owned
-
-`Id`, `RecipeId`, `UserId`, `HouseholdId`, `Servings` (decimal, the scaling in
-force), `CurrentStepIndex`, `StartedAt`, `LastActiveAt`, `CompletedAt?`,
-`AbandonedAt?`, `Version`.
-
-At most **one active session per user** (`CompletedAt` and `AbandonedAt` both
-null). Starting a new one abandons the previous. This is what makes
-`GET /cook-sessions/current` a single unambiguous answer and powers the
-"now cooking" bar.
-
-**Timers are not here.** A timer is device-bound and must keep ticking offline,
-so it lives in `localStorage` keyed by cook-session id, storing absolute end
-timestamps. A cooking session is a fact worth persisting; a timer is local
-ephemera. See `sveltekit-state-and-optimistic-ui`.
-
-Two limits, both stated rather than worked around:
-
-**A timer does not ring when the app is closed.** An absolute deadline is right
-whenever the app is looked at again — a phone in a pocket for ten minutes shows
-the correct remaining time on unlocking, and one that ran out shows that it did.
-What it cannot do is make a sound while nothing is running. Promising an alarm
-would need a notification the browser schedules, which needs permission Culina
-does not ask for, and a timer that sometimes rings is worse than one that never
-claims to.
-
-**`CurrentStepIndex` is a position, not an identity.** A recipe edited from
-another device while somebody is cooking it can move the step under them. The
-backend refuses a negative index (`cooking.step_out_of_range`) and clamps one past the end to the recipe's last step, so a device still showing a longer version lands on the last step instead of an error; the frontend clamps the same way when it reads the index. Even so, a step *inserted* above
-the current one shifts the position silently. Making this exact means recording
-the step's id in the session, which is a migration and a contract change for a
-case that is rare and immediately visible to the person cooking. Recorded here
-so the next person weighing it knows it was weighed.
-
-### CookLogEntry — person-owned
-
-`Id`, `RecipeId`, `UserId`, `HouseholdId`, `MadeAt`, `Servings?`, `Note?`.
-
-Append-only. Powers "you've made this 7 times, last in March" and the
-"most cooked" sort, which is why Culina needs no star ratings: what you actually
-cook is a better signal than what you claim to like.
-
-### DiaryEntry and DiarySettings — person-owned
-
-`DiaryEntry` holds:
-- `Id`, `UserId`, `Date` (a date, like the plan's), `Meal` (`breakfast`,
-  `lunch`, `dinner` or `snack`) and `Source` (`recipe`, `food` or `typed`);
-- `Link`: the recipe, household, food code and cook-log entry, as soft links;
-- `Amount`: a value, a unit, and the grams used;
-- `Label`, as it was when logged;
-- `Figures`: kcal, protein, carbohydrate, fat, saturated fat, sugars and salt,
-  where null means unknown;
-- `Trust`: `AtLeast`, `Estimated` and `Basis`;
-- `NutritionVersion`, `CreatedAt` and `Version`.
-
-What someone ate is a snapshot, taken when it was logged. A recipe edited or
-binned later never changes what was eaten on Monday, and a month reads as one
-indexed range (`user_id, on_date`). Adding an entry and changing its amount
-both go through `Application/Users/DiaryLookup`, so a changed amount is looked
-up exactly as a new one would be.
-
-Eating is not cooking: an entry may point at the "made it" it came from, and
-that is all. The cook log stays the batch that was made.
-
-`DiarySettings` holds `Enabled`, `ConsentedAt`, `ConsentVersion`, `KcalTarget?`,
-`ProteinTarget?` and `Headline`. Switching on records agreement to the current
-wording (`DiarySettings.CurrentConsentVersion`), because a kcal diary is
-treated as health data. Both tables go with the account (`on delete cascade`),
-and neither is in the household archive. See `docs/diary-design.md` and
-migration `0057_diary.sql`.
-
-### PersonalNote — person-owned
-
-`Id`, `RecipeId`, `UserId`, `StepId?` (null = recipe-level), `Body` (1–2000),
-`UpdatedAt`. The table has a `version` column the domain never reads or writes: a note is replaced, not concurrently edited. Unique on `(RecipeId, UserId, StepId)`.
-
-### SuggestionDismissal — person-owned
-
-`UserId`, `RecipeId`, `DismissedAt`. Composite primary key `(UserId, RecipeId)`.
-
-"Not this." The only signal the suggestion ranking cannot derive from something
-another feature already writes, and it has to be asked for rather than inferred:
-with two to eight people there is no such thing as a meaningful non-click, so
-reading dislike into five suggestions ignored on one evening would be
-manufacturing data.
-
-Person-owned, like the note and the cook log. One person hiding a recipe from
-their own suggestions says nothing about anybody else in the household, and the
-recipe itself is untouched — still in the collection, still searchable, still on
-its shelves.
-
-**It expires.** The ranker ignores rows older than its window, so "not tonight"
-does not quietly become "never again".
-
-**Not an aggregate root**, so no `version` column: it is never
-read-modify-written, has no concurrency to lose, and nothing about it could
-sensibly carry an ETag. Dismissing twice is one dismissal, enforced by the
-composite key rather than by a check — a double tap and a retried request are
-both ordinary, exactly as on `CookbookRecipe`.
-
-## Suggestions
-
-**Nothing is stored.** There is no suggestions table, no precomputed ranking and
-no taste profile on disk. A suggestion is a saved question answered whenever
-somebody looks — the same decision `Cookbook.Kind = smart` made, and for the same
-reasons: a recipe written this evening is ranked correctly this evening, there is
-no job to run, nothing to backfill when a weight changes, and no stored ranking
-that can drift out of step with the recipes it claims to describe.
-
-The score is a sum of named terms over data eight other features already write:
-
-| Term | Read from |
-| --- | --- |
-| Affinity | `CookLogEntry` (×1.3 with a photo), `MealPlanEntry`, `CookbookRecipe`, `PersonalNote`, completed `CookSession` |
-| Content | `RecipeTag` and `RecipeIngredient.Name`, as a TF-IDF cosine against the same features of what this person cooks |
-| Repetition | `max(CookLogEntry.MadeAt)` across **the whole household** |
-| Rediscovery | the same date, once it is months old, scaled by affinity |
-| Seasonality | the month distribution of this household's own cook log, per tag |
-| Slot | `MealPlanEntry.Slot`, Laplace-smoothed |
-| Effort | `PrepMinutes`, `CookMinutes`, `count(Step)` |
-| Household | everybody else's `CookLogEntry` |
-| Novelty | never cooked; `Recipe.CreatedAt` / `RecipeOrigin.ImportedAt` |
-
-Three properties are load-bearing and easy to lose:
-
-**Repetition is household-wide while affinity is personal.** If your partner made
-the lasagne on Tuesday then you ate it, and it should not be suggested to you on
-Wednesday even though your own cook log is silent. No general-purpose recommender
-expresses this asymmetry; it is the most product-specific line in the subsystem.
-
-**`CookSession.AbandonedAt` is not read.** Starting a session abandons the
-previous one — the partial unique index guarantees it — so abandonment is
-overwhelmingly a consequence of cooking something else, not a judgement. Reading
-it as dislike would systematically punish the recipes people cook most often.
-
-**Seasonality is observed, never curated.** A curated ingredient→season table was
-rejected for this project for the reason `README.md` rejects a pantry: nobody
-maintains it, so it goes stale and poisons what is built on it. This asks the
-household's own log instead, per tag, and stays silent below an evidence
-threshold — so a fresh installation says nothing about seasons rather than
-something confident and wrong.
-
-Scored **against the day rather than the instant**, so two requests on one day
-produce one order: a cursor keeps meaning something on the second page, and the
-list does not rearrange under somebody still reading it.
-
-## Shopping
-
-### ShoppingList — household-owned
-
-`Id`, `HouseholdId` (unique — exactly one list per household), `Version`.
-
-Created lazily on first access. One list, not many: a second list is a planning
-feature, and planning is v2.
-
-### ShoppingListItem
-
-`Id`, `ListId`, `Name`, `Quantity?`, `Unit?`, `Section`, `IsChecked`,
-`CheckedAt?`, `SortOrder`, `IsManual`.
-
-Merge rule, applied when a recipe is added:
-
-> Items merge when `Name` matches case- and diacritic-insensitively **and** the
-> units are in the same convertible family. Quantities are summed in the
-> family's canonical unit and stored **unrounded**. Anything else becomes a new
-> line.
-
-Merging unrounded matters: rounding first and summing second compounds error.
-Rounding is presentation, and presentation belongs to the client
-(`scaling-rules.md`).
-
-### ShoppingItemSource
-
-`ItemId`, `RecipeId`, `PlanEntryId?`, `Quantity`, `Unit` — table
-`shopping_list_item_sources` (migration 0022).
-
-What a line is the sum of: which recipe asked for how much, and for which
-planned meal (null for a recipe put on the list by itself). The quantity is the
-recipe's, scaled and in the unit it was written in; the line holds the sum.
-
-It is what makes the plan and the list one workflow rather than two:
-
-- **A planned meal is shopped for once.** Adding a week skips every meal that
-  already has sources on the list, so pressing it twice changes nothing.
-- **A recipe added by itself counts.** When a planned meal has no sources but
-  its recipe is on the list without a planned meal, those sources are counted
-  as that meal's instead of adding the recipe again. Two planned meals of one
-  recipe are two meals, and each is shopped for.
-- **A meal can be taken back.** Withdrawing a planned meal subtracts exactly its
-  sources; a line nothing else wants goes, a typed line stays, and a ticked line
-  stays because it has been bought.
-
-Lines written before sources existed have none, and are left alone.
-
-### Sections
-
-`produce`, `dairy_eggs`, `meat_fish`, `bakery`, `dry_goods`, `canned_jars`,
-`frozen`, `spices_baking`, `drinks`, `household`, `other`.
-
-Ordered the way a shop is walked. Assigned from a seeded DE+EN keyword table
-(~150 entries), defaulting to `other`. A user's correction is stored per
-household in `shopping_section_overrides(household_id, name_key, section)`
-and wins over the seed from then on — sensible default, trivially correctable,
-no configuration screen.
-
-### Nutrition, computed on read
-
-A recipe's nutrition is never stored. It is worked out on every read from three
-things: the recipe's lines and yield, the Bundeslebensmittelschlüssel extract
-loaded into memory at startup (`IFoodTable`), and a fourth table of food words,
-`FoodNames` in `Domain/Nutrition`, beside `CommonIngredients`, `SectionKeywords`
-and `CulinaryLexicon`. It answers a question none of them can: *which food,
-exactly, is this?* About 250 curated German and English names each point at one
-raw, as-bought BLS food, matched strictly (the whole name, give or take two
-letters, no compound splitting). `NutritionGrams` turns a line into grams for
-nutrition only: mass always, volumes and spoons only for foods that pour, eggs
-at EU size M, and nothing else. `Units` keeps its never-convert-spoons rule.
-Nothing hangs off `recipe_ingredients`, which a save deletes and re-inserts, so
-nothing can go stale. See `docs/nutrition-design.md`.
-
-### Food corrections
-
-What a household says an ingredient really is, for nutrition: the same idea as
-the section override, one table beside it —
-`nutrition_food_overrides(household_id, name_key, food_code?, updated_at)`,
-primary key `(household_id, name_key)`. `name_key` is `ItemName.Fold(name)`, the
-key the section override uses, so "Müsli" and "Muesli" share one row.
-`food_code` is a BLS code, or null for "do not count this".
-
-Stored per household, read down the inheritance chain: a household that inherits
-another's recipes counts with that household's corrections too, so one recipe
-shows one figure in both kitchens. The nearest household that said anything about
-a name decides it, so an heir that corrects for itself wins in its own kitchen,
-and the household it inherits from never sees that. The answer names the
-household whose choice applied (`chosenBy`), so the heir is told it is
-inherited and only takes back its own. No version column: a row is an
-idempotent fact at a known address. A recipe's nutrition reads the rows for its
-own folded names across its library in one query, and its ETag carries a
-fingerprint of the rows that applied and whose they were (see `api.md`).
-
-### Household weights and the typical-weights switch
-
-What one unit of an ingredient weighs in a household:
-`nutrition_unit_weights(household_id, name_key, unit_key, grams, updated_at)`,
-primary key `(household_id, name_key, unit_key)`, `grams numeric(10,3) > 0`,
-`on delete cascade` from `households_with_deleted`. `name_key` is
-`ItemName.Fold(name)` as for corrections; `unit_key` is the canonical key of
-`UnitKeys` (every spelling of a unit is one key; a household's own word is its
-folded self). The same properties as a correction: stored per household,
-read down the inheritance chain with the nearest household deciding (named by
-`weighedBy`), no version column, the nutrition ETag fingerprints the rows that
-applied. The typical-weights switch below stays the reading household's own.
-
-Whether typical weights may count lines is
-`nutrition_household_settings(household_id, use_typical_weights, updated_at)`,
-one row per household that ever said, none meaning true (a new household needs no
-write). A table beside the household rather than a column on it: the households
-table is read through views that a new column would have to recreate, the switch
-has no `Version` and no reason to bump the household's, and it is not part of the
-household aggregate.
-
-The typical weights themselves are code, not data: `TypicalWeights` in
-`Domain/Nutrition`, one cited row per (BLS food, unit key), generated from the
-reviewed table, and `FoodVariants` beside it, the groups of foods that stand for
-one another (Vollmilch, fettarme Milch, Magermilch...). Both raise
-`NutritionData.Version` when they change. See `docs/nutrition-design.md` and the
-nutrition section of `api.md`.
-
-## Planning
-
-### MealPlanEntry
-
-`Id`, `HouseholdId`, `Date`, `RecipeId`, `Servings?`, `Slot`, `SortOrder`.
-
-Household-owned, like the recipe: a plan is what the people who eat together
-have agreed on, and one only its author could see would be a diary.
-
-**A date, not a timestamp.** "Thursday" has no time zone, and storing one would
-move somebody's dinner when they travelled.
-
-`Servings` is null for however many the recipe was written for. Most planned
-meals are cooked as written, and asking every time is a question with an obvious
-answer.
-
-`Slot` is `breakfast`, `lunch` or `dinner`, defaulting to dinner. Three, and no
-"snack" or "dessert": a slot only earns its place if it changes what you buy.
-The week view shows no slot picker at all — it lives in the sheet that adds a
-meal — so a household that only ever plans dinner never meets the concept.
-
-**A week, not a calendar.** A week is the unit people plan in, because they shop
-at the weekend for the week that follows; the API reads seven days from the
-**Monday** of the week containing `from`, and always returns all seven whether
-or not anything is planned in them. A month view is where recurrence,
-drag-and-drop and a second reason for a shopping list come from, and Culina has
-exactly one list per household on purpose.
-
-**The plan writes the shopping list when somebody asks it to**, not by itself:
-a week planned in advance is not a list to shop from yet. One
-`POST /households/{id}/shopping-list/meals` puts the week on, through the same
-merge a single recipe goes through, and each planned meal knows whether it is
-on the list (see `ShoppingItemSource`). Taking a meal off the plan offers to
-take its shopping off too, rather than doing it behind anybody's back.
-
-## The archive
-
-`GET /households/{id}/archive` writes a household's recipes out as plain,
-readable JSON — photographs inline, base64 — and `POST` to the same address puts
-one back. The right answer to "what if I stop using Culina", which a self-hosted
-app owes its users.
-
-**A step's ingredient references travel as positions, never as ids.** The
-position is into the recipe's ingredients read in order, group by group, which
-is the order they are written back in. Ids are assigned by whichever database
-the archive lands in, so a format that carried them would restore into steps
-pointing at nothing — and a step whose amounts have come loose is precisely the
-failure this app exists to prevent.
-
-**Cookbooks travel the same way**, after the recipes: a chosen shelf as the
-positions of its recipes in shelf order, a smart one as its rules, which find
-their recipes again wherever they land. A recipe on a shelf that is not in the
-archive (one an inherited kitchen lent) has no position and is left off. On
-restore a shelf holds the copies the same restore just wrote, never the
-household's originals, and a shelf that does not hold together (no name, a
-smart one with no rules) is passed over like an odd recipe. The field is
-optional, so archives from before it still restore at version 1.
-
-**Barcode memory travels too**, as `products` after the cookbooks: only what the
-household itself said, never what it inherits (that leaves with the ancestor's
-archive). A restore adds each one the household has not named yet and leaves a
-barcode it already named alone, so it never overwrites what people have written
-since. The field is optional, so archives from before it restore at version 1.
-
-**Notes are the asking person's, and nobody else's.** The recipes belong to the
-household; notes and the cook log are personal, and an archive carrying every
-member's would be one person handing out another's private writing.
-
-**A restore adds; it never replaces.** One recipe per transaction, so an archive
-restored because something went wrong is not refused wholesale over one recipe a
-newer version wrote strangely — what could not be written is counted and
-reported. The format's version is read first and an unknown one is refused
-outright, because a half-restored recipe is worse than a failed restore: nobody
-can tell which half is wrong.
-
-**The export is streamed**, a recipe at a time. With photographs inline an
-archive of a well-used household is tens of megabytes, and building it in memory
-would make the export the largest allocation in the process.
-
-## Product memory
-
-What a household says a barcode is, from `docs/barcode-scanning-design.md`:
-`household_products(household_id, gtin, name, ingredient, quantity, unit,
-cook_minutes, note, created_by, updated_at, version)`, primary key
-`(household_id, gtin)`, `on delete cascade` from `households_with_deleted`. It maps a
-pack to an ingredient so a scan can match a recipe line or a shopping item; it is
-not what the household has at home, and Culina still keeps no stock.
-
-`Gtin` is the one form every scanner's spelling shares: digits only with a correct
-check digit; a UPC-A is padded with a zero to 13 and a UPC-E is expanded to its
-UPC-A first, so the symbology a phone read does not choose the row. An EAN-8 stays
-eight digits (and a UPC-E that fits the EAN-8 sum as well stays as read: the digits
-cannot say which it was).
-
-Unlike a correction or a weight, a row has a `version`: two phones can name the same
-unknown code at the same moment and the later one must hear about it. `PUT` without
-`If-Match` only names (`428 products.already_named` when the row exists); with it,
-it replaces that version (`412` when stale). The nearest household that named a
-barcode decides, as for corrections, and an heir names its own row without touching
-its ancestor's.
-
-## Persistence conventions
-
-- PostgreSQL, accessed with Npgsql + Dapper. No EF Core, no ORM change
-  tracking. SQL lives in `Infrastructure/Persistence/<Domain>/`, rows map to
-  Domain via `<Entity>RowMappings.cs` (`dotnet-layer-mapping`).
-- Every aggregate root carries `version bigint not null default 1`. Writes are
-  `... where id = @id and version = @version` and return the updated row; zero
-  rows affected means a `412` (`http-caching-etags`). **The version check is in
-  the SQL, never in C#.**
-- Ids are UUIDv7 generated by the application, so inserts stay index-friendly
-  and no round trip is needed to learn an id.
-- Timestamps are `timestamptz`, always UTC, always `DateTimeOffset` in C#.
-- Money does not exist in Culina. Recipe amounts, yields and servings are `numeric(10,3)` and are rounded to 3 places
-  in the domain, so what is accepted is what comes back; a value that would store as
-  zero is refused. Shopping quantities are `numeric(14,4)` and unrounded by the
-  domain. Never
-  `float`, which cannot represent 0.1.
-- Households, recipes and cookbooks are deleted into a bin for 30 days
-  (`deleted_at`, `deleted_by`), then purged with `on delete cascade` from the
-  aggregate root. No query has to remember this: the tables are
-  `*_with_deleted`, and views named `households`, `recipes` and `cookbooks` show
-  only what is not deleted (a recipe or cookbook of a deleted household
-  included). Only the bin's repository reads the tables. A migration adding a
-  column to one of them must create its view again. Everything else is a hard
-  delete.
-- Migrations are numbered `.sql` files embedded in `Infrastructure`, applied at
-  startup under a Postgres advisory lock, tracked in `schema_migrations`.
-  Forward-only; a mistake is a new migration.
+## 2. Core Entities & Invariants
+
+### Recipe Aggregate (`Recipe`)
+
+- **Fields:** `Id`, `Title` (1–200 chars), `Description`, `Servings` (1–100, default `4`), `PrepTimeMinutes`, `CookTimeMinutes`, `RestingTimeMinutes`, `Difficulty` (`Easy | Medium | Hard`), `SourceUrl`, `ImageUrl`, `Notes`, `IsQuickReference` (`kompakt` note card without structured steps), `CreatedByUserId`, `HouseholdId`, `Version` (concurrency counter incremented on every edit, exposed as HTTP `ETag`).
+- **Nutrition cache:** `CaloriesPerServing`, `ProteinGramsPerServing`, `CarbsGramsPerServing`, `FatGramsPerServing`, `FiberGramsPerServing`, `SugarGramsPerServing`, `NutritionEstimatedAt`, `NutritionIsAiEstimated`.
+- **Children:**
+    - **`RecipeIngredient`:** `Name` (required), `Amount` (`decimal?`), `AmountMax` (`decimal?`, for ranges like `100–150 g`), `Unit` (normalized via `UnitCatalog`), `GroupName` (optional section header, e.g. `"Für den Teig"`), `Notes` (prep hint, e.g. `"fein gewürfelt"`), `IsOptional`, `Scalable` (default `true`), `SortOrder`.
+    - **`RecipeStep`:** `StepNumber` (contiguous `1..N`), `Instruction`, `GroupName`, `DurationMinutes` (optional timer trigger), `TemperatureCelsius`, `TemperatureUnit`, `StepIngredients` (M:N link to `RecipeIngredient` with optional step-specific `Amount`/`Unit`).
+    - **`Category` & `Tag`:** Recipes link to `Category` (curated meal types: `Hauptgericht`, `Frühstück`, `Backen`, etc.) and `Tag` (freeform lowercase slugs, e.g. `vegetarisch`, `feierabend`, `one-pot`).
+    - **`RecipeRelation`:** Directed link (`SourceRecipeId -> TargetRecipeId`) with `RelationType` (`SideDish`, `BaseRecipe`, `Variant`).
+
+### Cookbooks (`Cookbook`)
+
+- **Types:** Manual (`SmartFilterQuery == null`, ordered via `CookbookRecipe.SortOrder`) or Smart (`SmartFilterQuery != null`, evaluated dynamically via `SmartFilterEvaluator` using the search query grammar).
+- **Sharing:** `CookbookMember` grants `View`, `Edit`, or `Manage`. `ShareToken` exposes read-only public access at `/shared/cookbook/{token}` when `IsPublicLinkEnabled == true`.
+
+### Meal Plan (`MealPlan` & `MealPlanEntry`)
+
+- Keyed by `(HouseholdId, WeekStartDate)` where `WeekStartDate` is always **ISO Monday** (`DayOfWeek.Monday`).
+- **`MealPlanEntry`:** `Date` (`DateOnly`), `MealType` (`Breakfast = 0`, `Lunch = 1`, `Dinner = 2`, `Snack = 3`, `Prep = 4`), `RecipeId` (nullable if `CustomTitle` is set), `Servings` (overrides `Recipe.Servings` for scaling, shopping generation, and diary logging), `Notes`, `CookedAt` (`DateTimeOffset?`), `LeftoverSourceEntryId` (links a planned leftover meal to its origin cook entry).
+
+### Shopping List (`ShoppingList` & `ShoppingListItem`)
+
+- Households maintain one primary active `ShoppingList` (`IsPrimary = true`) plus optional named lists.
+- **`ShoppingListItem`:** `Name`, `Amount`, `Unit`, `Category` (supermarket aisle `ShoppingCategory`: `Produce`, `Bakery`, `DairyEggs`, `MeatFish`, `Pantry`, `Frozen`, `Drinks`, `Household`, `Other`), `IsChecked`, `CheckedAt`, `SourceRecipeId`, `SourceMealPlanEntryId`, `SortOrder`.
+- Real-time updates broadcast over SSE (`ShoppingStreamBroadcaster`) to all connected household clients.
+
+### Pantry (`PantryItem` & `PantryStaple`)
+
+- **`PantryItem`:** Quantified inventory (`Name`, `Amount`, `Unit`, `StorageLocation`: `Fridge | Freezer | Pantry | SpiceRack`, `ExpiresAt`, `MinimumAmount` for low-stock warnings).
+- **`PantryStaple`:** Unquantified household basics (`Salz`, `Pfeffer`, `Olivenöl`, `Wasser`) assumed always in stock during availability checks and shopping generation.
+
+---
+
+## 3. Scaling, Units & Shopping Aggregation
+
+### Unit Families (`UnitCatalog` & `IngredientAggregator`)
+
+- **Mass:** `mg` (`0.001 g`), `g` (`1 g`), `kg` (`1000 g`). Auto-upgrades display to `kg` at `>= 1000 g`.
+- **Volume:** `ml` (`1 ml`), `cl` (`10 ml`), `dl` (`100 ml`), `l` (`1000 ml`), `TL` (`5 ml`), `EL` (`15 ml`), `Tasse` (`240 ml`). Auto-upgrades `ml` to `l` at `>= 1000 ml`.
+- **Count / Culinary:** `Stück`, `Zehe`, `Scheibe`, `Bund`, `Dose`, `Glas`, `Packung`, `Becher`, `Prise`, `Msp.`.
+- See [`docs/scaling-rules.md`](scaling-rules.md) for non-linear spice dampening ($s^{0.7}$), pan/tin area scaling, and culinary rounding rules (`QuantityFormatter`).
+
+### Shopping List Consolidation (`IngredientAggregator`)
+
+When generating shopping items from a meal plan (`POST /api/v1/shopping/from-meal-plan`):
+
+1. Scale each planned recipe's ingredients by `Entry.Servings / Recipe.Servings` (skipping `IsOptional == true` unless requested).
+2. Normalize ingredient names via `IngredientNameNormalizer` (case-folding, singular/plural stem matching in German).
+3. Group by normalized name:
+    - Compatible units within the same family (`250 g` + `1 kg` → `1,25 kg`; `2 EL` + `50 ml` → `80 ml`) merge into a single line item.
+    - Incompatible units (`200 g Tomaten` + `1 Dose Tomaten`) remain separate line items.
+4. Subtract matching `PantryItem` quantities (when unit families match) and suppress `PantryStaple` matches completely.
+
+### Ingredient Suggestions (`#ingredient-suggestions`)
+
+`GET /api/v1/ingredients/suggestions` merges three sources ranked by prefix match + household frequency:
+
+1. Distinct ingredient names used across the household's recipes (`RecipeIngredients`).
+2. Active `PantryItems` and `PantryStaples`.
+3. Curated German base catalog (`BLS 4.0` common ingredients) with default unit and supermarket aisle (`ShoppingCategory`).
+
+---
+
+## 4. Cooking Mode & Active Cook Sessions
+
+- **`ActiveCookSession`:** Server-persisted per-user session (`RecipeId`, `Servings`, `CurrentStepNumber`, `CompletedStepNumbersJson`, `CheckedIngredientsJson`, `TimersJson`, `StartedAt`, `UpdatedAt`). Allows seamless handoff between phone, tablet, and desktop.
+- **`POST /api/v1/recipes/{id}/cooked`:** Records a `CookHistoryEntry`, marks any matching `MealPlanEntry` for today as cooked (`CookedAt`), optionally deducts scaled ingredients from `PantryItems` (`PantryDeductionService`), and writes a `FoodLogEntry` to the user's nutrition diary.
+
+---
+
+## 5. Intake, Connected Libraries & Archives
+
+### Multimodal Recipe Intake (`IntakeSession`)
+
+- Supports **URL scraping** (`SchemaOrgRecipeExtractor`: JSON-LD `@type: Recipe`, Microdata, site-specific fallbacks, plus AI cleanup), **Images/Photos/PDFs** (multi-page vision extraction), **Free text**, and **Third-party imports** (Paprika `.paprikarecipes`, Nextcloud Cookbook, Mealie, Tandoor).
+- All outbound HTTP fetches pass through `SafeHttpDownloader` (DNS pinning, blocks loopback/RFC1918/link-local/CGNAT/cloud metadata IPs, enforces timeouts and byte caps).
+
+### Connected Libraries (`ConnectedLibrary` & `SyncedRecipe`)
+
+- Allows a household to subscribe read-only to another Culina instance's public cookbook or library feed (`GET /api/v1/library-sync/feed/{token}`).
+- `LibrarySyncBackgroundService` polls every `15 min` using conditional `If-None-Match` (`ETag`), upserting `SyncedRecipe` rows. Users can fork a `SyncedRecipe` into a native editable `Recipe` in their own household.
+
+### Full Household Archive (`ArchiveService`)
+
+- `GET /api/v1/archive/export` streams a deterministic `.zip` containing `archive.json` (`schemaVersion: 2` — recipes, cookbooks, meal plans, pantry, ratings, cook history, diary logs) plus `/images/*.webp`.
+- `POST /api/v1/archive/import` validates paths against Zip-Slip, deduplicates recipes by `(Title, SourceUrl)` or content hash, and remaps internal IDs atomically.

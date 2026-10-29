@@ -1,250 +1,59 @@
-# Culina — scaling rules
+# Recipe Scaling & Unit Conversion Rules
 
-Changing the number of portions is the feature every recipe app has and almost
-none gets right. This document is the specification; the implementation is
-`src/frontend/src/lib/features/recipes/scaling.ts` and its test suite.
+Specification for portion scaling (`src/backend/Culina.Domain/Services/QuantityFormatter.cs`, `IngredientAggregator.cs`, and `src/frontend/src/lib/utils/scaling.ts`).
 
-## Where scaling lives, and why in exactly one place
+---
 
-Scaling must be **instant** on the client — no network round trip when someone
-taps `+` — and **exact** on the server, which merges amounts into a shopping
-list. Implementing it twice is how two implementations quietly disagree.
+## 1. Portion Bounds & Scale Factor
 
-It splits cleanly instead:
+- **Default servings:** `4` (configurable per recipe from `1` to `100`).
+- **Interactive scaling range:** `0.25` to `50` portions (`scaleFactor = targetServings / baseServings`).
+- **Non-scalable ingredients:** If `RecipeIngredient.Scalable == false` (e.g., `"Öl zum Anbraten"`, `"1 Prise Salz zum Abschmecken"`), the base amount is preserved unchanged regardless of `scaleFactor`.
+- **Ranges (`Amount` – `AmountMax`):** Both bounds scale by the same factor and format as `"{min}–{max} {unit}"` (e.g., `100–150 g` at `2×` → `200–300 g`).
 
-| | Responsibility |
-| --- | --- |
-| **Server** | Exact decimal arithmetic only. Shopping-list quantities are stored **unrounded**, so merging never compounds rounding error. Knows nothing about how a number is shown. |
-| **Client** | Human rounding, which is **presentation**. One pure module, no I/O, exhaustively unit-tested. |
+---
 
-The only genuinely shared thing is the unit vocabulary. Its convertible half —
-the thirteen built-in units — is surfaced through OpenAPI, so there is one
-definition on both sides (`frontend-api-client`). The rest of the vocabulary is
-open: a household adds a unit by writing one, and what it writes counts things,
-so scaling it needs no table at all.
+## 2. Non-Linear Dampening for Potent Spices & Leaveners
 
-## The factor
+When scaling beyond `2×` (`scaleFactor > 2.0`), potent seasonings (`Chili`, `Cayennepfeffer`, `Muskat`, `Nelken`, `Kreuzkümmel`) and chemical leaveners (`Backpulver`, `Natron`, `Trockenhefe`, `Frischhefe`) do not scale linearly in real kitchens.
 
-```
-factor = targetYield / baseYield
-```
+- **Standard ingredients:** $\text{scaled} = \text{amount} \times s$
+- **Dampened potent spices (optional cooking-mode hint):** $\text{effective} = \text{amount} \times s^{0.75}$ when $s > 2.0$, surfaced as a subtle culinary hint while keeping shopping list quantities exact.
 
-A `decimal`/`number` that is never rounded itself. Every displayed amount is
-computed from the **base** amount and the factor, never from a previously
-scaled amount — scaling twice from a rounded value drifts.
+---
 
-`targetYield` is chosen by the servings control, or derived from
-"I have 600 g of flour" (below). It is clamped to `(0, 1000]`.
+## 3. Unit Auto-Upgrades & Down-Upgrades
 
-## Rounding: the rules
+Quantities automatically shift within their measurement family to stay readable:
 
-The goal is an amount a person can act on. `133.333 g` is arithmetic;
-`1⅓ eggs` is honest and useless. Culina prints what a cook would write.
+| Family                   | Rule                                                                                                       | Example                                              |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| **Mass (`g` ↔ `kg`)**    | `>= 1000 g` converts to `kg` (up to 2 decimals); `< 1 kg` when scaled down below `1.0 kg` converts to `g`. | `750 g` × `2` → `1,5 kg`; `0,5 kg` × `0.5` → `250 g` |
+| **Volume (`ml` ↔ `l`)**  | `>= 1000 ml` converts to `l`; `< 1 l` when scaled down below `1.0 l` converts to `ml`.                     | `600 ml` × `2` → `1,2 l`                             |
+| **Spoons (`TL` ↔ `EL`)** | `1 EL = 3 TL = 15 ml`. Sub-quarter teaspoons (`< 0.25 TL`) display as `1 Msp.` or `1 Prise`.               | `1,5 TL` × `2` → `1 EL`                              |
 
-### 1. Mass and volume — round to a usable step
+---
 
-| Raw amount | Step | Example |
-| --- | --- | --- |
-| `< 10` | `0.5` | `7.3 g` → `7.5 g` |
-| `10 – 100` | `5` | `63.3 g` → `65 g` |
-| `100 – 1000` | `10` | `433.3 g` → `430 g` |
-| `≥ 1000` | `50` | `1333 g` → `1350 g` |
+## 4. Culinary Rounding & Vulgar Fractions (`QuantityFormatter`)
 
-The band is chosen by the amount being rounded, not by the amount in the recipe:
-`133.3 g` is in the third band and becomes `130 g`.
+Raw floating-point results (`0.3333333`, `142.857 g`) are snapped to kitchen-friendly increments:
 
-Round half away from zero. Re-express upward **only when the larger unit reads
-better** — at least one of it, and no more than one decimal place:
+1. **Gram & Millilitre Precision Tiers:**
+    - `< 10 g/ml`: round to nearest `0.5` (`3,5 g`).
+    - `10 – 100 g/ml`: round to nearest `1` (`45 g`).
+    - `100 – 500 g/ml`: round to nearest `5` (`145 g`).
+    - `> 500 g/ml`: round to nearest `10` (`680 g`).
+2. **Count & Spoon Vulgar Fractions (`Stück`, `TL`, `EL`, `Tasse`, `Dose`, `Bund`):**
+    - Fractional parts snap within `±0.06` tolerance to Unicode fractions:
+        - `0.125` → `⅛`, `0.25` → `¼`, `0.333` → `⅓`, `0.5` → `½`, `0.666` → `⅔`, `0.75` → `¾`.
+    - Values like `1.5 Stück` render as `1 ½ Stück`; `0.5 TL` renders as `½ TL`.
+3. **German Decimal Formatting:** Numbers that do not use vulgar fractions format with a comma decimal separator (`1,25 kg`, `0,75 l`).
 
-- `1500 g` → `1.5 kg`, `2000 ml` → `2 l`
-- `1350 g` stays `1350 g`, because nobody writes `1.35 kg`
-- `500 g` stays `500 g`, because a scale shows grams
+---
 
-Nothing rounds to zero. An amount below the smallest step — `0.1 g` of saffron
-doubled, `2 g` of yeast in ounces — is shown exactly as the arithmetic gives
-it (`0.2 g`, `0.07 oz`): zero leaves it out, and the step would be several
-times too much.
+## 5. Baking Pan & Springform Conversion
 
-### 2. Countable things — a range above one, a fraction below it
+In baking recipes, scaling by pan geometry uses surface area ratios ($A_{\text{target}} / A_{\text{source}}$):
 
-Anything with a count unit (`piece`, `clove`, `slice`, `can`, `pack`, `bunch`)
-or no unit at all.
-
-```
-3 cloves × 1.5  = 4.5   →  "4–5 cloves"
-2 eggs   × 0.67 = 1.33  →  "1–2 eggs"
-4 pieces × 1.5  = 6.0   →  "6 pieces"     exact, no range
-1 onion  × 0.5  = 0.5   →  "½ onion"
-1 onion  × 0.1  = 0.1   →  "¼ onion"      approximate, and the floor
-```
-
-Above one, a range: half of three cloves is not one and a half cloves, it is
-one or two, and the cook decides.
-
-- Within `0.15` of an integer, snap to it: `3.9` → `4`, not `3–4`.
-- Otherwise show `floor–ceil`.
-
-Below one, the fraction — written as `¼ ⅓ ½ ⅔ ¾`, because that is how a person
-says part of an onion and `0.4` is not. **A quarter is the floor**, and nothing
-ever rounds to zero: an ingredient that disappears is an ingredient nobody
-buys.
-
-This used to say "1 onion", on the grounds that a recipe which needs an onion
-still needs an onion. That is not a rounding — at half scale it is two and a
-half times the onion, silently, in the one direction nobody checks.
-
-### 3. Spoons — halves, then thirds
-
-`tsp` and `tbsp` round to the nearest `0.5`. `⅓` and `⅔` are **not a second
-grid to round onto** — they exist so that a recipe scaled by a third lands on
-the spoon that is actually in the drawer instead of being marked approximate for
-no reason. A third is therefore used only when the arithmetic genuinely produced
-one (within `0.02`):
-
-- `1 tsp × ⅓` → `⅓ tsp`
-- `1.7 tbsp` → `1½ tbsp`, not `1⅔` — it is a half and a half
-
-Below a half, the grid is the small spoons, `⅛ ¼ ½`, with `⅛` the floor:
-`¼ tsp × 0.5` → `⅛ tsp`, `½ tsp × 0.5` → `¼ tsp`.
-
-A small spoon amount stays a small spoon amount. An earlier version of this
-document turned anything under `¼ tsp` into "a pinch"; a pinch is a gesture and
-`⅛ tsp` is a measurement, and replacing one with the other changes what is
-cooked.
-
-### 4. Things that never scale
-
-`pinch`, and any ingredient with no quantity at all ("salt", "pepper to
-taste"). They are reproduced unchanged. Salting to taste does not double.
-
-### 5. Mark what was approximated
-
-Any amount the rounding changed by more than 2 % renders with a preceding `~`
-and carries `isApproximate: true`. An approximation must never be mistaken for
-a measurement — that is the difference between a scaling feature you can trust
-and one you have to double-check.
-
-### 6. What the app must admit it cannot scale
-
-Beyond `factor ≥ 1.75` or `≤ 0.6`, a quiet single line appears beside the time,
-never a modal:
-
-> Times are for 4 portions — check earlier.
-
-And in the recipe's metadata, permanently:
-
-> Pan size and oven temperature are for the original {n} portions.
-
-Baking time scales with the *thickness* of what is in the tin, not with its
-mass; oven temperature does not scale at all; a doubled cake in the same tin is
-a raw cake. Culina says so rather than silently lying, and this honesty is
-worth more than a cleverer formula.
-
-## Scale to an amount you have
-
-Tap any ingredient's amount → "I have …" → the whole recipe reshapes around it.
-
-```
-factor       = availableAmount / baseAmountOfThatIngredient   (converted to a common unit)
-targetYield  = baseYield × factor
-```
-
-**The factor is exact, and only the label is rounded.** 370 g of that flour in
-a recipe built on 200 g for four is a yield of 7.4, and the amounts are computed
-from 7.4 so the flour comes out at 370 g. The control reads `7½ servings`,
-because that is a number somebody would say aloud.
-
-Rounding the yield first and recomputing the factor from it is the obvious
-implementation and the wrong one: it answered "I have 370 g" with a recipe
-calling for 380 g, and 370 appeared nowhere on the screen. Touching the stepper
-afterwards leaves the anchor behind and returns to whole numbers, which is what
-somebody who is no longer scaling to an amount wants.
-
-This reuses the machinery that already exists and introduces no new concept —
-it is simply the same scaling driven from the other end. It is also the real
-human moment: a leftover 600 g of flour, an odd package size.
-
-## Display formatting
-
-- Decimals are trimmed: `1.0` → `1`, `1.50` → `1.5`.
-- Common fractions render as glyphs where the amount makes them natural: on
-  spoons, and on part of a single countable thing. `½ tsp` and `½ onion`; never
-  `½ g`, because a scale shows `0.5 g`.
-- Locale-aware separators via `Intl.NumberFormat` — `1,5 kg` in German,
-  `1.5 kg` in English.
-- Ranges use an en dash with no spaces: `4–5`.
-- Amount and unit are one non-breaking group so `250` never wraps away from `g`.
-
-## Interaction
-
-- The servings control is a stepper with a tappable value that opens direct
-  entry. Steps of 1 for `servings`; for `pieces`, steps that suit the base
-  (12 muffins steps by 6, not by 1).
-- **Numbers morph in place.** Changed amounts get a ~400 ms highlight so the eye
-  can see *what* changed. No reload, no spinner, no layout shift.
-- Under `prefers-reduced-motion`, the highlight becomes an instant tint change
-  with no transition.
-- The chosen scaling is remembered **per recipe, per user** (server-side, in the
-  cook session and in user preferences) — you always cook this one for two, so
-  it opens at two.
-- Scaling **never** mutates the recipe. It is a view, and it is reflected in the
-  URL (`?yield=6`) so a scaled recipe can be shared or reloaded intact
-  (`sveltekit-state-and-optimistic-ui`).
-
-## Step text scales too
-
-This is the payoff for the ingredient↔step links in `domain-model.md`. Because
-a step stores `[[ingredient:…]]` rather than the literal text "200 g butter",
-the step renders with the *scaled* amount inline:
-
-> Melt **180 g butter** in the pan.
-
-Getting this wrong — ingredient list scaled, step text not — is the single most
-common bug in recipe apps, and the model makes it impossible here.
-
-## Test vectors
-
-`scaling.spec.ts` covers, at minimum:
-
-- Every row of the step table in §1, at the boundaries (`9.9`, `10`, `100`,
-  `1000`).
-- `kg`/`l` re-expression up, and the absence of re-expression down.
-- Counts: snapping, ranges, and the floor of 1.
-- Spoons: halves and thirds; the `pinch` threshold.
-- Non-scaling ingredients passed through byte-identical.
-- `isApproximate` set exactly when the delta exceeds 2 %.
-- Scale-to-amount round-trips: choosing 600 g of flour yields a factor that
-  reproduces ~600 g of flour.
-- Factor `1` is an identity: every amount renders exactly as authored.
-- German and English formatting of the same value.
-
-## Imperial units
-
-`UserSettings.MeasurementSystem` changes what is **shown**, never what is
-stored. A recipe keeps whatever its author wrote, so switching the setting and
-switching back leaves it exactly as it was — and a German recipe shared with an
-American is one recipe read two ways.
-
-The conversion happens **inside** `scaleQuantity`, before rounding, not after
-it. Converting a number that has already been rounded rounds it twice, and a
-quarter-ounce of drift on each of a recipe's twelve amounts is a different
-recipe.
-
-| | Imperial |
-| --- | --- |
-| Mass | ounces below a pound, then pounds |
-| Volume | fluid ounces below a cup, then cups |
-| Spoons | unchanged — a teaspoon is a teaspoon in both systems |
-| Counts, pinches, a household's own units | unchanged |
-
-**Mass never becomes cups.** A cup is a volume, and "1 cup of flour" is between
-120 g and 150 g depending on how it was packed and whether it was sifted.
-Turning 250 g into "2 cups" produces a recipe that is wrong in a way nobody can
-see, and an unfamiliar recipe beats a confidently wrong one.
-
-Amounts round onto measures that exist: quarters for ounces and fluid ounces,
-and quarters *and thirds* for cups, because a ⅓-cup measure is in every set.
-Fractions hold up to sixteen of a unit — "10½ oz" is what a recipe says, and
-rounding it to 11 would be a four per cent lie for no gain. Anything rounding
-moved by more than two per cent is still marked with a tilde, as it is in
-metric.
+- **Round springform ($d_1 \to d_2$):** $\text{factor} = (d_2 / d_1)^2$ (e.g., $\varnothing\,26\,\text{cm} \to \varnothing\,20\,\text{cm} = 0.59\times$).
+- **Rectangular sheet ($w_1 \times l_1 \to w_2 \times l_2$):** $\text{factor} = (w_2 \cdot l_2) / (w_1 \cdot l_1)$.

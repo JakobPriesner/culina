@@ -1,819 +1,149 @@
-# Culina — HTTP API (v1)
+# API Reference
 
-The full v1 surface. Conventions come from `rest-api-design`,
-`dotnet-endpoints`, `dotnet-result-pattern`, `http-caching-etags` and
-`cookie-auth-and-security`; this document only fixes *what* exists, never
-restates *how* an endpoint is written.
+Culina exposes a versioned REST API under `/api/v1` and a Streamable HTTP Model Context Protocol (MCP) server under `/mcp`.
 
-Base path `/api/v1`. JSON only, camelCase, UTF-8, RFC 3339 UTC timestamps.
-Every failure is an RFC 9457 problem document with `code`, `detail` and
-`requestId`.
+---
 
-## Authentication at a glance
+## 1. Conventions, Auth & Security
 
-Browsers: cookie only. `__Host-culina.session` (HttpOnly, Secure, SameSite=Lax,
-opaque), plus a readable `culina.csrf` companion cookie whose value is echoed in
-`X-Culina-CSRF` on every unsafe request. The SPA is served from the same origin,
-so a browser never needs CORS.
+### Authentication & CSRF
 
-The installed apps (`docs/native-app-design.md`, part 3) sign in with
-`client: "ios"` or `"android"`. They get the same session's token in the body
-(`sessionToken`), not as a cookie, and send it as `Authorization: Bearer`. A
-bearer request needs no CSRF token, because a browser never attaches that
-header by itself. When a request carries both, the cookie wins.
+1. **Browser Sessions:** `POST /api/v1/auth/login`, `/register`, or `/passkey/login-complete` returns a short-lived **JWT access token** (`15 min`, sent via `Authorization: Bearer <jwt>`) and sets an `HttpOnly`, `SameSite=Lax` refresh token cookie (`culina_rt`, `30 days`, path `/api/v1/auth`).
+2. **Refresh Rotation:** `POST /api/v1/auth/refresh` rotates `culina_rt` and issues a new JWT. Reusing a revoked refresh token triggers family revocation.
+3. **Personal Access Tokens (PATs):** Long-lived tokens prefixed `culina_pat_...` (SHA-256 hashed in `PersonalAccessTokens`) accepted in `Authorization: Bearer culina_pat_...` for CLI, scripts, and MCP clients.
+4. **CSRF Protection (`OriginValidationMiddleware`):** State-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) carrying cookies must have an `Origin` or `Referer` matching `CULINA_PUBLIC_ORIGIN`.
 
-The apps call from fixed origins (`capacitor://app.culina.localhost`,
-`https://app.culina.localhost`). Only those origins get CORS headers, never
-`Access-Control-Allow-Credentials`, with `ETag`, `Retry-After`, `Location` and
-`X-Request-Id` exposed. `GET /setup` reports `apiVersion`, so an app can tell
-whether it understands the server before signing in.
+### Concurrency & Idempotency
 
-An AI agent signs in with `client: "agent"` and uses the MCP server at
-`/api/mcp` (see [AI agents (MCP)](#ai-agents-mcp)). Its token works there and
-on the operations offered as tools, and nowhere else.
+- **Optimistic Concurrency (`ETag`):** `GET /api/v1/recipes/{id}` returns `ETag: "<version>"`. `PUT /api/v1/recipes/{id}` accepts `If-Match: "<version>"` and returns `412 Precondition Failed` (`concurrency_conflict`) on version mismatch.
+- **Idempotency (`IdempotencyMiddleware`):** `POST` endpoints accept `Idempotency-Key: <uuid>` (cached for `24h` per user + path + body hash).
 
-`me` is the alias for the authenticated user.
+### Error Format (RFC 9457 Problem Details)
 
-## Identity
-
-| Method | Path | Notes |
-| --- | --- | --- |
-| `POST` | `/users` | Register. `201`. Honours `registration` instance settings (open / invitation-only / max users). Rate limited per IP. |
-| `GET` | `/users/me` | `200` + ETag. The client calls this on boot to resolve the session. |
-| `PATCH` | `/users/me` | Display name. `If-Match` required. |
-| `GET` | `/users/me/settings` | locale, theme, mode, measurement system. |
-| `PUT` | `/users/me/settings` | |
-| `POST` | `/sessions` | Log in. `201`. Returns the CSRF token and the user; with `client` `ios`/`android`/`instance`/`agent`, also `sessionToken` and no cookie. Signing in an `agent` never ends the session that asked. Rate limited per IP **and** per account. Failure is always `auth.invalid_credentials` — never "no such user". |
-| `DELETE` | `/sessions/current` | Log out. Deletes the server-side session, then expires the cookie. `204`. |
-| `GET` | `/sessions` | Your active sessions — device (`client`: browser, ios, android, instance, agent), IP, last seen. Powers "sign out everywhere". |
-| `DELETE` | `/sessions/{sessionId}` | Revoke one. `204`. |
-| `PUT` | `/users/me/password` | Change password. Needs `currentPassword`; a wrong one is `400 users.incorrect_password`, never a `401` (which would sign the caller out). Revokes every other session; this one stays. `204`. |
-| `GET` | `/users/me/recovery-codes` | How many saved recovery codes are left, and when they were made. Never the codes. |
-| `POST` | `/users/me/recovery-codes` | Needs `password`. `201` with ten one-time codes, shown once; any earlier set stops working. |
-| `POST` | `/recovery-codes` | Administrator only. `201` with a one-time code for the account with that `email`, valid 24 hours. `404` when no account has the address — the administrator may know. |
-| `POST` | `/password-resets` | Anonymous. `email`, `code` (saved or issued; case, spaces and dashes ignored), `password`. Uses up the code, sets the password, revokes **every** session of the account. `204`. Failure is always `400 auth.invalid_recovery_code`, whether or not the address is registered. Rate limited like sign-in, per IP and per account. |
-| `POST` | `/password-reset-links` | Anonymous. `email`. `202` whether or not the address is registered; when it is, mails a link and a one-hour code for `/password-resets`. `409 mail.off` when the instance sends no mail (the same for every address). Rate limited like sign-in; at most one mail per account a minute. |
-| `POST` | `/sign-in-links` | Anonymous. `email`. `202`, as above; mails a link that signs in once, within 15 minutes. |
-| `POST` | `/sign-in-links/redemptions` | Anonymous. `token` from the link (after `#token=`). `201` and a browser session, as `/sessions`; also confirms the address. Failure is always `400 auth.invalid_link`. |
-| `POST` | `/email-confirmations` | Anonymous. `token` from a confirmation link. Confirms the address and signs the browser in, `201` as `/sessions`. Failure is always `400 auth.invalid_link`. While mail is on, `/sessions` answers `403 auth.email_unconfirmed` for an unconfirmed address once the password matched, and mails the link again. |
-
-## Households
-
-| Method | Path | Notes |
-| --- | --- | --- |
-| `GET` | `/households` | The ones you belong to. `?deleted=true`: the deleted ones you own instead, each with `deletedAt` and `purgeAfter`. |
-| `POST` | `/households` | `201`. Creator becomes `owner`. Optional `inheritsFrom`: a household you are in whose recipes the new one sees from the start. |
-| `GET` | `/households/{householdId}` | `200` + ETag. |
-| `PATCH` | `/households/{householdId}` | Rename. Owner only. `If-Match`. |
-| `PUT` | `/households/{householdId}/inheritance` | `{ householdId }`, or `null` to inherit nothing. Owner of this household, and a member of the other (`households.not_found` otherwise). `households.inheritance_cycle` when the other already sees this one's recipes. `200` with the chain it now inherits, nearest first. |
-| `GET` | `/households/{householdId}/heirs` | Every household that sees this one's recipes: those inheriting from it, then those inheriting from them, each with the household it inherits from directly. Members only. |
-| `DELETE` | `/households/{householdId}/heirs/{heirId}` | Stops a household inheriting from this one. Owners of this household, and only for a direct heir (`households.not_found` otherwise); anything inheriting through it stops too. `204`. |
-| `DELETE` | `/households/{householdId}` | Owner only (`403 households.not_owner` for a plain member). `If-Match` required. `204`, and `204` again when already gone or not the caller's. Into the bin for 30 days: every member loses access at once, and its recipes and cookbooks are hidden with it. A household inheriting from it sees none of its recipes while it is deleted. |
-| `POST` | `/households/{householdId}/restorations` | Owner only. Brings it back with its members, recipes and cookbooks — but not what was deleted inside it beforehand. `204`. |
-| `GET` | `/households/{householdId}/trash` | Any member. The recipes and cookbooks in this household's bin, newest first, each with `kind`, `deletedBy` and `purgeAfter`. |
-| `GET` | `/households/{householdId}/members` | |
-| `DELETE` | `/households/{householdId}/members/{userId}` | Owner removes anyone; a member may remove themselves. `households.last_owner` if it would leave none. |
-| `PATCH` | `/households/{householdId}/members/{userId}` | Role change. Owner only. |
-| `GET` | `/households/{householdId}/invitations` | Open invitations. Owner only. Returns metadata, **never** the code — the code is shown once, at creation. |
-| `POST` | `/households/{householdId}/invitations` | `201`. Response carries the one-time code. |
-| `DELETE` | `/households/{householdId}/invitations/{invitationId}` | Revoke. |
-| `GET` | `/invitations/{code}` | Signed in only. `{ householdName }` and nothing else, so the join page can say whose kitchen it is before anybody presses Join; the code is not used up. Expired / unknown / used (or a household in the bin) all return the identical `households.invitation_invalid`. Rate limited per address, separately from redeeming. |
-| `POST` | `/invitations/{code}/redemptions` | Join. `201` with the household. Expired / unknown / used all return the identical `households.invitation_invalid`, so codes cannot be probed. Rate limited. |
-
-`POST /invitations/{code}/redemptions` is the "non-CRUD action as a created
-sub-resource" pattern, not a verb route: redeeming *creates a redemption*.
-
-`GET /users/me` carries each membership's `inheritsFrom` chain, so the app can
-name where an inherited recipe comes from without a second request. Recipe
-summaries in `GET /recipes` carry `householdId`, the household that owns each
-one; in a household that inherits, that is not always the one asked about.
-`POST /recipes/{id}/cook-log` and `POST /cook-sessions` take an optional
-`householdId`, the household the recipe is cooked in, and
-`GET /recipes/{id}/cookbooks` an optional `?householdId=` for whose shelves to
-look on.
-
-## Recipes
-
-| Method | Path | Notes |
-| --- | --- | --- |
-| `GET` | `/recipes` | See query parameters below. Cursor-paginated, wrapped. |
-| `POST` | `/recipes` | `201` + `Location`. Only `householdId` and `title` are required. |
-| `POST` | `/recipes/{recipeId}/copies` | `{ householdId }`. `201` + `Location` with the new recipe: any recipe you can read, copied into a household you are in, with its own ingredient lines and steps and the same picture. How a household changes a recipe it only inherits. |
-| `GET` | `/recipes/{recipeId}` | `200` + ETag, `304` on `If-None-Match`. Full detail incl. step segments. |
-| `PUT` | `/recipes/{recipeId}` | Full replace incl. ingredients and steps. `If-Match` required; missing → `428`, stale → `412`. |
-| `DELETE` | `/recipes/{recipeId}` | `204`, and `204` again when already gone. Into the household's bin for 30 days: gone from every list, search, suggestion, plan, cookbook, completion and export, and its shared link stops working. |
-| `POST` | `/recipes/{recipeId}/restorations` | Any member of its household, until it is purged. Back everywhere it was. `204`; `404` when it is not in a bin the caller can open. |
-| `PUT` | `/recipes/{recipeId}/image` | `multipart/form-data`. JPEG/PNG/WebP, ≤ 10 MB, ≤ 8000 px. Re-encoded server-side — the uploaded bytes are never served back. |
-| `DELETE` | `/recipes/{recipeId}/image` | |
-| `GET` | `/recipes/{recipeId}/notes` | Your personal notes for this recipe. |
-| `PUT` | `/recipes/{recipeId}/notes` | Upsert. Recipe-level and per-step in one document. |
-| `GET` | `/recipes/{recipeId}/nutrition` | Per-portion nutrition, worked out on every read; see below. Optional `?householdId=` (whose corrections apply; default the recipe's own household). `200` + ETag, `304` on `If-None-Match`, `400` for a malformed `householdId`, `404` for a recipe the caller cannot see (the same answer as an unknown one). |
-| `GET` | `/foods` | Search the Bundeslebensmittelschlüssel: `?q=` and `?limit=` (default 20, max 50; no paging). `{ items: [{ code, nameDe, nameEn, energyKcal }] }`, best first; `energyKcal` is per 100 g and may be null. Any signed-in person; the ETag is the nutrition data version. `400` for an invalid `limit` or an unknown parameter. |
-| `PUT` | `/households/{householdId}/ingredients/{name}` | `{ "food": "Q611000" }` says what this household means by the ingredient; `{ "food": null }` says do not count it. `204`. See below. |
-| `DELETE` | `/households/{householdId}/ingredients/{name}` | Back to the table's default. `204`, also when there was no choice. |
-| `PUT` | `/households/{householdId}/ingredients/{name}/units/{unit}` | `{ "grams": 150 }`: what one unit of the ingredient weighs in this household ("bei uns wiegt 1 Zwiebel 150 g"). `204`. See below. |
-| `DELETE` | `/households/{householdId}/ingredients/{name}/units/{unit}` | Forget that weight. `204`, also when there was none. |
-| `GET` | `/households/{householdId}/nutrition/ingredients` | What the household said: `{ items: [{ name, corrected, food?, weights: [{ unit, grams }] }] }`, by name. |
-| `GET` | `/households/{householdId}/nutrition` | `{ useTypicalWeights }`, true until turned off. Any member. |
-| `PUT` | `/households/{householdId}/nutrition` | `{ "useTypicalWeights": false }`. `200` with the new state. Any member. |
-| `GET` | `/recipes/{recipeId}/cook-log` | Your "made it" entries, newest first. |
-| `POST` | `/recipes/{recipeId}/cook-log` | `201`. Body may be empty — one tap is the whole interaction. |
-
-### `GET /recipes/{recipeId}/nutrition`
-
-Nutrition per portion (`per: "serving"`) or per piece (`per: "piece"`, when the
-recipe makes pieces), divided by `yield`. Nothing is stored: every read looks
-each ingredient line up in the Bundeslebensmittelschlüssel and sums it.
-
-- `complete` is true when every ingredient line is counted; `counted` and
-  `lines` say how many of how many.
-- `values` holds energy (kJ and kcal), fat, saturated fat, carbohydrate,
-  sugars, protein and salt, each `{ value, atLeast, estimated }`. `atLeast` is true when a
-  line that could still raise it was left out, or when a counted food has no
-  figure for that value (23 foods lack saturated fat), so the number is a lower
-  bound and never a guess. A left-out line whose food is known to have exactly 0
-  of a value adds exactly 0 and does not flag it: salt and water have no energy,
-  so a `Salz` without an amount leaves energy exact (salt stays `atLeast`). A
-  line the household excluded is its choice and flags nothing; an unknown food
-  or an `implausible` amount flags every value. Nothing counted, or only
-  exclusions, is zeros with `atLeast: true`.
-- `ingredients` has one entry per line, in recipe order: `status` is `counted`,
-  `amountNotInGrams`, `noAmount`, `unknownFood`, `excluded` or `implausible`; a
-  line with a known food carries the `food` (`code`, `nameDe`, `nameEn`, `labelDe`,
-  `labelEn`); a counted one also the `grams`, `via` (`mass`, `density`,
-  `eggSize`, `householdWeight` or `typicalWeight`) and its own `energyKcal` per
-  portion, so the rows add up to the headline. `corrected` is true when a household chose the food. `counted`,
-  `lines` and `complete` count counted lines only.
-- **Weights for what has no weight of its own.** The order for one line: no amount;
-  mass (`g`, `kg`); the household's weight for the ingredient in this unit
-  (`via: householdWeight`, exact as far as the household is concerned, for any
-  unit but a mass or a volume; ml, l, US cup and fl oz keep the density rule); a
-  volume or spoon of a food that pours, at its density; eggs by count at size M; a
-  **typical weight** for the food and unit, only if the household allows it
-  (`via: typicalWeight`, an estimate); otherwise the `reason`s below. A typical
-  weight is a curated, cited value (USDA FoodData Central, or a pack size printed
-  on the pack or can) per BLS food and unit (piece, clove, tbsp and tsp of
-  solids, bunch, can, pack, slice, leaf, pinch...); its citation is the line's
-  `source`, which a client shows. Every spelling of a unit is one `unitKey`
-  (`Stück`, `Stk.`, `pcs` and a bare count are `piece`; `Zehe` is `clove`; `EL` is
-  `tbsp`; `Päckchen`, `Pck.` and `Packung` are `pack`); a household's own word is
-  its own key, folded. `unitKey` is the key a household weight for the line is set
-  under, and is absent for a line with no amount, a mass, a volume, or no food. A
-  bare count or `piece` of a name that already says its unit ("Knoblauchzehen",
-  "garlic cloves") is that unit, so "3 Knoblauchzehen" is three cloves; a bare
-  "1 Knoblauch" is not counted (it can be a bulb). A typical weight can name the
-  food a line really is: a can of "Tomaten" is counted as canned tomatoes at 400 g,
-  and the line's `food` says so, like a broth's resolved liquid.
-- `estimated` on a value is true when a line that adds to it was counted by a
-  typical weight, so a client says "partly estimated". A household's own weight
-  and every other basis leave it false. It is always sent.
-- `variants` on a line with a food lists the food's usual alternatives, itself
-  included, in the order to offer them: `[{ code, labelDe, labelEn, energyKcal }]`
-  (`energyKcal` per 100 g, may be null). Absent when the food has no group (82
-  groups: the milks, creams, flours, minced meats, oils...). Choosing one is the
-  existing food correction, `PUT .../ingredients/{name}` with `{ "food": code }`; the
-  server applies nothing by itself. Counted or not, corrected or not.
-- `food` is the food the line was **resolved** to, which for a broth depends on
-  its unit: `ml`, `l`, US `cup` and `fl oz` are the liquid (counted at its
-  density), `g` and `kg` up to and including 50 g the powder and above 50 g the
-  liquid (by mass), a spoon or a count the powder, which packs and is not
-  counted (`spoonOfSolid`, `count`). So the answer for "Gemüsebrühe" is
-  `R821000` "Gemüsebrühpulver" or `X416243` "Gemüsebrühe (flüssig)" by line. A
-  household correction names its food exactly and has no such alternative.
-- `nameDe`/`nameEn` are the BLS names, the citation. `labelDe`/`labelEn` are
-  what a reader calls the food (cooking language, "Hühnerei", "Kidneybohnen
-  (gekocht)"); for a food chosen by correction that has no label of its own they
-  are the BLS name, so a client never falls back. The shared recipe's answer
-  carries the same.
-- `reason`, only on `amountNotInGrams`, says why the unit is not counted:
-  `spoonOfSolid` (a tsp or tbsp of a food without a density: flour, sugar,
-  butter), `volumeOfSolid` (ml, l, a US cup or fl oz of such a food), `count` (a
-  bare count or `piece` of a non-egg food: an onion) or `householdUnit` (any other
-  unit: clove, bunch, can, pack, pinch, a household's own word, "Tasse").
-- `implausible`: a line whose grams per portion (or piece) would exceed 2000 g
-  and which weighs more than 10 kg in all. No single ingredient of one portion
-  plausibly weighs more than 2 kg; the real case is "1800 l Milch" meant as
-  1800 ml, and the ceiling also catches kg written for g. The 10 kg floor keeps a
-  big batch that only claims one portion (a whole cake) from being called a slip:
-  there the yield is wrong, not the amount. It is left out of the sums, carries `grams` (and `via`) as they would
-  have been, and makes every value `atLeast`.
-- `canRaiseEnergy` is true when the line is not counted, was not excluded by the
-  household, and its food is unknown or has energy (or no energy value); always
-  true for `implausible`. A client naming "what is missing" from the energy
-  headline lists only these lines.
-- US `cup`/`cups` (236.588 ml) and `fl oz`/`fl. oz` (29.5735 ml), in any case,
-  count like millilitres for a food with a density; "Tasse", "Becher" and "Glas"
-  never count (no standard size).
-- **Numbers are unrounded**, like every quantity the server sends; rounding is
-  the client's, and a lower bound rounds down. Per portion does not change when
-  a recipe is scaled, so no factor is applied.
-- `source` names the data (`Bundeslebensmittelschlüssel` 4.0, Max Rubner-Institut,
-  CC BY 4.0). **CC BY requires that attribution wherever the numbers are shown.**
-- It is a separate resource, not a field of `GET /recipes/{id}`, because that
-  ETag is the recipe's version alone. This one is the recipe's version, the
-  asking household, the version of the nutrition data and a fingerprint of the
-  corrections that apply, so a data update or a correction is never answered
-  with a `304`. The corrections and weights for the recipe's names (the
-  household's own, else the nearest it inherits, each with the household it came
-  from) and the typical-weights switch are all in the fingerprint, so a parent's
-  correction changes its heirs' tags too. Each line names that household as
-  `chosenBy` (with `corrected`) and `weighedBy` (with `via: householdWeight`).
-
-### `GET /shared-recipes/{token}/nutrition`
-
-The same figure for a shared recipe, to whoever holds the link: no session, the
-token is the whole authorisation, rate-limited like the shared recipe. The
-reader is in no household, so no household's corrections or weights apply
-(`corrected` is false on every line, `householdWeight` never occurs), and typical
-weights count, as they do for a household that has not turned them off.
-`variants` are carried as above. `200` + ETag (recipe version and nutrition data version,
-no recipe id), `304` on `If-None-Match`; an unknown or revoked token is the
-shared recipe's own `404` (`recipes.share_not_found`). `Cache-Control: private,
-no-store`, as on the recipe itself. The `source` attribution applies as above.
-
-### `PUT` and `DELETE /households/{householdId}/ingredients/{name}`
-
-A household's correction of what an ingredient name means for nutrition. The
-name is a member of the same collection the `GET .../ingredients` suggestions
-come from; the correction is the household's statement about it, so there is no
-verb and no extra segment.
-
-- `{name}` is the ingredient as written, percent-encoded; the server trims and
-  folds it (`Müsli` = `Muesli`, case ignored), so one correction covers every
-  recipe of the household that uses the name, however it is spelled. A slash is
-  `%2F`, a literal percent `%25`. 1–120 characters after trimming, else `400`.
-- `food` must be a code `GET /foods` returns, else `400`
-  `nutrition.unknown_food`. `null` means "do not count this": the line comes
-  back `excluded` with `corrected: true`.
-- `DELETE` removes the choice, so the default applies again; deleting nothing is
-  `204` as well. Both are idempotent and carry no `If-Match`.
-- Any member of `{householdId}` may correct; anyone else gets `404`, as for every
-  household resource. The correction belongs to exactly that household: an heir
-  corrects for itself, and the household it inherits from is not affected.
-- Afterwards `GET /recipes/{id}/nutrition` has a new ETag for every recipe of the
-  household that uses the name.
-
-### `PUT` and `DELETE /households/{householdId}/ingredients/{name}/units/{unit}`
-
-A household's weight for one unit of an ingredient: "bei uns wiegt 1 Zwiebel
-150 g". A member of the same ingredient collection, one level down, as the
-correction is; no verb.
-
-- `{name}` is encoded as for the correction (a slash is `%2F`), and so is `{unit}`.
-  `{unit}` is a spelling of a known unit or the household's own word
-  (1-16 letters, spaces and full stops); every spelling of a unit shares one weight,
-  keyed by `unitKey`.
-- `{ "grams": 150 }`: more than 0 and at most 10000, else `400`
-  `nutrition.invalid_grams`. Grams, kilograms, millilitres, litres, US cups and fl
-  oz already have a size: `400` `nutrition.unit_has_a_size`. A name too long or blank
-  is the correction's `400`.
-- The weight counts every line of this household with that name (folded) in that
-  unit, ahead of a typical weight, a density and the egg size, and also when
-  typical weights are off. It belongs to exactly that household: an heir sets its
-  own, and the household it inherits from is not affected.
-- `DELETE` removes it; deleting nothing is `204`. Both are idempotent, no
-  `If-Match`. Any member; anyone else gets `404`.
-- Afterwards `GET /recipes/{id}/nutrition` has a new ETag for every recipe of the
-  household that uses the name.
-
-### `GET` and `PUT /households/{householdId}/nutrition`
-
-How a household's nutrition is worked out: `{ "useTypicalWeights": true }`. A
-sub-resource of the household like `/inheritance` (there is no household settings
-resource yet), and it holds this one switch. Off, a count of onions or a spoon of
-butter is counted only by the household's own weight, else not at all. Any member
-may read and set it; `PUT` is a full replacement and answers `200` with the state.
-Changing it changes the ETag of every recipe nutrition of the household.
-
-### `GET /households/{householdId}/nutrition/ingredients`
-
-What the household has said about its ingredients, for a settings page. One entry
-per name with a food choice or a weight, ordered by name: `name` is the folded
-form (lower case, `ü` as `ue`), the key every spelling shares; `corrected` is true
-for a food choice and `food` (`code`, names and labels as in the nutrition
-answer) is then the chosen food, absent for "do not count"; `weights` lists
-`{ unit, grams }` by unit key. Not paged. Distinct from `GET .../ingredients`,
-which suggests what to type.
-
-### `GET /recipes` query parameters
-
-| Parameter | Meaning |
-| --- | --- |
-| `householdId` | **required** — scopes the query. |
-| `query` | Free text over the title, tags, ingredient names, description and step text. Tolerant of typos (`Bolgnese`), of German spelling variants (`Bolognäse`, `Muesli`, `Musli`), of inflection in both directions (`Tomate` ↔ `Tomaten`) and of compounds (`Hähnchen` finds `Hähnchenbrustfilet`). |
-| `tag` | Slug. Repeatable; repeated values are ANDed. |
-| `maxMinutes` | Total time ceiling. "I have 25 minutes." |
-| `ingredient` | Repeatable. Ranks by how many match and how few extras are needed. |
-| `sort` | `-updatedAt`, `title`, `totalMinutes`, `-cookCount`, `relevance`, `suggested`, `cookbookOrder` (only with `cookbookId`). An explicit value always wins; with none, `query` or `ingredient` means `relevance`, a `cookbookId` alone means `cookbookOrder`, and everything else means `-updatedAt`. |
-| `cookbookId` | Only what is on that cookbook — its rows if somebody fills it, its rules if it fills itself. Every other filter still applies, ANDed. |
-| `cursor`, `limit` | Cursor paging. `limit` default 24, max 100. |
-
-Unknown or duplicated parameters are rejected with `400` by
-`QueryParameterGuardMiddleware`. A silently ignored filter returns wrong data
-that looks right.
-
-**How `relevance` orders.** A tier first, then a score inside it. The tier is
-what kind of evidence put a recipe on the page — an exact title, a word of the
-title, a compound or near-miss of one, a tag, an ingredient, the method — and it
-is compared before anything else, so a recipe that merely resembles the query
-can never climb past one the query names. The score inside a tier weighs how
-much of the title the query accounts for, how much of the query the recipe
-accounts for, the full-text rank, and how well the recipe fits any `ingredient`
-values. Neither number is exposed: they are how a page is ordered and how its
-cursor resumes, not a fact about a recipe.
-
-With `ingredient`, each item additionally carries:
-
-```json
-{ "ingredientMatch": { "matched": 3, "requested": 3, "missing": 2 } }
-```
-
-which the UI renders as *"uses 3 of 3 · 2 more needed"*. That is the whole
-"what can I cook?" feature — no pantry to maintain, so nothing to go stale.
-
-### Step segments
-
-The API never exposes the raw `[[ingredient:…]]` token form. A step is returned
-pre-split, so the client renders without parsing:
+All errors return `application/problem+json` with stable machine-readable `problemCode` and `traceId`:
 
 ```json
 {
-  "id": "…", "sortOrder": 3, "durationSeconds": 1200,
-  "segments": [
-    { "type": "text", "value": "Melt " },
-    { "type": "ingredient", "recipeIngredientId": "…", "name": "butter",
-      "quantity": 120, "unit": "g" },
-    { "type": "text", "value": " in the pan." }
-  ]
+    "type": "https://culina.app/problems/validation_failed",
+    "title": "Validierungsfehler",
+    "status": 400,
+    "detail": "Der Titel darf nicht leer sein.",
+    "problemCode": "validation_failed",
+    "traceId": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+    "errors": { "Title": ["Der Titel darf nicht leer sein."] }
 }
 ```
 
-Quantities are the **base** amounts. The client applies the factor and the
-rounding (`scaling-rules.md`).
+| HTTP Status   | `problemCode`                                    | Meaning                                            |
+| ------------- | ------------------------------------------------ | -------------------------------------------------- |
+| `400`         | `validation_failed` / `bad_request`              | Field validation error or malformed input          |
+| `401`         | `unauthorized` / `token_expired`                 | Missing, invalid, or expired credentials           |
+| `403`         | `forbidden`                                      | Insufficient household or cookbook role            |
+| `404`         | `not_found`                                      | Entity does not exist or is invisible to caller    |
+| `409`         | `conflict` / `duplicate_resource`                | Unique constraint or state conflict                |
+| `412`         | `concurrency_conflict`                           | `If-Match` ETag mismatch on recipe update          |
+| `422`         | `intake_extraction_failed` / `ai_not_configured` | Scraper or AI provider could not extract recipe    |
+| `429`         | `rate_limit_exceeded`                            | Rate limit reached (`Retry-After` header included) |
+| `502` / `504` | `upstream_error` / `upstream_timeout`            | External AI provider or scraped URL failed         |
 
-On write, `PUT /recipes/{id}` accepts the same segment shape and the server
-re-serialises it to tokens — so the token format stays a persistence detail.
+### Rate Limit Policies
 
-### `sort=suggested`
+| Policy         | Default Limit | Partition Key                         | Endpoints                                              |
+| -------------- | ------------- | ------------------------------------- | ------------------------------------------------------ |
+| `global`       | `300 / min`   | Authenticated `UserId` (or client IP) | All `/api/v1/*` endpoints                              |
+| `auth`         | `10 / min`    | Client IP                             | `/api/v1/auth/*`, `/oauth/*`                           |
+| `ai`           | `20 / min`    | Authenticated `UserId`                | `/api/v1/intake/*`, `/assistant/*`, AI image/nutrition |
+| `public-share` | `60 / min`    | Client IP                             | `/api/v1/shared/*`, `/api/v1/library-sync/feed/*`      |
 
-Ranks the whole collection for whoever is asking: how much they cook this recipe
-and things like it, how recently the **household** ate it, how long it has been
-since they last did, what the plan says about the meal it suits, how much of a
-project it is on a weekday, what everyone else cooks, and how new it is. Every
-other filter still applies, so "what should I cook?" and "I have twenty-five
-minutes and some chicken" are one feature rather than two that can disagree.
+---
 
-**Scored against the day, not the instant.** Two requests on one day produce the
-same order, which is what makes the cursor mean something on the second page —
-and what stops the list rearranging under somebody who is still reading it.
+## 2. Endpoint Summary (`/api/v1`)
 
-A recipe this person has dismissed is not in this order. It is still in every
-other one, still searchable and still on its shelves: hiding a recipe from your
-own suggestions is not the same sentence as deleting it.
+### Auth, Passkeys & Household (`/auth`, `/household`, `/pats`)
 
-## Suggestions
+- `POST /auth/register`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`
+- `GET /auth/me`, `PUT /auth/me`, `POST /auth/change-password`, `DELETE /auth/account`
+- `POST /auth/passkey/register-options`, `POST /auth/passkey/register-complete`, `POST /auth/passkey/login-options`, `POST /auth/passkey/login-complete`, `GET /auth/passkeys`, `DELETE /auth/passkeys/{id}`
+- `GET /pats`, `POST /pats`, `DELETE /pats/{id}`
+- `GET /household`, `PUT /household`, `POST /household/invites`, `POST /household/join/{token}`, `DELETE /household/members/{userId}`
 
-| Method | Path | Notes |
-| --- | --- | --- |
-| `GET` | `/suggestions?householdId=…` | A bounded set with a reason for each, best first. Not paged. |
-| `POST` | `/suggestions/impressions` | Which recipes the shortlist drew, sent once it is on screen, so the next days' lists lean away from them. `204`, idempotent. |
-| `PUT` | `/recipes/{recipeId}/suggestion-dismissal` | Stop suggesting this to me. `204`, idempotent. |
-| `DELETE` | `/recipes/{recipeId}/suggestion-dismissal` | Undo that. `204`, and `204` when it was never hidden. |
+### Recipes, Search & Suggestions (`/recipes`, `/categories`, `/tags`, `/ingredients`, `/suggestions`)
 
-### `GET /suggestions` query parameters
+- `GET /recipes` — Paginated hybrid search (`q`, `categoryId`, `tags`, `ingredient`, `excludeIngredient`, `maxTime`, `difficulty`, `diet`, `favoritesOnly`, `unratedOnly`, `cookbookId`, `sort`: `relevance | newest | rating | quick | title | random`).
+- `GET /recipes/completions` — Instant search overlay completions (`q` — titles, ingredients, tags, categories).
+- `GET /recipes/lookalikes` — Duplicate detection during recipe creation (`title`, `sourceUrl`).
+- `GET /recipes/{id}`, `POST /recipes`, `PUT /recipes/{id}` (supports `If-Match`), `DELETE /recipes/{id}`
+- `GET /recipes/{id}/related` — Content-based similar recipes + explicit `RecipeRelations`.
+- `POST /recipes/{id}/image` (multipart upload → converted to WebP), `POST /recipes/{id}/generate-image` (AI image generation).
+- `PUT /recipes/{id}/rating`, `POST /recipes/{id}/favorite`, `DELETE /recipes/{id}/favorite`
+- `POST /recipes/{id}/cooked` — Logs cook history, marks meal plan entry cooked, optionally deducts pantry & logs nutrition diary.
+- `GET /recipes/{id}/cook-session`, `PUT /recipes/{id}/cook-session`, `DELETE /recipes/{id}/cook-session`
+- `GET /suggestions` — Contextual meal suggestions (`mealType`, `date`, `purpose`, `limit`; see [`docs/suggestions-research.md`](suggestions-research.md)).
+- `POST /suggestions/dismiss`, `POST /suggestions/impressions`
+- `GET /categories`, `GET /tags`, `POST /tags/suggest`, `GET /ingredients/suggestions`
 
-| Parameter | Meaning |
-| --- | --- |
-| `householdId` | **required** — scopes the question. |
-| `purpose` | `decide` (default) or `like`. Ranking the whole collection is a sort on the collection, so `browse` is deliberately not nameable here. |
-| `slot` | `breakfast`, `lunch` or `dinner`. |
-| `maxMinutes` | A ceiling on total time. A filter, never a preference. |
-| `tag`, `ingredient` | Repeatable. The caller's constraints, honoured exactly. |
-| `likeRecipeId` | Recipes resembling this one. Implies `purpose=like`. |
-| `exclude` | Repeatable. What the caller already has on screen or already planned. |
-| `limit` | 1–12, default 5. Out of range is rejected rather than clamped — asking for fifty is a client that thinks this is the recipe list. |
+### Cookbooks & Sharing (`/cookbooks`, `/shared`, `/library-sync`)
 
-**Deliberately not paged, and not wrapped in a cursor envelope.** The paging
-envelope exists for collections that page; a thing with no next page should not
-claim one. Past a dozen the honest answer is the recipe list, ranked.
+- `GET /cookbooks`, `POST /cookbooks`, `GET /cookbooks/{id}`, `PUT /cookbooks/{id}`, `DELETE /cookbooks/{id}`
+- `POST /cookbooks/{id}/recipes`, `DELETE /cookbooks/{id}/recipes/{recipeId}`, `PUT /cookbooks/{id}/recipes/reorder`
+- `POST /cookbooks/{id}/members`, `PUT /cookbooks/{id}/members/{userId}`, `DELETE /cookbooks/{id}/members/{userId}`
+- `POST /cookbooks/{id}/share-link`, `DELETE /cookbooks/{id}/share-link`
+- `GET /shared/cookbook/{token}`, `GET /shared/recipe/{token}`
+- `GET /library-sync/connections`, `POST /library-sync/connections`, `POST /library-sync/connections/{id}/sync`, `POST /library-sync/synced-recipes/{id}/fork`, `GET /library-sync/feed/{token}`
 
-**Context is supplied here rather than stored on a recipe.** Whether something
-is breakfast is a fact about the occasion and about how this household plans,
-not a property of the food — so a recipe has no `mealType` column and should not
-get one.
+### Meal Plan, Shopping & Pantry (`/meal-plan`, `/shopping`, `/pantry`)
 
-**`likeRecipeId` compares ingredients and tags, not who else cooked what.** With
-two to eight people, the co-occurrence between any two recipes is zero or a
-coincidence; "uses eleven of the same twelve ingredients" is neither, and it can
-be explained.
+- `GET /meal-plan?weekStart=YYYY-MM-DD`, `POST /meal-plan/entries`, `PUT /meal-plan/entries/{id}`, `DELETE /meal-plan/entries/{id}`
+- `POST /meal-plan/copy-week`, `GET /meal-plan/templates`, `POST /meal-plan/templates`, `POST /meal-plan/templates/{id}/apply`
+- `GET /meal-plan/availability?weekStart=YYYY-MM-DD` — Compares planned ingredients against `PantryItems` and `ShoppingListItems`.
+- `GET /shopping`, `POST /shopping/items`, `PUT /shopping/items/{id}`, `DELETE /shopping/items/{id}`, `POST /shopping/clear-checked`, `POST /shopping/from-meal-plan`, `POST /shopping/from-recipe/{recipeId}`
+- `GET /shopping/stream` — Server-Sent Events (`text/event-stream`) for real-time household list sync.
+- `GET /pantry`, `POST /pantry`, `PUT /pantry/{id}`, `DELETE /pantry/{id}`, `GET /pantry/staples`, `PUT /pantry/staples`
 
-### Why a recipe was suggested
+### Nutrition Diary & Barcode Lookup (`/diary`, `/nutrition`, `/foods`)
 
-```json
-{ "recipeId": "…", "title": "Linsensuppe", "cookCount": 9,
-  "lastCookedAt": "2026-04-12T18:30:00Z",
-  "reason": { "code": "ingredient", "subject": "Aubergine" } }
-```
+- `GET /diary?date=YYYY-MM-DD`, `GET /diary/range?from=YYYY-MM-DD&to=YYYY-MM-DD`
+- `POST /diary/entries`, `PUT /diary/entries/{id}`, `DELETE /diary/entries/{id}`, `POST /diary/copy-day`
+- `GET /diary/goals`, `PUT /diary/goals`, `POST /diary/weight`, `PUT /diary/water`
+- `GET /foods/search?q=...` (BLS 4.0 + custom foods + Open Food Facts), `GET /foods/barcode/{ean}` (local cache → OFF v2 API), `POST /foods/custom`, `POST /foods/off-contribute`
+- `POST /nutrition/estimate-recipe/{id}`, `POST /nutrition/estimate-text`, `POST /nutrition/estimate-photo`
 
-`code` is one of `affinity`, `rediscovery`, `tag`, `ingredient`, `season`,
-`slot`, `household`, `fresh`, `similar`. `subject` is the tag, ingredient name
-or member's display name it is about, when it is about something nameable.
+### Intake, Olli Assistant, Settings & Archive (`/intake`, `/assistant`, `/settings`, `/archive`)
 
-**`reason` is `null` whenever no single signal decided the ranking**, and that
-is an ordinary answer meaning *show nothing*. The reason is whichever term
-actually dominated the score, never a sentence composed to suit a recipe that
-was picked for other reasons — an invented explanation, caught once, discredits
-every one that was true.
+- `POST /intake/url`, `POST /intake/text`, `POST /intake/files`, `POST /intake/import-third-party`
+- `POST /assistant/chat/stream` — Streaming SSE chat with Olli (`pageContext`, tool calls, recipe drafts, timer controls).
+- `GET /settings/ai`, `PUT /settings/ai`, `POST /settings/ai/test`
+- `GET /archive/export`, `POST /archive/import`
 
-A code and at most a subject, never prose: the wording belongs to the client,
-because that is what knows which of two languages the reader reads.
+---
 
-## Cookbooks
+## 3. AI Agents & MCP Server (`#ai-agents-mcp`)
 
-A cookbook is a household's named shelf of recipes. **It is read as a view of
-the collection, not as a collection of its own**: the recipes on one come back
-from `GET /recipes?cookbookId=…`, which is what gives a cookbook the same
-search, tag filter, time ceiling, ingredient ranking and cursor paging the
-whole library has, with no second implementation of any of them.
+Culina hosts a remote **Model Context Protocol (MCP)** server at `/mcp` (`Streamable HTTP` transport, protocol `2025-03-26`).
 
-| Method | Path | Notes |
-| --- | --- | --- |
-| `GET` | `/cookbooks?householdId=…` | Wrapped, cursor-paginated, most recently changed first. Each carries `recipeCount` and up to four `coverRecipeIds` for the cover mosaic. |
-| `POST` | `/cookbooks` | `201` + `Location`. Only `householdId` and `name` are required. |
-| `GET` | `/cookbooks/{cookbookId}` | `200` + ETag, `304` on `If-None-Match`. The shelf's own metadata — **not** the recipes on it. |
-| `PATCH` | `/cookbooks/{cookbookId}` | The edit form whole: name, description, rules and `coverRecipeId` (a photographed recipe on it, or null for the first photos). `If-Match` required. |
-| `DELETE` | `/cookbooks/{cookbookId}` | `204`, and `204` again when already gone. **Every recipe that was on it survives.** Into the household's bin for 30 days. |
-| `POST` | `/cookbooks/{cookbookId}/restorations` | Any member of its household, until it is purged; back with the recipes it held. `204`. |
-| `PUT` | `/cookbooks/{cookbookId}/recipes/{recipeId}` | Put a recipe on. `204`. `409` on a cookbook that fills itself. |
-| `DELETE` | `/cookbooks/{cookbookId}/recipes/{recipeId}` | Take it off. `204`, and `204` when it was never on. `409` on a cookbook that fills itself. |
-| `PUT` | `/cookbooks/{cookbookId}/recipes` | Arrange it: `{ recipeIds }`, every recipe on it once, first first. `200` with the cookbook and its new ETag. `If-Match` required; anything but exactly the shelf is `400 cookbooks.order_mismatch`; `409` on a cookbook that fills itself. A recipe put on later goes last. |
-| `GET` | `/recipes/{recipeId}/cookbooks` | Which cookbooks contain it. Not paged — a recipe is on a handful of shelves or none. |
+### Discovery & OAuth 2.1 + PKCE Flow
 
-`PUT` on the membership rather than `POST` to a collection, because being on a
-shelf is a fact at a known address and not a new thing each time. It is
-therefore **idempotent**: a recipe already on keeps the moment it went on, and
-the cookbook's version is not bumped, so a double tap or a retried request
-neither duplicates nor invalidates a good cached copy.
+1. `GET /.well-known/oauth-protected-resource` → points MCP clients to the authorization server metadata.
+2. `GET /.well-known/oauth-authorization-server` → advertises:
+    - `registration_endpoint`: `POST /api/v1/oauth/register` (RFC 7591 Dynamic Client Registration)
+    - `authorization_endpoint`: `GET /oauth/authorize` (interactive consent screen in the SvelteKit app)
+    - `token_endpoint`: `POST /api/v1/oauth/token` (`authorization_code` + `S256` PKCE, `refresh_token`)
+3. Alternatively, pass a Personal Access Token directly: `Authorization: Bearer culina_pat_<token>`.
 
-**An unknown or foreign `cookbookId` on `GET /recipes` is an empty page, not a
-`404`.** The 404-never-403 rule governs resources named in the *path*; this is
-a filter value, and an unknown `tag` slug already behaves the same way. The
-cookbook's own page reads `GET /cookbooks/{id}` for its header, and that does
-answer `404`.
+### Exposed MCP Tools (`CulinaMcpTools`)
 
-### Cookbooks that fill themselves
+- **Recipes:** `search_recipes`, `get_recipe`, `create_recipe`, `update_recipe`, `scale_recipe`, `import_recipe_from_url`
+- **Planning & Shopping:** `get_meal_plan`, `plan_meal`, `remove_meal_plan_entry`, `get_shopping_list`, `add_shopping_items`, `generate_shopping_list_from_meal_plan`
+- **Pantry & Suggestions:** `get_pantry`, `upsert_pantry_item`, `get_meal_suggestions`
+- **Diary:** `get_nutrition_diary`, `log_food_entry`
 
-Send `rules` on `POST /cookbooks` — `{ tags, ingredients, maxMinutes }`, at
-least one of them — and the cookbook holds whatever matches, worked out whenever
-it is read. Omit `rules` for one you fill yourself. A cookbook is one or the
-other, chosen at creation and never changed; `PATCH` may edit a smart
-cookbook's rules but may not give a manual one any, and hand-adding to a smart
-one is `409 cookbooks.rules_decide_membership`.
+---
 
-**Nothing records what matches.** That is what makes "a recipe written this
-evening is on the right shelf already" true rather than eventually true: there
-is no sync to run, no backfill when a rule changes, and no stored membership
-that can disagree with the recipes. It is also why a smart cookbook's
-`recipeCount` and cover come back from evaluating the rules, and why
-`sort=cookbookOrder` falls back on one — it was never put in an order.
+## 4. Frontend Client Generation
 
-Every rule must hold, and each is the clause `GET /recipes` already applies, so
-a shelf and the filter bar cannot disagree about the same words. The exception
-worth knowing: an ingredient **rule excludes**, where the `ingredient` search
-parameter ranks.
-
-**Adding a whole cookbook to the shopping list is not an endpoint.** The client
-sends one `POST /households/{id}/shopping-list/recipes` per recipe. Every path
-that puts a recipe on the list — this one, a single recipe, a planned week —
-goes through the same server-side merge, because merging is the entire value
-of the list.
-
-## Cooking
-
-| Method | Path | Notes |
-| --- | --- | --- |
-| `POST` | `/cook-sessions` | Start. `201`. Abandons any other active session for this user — there is exactly one. |
-| `GET` | `/cook-sessions/current` | `200`, or `204` when nothing is being cooked. Drives the "now cooking" bar. |
-| `GET` | `/cook-sessions/{cookSessionId}` | `200` + ETag. |
-| `PATCH` | `/cook-sessions/{cookSessionId}` | `currentStepIndex`, `servings`, or `completedAt`. High frequency — the client debounces and sends optimistically. |
-| `DELETE` | `/cook-sessions/{cookSessionId}` | Abandon. `204`. |
-
-Timers are **not** in the API. They are device-local (`domain-model.md`).
-
-## Food diary
-
-One person's diary (`docs/diary-design.md`). It is never a household's, and it
-is withheld from AI agents (`AgentOperationsTests`). Every route but the
-settings answers `403 diary.disabled` while the diary is switched off.
-
-| Method | Path | Notes |
-| --- | --- | --- |
-| `GET` | `/users/me/settings/diary` | Settings and ETag. Off until switched on. `currentConsentVersion` is the wording that switching on agrees to. |
-| `PUT` | `/users/me/settings/diary` | `enabled`, `consentVersion` (needed to switch on, else `400 diary.consent_required`), `kcalTarget?`, `proteinTarget?`, `headline` (`eaten` or `remaining`), and `eraseEntries` when switching off. No If-Match. |
-| `GET` | `/users/me/diary?from=&to=` | Every day in the range, at most 62 days, logged or not. Each day has its entries and totals: `atLeast` when any entry is a lower bound or has no energy, `estimated` when any entry is an estimate, and `typedKcal` for the person's own figures. |
-| `POST` | `/users/me/diary/entries` | Exactly one of: a recipe with `recipeId` and `portions`; a food with `foodCode`, `amount` and `unit` (`g`, or a typical unit listed on `GET /foods`); or typed figures with `label` and `kcal`. The server looks the figures up and keeps a snapshot; it never takes figures for a recipe or a food. `201`. |
-| `PATCH` | `/users/me/diary/entries/{entryId}` | A new `date` or `meal` moves the entry and keeps its figures. A new `portions`, `amount` or `unit` looks them up again. A typed entry is corrected by sending its figures again (`label`, `kcal`, `protein`, `carbohydrate`, `fat`): a label or kcal left out stays, a macro left out becomes unknown. Figures on any other entry are `400 diary.unclear_source`. |
-| `DELETE` | `/users/me/diary/entries/{entryId}` | `204`. The client's undo logs the entry again. |
-| `DELETE` | `/users/me/diary` | Deletes every entry, whether the diary is on or off. The settings stay. `204`. |
-
-`GET /foods` lists, per food, the `units` it can be counted in by a cited
-typical weight (`TypicalWeights.UnitsOf`). An amount in one of those units is
-an estimate, and the entry names its source in `basis`.
-
-## Products
-
-What a household says a barcode is (`docs/barcode-scanning-design.md`): a mapping from
-packaging to an ingredient name, never what the household has at home.
-
-| Method | Path | Notes |
-| --- | --- | --- |
-| `GET` | `/households/{householdId}/products` | Every barcode the household and the households it inherits from named, one per barcode, the nearest household's winning: `{ items: [{ gtin, name, ingredient?, quantity?, unit?, cookMinutes?, note?, householdId, version }] }`. Not paged: it seeds the offline cache. `200` + ETag, `304` on `If-None-Match`. |
-| `GET` | `/households/{householdId}/products/{gtin}` | One barcode, from the household's own memory, else the nearest ancestor's (`householdId` says whose). `{gtin}` is read as EAN-8, UPC-A, UPC-E, EAN-13 or GTIN-14 and answered normalised. `404 products.unknown` when nobody named it; `400 products.invalid_gtin` for a malformed code or a wrong check digit. `200` + ETag, `304`. |
-| `PUT` | `/households/{householdId}/products/{gtin}` | `{ name, ingredient?, quantity?, unit?, cookMinutes?, note? }`. Without `If-Match` it names the barcode: `201` + ETag, or `428 products.already_named` when the household has it. With `If-Match` it replaces that version: `200` + the new ETag, `412` when stale, `404 products.unknown` when gone. An heir names its own row without `If-Match`; the ancestor's is never touched. Any member. |
-| `DELETE` | `/households/{householdId}/products/{gtin}` | The household's own row, `If-Match` required (`428`/`412`). `204`, also when already gone. An heir that removes a row it overrode reads its ancestor's again. |
-
-`cookMinutes` is only what the household says: a barcode never supplies one.
-
-## Shopping
-
-One list per household, under the household. Every write answers `200` with
-the whole list, so the client never refetches after one.
-
-| Method | Path | Notes |
-| --- | --- | --- |
-| `GET` | `/households/{householdId}/shopping-list` | The household's single list, created on first look. |
-| `POST` | `/households/{householdId}/shopping-list/items` | A line somebody typed. Always its own line. |
-| `PATCH` | `/households/{householdId}/shopping-list/items/{itemId}` | Check / uncheck, or correct the section. A section change is remembered for the household. |
-| `DELETE` | `/households/{householdId}/shopping-list/items?itemId=…` | One line; without `itemId`, everything ticked off. |
-| `POST` | `/households/{householdId}/shopping-list/recipes` | `{ recipeId, servings }`. The recipe's ingredients at those servings, merged by the rule in `domain-model.md`. Adding the same recipe twice asks for it twice. |
-| `POST` | `/households/{householdId}/shopping-list/meals` | `{ from }`. Every meal planned in that week, each once: a meal already on the list is skipped, and a recipe that was added by itself counts as the shopping for a planned meal of it. Safe to repeat. |
-| `DELETE` | `/households/{householdId}/shopping-list/meals/{entryId}` | Subtract exactly what that planned meal contributed — whether or not it is still planned. Ticked and typed lines stay. |
-
-`recipes` and `meals` are sub-resources rather than a polymorphic `items` body:
-each generates a clean client and stays greppable. Which planned meals are on
-the list is read from the plan, as `isOnShoppingList` on each meal.
-
-## Tags and settings
-
-| Method | Path | Notes |
-| --- | --- | --- |
-| `GET` | `/tags?householdId=…` | With usage counts, most used first. Not paged. Feeds the filter bar and the smart-cookbook rule editor. |
-| `GET` | `/settings/registration` | Instance settings. Admin only. |
-| `PUT` | `/settings/registration` | `openRegistration`, `requireInvitation`, `maxUsers`. |
-| `GET` | `/settings/assistance` | How the assistant is set up. Admin only. Never returns the API key — `apiKeyConfigured` says whether there is one. |
-| `PUT` | `/settings/assistance` | `connections` and `uses` together, because a use pointing at a connection that did not save is a state nobody should reach. Each connection's `apiKey` has three states: omit to keep the stored key, empty string to remove it, a value to replace it. |
-| `GET` | `/settings/assistance/usage` | This calendar month's tokens and spend, by person and by capability. Admin only. |
-
-## The assistant
-
-| Method | Path | Notes |
-| --- | --- | --- |
-| `POST` | `/recipe-drafts` | `kind` is `idea`, `text` or `revision`. A draft, never a recipe — nothing is created. |
-| `POST` | `/recipe-drafts/photographs` | The same draft, read out of a multipart photograph. Its own route because one route cannot bind both JSON and multipart. |
-| `POST` | `/recipes/{id}/image` | Draws one. `PUT` on the same sub-resource replaces it with bytes you send; `POST` asks the server to make one, so it carries no body. |
-
-A draft is accepted through the ordinary recipe endpoints — `POST /recipes` then
-`PUT /recipes/{id}` with `If-Match`. Passing `draftId` to `POST /recipes` records
-in `recipe_origins` that the recipe started as a draft, the same way an imported
-one records where it came from.
-
-`404` means this instance has no assistant *or* that capability is switched off;
-the two are one answer because a caller learns nothing from being told which, and
-the affordance that would have asked is not on screen either way. `429` means the
-month's budget is spent, or the per-person hourly limit was reached.
-
-## Health
-
-`GET /health/live` — the process is up. `GET /health/ready` — the database
-answers. Neither is under `/api`, neither requires auth, both are excluded from
-tracing (`dotnet-observability`).
-
-## AI agents (MCP)
-
-The API also serves a [Model Context Protocol](https://modelcontextprotocol.io)
-server at `/api/mcp` (Streamable HTTP, stateless), so an AI agent can read and
-write a household's recipes, cookbooks, meal plan and shopping list. It starts
-with the API; there is nothing to run beside it.
-
-**Connecting.** Sign in as an agent, which needs the account's password:
+The frontend uses `openapi-typescript` + `openapi-fetch`. Never hand-edit `src/frontend/src/lib/api/schema.d.ts`. After changing any backend DTO or endpoint signature, regenerate:
 
 ```bash
-curl -s https://culina.example/api/v1/sessions \
-  -H 'Content-Type: application/json' \
-  -d '{"email":"ada@example.com","password":"…","client":"agent"}'
+dotnet build src/backend/Culina.Api
+pnpm --dir src/frontend generate:api
 ```
-
-and give the agent the `sessionToken` from the answer as a bearer token, e.g.
-for Claude Code:
-
-```bash
-claude mcp add --transport http culina https://culina.example/api/mcp \
-  --header "Authorization: Bearer <sessionToken>"
-```
-
-The agent's session appears in `GET /sessions` as `client: "agent"` and is
-revoked like any other (`DELETE /sessions/{sessionId}`); it lapses when unused,
-like an app's.
-
-**Connecting through OAuth.** A client that cannot be given a header (Claude.ai
-and Claude Desktop custom connectors, ChatGPT) is given only the address,
-`https://culina.example/api/mcp`, and connects through OAuth 2.1 as the [MCP
-authorization spec](https://modelcontextprotocol.io/specification/latest/basic/authorization)
-(revision 2026-07-28) describes. Culina is its own authorization server; the
-code is in `Api/Agents/Authorization`.
-
-1. *Discovery.* `/api/mcp` answers a request without an agent token `401` with
-   `WWW-Authenticate: Bearer resource_metadata="https://culina.example/.well-known/oauth-protected-resource/api/mcp"`.
-   That document (RFC 9728, served by the MCP SDK's handler) names the resource
-   `https://culina.example/api/mcp`, the authorization server
-   `https://culina.example` and the one scope, `mcp`. The authorization server's
-   metadata is at `/.well-known/oauth-authorization-server` (RFC 8414). Issuer
-   and resource are built from the request's own scheme and host, after
-   forwarded headers, so they match the address the person typed.
-2. *Registration.* Either a [Client ID Metadata
-   Document](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/):
-   the `client_id` is an https address with a path, fetched afresh on every
-   authorization request (public addresses only, no redirects, 5 s, 16 kB) and
-   accepted only when its own `client_id` is that address; or dynamic client
-   registration (RFC 7591, deprecated by the spec but still used) at
-   `POST /oauth/register`. Every client is public: `token_endpoint_auth_method`
-   is always `none`, whatever was asked for. A registered client that never
-   connects anybody is forgotten after a day.
-3. *Authorization.* `GET /oauth/authorize` takes only `response_type=code` and
-   PKCE with `code_challenge_method=S256`. The `redirect_uri` must be one the
-   client registered, matched exactly, except that the port of a loopback
-   address (`http://localhost`, `127.0.0.1`, `[::1]`) may differ (RFC 8252).
-   Only https and loopback addresses can be registered at all. `resource`
-   (RFC 8707) must name `/api/mcp` when given. Until client and return address
-   check out, a failure is shown on Culina's own page (`/authorize?problem=…`)
-   and the browser goes nowhere; after that it goes back to the client with
-   `error`, `state` and `iss` (RFC 9207). Unknown parameters, `scope` included,
-   are ignored.
-4. *Consent.* The browser lands on the web app's `/authorize?request={id}`,
-   signing in first if need be. It reads `GET /api/v1/agent-authorizations/{id}`
-   (the client's name, who vouches for it, where it returns to, and whether that
-   is this computer) and answers with
-   `PUT /api/v1/agent-authorizations/{id}/decision` `{ "approved": true }`. The
-   answer is an ordinary unsafe cookie request, so it needs our own `Origin`
-   and the CSRF token: a page elsewhere cannot approve on someone's behalf. The
-   response's `redirectUri` carries the code (or `error=access_denied`), with
-   `state` and `iss`, and the page navigates there. A request must be answered
-   within 10 minutes, and only once.
-5. *Token.* `POST /oauth/token` (form-encoded, `grant_type=authorization_code`,
-   `code`, `redirect_uri`, `client_id`, `code_verifier`, optional `resource`)
-   answers `{ "access_token", "token_type": "Bearer", "scope": "mcp" }`. The code
-   lives 2 minutes and is redeemed once; a code presented again is refused and
-   ends the session it became. Only the code's digest is stored. Errors are
-   RFC 6749 JSON (`invalid_grant`, `invalid_target`, …), not problem documents.
-
-The access token **is an agent session**, started exactly as signing in as
-client `agent` starts one, for whoever approved, and listed with the browser
-that approved it. So everything above applies unchanged: it reaches only
-`/api/mcp` and the allow-listed operations, shows on the devices screen, and is
-revoked there. Culina issues no refresh tokens and no `expires_in`: the session
-slides while used (`Cookies__SessionDays`, at most `Cookies__MaxSessionDays`),
-and once it ends, `/api/mcp` answers `401` and the client runs the flow again.
-Every other session's token, and a cookie, is refused at `/api/mcp` with the
-same challenge: none of them was issued for it. The three OAuth endpoints and
-the two discovery documents sit outside `/api` (OAuth asks a server to ignore
-unknown parameters, which the API refuses) and outside the OpenAPI document;
-they are rate limited per address (`agent-authorization`, 60 a minute, and
-`agent-registration`, 60 an hour). There is no CORS: Claude and ChatGPT
-exchange the code from their servers, not from a page.
-
-**Tools.** One tool per API operation in `Api/Agents/AgentOperations.cs`, named
-after its `operationId` (`getRecipesV1`, `createRecipeV1`, …) and described
-from this API's own OpenAPI document. A tool's arguments are the operation's
-path and query parameters, `body` for its JSON body, and `ifMatch` for an
-operation that checks `If-Match`. Its answer is what the API said:
-`{status, etag, location, body}`, a failure's `body` being the usual problem
-document. A call is sent through the same middleware pipeline as any request,
-in memory and as the agent, so validation, authorization, rate limits and
-`If-Match` behave exactly as documented above.
-
-**What an agent cannot do.** The allow-list withholds the account and its
-credentials (sign-in, sessions, password, recovery codes, preferences,
-approving OAuth connections), push
-devices, household membership and invitations, creating, renaming, deleting or
-restoring a household, instance settings, share links, connected libraries,
-archives, the assistant, and every binary, multipart or streaming endpoint. An
-agent token authenticates none of them: they answer as they would an anonymous
-caller (`401` wherever a session is needed), and each refusal is counted on
-`culina.agent.refusals` and logged as `auth.agent_scope`. The other way round,
-no browser cookie or app token opens `/api/mcp`, so a page that can make a
-browser send its cookie cannot drive an agent's tools. A new endpoint is
-withheld until it is added to the allow-list or to the withheld list in
-`AgentOperationsTests`, which fails until one of the two is chosen.
-
-Recipe text is written by people and imported from the web; the server's
-instructions tell the agent to treat it as data, never as instructions.
-
-## Cross-cutting guarantees
-
-- **Every read of a single entity** returns a strong `ETag` derived from its
-  `version`, and honours `If-None-Match` with `304`.
-- **Every unsafe single-entity write** requires `If-Match`: missing → `428`,
-  stale → `412`. The check is in the SQL `WHERE`.
-- **A `412` is never retried.** Retrying it would silently overwrite whoever
-  wrote first. The client rolls its own copy back, keeps what was typed on the
-  device that typed it, and puts the choice to the person: keep mine — which
-  re-reads to learn the current version and writes over it deliberately — or
-  take theirs, which drops the local copy. Merging two people's recipes
-  automatically is a guess, and a guess about somebody's dinner is worse than a
-  question.
-- **Every collection** is wrapped (`items`, `nextCursor`, `total`) and
-  cursor-paginated.
-- **Authenticated responses** carry `Cache-Control: no-store`.
-- **`404`, never `403`**, when a resource exists but is not visible to the
-  caller. Existence is not leaked through a status code.
-- **No `GET` mutates state**, which is what makes the CSRF exemption for safe
-  methods sound.
-
-## The generated client
-
-The OpenAPI document is the contract. `pnpm generate:api` writes
-`src/lib/api/generated/schema.d.ts` from `src/backend/openapi/Api.json`; it is
-committed, never hand-edited, and ignored by the formatter and the linter.
-
-`src/lib/api/` is the only place in the frontend that may call `fetch` or import
-the generated schema — an ESLint rule fails the build otherwise, because the
-moment a component builds its own request it also has to remember credentials,
-CSRF, conditional requests and the shape of a failure.
-
-Everything cross-cutting lives there once:
-
-- `credentials: 'include'` and no base URL, because the generated paths already
-  carry `/api/v1` and the app is served from the same origin as its API. There is
-  no `Authorization` header anywhere.
-- `X-Culina-CSRF` on every unsafe request, read from the `culina.csrf` cookie at
-  send time so a sign-in in another tab is picked up without a reload.
-- `If-None-Match` on reads and `If-Match` on writes, both from an in-memory ETag
-  cache. A 304 is replayed from memory and never reaches the caller as an empty
-  success. A successful write forgets the URL it wrote and anything on its path.
-  Memory only: a household's recipes must not outlive the session on disk.
-- Every response becomes a `Result<T>` — `{ ok: true, value }` or
-  `{ ok: false, error }`. Nothing throws for a failure the server described.
-  `AppError` carries `code`, `detail`, `status`, `requestId` and one entry per
-  wrong field. **Branch on `code`; `detail` is prose and will be reworded.**
-- A 401 clears the cache and notifies the shell, exactly once, never retried.
-- A 403 with `auth.csrf_invalid` is retried exactly once, and only when the
-  CSRF cookie changed while the request was out (another tab signed in);
-  resending the same token would only earn the same refusal.
-- A 15-second deadline per request, combined with the caller's own signal so a
-  request still dies with the component that started it.
-
-## ETags must cover what the response contains
-
-Culina's ETags are derived from each entity's monotonic version, which is cheap,
-stable, and already what optimistic concurrency needs. Two rules keep that safe,
-both learned the hard way:
-
-1. **A version alone identifies a resource only when the URL does.**
-   `/users/me` names a different person for every session, and two people are
-   both at version 1 on the day they sign up. A browser holding one person's
-   response revalidates it, is told `304`, and shows their name and households to
-   the next person to sign in on that device. Any route whose meaning depends on
-   who is asking passes the entity's identity into the tag.
-
-2. **A tag must change whenever any part of the body does.** `/users/me` lists
-   the households the account belongs to, and joining one does not change the
-   account — so a tag made only of the account's version answers `304` to a
-   client that is missing a kitchen it can now cook in. The tag folds the
-   membership set in alongside the version.
-
-Both are asserted in `CurrentUserEndpointTests`, and both tests were verified to
-fail without the fix.
-
-## Rate limits during end-to-end tests
-
-The limits (`RateLimits__*`) are configuration, so a test run raises them rather
-than the defaults being weakened:
-
-```bash
-RateLimits__RegisterPerIpPerHour=200 RateLimits__LoginPerIpPerMinute=200 dotnet run
-```
-
-## Cooking sessions
-
-`POST /cook-sessions`, `GET /cook-sessions/current`, `PATCH /cook-sessions/{id}`,
-`DELETE /cook-sessions/{id}`.
-
-At most **one active session per person**, enforced by a partial unique index
-rather than by application code — two devices starting a session at the same
-moment is exactly the case application code gets wrong. Starting abandons
-whatever else was going, in one transaction, because the abandonment is what
-makes the insert legal.
-
-`PATCH` is called on every step advance, so it is deliberately cheap: a step
-touches two columns and **does not bump the version**, since the last tap
-genuinely is the truth about where the cook is, and making each advance a
-concurrency event would leave a second device permanently stale for no benefit.
-Rescaling does bump it.
-
-`GET /cook-sessions/current` carries the recipe's title, so the bar that leads
-back to what is on the hob costs one request rather than two on every page.
-
-**Timers are not in the API.** A timer must keep counting while the app is
-closed and the phone is in a pocket, so it is a wall-clock deadline stored on
-the device, keyed by session id. A cooking session is a fact worth persisting; a
-timer is local ephemera.

@@ -1,130 +1,58 @@
-# Contributing
+# Contributing to Culina
 
-## Getting it running
+## Prerequisites
 
-You need Docker, the .NET 10 SDK, Node 26 and pnpm.
+- **.NET 10 SDK** (`10.0.100+`, pinned in `global.json`)
+- **Node.js 24 LTS** + **pnpm 10** (`corepack enable`)
+- **PostgreSQL 17** (via `compose.dev.yaml`)
+- **Docker** (for Testcontainers integration tests and local Postgres)
 
-```bash
-cp .env.example .env
-make dev
-```
-
-That is PostgreSQL in a container, the API with hot reload, and the frontend dev
-server, each listening on this machine only; `make dev LAN=1` opens the
-frontend to your network, for trying it on a phone. The app is at
-<http://localhost:5173>; `/api` is proxied to the backend,
-so development is same-origin exactly like production — which is why Culina has
-no CORS policy anywhere and no development-only authentication path.
-
-`make` on its own lists every target.
-
-## The conventions are not in a wiki
-
-They are in [`.claude/skills/`](.claude/skills/), one directory per subject, and
-they are enforced by the compiler, by architecture tests and by CI rather than
-by review. Read the one that covers what you are touching before you touch it —
-`dotnet-result-pattern` and `sveltekit-state-and-optimistic-ui` are the two most
-worth reading first.
-
-Some of what they enforce, so nothing is a surprise:
-
-- **Warnings are errors**, in Debug as well as Release, with the full analyser
-  set on. There is no separate lint step for the backend because the compile is
-  one.
-- **Layering is a test.** Domain and Contracts depend on nothing; Application
-  depends on those; Infrastructure and Api may not be referenced by anything
-  below them. `ArchitectureTests` fails a violation.
-- **`Result` is observed only by `Match`.** There is no `IsSuccess` to branch on
-  — which is what stops an error from being read and then ignored.
-- **No colour outside the token system**, and no token that nothing declares.
-  Both are tests: a stray `#fff` breaks re-theming invisibly, and a
-  `var(--space-5)` that does not exist renders as nothing at all.
-- **Nothing user-visible is hard-coded.** Every string is a message key, in
-  German and English. Append to `messages/*.json`; never re-sort them, because
-  the compiler falls over on some reorderings and can emit correct output _and_
-  exit non-zero.
-
-## Running the tests
+## Development Setup
 
 ```bash
-make test        # backend and frontend unit tests
-make lint        # formatting and lint rules, both halves
+docker compose -f compose.dev.yaml up -d db searxng
+dotnet run --project src/backend/Culina.Api          # http://localhost:5180
+pnpm --dir src/frontend install && pnpm --dir src/frontend dev  # http://localhost:5173
 ```
 
-The end-to-end suite runs against the built app and a real backend, so it needs
-an administrator account to exist:
+## Code Organization
 
-```bash
-CULINA_E2E_EMAIL=you@example.com CULINA_E2E_PASSWORD=... make test-e2e
-```
+- `src/backend/Culina.Domain` — Entities, value objects, domain services (`IngredientAggregator`, `QuantityFormatter`, `IngredientAvailability`, `RecipeNutritionEstimator`). Zero infrastructure dependencies.
+- `src/backend/Culina.Application` — Request/response DTOs, validators, service interfaces.
+- `src/backend/Culina.Infrastructure` — EF Core (`CulinaDbContext`), PostgreSQL migrations, AI providers, scrapers, background jobs, search/suggestion engines.
+- `src/backend/Culina.Api` — Minimal API endpoints (`/api/v1/*`), MCP server (`/mcp`), auth, rate limiting, ProblemDetails handling.
+- `src/backend/Culina.Tests` — xUnit unit + Testcontainers PostgreSQL integration tests.
+- `src/frontend/src` — SvelteKit 2 + Svelte 5 runes (`$state`, `$derived`, `$effect`), generated OpenAPI client (`$lib/api/schema.d.ts`), Warm Modernism CSS tokens (`app.css`).
 
-Without those, the suites that need a backend say they were skipped rather than
-passing quietly. Every flow makes an account of its own, named after its file.
+## Verification Before Submitting
 
-The instance the suite runs against needs its rate limits raised, because six
-browsers driving one instance from one address is a burst no person produces and
-the defaults are right to refuse it. CI does this for the stack it starts; for a
-local run, start the API with:
+1. **Backend tests:** `dotnet test src/backend/Culina.slnx`
+2. **OpenAPI client sync (if API DTOs/endpoints changed):**
+    ```bash
+    dotnet build src/backend/Culina.Api
+    pnpm --dir src/frontend generate:api
+    git diff --exit-code src/frontend/src/lib/api/schema.d.ts
+    ```
+3. **Frontend checks & unit tests:**
+    ```bash
+    pnpm --dir src/frontend check
+    pnpm --dir src/frontend lint
+    pnpm --dir src/frontend test:unit
+    ```
+4. **Database migrations (if entities/mappings changed):**
+    ```bash
+    dotnet ef migrations add <MigrationName> \
+      --project src/backend/Culina.Infrastructure \
+      --startup-project src/backend/Culina.Api
+    ```
 
-```bash
-RateLimits__LoginPerIpPerMinute=1000 \
-RateLimits__RegisterPerIpPerHour=1000 \
-RateLimits__RequestsPerSessionPerMinute=20000 \
-make backend
-```
+## Coding & Design Conventions
 
-`make test-e2e` rebuilds the frontend, but uses the API that is already running.
-Restart the API after endpoint changes. To test against a different local API,
-set `CULINA_API=http://127.0.0.1:5001` alongside the test credentials.
+- **German UI copy:** All user-facing strings use informal _Du_, correct umlauts (`ä`, `ö`, `ü`, `ß`), typography (`–` for ranges, `…` for ellipsis), and terminology from [`docs/glossary.md`](docs/glossary.md).
+- **Warm Modernism tokens:** Never hardcode hex colours or pixel widths in Svelte components; use semantic tokens from `src/frontend/src/app.css` (see [`docs/design-system.md`](docs/design-system.md)).
+- **Generated API client:** Never hand-edit `src/frontend/src/lib/api/schema.d.ts` or construct raw `fetch('/api/v1/...')` calls when typed `apiClient` helpers exist.
 
-The archive round-trip uses a fresh test household each run: importing into a
-reused household would double its old recipes every time the suite runs.
+## Commit Rules
 
-## The contract between the halves
-
-The frontend's API client is generated from the backend's OpenAPI document, and
-CI fails if the two disagree. After changing anything an endpoint accepts or
-returns:
-
-```bash
-make api     # export the document, regenerate the client
-```
-
-Commit both. A stale generated client cannot merge, which is what stops a
-renamed field from becoming a runtime surprise weeks later in somebody's
-kitchen.
-
-## Work is tracked in beads
-
-```bash
-bd ready          # what is claimable, blockers resolved
-bd show <id>      # the whole ticket before starting
-bd update <id> --claim
-```
-
-A bead carries why the work exists, not just what to do. When one turns out to
-be wrong — and several have — say so when closing it rather than implementing
-something nobody wants.
-
-## Commits
-
-Say what changed and **why it is right**, in prose. The diff already says what
-the code does; a commit message that repeats it has said nothing. If a change
-fixes something, say what was broken and how it came to be that way — that is
-the part nobody can reconstruct later.
-
-Commits come solely from their human author (`https://github.com/JakobPriesner`).
-Never add `Co-Authored-By: Claude ...`, `noreply@anthropic.com`, `Signed-off-by`,
-or any AI attribution in commit messages, trailers, or branch names.
-
-## What a change should look like
-
-Small, and finished. A defect comes with a test that fails without the fix —
-verified to fail, not assumed to. A new behaviour comes with the message keys in
-both languages. Anything touching the middleware pipeline comes with a test for
-the property that depends on the order, because the order of that pipeline is a
-contract and moving a line in it is a security change.
-
-Everything carries the reason it is the way it is. A comment that says what the
-next line does is noise; a comment that says why it is not the obvious
-alternative is the only documentation that survives.
+- Use concise imperative subjects (`Add pantry expiry filter`, `Fix unit conversion for pinch`).
+- **No AI attribution:** Commits must be authored solely by the human developer (`Jakob Priesner <jakob.priesner@outlook.de>`). Never include `Claude`, `Anthropic`, `Co-Authored-By`, `Generated with Claude`, or AI-tool `Signed-off-by` trailers in commit messages or author fields (enforced by `.beads/hooks/commit-msg`).

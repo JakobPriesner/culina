@@ -1,744 +1,96 @@
-# Culina — design system
+# Design System — Warm Modernism
 
-How the frontend looks, and the structure that keeps it looking like one
-product. Component placement rules come from `sveltekit-components-and-pages`;
-this document fixes the **tokens, the theme architecture and the component
-inventory**.
+Visual and interaction specification for Culina. Every component in `src/frontend/src` consumes the CSS custom properties defined in `src/frontend/src/app.css`.
 
-## October 2026 foundations
+---
 
-From the design review of 2026-10-11 (beads `culina-v2-t1ou.*`). These are the
-rules every new screen inherits; they live in `tokens/scales.css`, `app.css` and
-the shared components, so a page cannot drift from them by accident.
+## 1. Aesthetic Direction
 
-**Type.** The scale follows Apple's text styles: `--text-xs` 13px (captions
-and badges, the floor), `--text-sm` 15px (secondary text, labels), `--text-base`
-17px (body, inputs, list rows), `--text-lg` 20px, `--text-xl` up to 22px. Inputs
-stay above Safari's 16px zoom-on-focus threshold.
+**Warm Modernism** combines editorial cookbook typography (`Newsreader` optical serif) with Swiss functional precision (`Plus Jakarta Sans` UI + `JetBrains Mono` quantities/timers) on warm parchment and alabaster surfaces.
 
-**Two voices.** The editorial face (`--font-editorial`: `ui-serif`, so New York
-on Apple platforms, Georgia elsewhere) is for content: every `h1` (set in
-`app.css`, so no page opts out), recipe and cookbook names, sections inside a
-recipe. Everything you operate uses the sans. Never set digits in the editorial
-face beside a count: Georgia's old-style 0 reads as an o. The wordmark has its
-own `--font-brand`, so it looks the same on every platform. Signed-out pages
-share `AuthIntro` for their heading.
+- **No cold SaaS grays or neon accents:** Surfaces use warm linen/stone undertones; primary actions use terracotta (`--color-accent`) and herbal sage (`--color-secondary`).
+- **Tactile clarity:** Hairline borders (`1px solid var(--color-border-subtle)`), subtle elevation, and generous touch targets (`>= 44px`, `>= 48px` in cooking mode).
 
-**Labels.** Section labels, legends and eyebrows are sentence case, semibold,
-15px, drawn by `SectionLabel` in one of three tones: `accent` for the eyebrow
-naming the page or form a title belongs to, `muted` for a section's heading,
-`subtle` for a legend or a row marker inside one. Uppercase is kept for one role only: the step number in a recipe
-("Schritt 1" in the method). The illustrated 404 and the family-secret card are
-art, not labels.
+---
 
-**Shape.** Radius is chosen by role and nests concentrically (inner = outer
-minus the padding between):
+## 2. Three-Layer Colour Token Architecture
 
-| Token           | Size    | Role                                                                                            |
-| --------------- | ------- | ----------------------------------------------------------------------------------------------- |
-| `--radius-sm`   | 6px     | tags inside text, code                                                                          |
-| `--radius-md`   | 12px    | fields, list cells, notices                                                                     |
-| `--radius-lg`   | 20px    | cards, photos, popovers, toasts, week days, grouped list sections                               |
-| `--radius-xl`   | 28px    | dialogs, wide-screen sheets, a phone's sheet at its large detent                                |
-| `--radius-full` | capsule | every control a finger presses: buttons, chips, search fields, segmented controls, icon buttons |
-| `--radius-screen` | ~54px | the phone's own corner; a surface floating near it takes this minus its `--screen-inset`      |
+Never reference raw hex values or `--palette-*` primitives directly in components; always use **Layer 2 semantic tokens**.
 
-The focus ring follows the element's own corners; only text links get a slight
-radius of their own.
+### Layer 1 & 2 — Core Semantic Surface & Text Tokens
 
-**States.** Every pressable thing hovers with `--surface-hover`, presses with
-`--surface-selected` (or the accent's `-active`) and sinks by `--press-scale`
-(0.98; `--press-scale-small` 0.94 for icon buttons), and focuses with the
-app-wide ring. A tile that leads somewhere reads like a settings cell: icon,
-words, trailing chevron.
+| Semantic Token           | Light Mode (Warm Parchment) | Dark Mode (Warm Espresso) | Usage                                                                     |
+| ------------------------ | --------------------------- | ------------------------- | ------------------------------------------------------------------------- |
+| `--color-bg-canvas`      | `#FAF7F2`                   | `#141210`                 | App background canvas                                                     |
+| `--color-bg-surface`     | `#FFFFFF`                   | `#1E1B18`                 | Cards, sheets, list containers                                            |
+| `--color-bg-elevated`    | `#F3EFE6`                   | `#282420`                 | Inputs, pills, secondary wells, hover states                              |
+| `--color-bg-glass`       | `rgba(250, 247, 242, 0.85)` | `rgba(20, 18, 16, 0.85)`  | Sticky headers, bottom nav, floating bars (`backdrop-filter: blur(16px)`) |
+| `--color-text-primary`   | `#1C1917`                   | `#F5F2EB`                 | Headings, body copy, ingredient names                                     |
+| `--color-text-secondary` | `#57534E`                   | `#B8B0A4`                 | Metadata, prep notes, secondary labels                                    |
+| `--color-text-muted`     | `#8C857B`                   | `#7D756B`                 | Placeholders, disabled text, timestamps                                   |
+| `--color-border-subtle`  | `#E7E2D8`                   | `#2E2924`                 | Card outlines, hairlines, table dividers                                  |
+| `--color-border-strong`  | `#D4CDBE`                   | `#423B34`                 | Focused inputs, active chip outlines                                      |
 
-**Direction.** "Back" and "on" are drawn with `Chevron` from `$ds`, never with
-text arrows. The `@` glyph and keyboard hint appear only in a step's mention
-list, not in ordinary comboboxes.
+### Brand, Semantic & Macro Accent Tokens
 
-**Header.** The brand stays left and the navigation centred; on the right,
-search (from 64rem; a phone's is beside the bottom bar) and the account menu are pinned to the edge, and a page's own
-action (today only "new recipe" on the library) sits before them, so nothing
-moves when it comes and goes. The header is capped at `--layout-wide`, so its
-right column never grows: the create button is a plus (named by its label and
-tooltip) and the account menu a profile icon (household, theme,
-language, settings and sign out are inside). Cook mode hides the header at
-every width.
+| Token                   | Light                  | Dark      | Usage                                               |
+| ----------------------- | ---------------------- | --------- | --------------------------------------------------- |
+| `--color-accent`        | `#C85A32` (Terracotta) | `#E0724A` | Primary CTAs, active tabs, timers, links            |
+| `--color-accent-subtle` | `#F9EBE5`              | `#331E16` | Selected pill background, active nav indicator      |
+| `--color-secondary`     | `#4A6B53` (Sage)       | `#699174` | Pantry/in-stock badges, vegetarian tags, completion |
+| `--color-warning`       | `#C27D1A` (Ochre)      | `#E59A30` | Expiring pantry items, calorie over-target warnings |
+| `--color-danger`        | `#B83B3B`              | `#E05858` | Destructive actions, errors, allergen exclusions    |
+| `--color-macro-kcal`    | `#C85A32`              | `#E0724A` | Calorie progress ring & sparkline                   |
+| `--color-macro-protein` | `#4A6B53`              | `#699174` | Protein macro bar (Sage)                            |
+| `--color-macro-carbs`   | `#C27D1A`              | `#E59A30` | Carbohydrate macro bar (Ochre)                      |
+| `--color-macro-fat`     | `#8C5E88`              | `#B07DAB` | Fat macro bar (Plum)                                |
 
-**Page templates.** A page picks one of three, through `Page`:
+---
 
-- _Library_ (`<Page>`, wide): recipes, cookbooks, the week. Grids and columns
-  use the full width.
-- _Document_ (`<Page>` with its own columns): one recipe, cook mode, the editor.
-  Prose keeps `--measure`; side panels use `--side-column`.
-- _Utility_ (`<Page width="reading">`): shopping, new recipe, import, and the
-  settings column. One column at the reading measure.
+## 3. Typography & Numeric Discipline
 
-A new page names its template instead of inventing a fourth width.
+| Token            | Font Stack                                   | Role                                                            |
+| ---------------- | -------------------------------------------- | --------------------------------------------------------------- |
+| `--font-display` | `'Newsreader', Georgia, serif`               | Recipe titles, page headers (`h1`, `h2`), editorial pull-quotes |
+| `--font-sans`    | `'Plus Jakarta Sans', system-ui, sans-serif` | All UI controls, body copy, step instructions, navigation       |
+| `--font-mono`    | `'JetBrains Mono', ui-monospace, monospace`  | Ingredient amounts, timers, macro gram readouts                 |
 
-## Liquid Glass (28 October 2026)
+### Fluid Type Scale & Numeric Rules
 
-From reading Apple's *Adopting Liquid Glass*, *Liquid Glass*, *Interface fundamentals* and *Preparing your app for
-iPhone Duo* (epic `culina-v2-njha`). Culina is a web page in a WKWebView, so none of the SwiftUI or UIKit glass
-APIs reach it; what carries over is the discipline.
+- `--text-xs` (`0.75rem`), `--text-sm` (`0.875rem`), `--text-base` (`1rem`), `--text-lg` (`1.125rem`), `--text-xl` (`1.25rem`), `--text-2xl` (`clamp(1.5rem, 2.2vw, 1.875rem)`), `--text-3xl` (`clamp(1.875rem, 3vw, 2.5rem)`).
+- **Tabular numerals:** Always apply `font-variant-numeric: tabular-nums` on ingredient amounts, portion steppers, countdown timers, and nutrition tables so columns never jitter during scaling or ticking.
+- **Fractions:** Use Unicode vulgar fractions (`½`, `¼`, `¾`, `⅓`, `⅔`) formatted by `QuantityFormatter`.
 
-**Glass is the layer above content, never content.** One token, `--glass-filter` (`scales.css`), is the only
-backdrop blur; the design-system lint (`findStrayGlass`) fails on any other, except the scroll edge effect's own
-stacked ramp in `EdgeEffect`. The audit of the nine surfaces that blurred:
+---
 
-| Surface | Decision |
-| --- | --- |
-| Header brand, top navigation, header tools | glass: navigation over content |
-| Phone dock and its search circle | glass (new): navigation over content |
-| Recipe phone bar's Back circle | glass (new): a toolbar over the photo |
-| Button `media` variant | glass: a control on a photograph |
-| Now cooking pill | glass: the bar's accessory over content |
-| Editor rail (phone), settings category rail | glass: navigation pinned over content |
-| Ingredient quick look | **solid** `--surface-overlay`: content, and every other popover is solid |
-| Image generating status | **solid**: a status, not a control; `--generating-panel` is denser instead |
-| Cook-mode controls | solid, as before: a large panel read across a counter |
+## 4. Spacing, Radii & Layout Breakpoints
 
-**The person's display settings win.** `data-transparency` and `data-contrast` sit on `<html>` beside
-`data-mode`, stamped by `app.html` before the first paint and followed by `displaySettings.ts`; the iOS app
-reports Reduce Transparency itself (`CulinaDisplayPlugin.swift`), since WebKit cannot. Either setting makes every
-glass token solid and the edge effect a solid band with a hairline (`tokens/accessibility.css`). Increase
-Contrast also takes each theme's `[data-mode][data-contrast='more']` block: muted text at 7:1, edges and the
-accent a step further from the ground. `themes.spec.ts` reads those blocks over their mode and checks them.
+- **Spacing scale (`4px` base):** `--space-1` (`4px`), `--space-2` (`8px`), `--space-3` (`12px`), `--space-4` (`16px`), `--space-5` (`20px`), `--space-6` (`24px`), `--space-8` (`32px`), `--space-10` (`40px`), `--space-12` (`48px`).
+- **Border radii:** `--radius-sm` (`6px`), `--radius-md` (`10px`), `--radius-lg` (`14px` — standard cards/inputs), `--radius-xl` (`20px` — modals/sheets), `--radius-full` (`9999px` — pills/chips).
+- **Breakpoints & Navigation Shell:**
+    - **Mobile (`< 768px`):** Single-column layout, bottom tab bar (`56px + env(safe-area-inset-bottom)`), bottom sheets (`Drawer.svelte`) for contextual actions.
+    - **Tablet (`768px – 1023px`):** Collapsible navigation rail, 2-column recipe grids, split ingredient + step layout in recipe detail.
+    - **Desktop (`>= 1024px`):** Persistent left sidebar (`240px`), max content container `1200px` (`760px` reading measure for instructions), centered modals.
 
-**Scroll edge effect.** `EdgeEffect` frosts the page under a floating bar (the header, the phone dock, the
-recipe's phone bar once its title has scrolled away) instead of a solid strip or a hairline.
+---
 
-**The phone dock** is a glass capsule concentric with the screen's corner, its search a separate glass circle at
-the trailing end (Apple puts search at the bottom on an iPhone; from 64rem it is in the header). Reading down a
-page recedes it to its icons at the 44px floor rather than sliding it away, as an iOS tab bar minimises: every
-destination stays one tap away, and what is under way stays above it. The current destination is a neutral
-raised lens with its icon and label in the accent, not an accent tile (decided 28 October 2026,
-`culina-v2-njha.8`): Apple asks for colour in navigation to stay sparing, and the accent on the raised lens
-reads at 6.5:1 light and 7.8:1 dark (checked in `themes.spec.ts`), above the 3.9:1 that kept the old tile's label
-in plain text.
+## 5. Motion & Transitions
 
-**Sheets.** A phone's sheet floats inset from the screen's edges by `--screen-inset`, every corner rounded
-concentric with the screen's; at the large detent it is flush and full width again, as iOS's is once expanded.
-`Popover`'s phone sheet follows the same geometry.
+| Token               | Value                           | Usage                                            |
+| ------------------- | ------------------------------- | ------------------------------------------------ |
+| `--ease-out-expo`   | `cubic-bezier(0.16, 1, 0.3, 1)` | Sheet entry, modal pop, card expansion           |
+| `--ease-in-out`     | `cubic-bezier(0.4, 0, 0.2, 1)`  | Colour/border state transitions                  |
+| `--duration-fast`   | `140ms`                         | Hover, button press (`scale(0.98)`), chip toggle |
+| `--duration-normal` | `220ms`                         | Drawer slide, popover fade, tab indicator        |
+| `--duration-slow`   | `360ms`                         | Page view transitions, layout reflows            |
 
-**Menus open from their trigger.** Every `ActionMenu` already does. The account menu stays a sheet on a phone
-(decided in `84a42b1e`): it is a long panel of choices, not a short list of actions.
+All animations respect `@media (prefers-reduced-motion: reduce)` by collapsing durations to `0.01ms` and disabling spring transforms.
 
-**Controls answer a touch.** A held `Switch` knob stretches and lifts; a held `SegmentedControl` thumb swells 4%.
+---
 
-**Native.** The iOS app follows Dynamic Type (`dynamicType.ts` scales the root font from WebKit's
-`-apple-system-body`), and its icon is a layered Icon Composer document (`native/ios/App/App/AppIcon.icon`) with
-default, dark, clear and tinted appearances; the asset catalog's PNG remains for iOS before 26. Cook mode on a
-foldable half open like a laptop gives the controls the lower segment whole (`vertical-viewport-segments`), so
-nothing sits in the fold; WebKit does not report segments yet, and the Xcode 27.0 SDK has no reserved-region API
-or iPhone Duo simulator, so this works on Android foldables today and on iPhone Duo once either arrives.
+## 6. Component & Accessibility Standards
 
-## September 2026 refinement
-
-Culina pairs warm ivory and charcoal surfaces with olive actions and a quiet
-serif wordmark. Recipe titles use Georgia; controls, quantities, and instructions
-keep system typography. The collection separates page identity from a compact search, filter, and count
-toolbar, with gutters that adapt to narrow phones. Photographs
-lead recipe cards, while recipes without a photo sit on a soft paper surface.
-
-The reading and cooking surfaces use a softly shaded ingredient panel, generous
-instruction spacing, and a visible action dock. Authentication and the optional
-recipe preview use a deep olive photographic feature panel. Its foreground and
-background have explicit semantic tokens (`--text-on-feature` and
-`--surface-feature`), tested for contrast in both modes and mapped to ink on white
-for print. Focus inside the dark preview panel uses its light foreground.
-
-Review `/design/recipes` for the interactive recipe concept and `/design` for
-primitives in development. The concept uses labelled temporary sample data and
-shares its palette, typography, and controls with the production app. Both
-preview routes retain the release guard. [The product plan](product-quality-plan.md)
-explains the release scope and quality contracts.
-
-## Library and shared control polish
-
-The recipe and cookbook libraries share `PageHeader`: an editorial title,
-a short supporting line, and contextual creation actions. One shared navigation
-exposes Recipes, Cookbooks, Week and Nutrition directly; Week holds the meal plan and the
-shopping list (a Meal plan | Shopping list switch, and the list beside the week from 80rem).
-Every label follows the glossary, `glossary.md`: one name per thing, in German and English.
-The same order and route selection appear in the desktop top bar and, below
-64rem, the bottom bar.
-There is no collection submenu or secondary sidebar. Cookbook detail uses the
-shared navigation too. The [research and current decision](navigation-research.md)
-explain the evidence and the explicit five-destination limit.
-
-**A page's one main action sits at the end of its title row**, at every width
-(decided 28 October 2026, culina-v2-6ilt.13): `PageAction`, an accent pill with a
-plus and a short verb ("Rezept", "Kochbuch", "Eintragen"), its accessible name the
-full wording starting with the visible words. The header holds navigation, search
-and the account only; it has no "+". Per-row adds (a day's "+" in Woche, a meal's
-"+" in the diary) stay where they are and add no title-row button. The phone dock
-shows each destination's label under its icon, and recedes to the icons alone while a page is read
-downwards (see *Liquid Glass*, below).
-The logo and main navigation retain their matched translucent backgrounds.
-Current destinations use a raised selection shadow, text emphasis, and
-`aria-current`. Every navigation item is a link, not a modal launcher.
-
-The recipe toolbar aligns a rounded rectangular search field with an equally
-tall `FilterChip`; its pressed state includes a checkmark as well as color.
-Count and sort information sit together at the trailing edge, reflowing below
-the controls on phones. Creation buttons share plus icons and rounded corners;
-green remains reserved for recipe creation. The 30-minute filter queries the
-API and composes with text search.
-
-Library search and the quick filter survive recipe navigation within the current
-session. They reset on household changes and sign-out. Search supports Escape to
-clear while preserving focus, and a separate action clears both filters. Counts
-use Paraglide plural variants in English and German, including cookbook counts,
-servings, and pieces.
-
-Photographed recipes retain image-led cards. Recipes without photographs use a
-paper surface, a small cooking mark, and a ruled heading area. Card links have a
-visible directional affordance and a whole-card keyboard focus ring. The feature
-link uses the feature foreground for both text and focus in light and dark mode.
-
-**Two kinds of tappable text** (culina-v2-6ilt.10): a link goes somewhere and is accent and underlined (the
-global `a` rule); `.text-action` does something here and is accent and medium weight, underlined on hover ("Wie
-gestern", "+ Notiz für nächstes Mal", "Rezept planen"). A dotted underline means "tap to change the unit" only.
-A cookbook an import made is named "<app> · yyyy-MM-dd" on the server, the same in every language; `shelfTitle`
-writes that date in the reader's own format on screen.
-
-**Settings save as they are set** (decided 28 October 2026, culina-v2-6ilt.6): switches, segmented
-controls and selects on change; a text or number field when it is left or Enter is pressed, with a
-quiet "Gespeichert" or the error and a retry under its group, never a toast. Mail and Server are the
-exceptions: they validate against or restart the server, so they keep an explicit Save with a guard
-for unsaved changes. Every settings section is a grouped card (`SettingsSection`): rows, or with
-`panel` a composed form at the rows' inset; `bare` only for a list that draws its own card.
-
-Shared buttons reserve their label geometry while a centered spinner appears;
-the label remains available to assistive technology. Disabled and pending states
-retain readable text. Search and form controls share a separated focus outline.
-
-`library-polish.spec.ts` checks the search round trip, composed filters, reset,
-Escape behavior, reflow, and automated accessibility at 320, 390, 768, and 1280px
-in both locales and modes using temporary API fixtures.
-
-## Design intent
-
-Food photography is the content. Everything else gets out of its way.
-
-- **Warm neutrals.** Cream in light, warm charcoal in dark — never blue-black,
-  which makes food look grey and dead.
-- **One accent**, reserved for the primary action on a screen. If two things are
-  accented, neither is primary (principle 10). Every page applies it the same
-  way:
-  - The page's own action, the one its head offers (*Eintragen*, *Neues
-    Kochbuch*, the library's new-recipe plus, *Rezepte hinzufügen*, *Kochen
-    starten*), is `variant="primary"`. A head action left neutral reads as
-    optional, and the page then has no primary at all.
-  - The same action repeated per item (each meal's or day's "＋") stays quiet:
-    it is the second way in, not a second primary.
-  - While an empty or error state shows its own primary button (*create your
-    first*, *Erneut versuchen*), the head's action steps aside, so one button
-    still leads.
-  - Apple's HIG says the same: a prominent style "for the most likely action
-    in a view", one or two per view.
-- **Photos are the cards.** A recipe card is an image with a title beneath it,
-  not a bordered box containing an image inside another rounded rectangle
-  (principle 12).
-- **Type does the structuring**, whitespace does the grouping, borders are a
-  last resort (principles 11, 13).
-- **Cook-mode text is sized to be read at arm's length across a counter**, not
-  to fit a spec sheet.
-- Motion only where it explains something (principle 16).
-
-## Theme architecture — three layers
-
-The requirement is that a second theme is *one file and zero component
-changes*. That only holds if components never touch a colour directly.
-
-```
-src/lib/design-system/
-  tokens/
-    primitives.css     layer 1 — raw ramps. No component may name one.
-    semantic.css       layer 2 — the contract. Declares every semantic token
-                       with a light default so nothing is ever undefined.
-    scales.css         space, radius, type, shadow, z-index, duration
-  themes/
-    warm-paper.css     layer 3 — assigns layer 1 to layer 2, per mode
-    index.ts           the theme registry
-```
-
-### Layer 1 — primitives
-
-Raw ramps only, no meaning attached:
-
-```css
-:root {
-  --c-sand-50:  #fdfbf7;   --c-sand-100: #f7f2e8;   --c-sand-200: #ece3d4;
-  --c-sand-300: #d9cbb5;   --c-sand-400: #b9a488;   --c-sand-500: #8f7a5f;
-  --c-sand-600: #6b5943;   --c-sand-700: #4a3d2f;   --c-sand-800: #302820;
-  --c-sand-900: #1f1a15;   --c-sand-950: #141110;
-
-  --c-terracotta-300: #e8a284;  --c-terracotta-500: #c65f3f;
-  --c-terracotta-600: #a94c30;  --c-terracotta-700: #8a3d26;
-
-  --c-sage-500: #5c7a5c;   --c-amber-500: #c98a2e;   --c-rust-600: #b23b30;
-}
-```
-
-### Layer 2 — semantic tokens (the contract)
-
-**The only thing a component may reference.** The full set, and every theme
-must define all of them:
-
-```
-Surfaces   --surface  --surface-raised  --surface-sunken  --surface-overlay
-           --surface-accent-subtle  --surface-feature
-Text       --text  --text-muted  --text-subtle  --text-on-accent
-           --text-danger  --text-success  --text-on-feature
-Lines      --border  --border-strong  --border-focus
-Accent     --accent  --accent-hover  --accent-active  --accent-contrast
-Status     --danger --danger-hover --success --warning  (+ -subtle variants)
-Effects    --shadow-card  --shadow-overlay  --scrim
-```
-
-#### Field tokens
-
-Every typed or chosen control (`.ds-control` in `inputs/control.css`, and the stepper) reads one set,
-never `--surface-raised` or `--border-strong` directly:
-
-```
---field-surface  --field-surface-inset  --field-text-disabled
---field-border   --field-border-hover   --field-border-focus  --field-border-error
-```
-
-Decided 29 October 2026, replacing the 28 October split (culina-v2-6ilt.12): **every field has the
-inset fill** (`--c-sand-75`; `--c-forest-950` in dark), on the warm page as inside a white group, so a
-field looks the same wherever it sits. `--field-surface` and `--field-surface-inset` hold the same
-value; the groups that still swap one for the other (`Card`, `ListSection`, a dialog or sheet, a
-popover) change nothing by it. Border, focus and error are the same everywhere. **A disabled
-field has no fill and a dashed edge**, so it never shares a colour with an enabled one (the navbar's
-sand, once proposed for fields, was exactly the old disabled fill). The gallery's "Field surfaces"
-section (`/design`, gallery builds only) shows the three grounds at rest, focused, invalid and
-disabled, in light and dark.
-
-Scales live in `scales.css` and are theme-independent:
-
-```
---space-1 … --space-16        4 px base, 1 2 3 4 6 8 12 16 24 32 48 64
---radius-sm|md|lg|full        4 / 8 / 16 / 9999
---text-xs … --text-4xl        clamp()-based fluid steps
---text-cook                   clamp(1.5rem, 1.1rem + 1.6vw, 2.25rem)
---duration-fast|base|slow     120 / 200 / 320 ms
---ease-out|--ease-spatial
-```
-
-### Layer 3 — a theme
-
-```css
-/* themes/warm-paper.css */
-[data-theme="warm-paper"] {
-  --surface: var(--c-sand-50);
-  --surface-raised: #ffffff;
-  --text: var(--c-sand-900);
-  --accent: var(--c-terracotta-600);
-  /* … every semantic token … */
-}
-
-[data-theme="warm-paper"][data-mode="dark"] {
-  --surface: var(--c-sand-950);
-  --surface-raised: var(--c-sand-900);
-  --text: var(--c-sand-100);
-  --accent: var(--c-terracotta-500);
-  /* … every semantic token, again … */
-}
-```
-
-`data-theme` and `data-mode` both sit on `<html>`. Mode is `light | dark |
-system`; `system` resolves to a concrete value before paint, so
-`prefers-color-scheme` never has to be queried inside a component.
-
-### What makes this safe rather than merely intended
-
-1. **`semantic.css` declares every token with a fallback**, so a partial theme
-   degrades instead of rendering invisible text.
-2. **A contract test** (`themes.spec.ts`) parses every file in `themes/`,
-   extracts the declared custom properties, and fails if any theme is missing
-   a token listed in `semantic.css` — in either mode. It also rejects a token a
-   theme declares that the contract does not, and a `var(--c-…)` pointing at a
-   primitive that does not exist.
-3. **The same test asserts WCAG AA contrast** for the pairs the UI really
-   stacks — 4.5:1 for text, 3:1 for a focus ring, an input border or a status
-   colour — in both modes. A palette that reads well in light and turns muddy in
-   dark is the normal way a theme fails, and it is invisible in review.
-4. **A raw-colour rule** (`lint.ts`, run by `lint.spec.ts`) fails on a hex
-   colour, a colour function, a named colour or a `--c-*` primitive appearing in
-   any stylesheet, `<style>` block or inline `style` outside
-   `design-system/tokens/` and `design-system/themes/`.
-5. **An unknown-token rule**, in the same file. A `var(--space-5)` that nothing
-   declares is not an error in CSS — the declaration is simply dropped — and the
-   scale is sparse on purpose, so reaching for a plausible-sounding step is an
-   easy mistake with a loud result and no warning.
-
-The contract is *derived*, never restated: a token added to `semantic.css`
-tomorrow is required of every theme without anyone editing the test.
-
-Adding *cool editorial* later is then: one CSS file, one registry line, and the
-tests tell you the moment it is incomplete.
-
-### No-flash theming
-
-The resolved theme and mode are mirrored to `localStorage` and applied by a
-tiny **nonce'd** inline script in `app.html` before first paint. The server
-already issues a per-response CSP nonce (`cookie-auth-and-security`), so this
-needs no `unsafe-inline`. The server-side user setting remains the source of
-truth and reconciles on boot.
-
-## Component inventory
-
-### `lib/design-system/` — domain-free
-
-If it knows what a recipe is, it is in the wrong folder.
-
-| | |
-| --- | --- |
-| Actions | `Button` (primary/secondary/ghost/danger × sm/md/lg, `loading`, `iconOnly`), `IconButton`, `Menu`, `Switch` |
-| Input | `TextInput`, `TextArea`, `Select`, `Checkbox`, `RadioGroup`, `Stepper`, `SearchField`, `Field` (label + hint + error + a11y wiring), `FilePicker` (the clipped file input, opened by a control beside it), `ImageField` (preview when set, template of the same size when not), `SegmentedControl`, `WeekStrip` (seven days as a calendar shows them: chosen day filled, today in the accent, a neutral dot where something is) |
-| Containment | `Card`, `Sheet` (mobile bottom sheet, desktop dialog), `Modal`, `Popover`, `Tabs`, `Disclosure`, `ListSection` + `ListRow` (a grouped list: a heading with a trailing value, rows on one raised surface, a leading control, one right column of figures, the section's own verb as its last row) |
-| Feedback | `Toast` + `toaster`, `Skeleton`, `EmptyState`, `ErrorState`, `ProgressBar`, `Spinner` (first boot only) |
-| Display | `Badge`, `Avatar`, `Icon`, `Image` (aspect-ratio box, lazy, blur-up), `Divider`, `SectionLabel`, `VisuallyHidden`, `Meter` (one amount against one reference: one thin accent track, a mark for the reference, the same hue past it, the sentence as its label) |
-
-Figures in a column (kcal, grams, amounts) are tabular, right-aligned, and carry
-their precision as a light mark read aloud as a word (`glossary.md`).
-
-Every one of them: driven entirely by props, no store import, no `fetch`, real
-semantic elements, visible focus, `prefers-reduced-motion` respected.
-
-### `lib/features/*/components/` — domain-aware
-
-```
-recipes/   RecipeCard  RecipeCardSkeleton  RecipeGrid  RecipeSurface
-           ServingsControl  ScaleToAmountSheet  IngredientList  IngredientRow
-           StepList  StepText  RecipeMeta  RecipeSearchField  TagFilter
-           TimeFilter  RecipeEditor  IngredientEditorRow  StepEditorRow
-cooking/   CookSurface  CookStep  CookIngredientStrip  CookProgress
-           TimerChip  TimerTray  NowCookingBar  MadeItButton  PersonalNotePanel
-shopping/  ShoppingSection  ShoppingItemRow  AddFromRecipeSheet  SectionPicker
-household/ HouseholdChoices  MemberList  InvitationPanel
-app/       AppShell  NavRail  NavBar  AccountMenu  ThemeToggle  LocalePicker  OfflineBadge
-
-Sizing note: the space scale is sparse (1, 2, 3, 4, 6, 8, 12, 16, 24) and there
-are three control heights — `--control-sm` is 2.75rem, not because it looks
-small but because 44px is the floor for something a wet thumb has to hit while
-the phone is propped against a mixing bowl. "Small" means dense, never hard to
-press.
-
-`inputs/control.css` is the one global class in the app (`.ds-control`). It
-describes what a typed-into or chosen-from control looks like, once, because a
-text input, a select and a search field that each own a copy of that are three
-things that drift — and the drift is only visible when two of them sit next to
-each other in a form.
-```
-
-## The interaction that defines the product
-
-`/recipes/[id]` and `/recipes/[id]/cook` render the **same** `RecipeSurface`
-with a different `emphasis` prop (`read` | `cook`).
-
-| | `read` | `cook` |
-| --- | --- | --- |
-| Ingredients | full list, body size | contracts to `CookIngredientStrip` — **same screen position** — showing only the current step's ingredients |
-| Steps | all visible, body size | current step at `--text-cook`, neighbours dimmed but present |
-| Chrome | normal | recedes; wake lock engaged |
-| Servings control | above the ingredients | **same place**, still usable mid-cook |
-
-The transition is a continuous re-layout, not a page swap: the step being read
-**grows in place** (View Transitions API where supported, a FLIP fallback
-otherwise). Under `prefers-reduced-motion` it is an instant cut — which is
-still correct, because the layout positions were chosen so that nothing has to
-move for the result to make sense.
-
-That property — *things stay where you expect them to be* — is the reason the
-two states share one component instead of being two pages that happen to show
-the same data.
-
-## Moving a planned meal
-
-The week planner's cards are picked up and put down. One store call — the entry's
-day, slot and place in that day — behind three ways of saying where it goes, so
-that no input is a lesser version of another:
-
-- **A pointer** grabs the card anywhere and lifts it after 6 px, which is what
-  leaves a click free to open the recipe.
-- **A finger** lifts it after a held moment (~350 ms). The delay is the whole
-  gesture on a phone: the same finger scrolls the week, so the drag has to wait
-  to be sure, and while one is in the air `touchmove` is refused so the page does
-  not scroll out from under it. Near either edge of the screen the week scrolls
-  itself, because seven days never fit on a phone.
-- **The grip** on each card is both the drag handle and a real button. Activated
-  rather than dragged, it opens a `Sheet` listing the week's days and the three
-  slots — the only path a keyboard or a screen reader has, and the easier one
-  whenever the day you want is off screen.
-
-Dragging never changes the slot; the sheet is the only place that does. A drop is
-optimistic and answered with an Undo toast rather than a confirmation, which is
-what `toaster` exists for. Nothing here animates: the card follows the pointer,
-and following is not a transition. The day under the pointer is outlined rather
-than filled, because today already owns the filled surface and today is a day you
-can drop on.
-
-## Responsive layout contract
-
-Breakpoints follow the space the content needs. A tablet keeps bottom navigation
-until the brand, all destination labels and connection status fit across the
-header. The content stays capped at `--layout-wide` (80rem) on larger monitors;
-prose and shopping lists keep the narrower `--measure`.
-
-| Minimum viewport width | Layout behavior |
-| --- | --- |
-| Base, including 320px | One-column collection and planner; bottom navigation; stacked recipe reading; settings categories wrap above their panel; authentication shows the form. |
-| 40rem / 640px | Two-column recipe collection and planner. Search and action rows can share space where their content fits. |
-| 48rem / 768px | Sheets become centered dialogs. This changes overlay geometry without forcing the page into a desktop layout. |
-| 64rem / 1024px | Top navigation replaces bottom navigation. Recipe ingredients and method sit side by side; settings gains a sidebar; authentication and featured recipes gain a photo column. Collections and planner use three columns. |
-| 80rem / 1280px | The planner displays all seven days across. Other content retains its maximum width. |
-
-Use `min-width` for enhancements and `width < …` for their exact complement,
-so fractional viewport widths do not create a gap. Breakpoint values are literal
-`rem` values in CSS because custom properties cannot be used in native media
-query conditions. Do not add a viewport breakpoint for each individual control.
-The 40rem collection breakpoint is shared by the real and preview collections;
-the 64rem split is shared by navigation and complex page layouts.
-
-Spacing is fluid between these transitions. `--layout-page-space` scales page
-padding from 1.5rem to 3rem, and `--layout-section-gap` scales large gaps over the
-same range. `--layout-gutter-start` and `--layout-gutter-end` include device safe
-areas so the header, page and persistent controls share an alignment even in
-landscape. The viewport permits safe-area coverage without disabling zoom.
-
-Ingredient fields use **container queries**: a narrow shopping list on a large
-monitor must behave like a narrow form. Amount and unit stay together, followed
-by full-width name and preparation fields. A simple three-field entry fits on
-one row at 28rem of actual field space; the four-field recipe entry needs 36rem.
-The ingredient editor puts its actions below the fields under 44rem of editor
-space; shopping entry does so under 40rem. These are component fit thresholds,
-not additional device categories.
-Below 24rem of editor space, written ingredient names get their own full-width
-line below the amount and actions. This also accommodates enlarged text.
-
-Buttons keep a minimum height of 44px (56px for cooking actions) and grow when a
-translated label needs another line. Long names, email addresses and URLs may
-wrap. Action groups wrap as groups; content must not be hidden with page-level
-horizontal overflow clipping to make a test pass.
-
-The desktop header has a transparent full-width container. The brand card and
-navigation track share the same softly translucent background and blur. Only the
-controls intercept pointer events, so exposed content behind the header stays
-usable. Direct recipe creation stays in the header. Navigation links lead directly
-to each workflow on both desktop and mobile. Below 32rem of viewport height the
-header returns to document flow to preserve reading space. Glass surfaces use
-semantic theme tokens shared by both color modes.
-
-The shell measures bottom navigation and the resume bar to keep recipe actions
-above them. Cooking keeps only step navigation sticky; its stop action stays in
-document flow so two footers never compete for the same inset. The preview
-measures its cooking dock too, reserving its actual
-height rather than assuming one row. Below 32rem of viewport height, the top
-header and recipe action docks return to normal document flow to preserve
-reading space. Sheets and dialogs use dynamic viewport height; their body
-scrolls while the heading, close control and footer stay available.
-
-Cookbook shelves scroll horizontally within the page. Keyboard focus reveals
-the whole card, with room for its focus ring; snapping is disabled while focus
-is in the shelf. Popovers constrain their width to the viewport and scroll
-within the space beside their trigger. If rotation or scrolling takes the
-trigger off-screen, the open panel moves into the viewport until the trigger
-returns. Browsers without sized anchor positioning use a centered panel.
-
-`tests/e2e/responsive.spec.ts` checks real production routes with deterministic
-API fixtures and long content in both English and German. It covers 320, 390,
-639/640, 767/768, 1023/1024, 1279/1280 and 1536px, plus short landscape. Checks
-include document and child overflow, useful ingredient input widths, a single
-visible navigation, grid transitions, editing, planner overlays and reachable
-cooking controls. Fixture tests cover layout; the existing signed-in suites
-remain responsible for backend integration.
-`tests/e2e/responsive-transitions.spec.ts` also covers live resizing during
-cooking, keyboard traversal of the cookbook shelf, rotation with forms and
-ingredient pickers open, long ingredient lists, and 200% text at 320, 640 and
-1280px. Both desktop and mobile browser profiles exercise these interactions.
-
-## Accessibility baseline
-
-Non-negotiable, and cheaper now than retrofitted: WCAG AA contrast for every
-token pair in **both** modes (asserted by the contract test), real `<button>`
-and `<a>`, a label for every input, one `<h1>` per page, focus visible and
-moved deliberately after dialogs and navigation, ≥ 44 px touch targets (≥ 56 px
-in cook mode — wet hands are not precise), colour never the sole carrier of
-meaning, and `prefers-reduced-motion` honoured by every transition.
-
-## Motion inventory
-
-The complete list. Anything not here does not animate.
-
-| What | Duration | Why it exists |
-| --- | --- | --- |
-| Servings number morph + highlight | 400 ms | shows *which* amounts changed |
-| read ⇄ cook re-layout | 320 ms | preserves spatial context |
-| Step advance | 200 ms | direction of travel |
-| Sheet / modal enter | 200 ms | where it came from |
-| Toast enter/leave | 200 ms | arrival without a jump |
-| Shopping item check | 200 ms | the row sinking is the confirmation |
-| Skeleton shimmer | 1.4 s loop | static tint under reduced motion |
-
-## Waiting, emptiness and failure
-
-`createLoadingState()` in `lib/app/` is the only implementation of the timing
-rules, and every feature uses it rather than its own `setTimeout` — the moment
-two screens disagree about these numbers the app feels inconsistent and nobody
-can say why.
-
-- **~150 ms before anything appears.** Most responses arrive inside that, and a
-  skeleton that flashes for one frame makes a fast app feel broken.
-- **~300 ms minimum once shown.** Otherwise a response landing at 160 ms
-  produces a flicker that reads as a glitch rather than as progress.
-- **~10 s to "this is taking longer than usual", with a retry.** Better than
-  spinning forever while the person wonders whether to reload.
-
-`Skeleton` shows the shape of what is coming, so the layout does not jump. It is
-`aria-hidden`; the container carries `aria-busy`, because a screen reader listing
-twelve empty boxes is worse than silence. Under `prefers-reduced-motion` it is a
-flat tint, which says "this is coming" just as well.
-
-`EmptyState` insists on a real action, and on distinguishing **"you have not made
-one yet"** from **"your filter matched nothing"** — the second is a mistake to
-undo, the first is an invitation. "No results" alone tells someone what they can
-already see.
-
-`ErrorState` keeps the page frame, says what failed in plain language, offers
-retry, and shows the request id in small print. Nobody reads that id until it
-matters, and then it is the whole conversation.
-
-`BusyRegion` is the rule that a refetch of data already on screen **keeps the old
-data**. Replacing a list you are reading with a skeleton loses your place, loses
-your scroll position, and tells you less than the stale list did.
-
-## Overlays
-
-`Sheet`, `Modal` and `Popover` all come from one place; no feature builds its
-own. `Sheet` and `Modal` are the same `Dialog` with different geometry — a sheet
-rises from the bottom edge on a phone, where a thumb already is, and becomes a
-centred dialog past 48rem, because a full-width strip along the bottom of a
-desktop window is a long way from where the eye is. One component and one API,
-so a feature cannot pick the wrong one for the viewport.
-
-`Dialog` is a native `<dialog>` opened with `showModal()`. The browser already
-traps focus, makes the rest of the page inert, puts the dialog in the top layer
-above every stacking context, closes on Escape, and restores focus to whatever
-opened it. A hand-rolled version of that is a few hundred lines and is still
-worse on a screen reader. What is done by hand: locking the page's scroll
-(counted, so a dialog above a dialog does not unlock early), labelling, a
-visible close control — Escape and the backdrop both work but neither is
-discoverable — and keeping the caller's `open` in step with the browser's own
-closing.
-
-`Popover` is the native `popover` attribute, which brings light dismiss, the top
-layer and the trigger pairing for free. For a decision that must be answered,
-use `Sheet` or `Modal`: a popover that must not be dismissed is a modal wearing
-the wrong clothes.
-
-Because all of this is browser behaviour, it is asserted in Playwright rather
-than jsdom — jsdom implements `<dialog>` without the top layer that gives it
-those properties.
-
-## Toasts instead of confirmations
-
-Asking "are you sure?" before something reversible costs everyone a decision to
-protect against a mistake that was already cheap to fix. Culina does the thing
-and offers **Undo** in a toast.
-
-Each toast is `role="status"` — a polite live region, never assertive: it reports
-something that already happened. The clock pauses on hover *and* on focus,
-because a keyboard user reading with focus inside the toast is doing exactly what
-a pointer user hovering is doing. Undo removes the message as it runs, so a
-second press cannot undo the undo. At most three stack; beyond that it is a log,
-not a notification.
-
-## Never dim text with opacity
-
-Reducing a text element's opacity blends it toward whatever is behind it by an
-amount no palette review can see and the theme's own contrast test cannot
-reach — the tokens are all correct, and the rendered page is not. The cooking
-screen dimmed its non-current steps to `0.45`, which put body text at **2.7:1**
-against the page in light mode. The intent was right; opacity was the wrong way
-to express it.
-
-Recede with a colour the contract already proves readable — `--text-muted` —
-and with size and weight. Opacity is for things that are not text.
-
-The rendered pages are checked by axe on every route in both modes, which is
-the layer that catches this. The token table catches what the design system
-promises; only the page catches what it renders.
-
-## A control that changes what it says is one control
-
-Two controls in an `{#if}`/`{:else}` that swap places are two elements, and
-swapping them takes focus with them. The cooking screen did that at the last
-step: the keyboard user who had just pressed Next found themselves back at the
-top of the page, at exactly the moment the remaining action was "I made it".
-
-Render one control and change its label and its handler. Use two only when they
-are genuinely two things a person might choose between.
-
-## Settings refinement — 15 September 2026
-
-Settings has an anatomy rather than a scroll. The category rail keeps its pills
-and gains an uppercase caption and, past 64rem, a sticky position, so the way
-out of a long archive is never above the fold. The category's heading and its
-one-line lead belong to `me/+layout.svelte`, not to the three pages: the heading
-is the word the rail is already showing, and three pages writing it separately is
-three places for it to drift. The panel is capped at 46rem — a settings row is a
-label on the left and a control on the right, and a 1400px monitor puts a
-centimetre of nothing between them.
-
-Inside a category, `SettingsSection` and `SettingsRow` (local to the settings
-routes — they are page furniture, not primitives) give every setting one
-anatomy: a title and a sentence outside the enclosure, where type does the
-structuring, and the run of related controls inside a hairline border, which is
-the one thing whitespace cannot say. Rows carry a label, an optional line about
-what the setting does *not* do, and the control on the trailing edge; under
-30rem of row — a container query, not a viewport one — the control takes its own
-line. A row's label is a `span`, because the control already carries its own
-label and two labels on one field is an axe failure; `group` is the exception,
-naming a set of radios through `role="group"`.
-
-Appearance chooses a mode outright. `ThemeChoice` shows light, dark and follow
-the device as three native radios in a segmented track, with the chosen one
-raised out of it rather than only tinted. The header keeps the cycling
-`ThemeToggle`, where there is room for one icon and the choice is a passing one.
-The language and measurement pickers now share `.ds-control` and clip their own
-labels beside the row's.
-
-## Recipe preview refinement — 13 September 2026
-
-The development-only `/design/recipes` experience extends the editorial direction with consistent food photography. Collection entries use photographs, typography and spacing without an enclosing card background. A favourite remains a separate, labelled control above the photograph. The feature image fills its reserved area at tablet widths; Image's `fill` option is for parents that already reserve height.
-
-Reading shows ingredients beside the complete method on larger screens. Cooking keeps only the current instruction visible, with a quiet segmented progress line and persistent previous/next controls. On mobile, the shared Sheet exposes ingredients and portions from the bottom controls; on wider screens they stay beside the method. Instructions receive focus on entry and on a step change. Controls remain usable at 320px, with safe-area padding and no motion requirement.
-
-Preview progress belongs to the recipe collection, rather than to a detail component that disappears when closed. Returning to the collection preserves search, filters, favourites, portions, ingredient checks and current steps for the mounted preview session. It restores the opening control's focus and the collection's scroll position. A Continue cooking action makes an active session visible. Reloading or changing language remounts this temporary preview; this is not an implementation of durable cooking recovery.
-
-The shared Image primitive also provides a labelled fallback and accepts a new source after an image failure. These behaviors apply wherever the primitive is used. New sample photography is documented in `design-assets.md`.
-
-## Print
-
-Print is a medium, not a theme. `tokens/print.css` is imported after the themes
-and collapses every one of them — and both modes — to ink on paper, because a
-printer has one background and it is white, and the browser's "background
-graphics" setting is off by default anyway: a dark theme that printed as dark
-would come out as a page of toner behind every word, or as white text on white.
-
-It assigns the **whole** semantic set, for the same reason a theme does. A
-partial palette is how one forgotten token ends up as pale grey on white, and
-that is exactly the token nobody checks before sending a page to a printer.
-
-What is hidden on paper is hidden by the component that owns it — the shell
-hides its header and bars, the recipe surface hides its photograph and its
-servings control — so it is always obvious what is being hidden and why. The one
-global rule covers what is never content anywhere: form fields, dialogs, live
-regions. Deliberately **not** every button: a step's ingredient reference is a
-button so that pointing at it lights up the ingredient list, and a blanket rule
-took the amounts out of the printed steps, which is the one thing they are for.
+- **Touch targets:** Minimum `44×44px` across the app; `48×48px` in `CookingMode.svelte` and `FloatingTimerBar.svelte` (wet/messy hands).
+- **Focus rings:** Visible `2px solid var(--color-accent)` with `2px` offset on `:focus-visible`; never suppress outline without a high-contrast replacement.
+- **Scrollbars:** Custom overlays use thin, unobtrusive scrollbars (`scrollbar-width: thin`); horizontal chip rows hide scrollbars cleanly while preserving touch/wheel momentum.
+- **Olli Assistant:** Triggered via header button or `Cmd/Ctrl+K`. Never auto-popups unsolicited tooltips; tool actions that mutate household state (`plan_meal`, `add_shopping_items`, `create_recipe`) render explicit confirmation cards or undo toasts.

@@ -1,264 +1,60 @@
-# Culina — deployment and delivery pipeline
+# Deployment & CI/CD Architecture
 
-Culina ships as **one container image** that serves the API and the built SPA
-from the same origin, plus a PostgreSQL database. That single-origin property is
-not a packaging convenience — it is what removes CORS entirely and makes the
-cookie/CSRF model in `cookie-auth-and-security` sound.
+Culina ships as a single self-contained container image (`ghcr.io/jakobpriesner/culina`) for `linux/amd64` and `linux/arm64`.
 
-## Runtime topology
+---
 
-```
-            ┌────────────────────────────────────────────┐
-  browser ──┤ operator's reverse proxy (TLS, HSTS)        │
-            └───────────────────┬────────────────────────┘
-                                │ http, X-Forwarded-*
-                   ┌────────────┴─────────────┐
-                   │  culina  (one container) │
-                   │  Kestrel :8080           │
-                   │   /api/*  → endpoints    │
-                   │   /*      → SPA fallback │
-                   │  volumes: /data/images   │
-                   │           /data/keys     │
-                   │           /data/config   │
-                   └────────────┬─────────────┘
-                                │
-                        ┌───────┴────────┐
-                        │  postgres:18   │
-                        └────────────────┘
-```
-
-**TLS terminates at the operator's proxy.** The app sets no HSTS, performs no
-HTTPS redirect and compresses no response it generates — compressing
-cookie-authenticated responses invites BREACH. The frontend build instead
-writes Brotli and gzip copies beside every static text file, and the host sends
-whichever one a client accepts: those files are identical for every visitor and
-carry no secret, so there is nothing for BREACH to recover, and nothing is
-compressed at request time. If the proxy compresses, leave `/api` out of it for
-the same reason. It trusts `X-Forwarded-*` only from configured proxy addresses
-(`ForwardedHeaders:KnownProxies`).
-
-Three volumes are mandatory, and forgetting one is a silent failure:
-
-| Path | Why |
-| --- | --- |
-| `/data/images` | Recipe images. Content-addressed; lost on redeploy otherwise. |
-| `/data/keys` | The key ring that encrypts the secrets stored in the database. |
-| `/data/config` | `culina.json`: what an administrator set up in the app. Without it the settings screen cannot save. |
-
-A note on `/data/keys`, because the usual warning is the wrong one here:
-Culina's session cookie carries an opaque reference, not an encrypted payload,
-so a lost key ring signs nobody out. What it does encrypt is the model
-provider's API key, the key push notifications are signed with, and the API
-tokens of connected recipe libraries. Lose it and the assistant has to be given
-its key again, finished imports stop notifying anyone, and every connected
-library has to be connected again. Back it up, apart from the dump —
-`operations.md` says how.
-
-## The image
-
-Multi-stage, deterministic, non-root, no build tooling in the final layer.
+## 1. Container Topology
 
 ```
-stage 1  node:22-alpine     pnpm install --frozen-lockfile
-                            pnpm generate:api        (from the committed OpenAPI doc)
-                            pnpm build               → build/
-stage 2  dotnet/sdk:10.0    dotnet restore --locked-mode
-                            copy stage-1 build/ into Api/wwwroot/
-                            dotnet publish -c Release
-stage 3  dotnet/aspnet:10.0-noble-chiseled
-                            non-root (uid 64198), read-only rootfs,
-                            no shell, HEALTHCHECK → /health/ready
+┌───────────────────────────────────────────────────────────┐
+│ Container: ghcr.io/jakobpriesner/culina (:8080)           │
+│                                                           │
+│  docker-entrypoint.sh (root bootstrap)                    │
+│   ├─ Initializes /var/lib/postgresql/data if empty        │
+│   ├─ Ensures user/db `culina` + syncs $POSTGRES_PASSWORD  │
+│   ├─ Chowns /app/uploads to `culina:culina` (UID 10001)   │
+│   └─ Execs supervisord                                    │
+│       ├─ [postgres]   (user: postgres, 127.0.0.1:5432)    │
+│       └─ [culina-api] (user: culina,   0.0.0.0:8080)      │
+│            ├─ Serves SvelteKit static SPA (/app/wwwroot)  │
+│            ├─ Serves REST API (/api/v1/*) & MCP (/mcp)    │
+│            └─ Runs EF Core migrations under advisory lock │
+└───────────────────────────────────────────────────────────┘
 ```
 
-- `--locked-mode` / `--frozen-lockfile` on both sides: a build that silently
-  resolves a different dependency is not reproducible.
-- The frontend is generated from the **committed** `openapi/Api.json`, never
-  from a running server, so the image build needs no database.
-- Chiseled runtime: no shell, no package manager — a much smaller attack
-  surface and a much smaller CVE feed.
-- Every base image (and the database in `compose.yaml`) is pinned to a digest
-  next to its tag, so a moved or compromised tag cannot change what ships
-  without a diff. Dependabot (`.github/dependabot.yml`) proposes new digests
-  and action SHAs weekly, never a major version.
-- Labels carry `org.opencontainers.image.source`, `.revision` and `.version` so
-  GitHub Packages can link the image to this repository and a running container
-  can be traced back to a commit.
+- **External PostgreSQL mode:** If `ConnectionStrings__DefaultConnection` points to a non-local host, you can run without the local Postgres volume or use `compose.dev.yaml` for split-container development.
 
-## Configuration
+---
 
-Bootstrap settings, read once at startup (`dotnet-configuration`), from the
-environment and from `/data/config/culina.json` — which the app writes when an
-administrator uses the setup screen or Settings → Server, and applies by
-rebuilding its host in place. The environment wins over the file. Everything an
-admin changes *without* a restart lives in the database instead. The full list,
-and what the app can edit, is in `configuration.md`.
+## 2. Multi-Stage `Dockerfile`
 
-| Variable | Default | |
-| --- | --- | --- |
-| `Database__Host` / `__Port` / `__Name` / `__Username` / `__Password` | — | required, parts not a connection string |
-| `Database__RequireSsl` | `true` | |
-| `Storage__ImagePath` | `/data/images` | unused when `Storage__S3__*` is set |
-| `Storage__S3__Endpoint` / `__Bucket` / `__AccessKey` / `__SecretKey` / `__Region` / `__ForcePathStyle` | — | optional; photos in an S3-compatible bucket |
-| `Storage__DataProtectionKeyPath` | `/data/keys` | |
-| `Storage__ConfigPath` | `/data/config` | where `culina.json` lives |
-| `Cookies__Secure` | `true` | `false` is refused outside Development, unless… |
-| `Cookies__AllowInsecureOutsideDevelopment` | `false` | …this is `true`; plain-HTTP instances only |
-| `ForwardedHeaders__KnownProxies` | — | comma-separated; required behind a proxy |
-| `PasswordHashing__*` | Argon2id defaults | memory, iterations, parallelism |
-| `RateLimits__*` | sensible | login, registration, invitation redemption |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | unset | unset ⇒ console logs only, no export |
+1. **`frontend-build` (`node:24-alpine`):** Runs `pnpm install --frozen-lockfile` and `pnpm build` (`@sveltejs/adapter-static` with `200.html` SPA fallback).
+2. **`backend-build` (`mcr.microsoft.com/dotnet/sdk:10.0-noble`):** Restores and publishes `src/backend/Culina.Api/Culina.Api.csproj` (`-c Release`).
+3. **`runtime` (`mcr.microsoft.com/dotnet/aspnet:10.0-noble`):**
+    - Installs `postgresql-17`, `supervisor`, `curl`, `gosu`, and `libgssapi-krb5-2`.
+    - Creates unprivileged system user `culina` (`UID 10001`).
+    - Copies backend binaries to `/app` and static frontend assets to `/app/wwwroot`.
+    - Configures Docker `HEALTHCHECK` against `http://127.0.0.1:8080/healthz`.
 
-**The process must refuse to start on invalid configuration.** Every settings
-record has `Validate()`, called at startup; a misconfigured deployment fails
-loudly rather than on the first request that needed the value.
+---
 
-Secrets arrive as env vars or Docker secrets. There is no secret in any
-committed file, and `Database__Password` is never logged, echoed by an endpoint
-or included in a problem document.
+## 3. Database Migrations (`MigrationHostedService`)
 
-## Database migrations
+- On startup, `MigrationHostedService` acquires PostgreSQL session advisory lock `784_920_113` (`pg_advisory_lock`), runs `db.Database.MigrateAsync()`, seeds default categories/BLS nutrition reference data (`BlsSeederHostedService`), and releases the lock.
+- Concurrent replicas or rapid restarts wait safely on the advisory lock rather than racing schema changes.
 
-Numbered `.sql` files embedded in `Infrastructure`, applied at startup by a
-hosted service **before** the app accepts traffic:
+---
 
-1. Take a Postgres **advisory lock**, so rolling or replicated starts cannot
-   race each other.
-2. Compare `schema_migrations` with the embedded set.
-3. Apply each missing migration in its own transaction, in order.
-4. Release, log one `Information` line per applied migration, then serve.
+## 4. CI/CD Pipelines (`.github/workflows/`)
 
-Forward-only. A mistake is a new migration, never an edited one. A migration
-that fails is `Critical` and the process exits non-zero — a half-migrated
-database must not serve traffic.
+### `ci.yml` (Every Push & PR)
 
-## CI pipeline (GitHub Actions)
+- **`backend-test`:** Builds `Culina.slnx` and runs xUnit + Testcontainers PostgreSQL 17 integration tests.
+- **`frontend-verify`:** Boots the compiled backend solely to export `/openapi/v1.json`, verifies `pnpm generate:api` produces zero diff against `src/frontend/src/lib/api/schema.d.ts`, then runs `pnpm lint`, `pnpm check`, and `pnpm test:unit` (Vitest).
+- **`e2e-smoke`:** Runs Playwright smoke suites against the full stack (`src/frontend/tests/e2e`).
+- **`docker-smoke`:** Builds the production `Dockerfile`, boots the container with real secrets, waits for `/healthz == 200`, and verifies static asset serving and security headers.
 
-Three workflows. Everything below runs on every pull request; only the last job
-differs on `main`.
+### `release.yml` (Tags `v*.*.*`)
 
-### `ci.yml` — on push and pull request
-
-```
-backend        dotnet format --verify-no-changes
-               dotnet build -warnaserror          (warnings are already errors)
-               dotnet test  Domain.UnitTests Application.UnitTests ArchitectureTests
-               dotnet test  IntegrationTests      (Testcontainers → real Postgres)
-
-frontend       pnpm install --frozen-lockfile
-               pnpm lint · pnpm check             (svelte-check, zero errors)
-               pnpm test:unit                     (Vitest incl. scaling + theme contract)
-               pnpm build
-
-contract       dotnet build → export openapi/Api.json
-               pnpm generate:api
-               git diff --exit-code               ← a stale generated client cannot merge
-
-e2e            docker compose up + Playwright: auth, create, scale, cook, shop
-               uploads traces and screenshots on failure
-
-security       CodeQL (C#, TypeScript)
-               dotnet list package --vulnerable --include-transitive  (fails on any)
-               pnpm audit --audit-level=high
-               Trivy on the built image (fails on HIGH/CRITICAL, fixed only)
-               Gitleaks secret scan
-```
-
-The `contract` job is the one that keeps the two halves honest: the backend and
-the generated frontend client cannot drift, because drift fails the build.
-
-### `release.yml` — on a tag `v*`
-
-Publishes nothing unless the tagged commit is already on `main` and `ci.yml`'s
-run for that commit on `main` succeeded; a tag on a red, unfinished or unmerged
-commit stops at the first job (re-run the workflow once CI is green). Then it
-builds `linux/amd64` + `linux/arm64` with Buildx and pushes the image to GHCR
-**by digest only**, scans that digest with Trivy (fails on HIGH/CRITICAL, fixed
-only), generates an SBOM (Syft), signs the image and the SBOM with Cosign
-(keyless OIDC) and attaches SLSA build provenance. Only after all of that are
-`vX.Y.Z`, `vX.Y` and `latest` pointed at the digest, so an image that fails the
-scan is never tagged. The release links to the GitHub Packages image and gives
-both a versioned and a digest-pinned pull command. Its change notes are
-generated from commits since the previous tag.
-
-The workflow runs from the tagged commit's own copy of `release.yml`, so the
-check above stops mistakes, not somebody with push access who edits it away.
-Restrict who may create, move or delete `v*` tags with a tag ruleset in the
-repository settings.
-
-### `nightly.yml`
-
-Re-scans the **published** image with Trivy — a CVE disclosed after release is
-exactly the one nobody notices — refreshes the dependency audit, and opens a
-bead when something needs action.
-
-## Environments
-
-| | |
-| --- | --- |
-| **Local dev** | `docker compose up -d db` + `dotnet watch` + `pnpm dev`. Vite proxies `/api` → backend so the app is same-origin in development too — cookies and CSRF behave exactly as in production, which is why there is no CORS anywhere and no dev-only auth path. |
-| **Local prod check** | `docker compose -f compose.yaml -f compose.prod.yaml up` — the real image, real migrations, secure cookies on: browsers (and curl) treat `http://localhost` as secure, so nothing needs `Cookies__Secure=false`. Anything reached over plain HTTP by another name needs `Cookies__AllowInsecureOutsideDevelopment=true` as well. |
-| **Production** | The published image behind the operator's proxy. Deploy = pull the new tag, restart. Migrations run at boot. |
-
-## Operating it
-
-- **Health**: `/health/live` (process) and `/health/ready` (database). The
-  container `HEALTHCHECK` and any orchestrator use `ready`.
-- **`Cannot load library libgssapi_krb5.so.2` at boot is expected.** Npgsql
-  probes for Kerberos when it builds its data source, and a chiseled runtime
-  ships no Kerberos. Culina authenticates to PostgreSQL with a password, so
-  nothing needs it. Two lines on stderr at startup and never again; adding six
-  system libraries to the image to silence them is not a trade worth making.
-- **Observability**: set `OTEL_EXPORTER_OTLP_ENDPOINT` and all three signals
-  export. Unset, the app logs JSON to stdout and exports nothing. Culina
-  invents no telemetry configuration names of its own.
-- **Backups**: `pg_dump` for the database plus a copy of `/data/images`,
-  `/data/keys` and `/data/config` — the last two encrypted and kept apart from
-  the dump, because together they decrypt the secrets in it. The documented
-  restore procedure is tested as part of the release checklist — an untested
-  backup is a hope.
-- **Rollback**: redeploy the previous tag. Safe as long as no migration since
-  then was destructive, which is why migrations are additive by default and a
-  destructive one is called out in its release notes.
-- **Zero downtime is not a goal.** A single-instance self-hosted recipe app
-  restarts in a second or two; engineering around that would cost more than it
-  returns.
-
-## Security posture
-
-- Non-root, read-only root filesystem, `no-new-privileges`, dropped
-  capabilities, and only the two data volumes writable.
-- The database is not published to the host in the production compose file —
-  it is reachable only on the internal network.
-- Security headers, CSP with a per-response nonce, and no `unsafe-inline`
-  anywhere, per `cookie-auth-and-security`.
-- Dependency and image scanning gate the pipeline; `NuGetAudit` is already on
-  at `low` in `Directory.Build.props`, so a vulnerable transitive package fails
-  the compile, not the review.
-- `/.well-known/security.txt` is written by the server from the operator's
-  `Site__SecurityContact`, with an `Expires` always half a year out, and is a
-  `404` until one is set (`frontend-static-assets`).
-
-## Public files
-
-`robots.txt` and `sitemap.xml` are written at build time from one list of
-public routes (`src/lib/app/publicRoutes.ts`), so a new public route cannot end
-up allowed in one and missing from the other. `PUBLIC_SITE_URL`, optional, is
-the address the sitemap is written for; without it there is no sitemap, because
-an instance on a private network has no public address and should not invent
-one.
-
-`/.well-known/security.txt` is the exception, because what it says belongs to
-the operator rather than to the build: the server writes it on every request
-from two runtime settings, both optional.
-
-| Variable | Effect when unset |
-| --- | --- |
-| `Site__SecurityContact` | No security.txt — a `404`. A contact nobody reads is worse than none: it tells a finder they have reported something when they have not. A `mailto:`, `https://` or `tel:` address. |
-| `Site__Url` | No `Canonical:` line in it. |
-
-Its `Expires` is half a year from the moment it is asked for, so it is never
-stale — RFC 9116 asks for less than a year.
-
-None of this is access control. Every route in the `Disallow` list returns 401
-to a stranger; robots.txt only asks well-behaved crawlers not to advertise that
-the instance exists.
+- Builds multi-arch (`linux/amd64`, `linux/arm64`) images via Docker Buildx, pushes tags (`latest`, `X.Y.Z`, `X.Y`, `sha-...`) to `ghcr.io/jakobpriesner/culina`, generates CycloneDX SBOMs (`anchore/sbom-action`), and attests build provenance (`actions/attest-build-provenance`).

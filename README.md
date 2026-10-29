@@ -1,169 +1,117 @@
 # Culina
 
-A self-hosted recipe app for the people you actually cook with.
+![CI](https://github.com/JakobPriesner/culina/actions/workflows/ci.yml/badge.svg)
+![License: MIT](https://img.shields.io/badge/license-MIT-5c6b4f.svg)
 
-![A recipe in Culina: the photograph, the ingredient list, and steps whose
-amounts come from that list](docs/images/recipe.webp)
+A self-hosted kitchen companion for German-speaking households — recipe library, weekly meal planner, smart shopping list, step-by-step cooking mode, nutrition diary, and native iOS/macOS app in one container.
 
-Culina is built around one observation: a person using a recipe app is never in
-a single state. They move through **finding → deciding → shopping → cooking →
-remembering**, and almost every recipe app treats those as separate screens.
-All the pain lives in the transitions between them.
+![Culina recipe detail view showing portions scaling, preparation time, nutrition summary, ingredients, and step-by-step instructions](docs/images/recipe.webp)
 
-## Three commitments
+## Features
 
-**1. One recipe surface. Cooking is a change in emphasis, not a change of
-screen.** Reading and cooking are the same component at two weightings. The
-ingredient list and the servings control keep their screen position; the step
-you were reading grows in place. You never have to re-find anything.
+- **Recipe library & search** — Hybrid bilingual search (DE/EN) with prefix matching, typo tolerance, culinary synonym expansion, and filter tokens (`#tag`, `@zutat`, `~30m`, `!allergen`, `k:600`). Import via URL (`schema.org/Recipe` JSON-LD / Microdata), photos/PDFs, text, Paprika (`.paprikarecipes`), Nextcloud Cookbook, Mealie, Tandoor, or full ZIP archives.
+- **Cookbooks & shared households** — Organise recipes into manual or rule-based smart cookbooks (`SmartFilterQuery`). Invite household members (`view` / `edit` / `manage`) or share read-only public links. Connect partner libraries across instances.
+- **Woche (weekly planner) & Tagebuch (nutrition diary)** — Drag-and-drop 7-day meal planner (`Frühstück`, `Mittag`, `Abend`, `Snack`, `Vorbereitung`) with automatic ingredient availability checks and leftover prompts. Log meals, barcode scans (Open Food Facts + BLS 4.0), freeform entries, weight, and water against BMR/TDEE targets.
+- **Smart shopping list** — Consolidates planned meals and manual items into a real-time SSE-synced list sorted by supermarket aisle, merging compatible units (`g`/`kg`, `ml`/`l`, `TL`/`EL`) and subtracting stocked pantry items (`Küche`).
+- **Step-by-step cooking mode & Olli** — Distraction-free cooking view with Wake Lock, concurrent step timers, hands-free voice readout (Web Speech API / native TTS), per-portion scaling (`0.25`–`50`), and **Olli**, an optional context-aware kitchen assistant (`Cmd/Ctrl+K`) and remote MCP server (`/mcp`).
+- **Web & native apps** — Installable PWA plus Capacitor 8 iOS & macOS (Mac Catalyst) app with biometric passkeys, native barcode scanner, offline recipe/shopping cache, and App Shortcuts / Spotlight indexing.
 
-**2. Steps know which ingredients they use.** A step references its
-ingredients, so changing the servings changes the amounts *inside the step
-text* — "Melt **180 g butter** in the pan", not "melt the butter" with the
-number 400 px away. Scaling is honest instead of cosmetic, and the app rounds
-the way a cook writes: `4–5 cloves`, never `4.5`.
+## Quickstart (Docker Compose)
 
-**3. The app never loses your place.** Servings are remembered per recipe.
-Leave mid-cook and come back to the same step with your timers still running —
-they count from a deadline, not from a page that has to stay open, so ten
-minutes in a pocket is ten minutes gone. They do not ring while the app is
-closed, and nothing in the app pretends otherwise. A slim bar anywhere brings
-you straight back.
+Save as `compose.yaml`:
 
-## What it deliberately does not do
+```yaml
+services:
+    culina:
+        image: ghcr.io/jakobpriesner/culina:latest
+        container_name: culina
+        restart: unless-stopped
+        ports:
+            - "8080:8080"
+        environment:
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+            CULINA_JWT_SECRET: ${CULINA_JWT_SECRET:?Set CULINA_JWT_SECRET in .env}
+            CULINA_SETTINGS_ENCRYPTION_KEY: ${CULINA_SETTINGS_ENCRYPTION_KEY:?Set CULINA_SETTINGS_ENCRYPTION_KEY in .env}
+            CULINA_PUBLIC_ORIGIN: ${CULINA_PUBLIC_ORIGIN:-http://localhost:8080}
+        volumes:
+            - culina-pgdata:/var/lib/postgresql/data
+            - culina-uploads:/app/uploads
 
-No pantry inventory (nobody maintains one, so it goes stale and poisons
-everything built on it). No hidden calorie estimates (a wrong number is worse
-than none): nutrition is a lookup in the German food composition table, cited on
-the page. Where a recipe gives no weight, a cited typical weight ("1 Zwiebel ≈
-110 g", USDA) may count it, always marked as an estimate; your household can set
-its own weights or switch typical ones off, and what still cannot be counted
-makes the figure "at least" and is named. No social feed, ratings or comments —
-this is your kitchen, not a network.
-
-## The assistant
-
-Culina can connect to a language model, and then it will do four things: tidy
-the wording and structure of a recipe you wrote, turn an idea into a draft,
-read a recipe out of a photograph of a cookbook page, and draw a picture for a
-recipe that has none. Nothing it produces is saved until you have read it beside
-what was there before and accepted it, field by field.
-
-It is off until an administrator connects one, and an instance with nothing
-connected is the app exactly as it was before any of this existed — the buttons
-are absent, not greyed out. Culina has to work completely without it, and it
-does.
-
-Three providers — **Ollama** for a model on your own hardware, **Gemini** and
-**OpenAI** for a hosted one — and you can connect all of them and give each job
-to whichever suits it. Reading a cookbook photograph wants good vision; tidying
-wording wants something cheap you will ask twenty times an evening; drawing
-wants a provider that draws at all, which a local model does not.
-
-A job given to Ollama costs nothing per recipe and sends nothing off the
-machine. A job given to Gemini or OpenAI sends that recipe's text, or the
-photograph you pointed it at, to that company to be read — and the settings
-screen tracks tokens and spend per person, and refuses requests once you have
-hit the monthly ceiling you set.
-
-## Stack
-
-| | |
-| --- | --- |
-| Backend | C# / .NET 10, minimal APIs, Npgsql + Dapper, PostgreSQL |
-| Frontend | SvelteKit 2 / Svelte 5 runes, TypeScript, static SPA, installable PWA |
-| Shipping | One container serving both from the same origin |
-| i18n | German and English, compile-time via Paraglide |
-
-## Running it
-
-There are two ways to run Culina with your **local code**, plus running the **published production image**:
-
-### 1. Locally from source (development with hot reload)
-
-Best for developing, experimenting, or running the latest source directly.
-
-**Prerequisites:** Docker, .NET 10 SDK, Node 26, and pnpm.
-
-```bash
-git clone https://github.com/jakobpriesner/culina.git
-cd culina
-cp .env.example .env
-make dev
+volumes:
+    culina-pgdata:
+    culina-uploads:
 ```
 
-PostgreSQL starts in a container (port 5433), the API runs with hot reload (port 5000), and the Vite dev server runs at <http://localhost:5173>. Vite proxies `/api` to the backend, so development is same-origin exactly like production — which is why Culina has no CORS policy anywhere.
-
-- Run `make dev LAN=1` to open the frontend to your local network (for testing on a phone).
-- If running without `make`:
-  ```bash
-  docker compose up -d db
-  # In one terminal (backend API):
-  cd src/backend/src/Api && dotnet watch run
-  # In another terminal (frontend):
-  cd src/frontend && pnpm dev
-  ```
-- Run `make` with no target to see every developer command.
-
-### 2. Locally as a container (built from local code)
-
-Runs the complete single-container production build (backend API + pre-compressed static SPA served on port 8080) built directly from your local checkout rather than pulling from a remote registry.
-
-**Prerequisites:** Docker only.
+Generate secrets and start:
 
 ```bash
-cp .env.example .env
-# Fill in Database__Password and POSTGRES_SUPERUSER_PASSWORD in .env
-docker compose -f compose.yaml -f compose.prod.yaml up --build -d
-# Or: make image-run
+cat <<EOF > .env
+POSTGRES_PASSWORD=$(openssl rand -hex 24)
+CULINA_JWT_SECRET=$(openssl rand -base64 48 | tr -d '\n')
+CULINA_SETTINGS_ENCRYPTION_KEY=$(openssl rand -base64 32 | tr -d '\n')
+CULINA_PUBLIC_ORIGIN=http://localhost:8080
+EOF
+chmod 600 .env
+docker compose up -d
 ```
 
-Culina builds the multi-stage image from your local `Dockerfile` and runs at <http://localhost:8080>.
+Open `http://localhost:8080`. The first account registered becomes the instance owner.
 
-### 3. With the published image (production / self-hosting)
+> **Production HTTPS:** Set `CULINA_PUBLIC_ORIGIN=https://culina.example.com` and `CULINA_FORWARDED_HEADERS_KNOWN_PROXIES` behind a reverse proxy. WebAuthn passkeys and Secure cookies require matching origins.
 
-For self-hosting an instance without compiling from source:
+## AI Provider Setup (Optional)
+
+Intake extraction, Olli, and photo nutrition estimation work with any supported provider configured globally via environment variables or per-household under **Einstellungen → KI-Assistent**:
+
+| Provider             | Key / URL Variable          | Default Model (`fast` / `capable`)                              |
+| -------------------- | --------------------------- | --------------------------------------------------------------- |
+| **Anthropic Claude** | `CULINA_ANTHROPIC_API_KEY`  | `claude-haiku-4-5` / `claude-sonnet-4-6`                        |
+| **Google Gemini**    | `CULINA_GEMINI_API_KEY`     | `gemini-3-flash-preview` / `gemini-3.1-pro-preview`             |
+| **OpenAI**           | `CULINA_OPENAI_API_KEY`     | `gpt-5.4-mini` / `gpt-5.4`                                      |
+| **OpenRouter**       | `CULINA_OPENROUTER_API_KEY` | `google/gemini-3-flash-preview` / `anthropic/claude-sonnet-4-6` |
+| **Ollama (local)**   | `CULINA_OLLAMA_BASE_URL`    | `gemma4:e4b`                                                    |
+
+External AI agents (Claude Desktop, Claude Code, Cursor) can also connect directly to Culina's built-in **MCP server** at `<origin>/mcp` via OAuth 2.1 + PKCE or personal access tokens (`culina_pat_...`).
+
+## Local Development
+
+**Prerequisites:** .NET 10 SDK, Node.js 24 LTS + `pnpm` 10, PostgreSQL 17 (or Docker).
 
 ```bash
-cp .env.example .env
-# Fill in Database__Password, POSTGRES_SUPERUSER_PASSWORD and the address of
-# your reverse proxy.
-docker compose -f compose.yaml -f compose.prod.yaml up -d
+# 1. Start PostgreSQL + SearXNG
+docker compose -f compose.dev.yaml up -d db searxng
+
+# 2. Run backend API (http://localhost:5180, auto-migrates on boot)
+dotnet run --project src/backend/Culina.Api
+
+# 3. Run frontend dev server (http://localhost:5173)
+pnpm --dir src/frontend install
+pnpm --dir src/frontend dev
 ```
 
-Pulls `ghcr.io/jakobpriesner/culina:latest` and serves at `http://localhost:8080`.
+Verify changes:
 
-Point your reverse proxy at it — TLS is the proxy's job, deliberately. The first visit opens a **setup screen** — the database password you put in `.env`, which proxy to trust, whether cookies need HTTPS, and your account. **Whoever finishes it becomes the administrator**, and whether anyone else may register is then that person's decision, made in the app. The server settings stay there too, under Settings → Server.
-
-Three volumes are mandatory, and the compose file declares all of them:
-`/data/images` holds the only copy of every photograph, and losing it on a
-redeploy would say nothing at all; `/data/keys` holds the key ring that encrypts the assistant's API key, the push-notification key and connected libraries' tokens; `/data/config` holds what was set up in the app, the database password among it.
-
-[`docs/operations.md`](docs/operations.md) has installing, upgrading, backup,
-a tested restore, and the proxy configuration the app expects.
+```bash
+dotnet test src/backend/Culina.slnx
+pnpm --dir src/frontend check && pnpm --dir src/frontend test:unit
+```
 
 ## Documentation
 
-| | |
-| --- | --- |
-| [`docs/domain-model.md`](docs/domain-model.md) | Entities, invariants, persistence conventions |
-| [`docs/api.md`](docs/api.md) | The full v1 HTTP surface |
-| [`docs/design-system.md`](docs/design-system.md) | Tokens, theming, component inventory |
-| [`docs/scaling-rules.md`](docs/scaling-rules.md) | How portions scale, and how amounts are rounded |
-| [`docs/search-design.md`](docs/search-design.md) | Search: retrieval, query understanding, ranking and the interaction |
-| [`docs/nutrition-design.md`](docs/nutrition-design.md) | Nutrition: the food table, how a line becomes grams, and how a figure says what it covers |
-| [`docs/deployment.md`](docs/deployment.md) | The image, the pipeline, and why they are shaped that way |
-| [`docs/operations.md`](docs/operations.md) | Installing, upgrading, backup and restore |
-| [`docs/configuration.md`](docs/configuration.md) | Every environment variable and what breaks without it |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md) | How to work on it, and what the conventions enforce |
-| [`SECURITY.md`](SECURITY.md) | Reporting a vulnerability |
-| [`docs/security-review.md`](docs/security-review.md) | What was checked against ASVS 5.0 L2, and what is deliberately absent |
-| [`docs/accessibility-and-performance.md`](docs/accessibility-and-performance.md) | What is checked on every change, what the audit found, and the weight budget |
+| Guide                                                               | Contents                                                                 |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [`docs/configuration.md`](docs/configuration.md)                    | Environment variables, defaults, reverse proxy & Prometheus setup        |
+| [`docs/operations.md`](docs/operations.md)                          | Install, upgrades, backup/restore, key rotation, alerts, troubleshooting |
+| [`docs/deployment.md`](docs/deployment.md)                          | Container topology, Dockerfile hardening, CI/CD, EF Core migrations      |
+| [`docs/api.md`](docs/api.md)                                        | REST endpoints, auth/CSRF, RFC 9457 problem codes, MCP server (`/mcp`)   |
+| [`docs/domain-model.md`](docs/domain-model.md)                      | Entities, ownership axes, scaling, shopping merge, connected libraries   |
+| [`docs/design-system.md`](docs/design-system.md)                    | Warm Modernism tokens, typography, surfaces, motion, and components      |
+| [`docs/search-design.md`](docs/search-design.md)                    | Hybrid Postgres FTS + trigram search, query grammar, ranking tiers       |
+| [`docs/suggestions-research.md`](docs/suggestions-research.md)      | Contextual meal suggestion engine, decay curves, MMR diversity           |
+| [`docs/nutrition-design.md`](docs/nutrition-design.md)              | BLS 4.0 + Open Food Facts pipeline, Retention factors, BMR/TDEE          |
+| [`docs/native-app-design.md`](docs/native-app-design.md)            | Capacitor 8 iOS & Mac Catalyst architecture, plugins, offline sync       |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) · [`SECURITY.md`](SECURITY.md) | Contribution workflow, coding conventions, and vulnerability reporting   |
 
-## Licence
+## License
 
-PolyForm Noncommercial License 1.0.0. See [LICENSE](LICENSE).
-
-Nutrition values come from the Bundeslebensmittelschlüssel (BLS) 4.0 of the
-Max Rubner-Institut, under CC BY 4.0; the extract and its attribution are in
-[`src/backend/src/Infrastructure/Nutrition`](src/backend/src/Infrastructure/Nutrition/BLS-ATTRIBUTION.md).
+MIT — see [`LICENSE`](LICENSE).

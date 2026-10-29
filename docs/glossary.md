@@ -1,62 +1,40 @@
-# Culina's words
+# German UI Glossary & Copywriting Guide
 
-One name per thing, everywhere people read it: tab, page title, segment,
-settings, toast and screen-reader label. A place is named for what it holds,
-not for its shape or a metaphor. Decided 24 October 2026
-(`docs/food-log-redesign.md` §1, `culina-v2-6dt0.1`). The code keeps its own
-identifiers (`diary`, `shopping`, `plan`); only what people read follows this
-list.
+Canonical terminology and typographic rules for Culina's German interface.
 
-## Places
+---
 
-| Thing | Deutsch | English | Not |
-| --- | --- | --- | --- |
-| The recipe library | Rezepte | Recipes | |
-| Shelves of recipes | Kochbücher | Cookbooks | |
-| The week, as a place (tab) | Woche | Week | |
-| What the week cooks | Essensplan | Meal plan | Plan |
-| What the household buys | Einkaufsliste | Shopping list | Liste, Einkauf, List |
-| What one ate, against one's own targets | Ernährung | Nutrition | Tagebuch, Ernährungstagebuch, Diary |
-| The settings | Einstellungen | Settings | |
+## 1. Voice, Tone & Address
 
-## Things
+- **Informal _Du_ (lowercase `du` / `dein`):** Warm, respectful, and concise (`"Dein Wochenplan ist leer"`, `"Was möchtest du heute kochen?"`).
+- **Real German Umlauts:** Always write `ä`, `ö`, `ü`, `ß` in UI copy, labels, and error messages (`Küche`, `Frühstück`, `Größe`, `Soße`, `schließen`) — never ASCII fallbacks (`ae`, `oe`, `ue`, `ss`).
+- **Typographic Precision:**
+    - En-dash (`–`, U+2013) for numeric ranges (`100–150 g`, `20–25 Min.`) and clauses (`Offline-Modus – Änderungen gespeichert`).
+    - Real ellipsis (`…`, U+2026) for loading/placeholders (`Rezepte durchsuchen…`, `Wird gespeichert…`).
+    - Non-breaking thin/narrow space before units (`250 g`, `1,5 l`, `180 °C`, `450 kcal`).
+    - Comma decimal separator (`1,5`, `0,75`).
 
-| Thing | Deutsch | English | Not |
-| --- | --- | --- | --- |
-| One thing eaten | Eintrag | Entry | |
-| A line on the shopping list | Posten | Item | |
-| One's own number for a day | Richtwert | Target | Ziel, Limit |
-| A planned meal of a day | Mahlzeit | Meal | |
-| Breakfast, lunch, dinner, snacks | Frühstück, Mittagessen, Abendessen, Snacks | Breakfast, Lunch, Dinner, Snacks | |
+---
 
-## Actions
+## 2. Canonical Domain Terms
 
-Buttons say a verb; links say where they go.
+Always use the **Preferred Term** in navigation, headings, buttons, and toasts:
 
-| Action | Deutsch | English | Not |
-| --- | --- | --- | --- |
-| Putting a recipe in the week | Einplanen | Plan | |
-| Putting things on the shopping list | Auf die Einkaufsliste | Add to shopping list | Auf die Liste |
-| Writing down what was eaten | Eintragen | Log | Hinzufügen |
-| A planned meal that was not eaten | Übersprungen | Skipped | Vergessen, Verpasst |
-| Taking a write back | Rückgängig | Undo | |
-
-## How figures are qualified
-
-| Meaning | Mark | Read aloud (de / en) |
-| --- | --- | --- |
-| Estimated (typical weights, a household's own food) | ≈ | etwa / about |
-| A lower bound (some ingredients without values) | ≥ | mindestens / at least |
-| One's own figures | ✎ | von dir eingetragen / typed by you |
-
-The page says once in words that some figures are estimated; it does not
-write "ca." or "mind." before every number.
-
-## Rules
-
-- Back-references inside a sentence on the list's own page may say "die
-  Liste" ("steht schon auf der Liste"). A label, title or toast seen elsewhere
-  never does.
-- Possessives sparingly (Apple HIG, Writing): "Einkaufsliste", not "Deine
-  Einkaufsliste"; "du" in sentences, as everywhere in Culina.
-- No "wir" in messages.
+| Concept                   | Preferred Term (DE)                                                                           | Avoid                                               |
+| ------------------------- | --------------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| Dashboard / Today view    | **Heute**                                                                                     | Dashboard, Startseite, Home                         |
+| Recipe library            | **Sammlung** / **Rezepte**                                                                    | Bibliothek, Datenbank, Index                        |
+| Cookbook (manual / smart) | **Kochbuch** (`Pl. Kochbücher`) / **Smart-Kochbuch**                                          | Ordner, Kollektion, Playlist                        |
+| Quick reference card      | **Kompakt-Notiz** (`kompakt`)                                                                 | Kurzrezept, Snippet                                 |
+| Weekly meal planner       | **Woche** / **Wochenplan**                                                                    | Kalender, Essensplaner, Meal Plan                   |
+| Meal slots                | **Frühstück**, **Mittag**, **Abend**, **Snack**, **Vorbereitung**                             | Lunch, Dinner, Meal Prep                            |
+| Shopping list             | **Einkauf** / **Einkaufsliste**                                                               | Einkaufswagen, Merkliste                            |
+| Pantry & staples          | **Küche** / **Vorrat** & **Grundvorrat**                                                      | Speisekammer, Inventar, Lager                       |
+| Storage locations         | **Kühlschrank**, **Gefrierfach**, **Vorratsschrank**, **Gewürzregal**                         | Fridge, Freezer, Pantry                             |
+| Nutrition diary           | **Tagebuch**                                                                                  | Tracker, Kalorienzähler, Food Log                   |
+| Macros                    | **Kalorien (`kcal`)**, **Eiweiß**, **Kohlenhydrate**, **Fett**, **Ballaststoffe**, **Zucker** | Proteine (prefer _Eiweiß_ in labels), Carbs, Fibers |
+| Cooking view              | **Kochmodus**                                                                                 | Schritt-für-Schritt-Ansicht, Präsentationsmodus     |
+| Servings                  | **Portionen**                                                                                 | Personen, Teile, Servings                           |
+| AI Assistant              | **Olli** (`Küchenassistent`)                                                                  | Bot, KI-Chat, Copilot                               |
+| Household workspace       | **Haushalt**                                                                                  | Team, Organisation, Gruppe                          |
+| Connected library         | **Verbundene Sammlung**                                                                       | Föderation, Remote-Feed                             |

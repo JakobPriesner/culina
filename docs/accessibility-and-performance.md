@@ -1,122 +1,34 @@
-# Accessibility and performance
+# Accessibility & Performance Standards
 
-A pass before the 1.0 tag, rather than a checkbox on every ticket. What was
-checked, what it found, and — the part that matters more — what is now checked
-on every change so the answers cannot quietly go back.
+Targets, budgets, and verification gates for Culina's web and native surfaces.
 
-| | |
-| --- | --- |
-| Reviewed | 13 September 2026 |
-| Target | WCAG 2.1 AA, and a first load small enough for a kitchen at the back of a house |
+---
 
-## What runs on every change
+## 1. Accessibility (WCAG 2.2 AA)
 
-- **axe over twenty routes**, signed out and signed in, in light and dark, at
-  `wcag2a`, `wcag2aa`, `wcag21a` and `wcag21aa`. Sign in, register, the recipe
-  list, a recipe, cooking, the editor, the shopping list, the profile.
-- **A keyboard walk**: the skip link is the first stop on every screen, every
-  control on the recipe surface is reachable, everything focusable is a real
-  control rather than a `div`, and cooking can be driven end to end without
-  touching the screen.
-- **Layout shift** on the list routes, held under 0.02 — Google calls 0.1
-  "good"; Culina reserves space for everything that arrives late, so anything
-  above a rounding error means a box was forgotten.
-- **A weight budget**, printed on every run: first load, all JavaScript, all
-  styles, gzipped.
-- **The token contrast contract**, which proves every theme defines every token
-  and that the pairs the UI stacks meet AA in both modes.
+- **Colour Contrast:**
+    - Primary and secondary body text (`--color-text-primary`, `--color-text-secondary`) maintain `>= 4.5:1` contrast against both `--color-bg-canvas` and `--color-bg-surface` in light and dark modes.
+    - UI components, input borders on focus, and active state indicators maintain `>= 3:1`.
+- **Keyboard & Focus Management:**
+    - Global shortcuts (`Cmd/Ctrl+K` for Olli / search, `Escape` to close overlays, arrow keys in autocomplete lists) never trap keyboard tab navigation.
+    - Modals and bottom drawers (`Drawer.svelte`) trap focus while open, announce via `role="dialog"` + `aria-modal="true"`, and restore focus to the trigger element on close.
+    - Every icon-only button (`Button`, `Header`, `CookingMode`, `FloatingTimerBar`) carries an explicit German `aria-label`.
+- **Touch Target Floors:**
+    - Standard interactive controls: minimum `44×44px` hit area.
+    - Kitchen / Cooking Mode (`CookingMode.svelte`, step timers, portion steppers): minimum `48×48px` hit area with `>= 8px` gap between adjacent actions.
+- **Screen Readers & Live Regions:**
+    - Timer expirations, shopping list SSE updates, toast notifications, and search result counts announce via polite `aria-live="polite"` / `role="status"` regions.
+- **Reduced Motion:**
+    - `@media (prefers-reduced-motion: reduce)` disables transform animations and collapses transition durations in `app.css`.
 
-## What it found
+---
 
-**Cooking dimmed its own text to 2.7:1.** Non-current steps were faded to `0.45`
-opacity and the header to `0.55`. The intent — quieter, not hidden — was right;
-opacity was the wrong way to express it. It blends text toward the background by
-an amount no palette review can see, and the theme's contrast test cannot reach
-it, because every token involved is correct. They recede with `--text-muted`
-now.
+## 2. Performance Budgets
 
-**"Pick it back up" was the accent colour on an accent-tinted surface**: 3.7:1
-in light, 2.9:1 in dark. Two colours a few degrees apart is what makes the tint
-work as a background and what makes it unreadable as text on top of itself.
-
-**The editor had no heading and its step fields had no labels.** A screen reader
-landing there was told nothing about where it was, and each step was an unnamed
-box.
-
-**The last step took focus with it.** Next and "I made it" were two controls
-swapping places, so reaching the last step put a keyboard user back at the top
-of the page at exactly the moment the only remaining action was finishing.
-
-**The ingredient list said "No ingredients written down yet"** on a step that
-names none — about a recipe with seven.
-
-## Numbers
-
-Measured on the built app, gzipped:
-
-| | Measured | Budget |
-| --- | --- | --- |
-| First load (document, entry scripts, styles) | 55.8 kB | 80 kB |
-| All JavaScript, every route | 97.4 kB | 140 kB |
-| All styles | 12.0 kB | 24 kB |
-
-Raise a budget deliberately, in a commit that says what was added and why it was
-worth it — never to make a build pass.
-
-## A known flake
-
-`cooking can be driven without touching the screen` fails in roughly one full
-suite run in five, only when the whole suite runs in parallel and never when the
-file runs on its own. The assertion is that focus stays on the primary control
-across the last step; when it fails, focus is on `body`, which is what a browser
-does when the focused element becomes disabled. The control is disabled until
-the cook session has loaded — deliberately, because a tap that silently does
-nothing reads as a broken button — so something is briefly taking that session
-away under load. It has not been found. It is recorded here rather than deleted
-or retried away, because a test that is quietly marked flaky is a test that has
-stopped meaning anything.
-
-## What was not done, and why
-
-**No screen-reader pass with VoiceOver or NVDA.** Nothing automated substitutes
-for it: axe cannot tell whether a heading structure makes sense to somebody
-listening, whether a live region interrupts at the wrong moment, or whether the
-cooking transition is followable without sight. It is the largest remaining gap
-in this document and it needs a person with a screen reader they use daily —
-ideally not the person who wrote the app, who knows where everything is.
-
-**No Lighthouse score.** The number is made of measurements that are checked
-directly here — layout shift, transfer weight, and accessibility violations —
-and a score is a worse way to hold a line than the thing it summarises. Running
-it before a release is still worth doing on real hardware, where the numbers
-mean something; a score from a laptop plugged into the wall does not.
-
-**No throttled-connection budget for images.** Recipe photographs are the
-largest thing on the page and they are served content-addressed, in three
-widths, cached immutably, and behind an aspect-ratio box that reserves the
-space. What is not measured is the largest contentful paint on a slow
-connection, which needs a device lab rather than a CI runner.
-
-## Cooking with wet hands
-
-Advancing a step with wet hands is a real problem, and voice control is the
-obvious answer to it. Culina does not have voice control, and this is the
-reasoning, recorded so it does not have to be had again.
-
-**Misrecognition mid-cook is worse than the problem it solves.** Jumping to step
-nine because a podcast was playing in the kitchen is a genuinely bad failure —
-worse than wiping a hand on a towel — and there is no undo that makes it fine,
-because by the time you notice you have lost your place in something on a hob.
-
-What was done instead was measured. At 320 px the two controls were **129 × 56**
-for "Next step" and **161 × 56** for "Previous step": the wider target was the
-one that undoes progress, purely because it is a longer phrase. Previous is now
-an icon at the minimum comfortable size and Next takes the rest of the bar —
-roughly three times the area at 320 px and four at 390 px — with the progress
-line on its own row so the controls have the whole width.
-
-Both still clear 44 px in both directions, and a test asserts the ratio so a
-future label cannot quietly reverse it again. Cooking is also fully drivable
-from a keyboard, and the screen is held awake with a lock that is retaken every
-time the tab comes back — because that is not an edge case, it is what happens
-every time somebody checks a message.
+| Metric                                 | Target               | Mechanism                                                                                                                                                                     |
+| -------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Initial JS Bundle (gzipped)**        | `< 120 KB`           | Route-level code splitting in SvelteKit; heavy utilities (`zxing-wasm` barcode reader, chart helpers) lazy-loaded on demand.                                                  |
+| **Largest Contentful Paint (LCP)**     | `< 1.8 s` (4G / LAN) | Preloaded Variable fonts (`Plus Jakarta Sans`, `Newsreader`), server-converted `.webp` recipe images (`<= 1600px`), `loading="lazy"` + `decoding="async"` on offscreen cards. |
+| **Interaction to Next Paint (INP)**    | `< 100 ms`           | Optimistic UI updates on shopping check/uncheck, favorites, ratings, and meal plan drag-and-drop.                                                                             |
+| **Recipe Search Latency (`p95`)**      | `< 35 ms`            | Precomputed `recipe_search_documents` table with 4 GIN indexes (`tsvector` DE/EN + `pg_trgm` title/ingredients) and single-pass union index scan.                             |
+| **Completion Overlay Latency (`p95`)** | `< 15 ms`            | Prefix/trigram index lookup capped at 8 suggestions (`GET /api/v1/recipes/completions`).                                                                                      |
