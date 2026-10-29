@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import IngredientNounsPanel from './IngredientNounsPanel.svelte';
 import { nouns } from '$features/recipes/stores/nouns.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 import { preferences } from '$shell/preferences.svelte';
 
 const json = (body: unknown, status = 200) =>

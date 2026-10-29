@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Recipe } from '$features/recipes/types';
 import CookingControls from './CookingControls.svelte';
 import { kitchenTimers } from './kitchen.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* A wait the method only writes down ("4 Min. braten") is a timer one tap away, not one to set by hand at the hob. */
 const recipe = (text: string, durationSeconds: number | null = null) =>

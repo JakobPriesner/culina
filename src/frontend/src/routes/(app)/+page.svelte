@@ -46,7 +46,7 @@
       untrack(() => {
         libraryView.forHousehold(household);
         libraryView.assign({ tags: [tag] });
-        void goto(resolve('/(app)'), { replaceState: true });
+        void goto(resolve('/(app)'), { replace: true });
       });
     }
   });

@@ -4,8 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SetupPage from './+page.svelte';
 import { tips } from '$features/onboarding/tips.svelte';
-import { server } from '$features/server/stores/server.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { server } from '$features/instance/stores/instance.svelte';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const navigation = vi.hoisted(() => ({ goto: vi.fn(() => Promise.resolve()) }));
 

@@ -59,7 +59,7 @@
     if (succeeded) {
       // A kitchen to cook in, so the tour of it starts there.
       tips.startTour();
-      await goto(resolve('/(app)'), { replaceState: true });
+      await goto(resolve('/(app)'), { replace: true });
     }
   }
 </script>

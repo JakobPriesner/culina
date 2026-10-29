@@ -4,7 +4,7 @@ import { resolve } from '$app/paths';
 
 import { loginUrlFor } from '$features/auth/redirectTarget';
 import { session } from '$features/auth/session.svelte';
-import { readSetup } from '$features/server/setup';
+import { readSetup } from '$features/instance/setup';
 
 /**
  * The guard for everything behind a sign-in. Resolved here, not in the layout component, so the shell never renders for a stranger, even for one frame.

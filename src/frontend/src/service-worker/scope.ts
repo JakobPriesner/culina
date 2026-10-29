@@ -1,4 +1,4 @@
-import { base, version } from '$service-worker';
+import { version } from '$app/env';
 
 export const worker = self as unknown as ServiceWorkerGlobalScope;
 
@@ -9,4 +9,4 @@ export const cacheName = `culina-${version}`;
 export { privateCacheName } from '../lib/api/offlineReads';
 
 /** The shell document every route renders into: the root path, which is what navigations request, not `/index.html`. */
-export const shellDocument = `${base}/`;
+export const shellDocument = '/';

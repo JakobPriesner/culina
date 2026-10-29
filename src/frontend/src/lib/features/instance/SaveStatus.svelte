@@ -3,7 +3,7 @@
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
 
-  import type { SaveOutcome, SavePhase } from './stores/server.svelte';
+  import type { SaveOutcome, SavePhase } from './stores/instance.svelte';
 
   /**
    * What saving a server setting did, said under its button; each restart phase has a sentence, and one that never comes back says where to look and how to undo it.

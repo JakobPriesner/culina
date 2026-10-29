@@ -20,20 +20,20 @@
 # same bytes for arm64 as for amd64 — and running `pnpm install` a second time
 # under emulation is how a two-architecture build goes from fifteen minutes to
 # more than ninety and is killed by the timeout.
-FROM --platform=$BUILDPLATFORM node:22-alpine@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS frontend
+FROM --platform=$BUILDPLATFORM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS frontend
 
 WORKDIR /src
 
-# Corepack pins pnpm to the version in package.json's `packageManager`, so the
-# image is built by the same pnpm the lockfile was written by.
-RUN corepack enable
-
 # Manifests first, on their own layer: they change far less often than the
 # source, so an ordinary code change reuses the install. pnpm-workspace.yaml
-# holds the overrides, and a frozen install refuses a lockfile whose overrides
-# it cannot see.
+# holds pnpm's settings, and a frozen install refuses a lockfile written under
+# settings it cannot see.
 COPY src/frontend/package.json src/frontend/pnpm-lock.yaml src/frontend/pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile --ignore-scripts
+# The pnpm named in package.json's `packageManager` ("pnpm@x.y.z", which npm
+# reads as a package spec), so the image is built by the same pnpm the lockfile
+# was written by. Node 25 stopped shipping Corepack, which used to do this.
+RUN npm install --global "$(node -p 'require("./package.json").packageManager')" \
+ && pnpm install --frozen-lockfile --ignore-scripts
 
 # The client is generated from the committed OpenAPI document, never from a
 # running server, so building the image needs no database and no backend.
@@ -46,7 +46,7 @@ RUN pnpm generate:api && pnpm build
 # same for both architectures, and only the native launcher (/app/Api) and a few
 # native packages are not, which `-a` picks. Building arm64 under emulation is
 # what made publishing take twenty minutes.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0@sha256:747cbade5bfd918a175ac32f8f1d931edec2c7d0d5397a3de72eaef1ac1f66d2 AS backend
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b AS backend
 
 # amd64 or arm64, set by buildx; `-a` accepts Docker's names as they are.
 ARG TARGETARCH
@@ -94,7 +94,7 @@ RUN mkdir -p /data/images /data/keys /data/config
 # ── 3. What ships ────────────────────────────────────────────────────────────
 # Chiseled: no shell and no package manager, which is both a much smaller
 # attack surface and a much smaller CVE feed to keep up with.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled@sha256:5165aeeb688df15e869a56a7584bb94bf16a14e0b3ba77b49fcdbe350f6b8020 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled@sha256:c89a6a61f494f20a5ae302990e814627a8d91b332fd4a8e7c1707c2d4da9555d AS runtime
 
 # Traceable to a commit, from `docker inspect`, without asking anyone.
 ARG REVISION=unknown

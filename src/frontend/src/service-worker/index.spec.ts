@@ -1,19 +1,14 @@
-import { applyTimerAction, editTimerState } from './lib/features/cooking/timerState';
+import { applyTimerAction, editTimerState } from '../lib/features/cooking/timerState';
 import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 
 /*
  * A stalled fetch never rejects, so the worker must stop waiting when it holds a copy,
  * before the app stops waiting for the worker.
  */
-vi.mock('$service-worker', () => ({
-  base: '',
-  build: [],
-  files: [],
-  prerendered: [],
-  version: 'test'
-}));
+vi.mock('$app/env', () => ({ version: 'test' }));
+vi.mock('$app/manifest', () => ({ immutable: [] }));
 
-vi.mock('./lib/features/cooking/timerState', () => ({
+vi.mock('../lib/features/cooking/timerState', () => ({
   applyTimerAction: vi.fn(),
   editTimerState: vi.fn(),
   forgetKitchen: vi.fn().mockResolvedValue(undefined)
@@ -29,9 +24,9 @@ let onPush: Listener;
 beforeAll(async () => {
   const addEventListener = vi.spyOn(self, 'addEventListener');
 
-  // Not a literal: tsconfig.worker.json checks the worker as a worker; a literal import would
-  // pull its webworker lib into the app's program.
-  const worker = './service-worker';
+  // Not a literal: the worker's own tsconfig checks it as a worker; a literal import would
+  // pull its webworker lib into this program.
+  const worker = './index';
 
   await import(/* @vite-ignore */ worker);
 

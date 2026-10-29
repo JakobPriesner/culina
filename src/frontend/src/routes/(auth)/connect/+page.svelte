@@ -37,7 +37,7 @@
     });
 
     if (connected) {
-      await goto(resolve('/(auth)/login'), { replaceState: true });
+      await goto(resolve('/(auth)/login'), { replace: true });
     }
   }
 </script>

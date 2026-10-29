@@ -5,7 +5,7 @@ import type { Manifest } from './routePreloads';
 
 /* The table decides what a cold visit fetches up front: a wrong row either preloads nothing useful or fetches what the page never uses. */
 const file = (name: string) => `_app/immutable/${name}`;
-const node = (id: number) => `.svelte-kit/generated/client-optimized/nodes/${id}.js`;
+const node = (id: number) => `.svelte-kit/generated/build/client-optimized/nodes/${id}.js`;
 
 const manifest: Manifest = {
   [node(0)]: { file: file('nodes/0.a.js'), imports: ['_shell.js', '_layout.js'] },

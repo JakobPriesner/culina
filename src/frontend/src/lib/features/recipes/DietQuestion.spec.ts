@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import DietQuestion from './DietQuestion.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 describe('asking whether a presumed recipe keeps its diet', () => {
   it('asks about the diet the search presumed', () => {

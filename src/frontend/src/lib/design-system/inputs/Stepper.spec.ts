@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import StepperHarness from '../__fixtures__/StepperHarness.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const servings = () => screen.getByRole('spinbutton', { name: 'Servings' });
 

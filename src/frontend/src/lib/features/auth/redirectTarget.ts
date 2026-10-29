@@ -1,4 +1,5 @@
 import { resolve } from '$app/paths';
+import type { ReadonlyURL } from '$app/state';
 
 /**
  * Where to go after signing in. The value comes from the URL, so it is hostile: only a path within this app is accepted
@@ -28,7 +29,7 @@ export function safeRedirect(next: string | null): string {
 }
 
 /** The sign-in URL that remembers where someone was going; one definition for the route guard and the expired-session handler. The reason lets the page say why. */
-export function loginUrlFor(url: URL, reason?: 'expired'): string {
+export function loginUrlFor(url: ReadonlyURL, reason?: 'expired'): string {
   const login = resolve('/(auth)/login');
   // Already on the sign-in page: pointing `next` at itself would nest one level deeper per sign-in.
   const target =

@@ -9,7 +9,7 @@ import { recipes } from '$features/recipes/stores/recipes.svelte';
 import { tagSuggestions } from '$features/recipes/stores/tagSuggestions.svelte';
 import { units } from '$features/recipes/stores/units.svelte';
 import type { Recipe } from '$features/recipes/types';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* Tested at the page, not the mention parser: a name added from inside a step has no id when mentioned, and only the following save gives it one. */
 vi.mock('$app/state', () => ({

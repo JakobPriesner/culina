@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import IngredientFactsPanel from './IngredientFactsPanel.svelte';
 import { ingredientFacts } from './stores/ingredientFacts.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 import { preferences } from '$shell/preferences.svelte';
 
 const butter = {

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import ImportProgress from './ImportProgress.svelte';
 import type { AppError } from '$api';
 import type { ImportRun } from './types';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* The end of the flow: four hundred recipes arriving is invisible, so the cookbook is what makes the import something to go and look at. */
 const run = (over: Partial<ImportRun> = {}): ImportRun => ({

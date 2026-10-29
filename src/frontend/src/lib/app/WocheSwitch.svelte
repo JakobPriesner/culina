@@ -55,7 +55,7 @@
     const to = id === 'list' ? 'list' : 'plan';
     const returning = woche.leave(view, to, window.scrollY);
     void goto(to === 'list' ? resolve('/(app)/shopping') : resolve('/(app)/plan'), {
-      noScroll: returning
+      reset: !returning
     });
   }
 

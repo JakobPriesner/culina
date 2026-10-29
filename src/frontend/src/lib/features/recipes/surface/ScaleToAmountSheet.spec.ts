@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import ScaleToAmountSheet from './ScaleToAmountSheet.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 import type { RecipeReading } from '../types';
 
 const recipe: RecipeReading = {

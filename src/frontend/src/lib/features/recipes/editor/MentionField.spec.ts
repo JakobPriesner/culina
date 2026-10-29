@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import MentionHarness from './__fixtures__/MentionHarness.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const step = () => screen.getByRole('combobox', { name: 'Step 1' });
 const picker = () => screen.queryByRole('listbox', { name: 'Ingredients to mention' });

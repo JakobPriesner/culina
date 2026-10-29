@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import CookbookCard from './CookbookCard.svelte';
 import type { Cookbook } from './types';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const cookbook = (over: Partial<Cookbook> = {}): Cookbook => ({
   id: 'c1',

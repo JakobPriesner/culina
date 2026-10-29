@@ -7,7 +7,7 @@ import { cookLog } from '$features/cooking/stores/cookLog.svelte';
 import { notes } from '$features/cooking/stores/notes.svelte';
 import { recipes } from '$features/recipes/stores/recipes.svelte';
 import { related } from '$features/recipes/stores/related.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 vi.mock('$app/state', () => ({
   page: { params: { recipeId: 'r1' }, url: new URL('http://localhost/recipes/r1') }

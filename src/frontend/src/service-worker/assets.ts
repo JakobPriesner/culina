@@ -1,23 +1,24 @@
-import { base, build, files } from '$service-worker';
+import { immutable } from '$app/manifest';
+import { asset } from '$app/paths';
 import { cacheName, shellDocument } from './scope';
 
+/** The build's own files, every one content-hashed; the manifest lists them relative to the root the app is served from. */
+const hashedBuildFiles = new Set(immutable.map(({ path }) => `/${path}`));
+
 /**
- * The only `static/` files installed up front: `files` is ~1.2 MB of photos and large icons most devices never use.
+ * The only `static/` files installed up front: the rest is ~1.2 MB of photos and large icons most devices never use.
  * `assetResponse` still caches anything actually fetched.
  */
-const linkedByTheDocument = new Set([
-  `${base}/favicon.ico`,
-  `${base}/icon.svg`,
-  `${base}/manifest.webmanifest`
-]);
-
-// Every build file but the barcode decoder's WebAssembly: 1.1 MB that only a browser without a decoder of its own fetches.
-const shell = [
-  ...build.filter((file) => !file.endsWith('.wasm')),
-  ...files.filter((file) => linkedByTheDocument.has(file))
+const linkedByTheDocument = [
+  asset('favicon.ico'),
+  asset('icon.svg'),
+  asset('manifest.webmanifest')
 ];
 
-const hashedBuildFiles = new Set(build);
+// Every build file but the barcode decoder's WebAssembly: 1.1 MB that only a browser without a decoder of its own fetches.
+const shell = [...hashedBuildFiles]
+  .filter((file) => !file.endsWith('.wasm'))
+  .concat(linkedByTheDocument);
 
 /** The shell document must cache or the install fails; the rest is best effort, since `addAll` would fail wholly on one 404. */
 export async function precache(): Promise<void> {

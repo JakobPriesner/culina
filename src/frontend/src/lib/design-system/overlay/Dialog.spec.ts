@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import DialogHarness from '../__fixtures__/DialogHarness.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 // These prove the native dialog is opened as modal, since the browser provides the focus trap and inert background.
 const open = () => screen.getByRole('button', { name: 'Open' });

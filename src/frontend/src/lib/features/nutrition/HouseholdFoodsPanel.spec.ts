@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import HouseholdFoodsPanel from './HouseholdFoodsPanel.svelte';
 import { householdFoods } from './stores/householdFoods.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 import { preferences } from '$shell/preferences.svelte';
 
 const food = (id: string, name: string, own: boolean) => ({

@@ -113,7 +113,7 @@
     incomingPhotos = [];
     incomingText = '';
     incomingUrl = '';
-    void goto(resolve('/(app)/recipes/new'), { replaceState: true });
+    void goto(resolve('/(app)/recipes/new'), { replace: true });
   }
 
   function cancelDescribing() {

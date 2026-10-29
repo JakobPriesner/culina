@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { toDatabaseDraft } from '../types';
-import { server } from './server.svelte';
+import { server } from './instance.svelte';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {

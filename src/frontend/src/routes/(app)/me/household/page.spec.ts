@@ -6,12 +6,12 @@ import HouseholdPage from './+page.svelte';
 import { session } from '$features/auth/session.svelte';
 import { resetAllStores } from '$shell/stores';
 import { toaster } from '$shell/toaster.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* Deleting a household: the server decides who may; these prove the page offers it to nobody else, sends the version it just read, and says so when the server refuses anyway. */
 const goto = vi.hoisted(() => vi.fn());
 
-vi.mock('$app/navigation', () => ({ goto, invalidateAll: vi.fn() }));
+vi.mock('$app/navigation', () => ({ goto, refreshAll: vi.fn() }));
 
 const home = (role: 'owner' | 'member') => ({
   householdId: 'h1',
@@ -138,7 +138,7 @@ describe('deleting a household', () => {
     await waitFor(() => expect(deletes()).toHaveLength(1));
     expect(deletes()[0]!.url).toMatch(/\/api\/v1\/households\/h1$/);
     expect(deletes()[0]!.headers.get('If-Match')).toBe('"v7"');
-    await waitFor(() => expect(goto).toHaveBeenCalledWith('/', { replaceState: true }));
+    await waitFor(() => expect(goto).toHaveBeenCalledWith('/', { replace: true }));
   });
 
   it('names, and undoes, the household that was deleted — not the one shown next', async () => {

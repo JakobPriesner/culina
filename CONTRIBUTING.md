@@ -2,7 +2,7 @@
 
 ## Getting it running
 
-You need Docker, the .NET 10 SDK, Node 22 and pnpm.
+You need Docker, the .NET 10 SDK, Node 26 and pnpm.
 
 ```bash
 cp .env.example .env
@@ -41,7 +41,7 @@ Some of what they enforce, so nothing is a surprise:
   `var(--space-5)` that does not exist renders as nothing at all.
 - **Nothing user-visible is hard-coded.** Every string is a message key, in
   German and English. Append to `messages/*.json`; never re-sort them, because
-  the compiler falls over on some reorderings and can emit correct output *and*
+  the compiler falls over on some reorderings and can emit correct output _and_
   exit non-zero.
 
 ## Running the tests
@@ -112,6 +112,10 @@ Say what changed and **why it is right**, in prose. The diff already says what
 the code does; a commit message that repeats it has said nothing. If a change
 fixes something, say what was broken and how it came to be that way — that is
 the part nobody can reconstruct later.
+
+Commits come solely from their human author (`https://github.com/JakobPriesner`).
+Never add `Co-Authored-By: Claude ...`, `noreply@anthropic.com`, `Signed-off-by`,
+or any AI attribution in commit messages, trailers, or branch names.
 
 ## What a change should look like
 

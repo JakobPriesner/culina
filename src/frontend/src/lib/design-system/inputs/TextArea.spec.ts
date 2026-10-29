@@ -2,7 +2,7 @@ import { screen } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import TextAreaHarness from '../__fixtures__/TextAreaHarness.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 // jsdom lays nothing out, so every element is 0px tall; a line is 20px here.
 function measureByLines() {

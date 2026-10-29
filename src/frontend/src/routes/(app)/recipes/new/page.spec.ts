@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import NewRecipePage from './+page.svelte';
 import { session } from '$features/auth/session.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 import { resetAllStores } from '$shell/stores';
 
 const navigation = vi.hoisted(() => ({ goto: vi.fn() }));

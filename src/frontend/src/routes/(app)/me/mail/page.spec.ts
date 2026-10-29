@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import MailPage from './+page.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 import { toaster } from '$shell/toaster.svelte';
 
 /* The mail page: a write-only password, kept only for the server it was saved for, and a test through what was saved. */

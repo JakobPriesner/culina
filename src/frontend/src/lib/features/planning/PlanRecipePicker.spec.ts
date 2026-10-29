@@ -2,7 +2,7 @@ import { screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 import { recipes } from '$features/recipes/stores/recipes.svelte';
 import { suggestions } from '$features/recipes/stores/suggestions.svelte';
 import { preferences } from '$shell/preferences.svelte';

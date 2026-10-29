@@ -3,7 +3,7 @@
 
   import { onMount, type Snippet } from 'svelte';
 
-  import { dev } from '$app/environment';
+  import { dev } from '$app/env';
   import { goto } from '$app/navigation';
   import { page } from '$app/state';
   import { handleSessionExpiry, native } from '$api';
@@ -43,7 +43,7 @@
     // The API layer decides when a session has ended; what happens next is the app's business, so the client need not know a router exists.
     handleSessionExpiry(() => {
       session.end();
-      void goto(loginUrlFor(page.url, 'expired'), { replaceState: true });
+      void goto(loginUrlFor(page.url, 'expired'), { replace: true });
     });
 
     return () => {

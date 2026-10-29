@@ -42,7 +42,7 @@
       return;
     }
 
-    await goto(resolve('/(app)'), { replaceState: true });
+    await goto(resolve('/(app)'), { replace: true });
   });
 </script>
 

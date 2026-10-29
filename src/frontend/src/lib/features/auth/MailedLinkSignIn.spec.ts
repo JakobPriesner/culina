@@ -2,7 +2,7 @@ import { screen } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import MailedLinkSignIn from './MailedLinkSignIn.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const navigation = vi.hoisted(() => ({ goto: vi.fn() }));
 

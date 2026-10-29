@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import StepIngredients from './StepIngredients.svelte';
 import type { Ingredient, Step } from '../types';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* The chip row says what a sentence cannot ("combine everything and knead" names none of the five things it needs). */
 

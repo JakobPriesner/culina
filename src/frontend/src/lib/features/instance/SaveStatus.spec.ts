@@ -2,7 +2,7 @@ import { screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 
 import SaveStatus from './SaveStatus.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const cause = (detail: string) => ({ field: null, code: 'settings.invalid', detail });
 

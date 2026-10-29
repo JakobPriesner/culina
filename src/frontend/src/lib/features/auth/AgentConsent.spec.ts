@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 import AgentConsent from './AgentConsent.svelte';
 import type { AgentAuthorization } from './agentAuthorization';

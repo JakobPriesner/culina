@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { session } from '$features/auth/session.svelte';
 import { diary } from '$features/diary/stores/diary.svelte';
 import { diarySettings } from '$features/diary/stores/diarySettings.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 import DiaryPage from './+page.svelte';
 

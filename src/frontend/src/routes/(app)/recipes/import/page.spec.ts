@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ImportPage from './+page.svelte';
 import { session } from '$features/auth/session.svelte';
 import { sources } from '$features/import/stores/sources.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /*
  * Tests the page, not the store: the bug (a `list` that read the state it writes and re-triggered

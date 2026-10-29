@@ -42,7 +42,7 @@ export const earlyRequests: readonly (readonly string[])[] = [
 ];
 
 const immutable = '_app/immutable/';
-const nodeKey = (id: number) => `.svelte-kit/generated/client-optimized/nodes/${id}.js`;
+const nodeKey = (id: number) => `.svelte-kit/generated/build/client-optimized/nodes/${id}.js`;
 
 /** Reads the route table out of the file SvelteKit generates; one line per route, which a build would have to change shape to break. */
 export function parseDictionary(source: string): Dictionary {
@@ -191,7 +191,7 @@ export async function readKit(
       await readFile(`${kitDir}/output/client/.vite/manifest.json`, 'utf8')
     ) as Manifest,
     dictionary: parseDictionary(
-      await readFile(`${kitDir}/generated/client-optimized/app.js`, 'utf8')
+      await readFile(`${kitDir}/generated/build/client-optimized/app.js`, 'utf8')
     )
   };
 }

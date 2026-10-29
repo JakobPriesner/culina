@@ -1,6 +1,6 @@
 <script lang="ts">
   import { readAloud } from '$features/cooking/readAloud.svelte';
-  import { getLocale } from '$lib/paraglide/runtime';
+  import { getLocale } from '#lib/paraglide/runtime.js';
   import { m } from '$shell/i18n';
 
   import { moving } from './demo';

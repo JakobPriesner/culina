@@ -2,7 +2,7 @@ import { screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { clientError } from '$api';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 import DraftReview from './DraftReview.svelte';
 
 import type { Recipe } from '$features/recipes/types';

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SourceLibrary from './SourceLibrary.svelte';
 import { sources } from './stores/sources.svelte';
 import type { ConnectedSource } from './types';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* Where somebody decides what to keep: it must separate "I already have this" from "this did not come through". */
 const source: ConnectedSource = {

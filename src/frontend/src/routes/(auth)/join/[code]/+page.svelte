@@ -89,7 +89,7 @@
 
   async function enter(householdId: string) {
     session.selectHousehold(householdId);
-    await goto(resolve('/(app)'), { replaceState: true });
+    await goto(resolve('/(app)'), { replace: true });
   }
 
   const registerHref = $derived(`${resolve('/(auth)/register')}?code=${encodeURIComponent(code)}`);

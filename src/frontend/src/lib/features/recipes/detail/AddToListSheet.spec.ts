@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { upcoming } from '$features/planning/upcoming.svelte';
 import { shopping } from '$features/shopping/stores/shopping.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 import type { Recipe } from '../types';
 import AddToListSheet from './AddToListSheet.svelte';

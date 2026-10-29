@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import SearchHarness from '../__fixtures__/SearchHarness.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const clear = () => screen.queryByRole('button', { name: 'Clear search' });
 

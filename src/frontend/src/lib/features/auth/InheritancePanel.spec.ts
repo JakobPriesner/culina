@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resetAllStores } from '$shell/stores';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 import InheritancePanel from './InheritancePanel.svelte';
 import { session } from './session.svelte';

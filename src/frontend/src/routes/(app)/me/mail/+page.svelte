@@ -16,7 +16,7 @@
     type MailDraft,
     type MailSecurity,
     type MailSettings
-  } from '$features/server/mail';
+  } from '$features/instance/mail';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
   import { toaster } from '$shell/toaster.svelte';

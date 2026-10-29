@@ -7,7 +7,8 @@
 </script>
 
 <div class="preview-note">
-  <span>{m['preview.notice']()}</span><a href={resolve('/design')}>{m['preview.components']()} ↗</a>
+  <span>{m['preview.notice']()}</span>
+  <a href={resolve('design')}>{m['preview.components']()} ↗</a>
 </div>
 <header class="header">
   <Brand /><span class="context">{m['preview.footer']()}</span>

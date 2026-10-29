@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import NutritionCorrectionSheet from './NutritionCorrectionSheet.svelte';
 import type { NutritionLine } from './types';
 import { session } from '$features/auth/session.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 import { preferences } from '$shell/preferences.svelte';
 import { resetAllStores } from '$shell/stores';
 

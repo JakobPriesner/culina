@@ -2,7 +2,7 @@ import { fireEvent, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { resetAllStores } from '$shell/stores';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 import HouseholdChoices from './HouseholdChoices.svelte';
 import { session } from './session.svelte';

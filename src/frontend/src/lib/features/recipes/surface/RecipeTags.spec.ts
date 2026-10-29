@@ -2,7 +2,7 @@ import { screen } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { session } from '$features/auth/session.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 import RecipeTags from './RecipeTags.svelte';
 
 const show = (tags: string[]) =>

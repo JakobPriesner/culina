@@ -2,7 +2,7 @@ import { screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 
 import PlanWeekSkeleton from './PlanWeekSkeleton.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 describe('PlanWeekSkeleton', () => {
   it('renders a 7-day week skeleton with aria-busy set', () => {

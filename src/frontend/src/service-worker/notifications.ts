@@ -1,4 +1,4 @@
-import { base } from '$service-worker';
+import { asset } from '$app/paths';
 import { applyTimerAction, type TimerNotice } from '../lib/features/cooking/timerState';
 import { shellDocument, worker } from './scope';
 
@@ -31,8 +31,8 @@ export function handlePush(event: PushEvent): void {
       worker.registration.showNotification(notice.title ?? 'Culina', {
         body: notice.body,
         tag: notice.tag,
-        icon: `${base}/icon-192.png`,
-        data: { type: 'culina:intake', url: `${base}${notice.url}` } satisfies IntakeNotice
+        icon: asset('icon-192.png'),
+        data: { type: 'culina:intake', url: notice.url } satisfies IntakeNotice
       })
     );
   } catch {
@@ -85,10 +85,9 @@ function safeHref(notice: TimerNotice | IntakeNotice | undefined): string {
   const target = new URL(notice?.url ?? shellDocument, worker.location.origin);
   const safe =
     target.origin === worker.location.origin &&
-    target.pathname.startsWith(`${base}/recipes/`) &&
+    target.pathname.startsWith('/recipes/') &&
     (target.pathname.endsWith('/cook') ||
-      (notice?.type === 'culina:intake' &&
-        opensReady(target.pathname.slice(base.length) + target.search)));
+      (notice?.type === 'culina:intake' && opensReady(target.pathname + target.search)));
 
   return safe ? target.href : new URL(shellDocument, worker.location.origin).href;
 }

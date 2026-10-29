@@ -1,0 +1,11 @@
+{
+  "extends": "$app/tsconfig/service-worker",
+  "compilerOptions": {
+    "rewriteRelativeImportExtensions": true,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "exclude": ["**/*.spec.ts"]
+}

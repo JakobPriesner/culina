@@ -83,7 +83,7 @@ There are two ways to run Culina with your **local code**, plus running the **pu
 
 Best for developing, experimenting, or running the latest source directly.
 
-**Prerequisites:** Docker, .NET 10 SDK, Node 22, and pnpm.
+**Prerequisites:** Docker, .NET 10 SDK, Node 26, and pnpm.
 
 ```bash
 git clone https://github.com/jakobpriesner/culina.git

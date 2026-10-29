@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import RecipeCard from './RecipeCard.svelte';
 import type { RecipeSummary } from './types';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const recipe = (over: Partial<RecipeSummary> = {}): RecipeSummary => ({
   id: 'r1',

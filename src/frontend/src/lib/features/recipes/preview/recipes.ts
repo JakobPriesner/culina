@@ -1,4 +1,4 @@
-import { base } from '$app/paths';
+import { asset } from '$app/paths';
 import { m } from '$shell/i18n';
 
 export interface PreviewRecipe {
@@ -28,7 +28,7 @@ export function sampleRecipes(): PreviewRecipe[] {
       description: m['preview.orzo.body'](),
       minutes: 25,
       tag: m['preview.tag.weeknight'](),
-      image: `${base}/images/culina-orzo.webp`,
+      image: asset('images/culina-orzo.webp'),
       ingredients: [
         { name: m['preview.ingredient.orzo'](), quantity: 200, unit: 'g' },
         { name: m['preview.ingredient.zucchini'](), quantity: 1, unit: '' },
@@ -44,7 +44,7 @@ export function sampleRecipes(): PreviewRecipe[] {
       description: m['preview.toast.body'](),
       minutes: 15,
       tag: m['preview.tag.simple'](),
-      image: `${base}/images/culina-tomato-toast.webp`,
+      image: asset('images/culina-tomato-toast.webp'),
       ingredients: [
         { name: m['preview.ingredient.bread'](), quantity: 4, unit: '' },
         { name: m['preview.ingredient.tomatoes'](), quantity: 400, unit: 'g' },
@@ -58,7 +58,7 @@ export function sampleRecipes(): PreviewRecipe[] {
       description: m['preview.rice.body'](),
       minutes: 40,
       tag: m['preview.tag.slow'](),
-      image: `${base}/images/culina-miso-rice.webp`,
+      image: asset('images/culina-miso-rice.webp'),
       ingredients: [
         { name: m['preview.ingredient.rice'](), quantity: 200, unit: 'g' },
         { name: m['preview.ingredient.mushrooms'](), quantity: 250, unit: 'g' },

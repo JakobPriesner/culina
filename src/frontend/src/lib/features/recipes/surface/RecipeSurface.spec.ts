@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import RecipeSurface from './RecipeSurface.svelte';
 import type { Recipe } from '../types';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const butter = 'i-butter';
 const flour = 'i-flour';

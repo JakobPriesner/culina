@@ -2,7 +2,7 @@ import { screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 import EditMealSheet from './EditMealSheet.svelte';
 import type { PlannedDay, PlannedMeal } from './mealPlan.svelte';

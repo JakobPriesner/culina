@@ -1,6 +1,6 @@
 import { fireEvent, screen } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 import Image from './Image.svelte';
 import { useImageSource } from './imageSources';
 

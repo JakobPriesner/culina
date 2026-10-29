@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { session as account } from '$features/auth/session.svelte';
 import NowCookingBar from './NowCookingBar.svelte';
 import { cooking } from './stores/cooking.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const page = vi.hoisted(() => ({ url: new URL('http://culina.test/') }));
 

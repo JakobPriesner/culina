@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 
 import FormFieldHarness from './__fixtures__/FormFieldHarness.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const problem = (field: string, detail: string) => ({
   code: 'users.invalid',

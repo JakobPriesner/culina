@@ -2,7 +2,7 @@ import { screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 import IngredientGroups from './IngredientGroups.svelte';
 import type { IngredientGroup } from '../types';

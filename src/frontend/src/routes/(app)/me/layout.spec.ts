@@ -6,7 +6,7 @@ import SettingsLayout from './+layout.svelte';
 import { session } from '$features/auth/session.svelte';
 import { olliSetting } from '$shell/olli/setting.svelte';
 import { resetAllStores } from '$shell/stores';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /*
  * The two settings pages only an administrator may open, opened by somebody

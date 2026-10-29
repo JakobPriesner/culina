@@ -1,11 +1,10 @@
 /* The worker's side of the offline reads in lib/api/offlineReads.ts: same-origin, kept alive by the fetch event. */
-import { base } from '$service-worker';
 import { offlineReads, type CachePolicy } from '../lib/api/offlineReads';
 import { forgetKitchen } from '../lib/features/cooking/timerState';
 
 export type { CachePolicy };
 
-const reads = offlineReads({ base, locate: (path) => path, signedOut: forgetKitchen });
+const reads = offlineReads({ base: '', locate: (path) => path, signedOut: forgetKitchen });
 
 export const isApi = reads.isApi;
 

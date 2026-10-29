@@ -1,19 +1,15 @@
 {
-  "extends": "./.svelte-kit/tsconfig.json",
+  "extends": "$app/tsconfig",
   "compilerOptions": {
     "rewriteRelativeImportExtensions": true,
-    "allowJs": true,
-    "checkJs": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
-    "moduleResolution": "bundler",
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
-    "noFallthroughCasesInSwitch": true,
-    "verbatimModuleSyntax": true
-  }
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src", "vite.config.ts", "playwright.config.ts", "tests"],
+  // The worker is its own project (src/service-worker/tsconfig.json): it has no DOM. Paraglide's output is generated
+  // and typed by its own .d.ts files; its JSDoc quotes message text, which TypeScript parses as tags.
+  "exclude": ["src/service-worker", "src/lib/paraglide"]
 }

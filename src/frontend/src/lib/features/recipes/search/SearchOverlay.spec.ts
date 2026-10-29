@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SearchOverlay from './SearchOverlay.svelte';
 import { resetAllStores } from '$shell/stores';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* The keys of the one search field (focus never leaves it) and the offer to keep a search as a cookbook. */
 const goto = vi.hoisted(() => vi.fn());

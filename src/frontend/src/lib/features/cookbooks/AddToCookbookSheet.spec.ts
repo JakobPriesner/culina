@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 import AddToCookbookSheet from './AddToCookbookSheet.svelte';
 import { cookbooks } from './stores/cookbooks.svelte';

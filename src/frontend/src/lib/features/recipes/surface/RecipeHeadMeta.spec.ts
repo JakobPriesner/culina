@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import RecipeHeadMeta from './RecipeHeadMeta.svelte';
 import type { RecipeReading } from '../types';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const recipe = {
   totalMinutes: 35,

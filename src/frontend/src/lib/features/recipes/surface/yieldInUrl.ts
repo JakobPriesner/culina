@@ -1,3 +1,5 @@
+import type { ReadonlyURL } from '$app/state';
+
 import { clampYield } from '../scaling';
 import type { RecipeReading } from '../types';
 
@@ -5,7 +7,7 @@ import type { RecipeReading } from '../types';
 const key = 'yield';
 
 /** Reads it back, refusing anything that is not a usable number. */
-export function yieldFrom(url: URL, recipe: RecipeReading | null): number {
+export function yieldFrom(url: ReadonlyURL, recipe: RecipeReading | null): number {
   const raw = url.searchParams.get(key);
   const parsed = raw === null ? Number.NaN : Number(raw);
 
@@ -17,8 +19,8 @@ export function yieldFrom(url: URL, recipe: RecipeReading | null): number {
 }
 
 /** The same URL at a different yield; the recipe's own yield is omitted so a plain link stays plain. */
-export function urlAtYield(url: URL, value: number, recipe: RecipeReading | null): string {
-  const next = new URL(url);
+export function urlAtYield(url: ReadonlyURL, value: number, recipe: RecipeReading | null): string {
+  const next = new URL(url.href);
 
   if (recipe && value === recipe.yieldAmount) {
     next.searchParams.delete(key);

@@ -7,7 +7,7 @@ import { RecipeQuery } from '../stores/libraryView.svelte';
 import { recipeLayout } from '../stores/recipeLayout.svelte';
 import { savedSearches } from '../stores/savedSearches.svelte';
 import { tags } from '$features/cookbooks/stores/tags.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* The toolbar, rendered: every filter that is on must be removable from where it is shown, since a chip that cannot take its filter off names a thing you must hunt for. */
 const household = 'h1';

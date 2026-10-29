@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { base } from '$app/paths';
   import { Button, FilePicker } from '$ds';
 
   import { fetchFile, native, type AppError } from '$api';
@@ -24,7 +23,7 @@
   let picker = $state<ReturnType<typeof FilePicker>>();
 
   /** A plain link, not a fetch: the browser's download gives a name and progress, and archives with inline photos are the app's largest payload. */
-  const href = $derived(`${base}/api/v1/households/${householdId}/archive`);
+  const href = $derived(`/api/v1/households/${householdId}/archive`);
 
   /**
    * The app cannot follow that link: it signs in with a bearer token a link does not send, and a web view has no

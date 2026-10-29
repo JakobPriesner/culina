@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import RecipePicker from './RecipePicker.svelte';
 import { recipes } from './stores/recipes.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* Tests the asking: it searches only while open, not per keystroke, and returns the recipe (its yield tells how much to buy), not an id. */
 const summary = (id: string, title: string) => ({

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import JoinPage from './+page.svelte';
 import { session, type SessionStatus } from '$features/auth/session.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* One link, four visitors (signed out, signed in, the owner, an expired code): only the first is offered a sign-in, nobody joins without asking, nobody is left without a way back. */
 vi.mock('$app/state', () => ({ page: { params: { code: 'abc123' } } }));

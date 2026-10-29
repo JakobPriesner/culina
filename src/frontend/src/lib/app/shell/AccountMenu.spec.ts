@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { session } from '$features/auth/session.svelte';
 import { resetAllStores } from '$shell/stores';
 import { update } from '$shell/updates.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 import AccountMenu from './AccountMenu.svelte';
 
@@ -101,7 +101,7 @@ describe('the account menu', () => {
 
     await fireEvent.click(screen.getByRole('button', { name: 'Sign out', ...hidden }));
 
-    await vi.waitFor(() => expect(goto).toHaveBeenCalledWith('/login', { replaceState: true }));
+    await vi.waitFor(() => expect(goto).toHaveBeenCalledWith('/login', { replace: true }));
     expect(fetch.mock.calls.some(([request]) => request.method === 'DELETE')).toBe(true);
   });
 

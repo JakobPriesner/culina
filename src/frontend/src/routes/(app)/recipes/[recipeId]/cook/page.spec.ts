@@ -10,7 +10,7 @@ import { kitchenTimers } from '$features/cooking/kitchen.svelte';
 import { readAloud } from '$features/cooking/readAloud.svelte';
 import { recipes } from '$features/recipes/stores/recipes.svelte';
 import type { Recipe } from '$features/recipes/types';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 vi.mock('$app/state', () => ({
   page: { params: { recipeId: 'recipe-1' }, url: new URL('http://localhost/recipes/recipe-1/cook') }

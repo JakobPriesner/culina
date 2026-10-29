@@ -3,7 +3,7 @@ import { userEvent } from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { householdFoods } from '$features/nutrition/stores/householdFoods.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 import { preferences } from '$shell/preferences.svelte';
 
 import DiaryProduct from './DiaryProduct.svelte';

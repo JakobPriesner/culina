@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import IngredientHarness from './__fixtures__/IngredientHarness.svelte';
 import { ingredients as known } from '../stores/ingredients.svelte';
 import { units } from '../stores/units.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* Amount, unit and name entered apart stay apart, and neither list can stop somebody writing a word it has never heard of. */
 

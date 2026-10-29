@@ -1,4 +1,4 @@
-import { server, type SaveOutcome } from './stores/server.svelte';
+import { server, type SaveOutcome } from './stores/instance.svelte';
 import {
   unreadableDatabaseNumbers,
   unreadableNumbers,

@@ -1,3 +1,5 @@
+import type { ReadonlyURLSearchParams } from '$app/state';
+
 export interface IncomingShare {
   title: string;
   /** Address to import from, or ''. */
@@ -8,7 +10,7 @@ export interface IncomingShare {
 const isAddress = (value: string) => value.startsWith('http://') || value.startsWith('https://');
 
 /** Reads a share-target query; apps put the address in `url` or inside `text`. */
-export function readIncomingShare(params: URLSearchParams): IncomingShare {
+export function readIncomingShare(params: ReadonlyURLSearchParams): IncomingShare {
   const url = params.get('url')?.trim() ?? '';
   const text = params.get('text')?.trim() ?? '';
 

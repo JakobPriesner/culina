@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ServerPage from './+page.svelte';
-import { server } from '$features/server/stores/server.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { server } from '$features/instance/stores/instance.svelte';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* The page: what an administrator can see the deployment has fixed, and saving a change knowing the server restarts. */
 const serverSettings = {

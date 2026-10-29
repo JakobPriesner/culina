@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import RegisterPage from './+page.svelte';
 import { resetAllStores } from '$shell/stores';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const register = vi.hoisted(() => vi.fn());
 

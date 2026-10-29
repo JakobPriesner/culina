@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SimilarRecipes from './SimilarRecipes.svelte';
 import { related } from './stores/related.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* The shelf of recipes like the one being read, rendered because the store paired with its effect is what can fail (a `$state` guard would make the effect ask forever). */
 const item = (id: string, title: string, kind: 'kinds' | 'ingredients', shared: string[]) => ({

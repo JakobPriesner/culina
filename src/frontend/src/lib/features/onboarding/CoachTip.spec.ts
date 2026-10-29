@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { createRawSnippet } from 'svelte';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 import CoachTip from './CoachTip.svelte';
 import { tips } from './tips.svelte';

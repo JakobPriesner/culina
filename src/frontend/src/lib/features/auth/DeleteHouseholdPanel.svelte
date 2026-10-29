@@ -54,7 +54,7 @@
       action: { label: () => m['trash.undo'](), run: () => void undo(id) }
     });
 
-    await goto(resolve('/(app)'), { replaceState: true });
+    await goto(resolve('/(app)'), { replace: true });
   }
 
   async function undo(id: string) {

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { server } from './stores/server.svelte';
+import { server } from './stores/instance.svelte';
 import { useServerDrafts } from './useServerDrafts.svelte';
 
 /* The copies both server screens edit: typing never reaches the store, and an unreadable number is not sent. */

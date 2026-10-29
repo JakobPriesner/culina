@@ -92,7 +92,7 @@ export default ts.config(
   {
     // The service worker has no window, session or store, so no typed client, and must never
     // touch the API (see its header).
-    files: ['src/service-worker.ts', 'src/service-worker/**/*.ts'],
+    files: ['src/service-worker/**/*.ts'],
     rules: { 'no-restricted-globals': 'off' }
   },
   {

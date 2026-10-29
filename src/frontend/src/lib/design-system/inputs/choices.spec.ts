@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import ChoiceHarness from '../__fixtures__/ChoiceHarness.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* These four are native on purpose: assert they stay native (keyboard, role) and that each added prop works. */
 describe('Checkbox', () => {

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte';
-  import { base } from '$app/paths';
+  import { asset } from '$app/paths';
   import Brand from '$shell/Brand.svelte';
   import { m } from '$shell/i18n';
   import LocalePicker from '$shell/LocalePicker.svelte';
@@ -21,8 +21,10 @@
       <!-- Lazy: below 64rem this panel is display: none, and an eager image in it is still fetched
            (260 kB for nothing). -->
       <img
-        src="{base}/images/culina-orzo.webp"
-        srcset="{base}/images/culina-orzo-800.webp 800w, {base}/images/culina-orzo.webp 1536w"
+        src={asset('images/culina-orzo.webp')}
+        srcset="{asset('images/culina-orzo-800.webp')} 800w, {asset(
+          'images/culina-orzo.webp'
+        )} 1536w"
         sizes="(min-width: 80rem) 37rem, 50vw"
         alt=""
         width="1536"

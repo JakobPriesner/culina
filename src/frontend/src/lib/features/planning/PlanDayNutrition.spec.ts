@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { recipeAnswers } from '$features/nutrition/stores/recipeAnswers.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 import { preferences } from '$shell/preferences.svelte';
 
 import type { PlannedMeal } from './mealPlan.svelte';

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { pageSearch } from '$features/recipes/filters/pageSearch.svelte';
 import { searchOverlay } from '$features/recipes/search/overlayState.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 import SearchButton from './SearchButton.svelte';
 

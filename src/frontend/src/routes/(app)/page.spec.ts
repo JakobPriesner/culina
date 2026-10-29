@@ -8,7 +8,7 @@ import { libraryView } from '$features/recipes/stores/libraryView.svelte';
 import { recipes } from '$features/recipes/stores/recipes.svelte';
 import { savedSearches } from '$features/recipes/stores/savedSearches.svelte';
 import { suggestions } from '$features/recipes/stores/suggestions.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 import { toaster } from '$shell/toaster.svelte';
 
 /* The library rendered with a real `$effect`: catches a store re-triggering its own effect (429 loop) and an order that changes silently. */

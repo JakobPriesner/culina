@@ -1,24 +1,24 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
-  import { invalidateAll } from '$app/navigation';
+  import { refreshAll } from '$app/navigation';
   import { Button, ErrorState, Skeleton } from '$ds';
   import { m } from '$shell/i18n';
 
   import { session } from '$features/auth/session.svelte';
-  import DatabaseFields from '$features/server/DatabaseFields.svelte';
-  import LimitFields from '$features/server/LimitFields.svelte';
-  import ProxyFields from '$features/server/ProxyFields.svelte';
-  import SaveStatus from '$features/server/SaveStatus.svelte';
-  import SecureCookiesField from '$features/server/SecureCookiesField.svelte';
-  import SessionFields from '$features/server/SessionFields.svelte';
-  import ProductLookupFields from '$features/server/ProductLookupFields.svelte';
-  import PushRelayFields from '$features/server/PushRelayFields.svelte';
-  import RegistrationFields from '$features/server/RegistrationFields.svelte';
-  import TelemetryFields from '$features/server/TelemetryFields.svelte';
-  import { server, type SaveOutcome } from '$features/server/stores/server.svelte';
-  import { variables } from '$features/server/types';
-  import { useServerDrafts, type ServerPart } from '$features/server/useServerDrafts.svelte';
+  import DatabaseFields from '$features/instance/DatabaseFields.svelte';
+  import LimitFields from '$features/instance/LimitFields.svelte';
+  import ProxyFields from '$features/instance/ProxyFields.svelte';
+  import SaveStatus from '$features/instance/SaveStatus.svelte';
+  import SecureCookiesField from '$features/instance/SecureCookiesField.svelte';
+  import SessionFields from '$features/instance/SessionFields.svelte';
+  import ProductLookupFields from '$features/instance/ProductLookupFields.svelte';
+  import PushRelayFields from '$features/instance/PushRelayFields.svelte';
+  import RegistrationFields from '$features/instance/RegistrationFields.svelte';
+  import TelemetryFields from '$features/instance/TelemetryFields.svelte';
+  import { server, type SaveOutcome } from '$features/instance/stores/instance.svelte';
+  import { variables } from '$features/instance/types';
+  import { useServerDrafts, type ServerPart } from '$features/instance/useServerDrafts.svelte';
 
   import IssueRecoveryCodePanel from '$features/auth/IssueRecoveryCodePanel.svelte';
 
@@ -43,7 +43,7 @@
     await session.refresh();
 
     if (session.status !== 'authenticated') {
-      await invalidateAll();
+      await refreshAll();
 
       return;
     }

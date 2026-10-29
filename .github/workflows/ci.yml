@@ -26,7 +26,7 @@ permissions:
 env:
   # One place, so a bump is one edit rather than a hunt through the file.
   DOTNET_VERSION: '10.0.x'
-  NODE_VERSION: '22'
+  NODE_VERSION: '26'
   # pnpm's version lives in `packageManager` in the frontend's package.json.
   # There is none at the repository root, and every `pnpm/action-setup` here has
   # to be pointed at that file or it fails with no version to install.

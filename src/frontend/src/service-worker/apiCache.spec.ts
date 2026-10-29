@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('$service-worker', () => ({ base: '', version: 'test' }));
+vi.mock('$app/env', () => ({ version: 'test' }));
 vi.mock('../lib/features/cooking/timerState', () => ({ forgetKitchen: vi.fn() }));
 
 const { policyFor } = await import('./apiCache');

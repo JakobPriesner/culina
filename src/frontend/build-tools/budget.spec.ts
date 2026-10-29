@@ -6,7 +6,7 @@ import type { Manifest } from './routePreloads';
 
 /* A route's cold load is the shell plus its nodes' static imports and styles, each file counted once. */
 const file = (name: string) => `_app/immutable/${name}`;
-const node = (id: number) => `.svelte-kit/generated/client-optimized/nodes/${id}.js`;
+const node = (id: number) => `.svelte-kit/generated/build/client-optimized/nodes/${id}.js`;
 
 const manifest: Manifest = {
   [node(0)]: { file: file('nodes/0.js'), imports: ['_shell.js'], css: [file('assets/0.css')] },

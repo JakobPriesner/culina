@@ -1,7 +1,7 @@
 import { screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 import PhotoField from './PhotoField.svelte';
 
 /* "This picture was drawn by the AI" is about the picture on the recipe, so it needs one that was. */

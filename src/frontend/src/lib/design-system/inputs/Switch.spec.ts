@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import SwitchHarness from '../__fixtures__/SwitchHarness.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const toggle = () => screen.getByRole('switch', { name: 'Open registration' });
 

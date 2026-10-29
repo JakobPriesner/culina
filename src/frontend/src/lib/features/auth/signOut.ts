@@ -6,7 +6,7 @@ import { session } from './session.svelte';
 /** Ends the session and lands on sign-in, replacing the page so Back cannot return to it; from settings and the account menu alike. */
 export async function signOut(): Promise<void> {
   await session.signOut();
-  await goto(resolve('/(auth)/login'), { replaceState: true });
+  await goto(resolve('/(auth)/login'), { replace: true });
 }
 
 /** The app's "use a different server": signs out of this one, forgets it, and asks for another address. */
@@ -16,5 +16,5 @@ export async function switchServer(): Promise<void> {
 
   await session.signOut();
   await disconnect();
-  await goto(resolve('/(auth)/connect'), { replaceState: true });
+  await goto(resolve('/(auth)/connect'), { replace: true });
 }

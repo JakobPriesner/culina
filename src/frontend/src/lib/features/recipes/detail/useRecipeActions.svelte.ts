@@ -17,13 +17,12 @@ interface Recipe {
 
 /** What can be done with the recipe on screen at the yield it is shown at. */
 export function useRecipeActions(on: Recipe) {
-  /** Replaces history so stepper taps do not bury the previous page. `goto`, not shallow `replaceState`, because the yield drives every amount on screen. */
+  /** Replaces history so stepper taps do not bury the previous page. A full `goto`, not a shallow one, because the yield drives every amount on screen. */
   function scale(value: number) {
     // eslint-disable-next-line svelte/no-navigation-without-resolve -- The page's own URL, with only its yield changed.
     void goto(urlAtYield(page.url, value, recipes.detail), {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true
+      replace: true,
+      reset: false
     });
   }
 
@@ -51,7 +50,7 @@ export function useRecipeActions(on: Recipe) {
   function startCooking() {
     const target = new SvelteURL(
       resolve('/(app)/recipes/[recipeId]/cook', { recipeId: on.recipeId() }),
-      page.url
+      page.url.href
     );
 
     // eslint-disable-next-line svelte/no-navigation-without-resolve -- The route is resolved before its yield is appended.

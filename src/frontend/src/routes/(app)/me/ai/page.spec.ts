@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AiPage from './+page.svelte';
 import { assistance } from '$features/assistance/stores/assistance.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* Tests the page, not the store: no API key in a readable field, all providers connectable, jobs only to capable ones. */
 const connection = (provider: string, overrides: object = {}) => ({

@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import DeleteRecipeDialog from './DeleteRecipeDialog.svelte';
 import { ErrorCodes, type AppError } from '$api';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const render = (props: Record<string, unknown> = {}) => {
   const onconfirm = vi.fn();

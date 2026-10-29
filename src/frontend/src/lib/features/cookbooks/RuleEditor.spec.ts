@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import RuleEditor from './RuleEditor.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 vi.mock('./stores/tags.svelte', () => ({ tags: { items: [], load: vi.fn() } }));
 

@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TagEditor from './TagEditor.svelte';
 import { tagSuggestions } from '$features/recipes/stores/tagSuggestions.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /*
  * A recipe's tags: the seam between slugs (stored) and names (typed), where duplicates would show.

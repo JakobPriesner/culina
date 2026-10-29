@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import SectionWatchHarness from './__fixtures__/SectionWatchHarness.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 let report: (entries: Partial<IntersectionObserverEntry>[]) => void;
 

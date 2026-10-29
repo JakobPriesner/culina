@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import PasteImport from './PasteImport.svelte';
 import type { ParsedRecipe } from './parseRecipeText';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* An external link (share sheet, /recipes/new?url=…) is filled in and left alone: reading makes the server fetch it, so only a button tap may start that. */
 const imports = '/api/v1/recipe-imports';

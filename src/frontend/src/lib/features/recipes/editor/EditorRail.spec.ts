@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import EditorRail from './EditorRail.svelte';
 import type { SaveTone } from './SaveState.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const show = (tone: SaveTone, status: string) =>
   renderWithProviders(EditorRail, {

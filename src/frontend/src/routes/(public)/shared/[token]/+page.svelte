@@ -50,9 +50,8 @@
   /** Scaling as on the household page, replaced not pushed so each stepper tap is not a Back step. */
   function scale(value: number) {
     void goto(urlAtYield(page.url, value, recipe), {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true
+      replace: true,
+      reset: false
     });
   }
 </script>

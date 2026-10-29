@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import TextInput from './TextInput.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 const field = () => screen.getByLabelText('Password');
 const reveal = () => screen.queryByRole('button', { name: 'Show password' });

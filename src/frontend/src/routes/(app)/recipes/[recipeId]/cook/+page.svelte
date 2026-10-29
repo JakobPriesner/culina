@@ -52,7 +52,7 @@
 
   const recipeHref = $derived(
     urlAtYield(
-      new URL(resolve('/(app)/recipes/[recipeId]', { recipeId }), page.url),
+      new URL(resolve('/(app)/recipes/[recipeId]', { recipeId }), page.url.href),
       servings,
       recipes.detail
     )
@@ -196,11 +196,10 @@
   });
 
   function scale(value: number) {
-    // `replaceState` moves the address bar without telling the page (see the detail page), and every amount derives from the yield.
+    // A shallow navigation would move the address bar without telling the page (see the detail page), and every amount derives from the yield.
     void goto(urlAtYield(page.url, value, recipes.detail), {
-      replaceState: true,
-      keepFocus: true,
-      noScroll: true
+      replace: true,
+      reset: false
     });
   }
 

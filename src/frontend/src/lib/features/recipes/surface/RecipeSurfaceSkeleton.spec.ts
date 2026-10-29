@@ -2,7 +2,7 @@ import { screen } from '@testing-library/svelte';
 import { describe, expect, it } from 'vitest';
 
 import RecipeSurfaceSkeleton from './RecipeSurfaceSkeleton.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 describe('RecipeSurfaceSkeleton', () => {
   it('marks the region as busy with an accessible loading announcement', () => {

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import SuggestionDeck from './SuggestionDeck.svelte';
 import type { Suggestion } from './types';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* Pins two things: every suggestion is really in the document (a scroll-snap track, so swipe, keyboard and readers get the content free),
  * and the position is read off the scroll rather than remembered from a button press. */

@@ -78,7 +78,7 @@
     if (landedIn) tips.startTour();
 
     // No household yet: the welcome screen offers the two ways out.
-    await goto(landedIn ? destination : resolve('/(app)/welcome'), { replaceState: true });
+    await goto(landedIn ? destination : resolve('/(app)/welcome'), { replace: true });
   }
 </script>
 

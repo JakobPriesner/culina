@@ -3,8 +3,8 @@ import { redirect } from '@sveltejs/kit';
 import { instanceOrigin } from '$api';
 import { resolve } from '$app/paths';
 
-import { readSetup } from '$features/server/setup';
-import type { Setup } from '$features/server/types';
+import { readSetup } from '$features/instance/setup';
+import type { Setup } from '$features/instance/types';
 
 /** The sign-in screen must not hang on a stalled server; the app's own boot wait is this long too. */
 const setupDeadlineMs = 4_000;

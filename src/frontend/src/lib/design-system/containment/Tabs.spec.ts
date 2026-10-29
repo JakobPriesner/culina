@@ -2,7 +2,7 @@ import { screen } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
 import { describe, expect, it } from 'vitest';
 
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 import Tabs from './Tabs.svelte';
 

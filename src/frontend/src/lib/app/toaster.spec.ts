@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { render, screen, waitFor, within } from '@testing-library/svelte';
 
-import LocaleKeyedToaster from '$lib/test/LocaleKeyedToaster.svelte';
+import LocaleKeyedToaster from '#lib/test/LocaleKeyedToaster.svelte';
 
 import { m } from './i18n';
 import { preferences } from './preferences.svelte';

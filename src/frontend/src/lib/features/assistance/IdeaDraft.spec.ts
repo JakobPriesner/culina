@@ -1,7 +1,7 @@
 import { fireEvent, screen } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 import { applyLocale } from '$shell/i18n';
 
 import IdeaDraft from './IdeaDraft.svelte';

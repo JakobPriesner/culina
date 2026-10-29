@@ -1,7 +1,7 @@
 import { fireEvent, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it } from 'vitest';
 
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 import AppIconChoice from './AppIconChoice.svelte';
 import { appIcon } from './appIcon.svelte';

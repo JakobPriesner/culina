@@ -1,4 +1,4 @@
-import type { ClientInit, HandleClientError } from '@sveltejs/kit';
+import type { ClientInit, HandleClientError } from '@sveltejs/kit/hooks';
 
 import { report, startReporting } from '$shell/telemetry';
 
@@ -8,9 +8,11 @@ export const init: ClientInit = () => {
 };
 
 /** Whatever a load function or navigation threw; the router catches these, so they never reach the window's error handler. */
-export const handleError: HandleClientError = ({ error, status }) => {
-  // An address nobody has is somebody's typo, not the app being wrong.
-  if (status !== 404) {
-    report('render_failed', error);
+export const handleError: HandleClientError = (caught) => {
+  // `error(...)` is the app saying no on purpose, and an address nobody has is somebody's typo: neither is the app being wrong.
+  if (caught.kind === 'app' || (caught.kind === 'framework' && caught.error.status === 404)) {
+    return;
   }
+
+  report('render_failed', caught.error);
 };

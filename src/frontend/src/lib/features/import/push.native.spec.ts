@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('$lib/api/platform', () => ({
+vi.mock('#lib/api/platform.js', () => ({
   native: true,
   relayUrl: 'https://relay.example.com',
   nativePlatform: () => 'ios'

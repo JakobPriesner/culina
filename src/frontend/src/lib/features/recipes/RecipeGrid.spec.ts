@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import RecipeGrid from './RecipeGrid.svelte';
 import type { RecipeSummary } from './types';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* Only the list asks for the next page: reaching the end must ask, and nothing asks when nothing is left. */
 const recipe = (id: string): RecipeSummary => ({

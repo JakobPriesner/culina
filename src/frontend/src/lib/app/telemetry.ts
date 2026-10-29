@@ -1,4 +1,4 @@
-import { version } from '$app/environment';
+import { version } from '$app/env';
 import { page } from '$app/state';
 import { http, request } from '$api';
 
@@ -49,7 +49,7 @@ const flushDelayMs = 5_000;
 const mostPerWindow = 50;
 const windowMs = 60 * 60_000;
 
-/** What the service worker sends when it fails; see `tell` in service-worker.ts. */
+/** What the service worker sends when it fails; see `tell` in service-worker/index.ts. */
 const workerFailed = 'culina:failed';
 
 let queue: LogRecord[] = [];
@@ -75,7 +75,10 @@ export function report(event: ReportedEvent, thrown: unknown): void {
     const waiting = queue.findIndex((one) => keyOf(one) === key);
 
     if (waiting >= 0) {
-      queue[waiting] = { ...queue[waiting]!, occurrences: (queue[waiting]!.occurrences ?? 1) + 1 };
+      queue[waiting] = {
+        ...queue[waiting]!,
+        occurrences: (queue[waiting]!.occurrences ?? 1) + 1
+      };
     } else {
       // The latest of them, so its moment (online, visible, page age) is the most recent.
       repeats.set(key, { record, count: (repeats.get(key)?.count ?? 0) + 1 });

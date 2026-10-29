@@ -13,16 +13,16 @@
   import { session } from '$features/auth/session.svelte';
   import { createSubmission } from '$features/auth/submission.svelte';
   import { tips } from '$features/onboarding/tips.svelte';
-  import DatabaseFields from '$features/server/DatabaseFields.svelte';
-  import LimitFields from '$features/server/LimitFields.svelte';
-  import ProxyFields from '$features/server/ProxyFields.svelte';
-  import SaveStatus from '$features/server/SaveStatus.svelte';
-  import SecureCookiesField from '$features/server/SecureCookiesField.svelte';
-  import SessionFields from '$features/server/SessionFields.svelte';
-  import TelemetryFields from '$features/server/TelemetryFields.svelte';
-  import { server, type SaveOutcome } from '$features/server/stores/server.svelte';
-  import { variables } from '$features/server/types';
-  import { useServerDrafts, type ServerPart } from '$features/server/useServerDrafts.svelte';
+  import DatabaseFields from '$features/instance/DatabaseFields.svelte';
+  import LimitFields from '$features/instance/LimitFields.svelte';
+  import ProxyFields from '$features/instance/ProxyFields.svelte';
+  import SaveStatus from '$features/instance/SaveStatus.svelte';
+  import SecureCookiesField from '$features/instance/SecureCookiesField.svelte';
+  import SessionFields from '$features/instance/SessionFields.svelte';
+  import TelemetryFields from '$features/instance/TelemetryFields.svelte';
+  import { server, type SaveOutcome } from '$features/instance/stores/instance.svelte';
+  import { variables } from '$features/instance/types';
+  import { useServerDrafts, type ServerPart } from '$features/instance/useServerDrafts.svelte';
 
   /**
    * Fresh-instance setup in dependency order: database, then the network-dependent settings (secure cookies, trusted proxy), then the account.
@@ -72,7 +72,7 @@
 
     // An existing Culina moved to a new server already has an administrator: nothing to set up.
     if (result.kind === 'applied' && result.setup.stage === 'complete') {
-      await goto(resolve('/(auth)/login'), { replaceState: true });
+      await goto(resolve('/(auth)/login'), { replace: true });
 
       return;
     }
@@ -138,7 +138,7 @@
       // The first account always gets a kitchen, so the tour of it starts there, as after signing up.
       if (landedIn) tips.startTour();
 
-      await goto(resolve('/(app)'), { replaceState: true });
+      await goto(resolve('/(app)'), { replace: true });
     }
   }
 

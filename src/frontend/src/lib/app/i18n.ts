@@ -5,7 +5,7 @@ import {
   getLocale,
   locales,
   type Locale
-} from '$lib/paraglide/runtime';
+} from '#lib/paraglide/runtime.js';
 
 import { readDevice, writeDevice } from './deviceStorage';
 
@@ -13,7 +13,7 @@ import { readDevice, writeDevice } from './deviceStorage';
  * Everything for saying something in the reader's language; messages compile to functions so a missing key fails the build.
  * **Append new keys to `messages/*.json`; never re-sort:** the compiler can fail with "No Lix transaction is active" and even emit correct output while exiting non-zero.
  */
-export { m } from '$lib/paraglide/messages';
+export { m } from '#lib/paraglide/messages.js';
 export { locales, type Locale };
 
 /** What a person chose. `system` is a choice: read whatever the device reads. */

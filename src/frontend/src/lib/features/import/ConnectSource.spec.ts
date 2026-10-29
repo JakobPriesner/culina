@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ConnectSource from './ConnectSource.svelte';
 import { sources } from './stores/sources.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* The form that decides whether somebody reaches their recipes: it must not ask for an API token before offering help to get one. */
 let sent: Record<string, unknown>[] = [];

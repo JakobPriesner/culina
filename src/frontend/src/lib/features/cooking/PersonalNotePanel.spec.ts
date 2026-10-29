@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import PersonalNotePanel from './PersonalNotePanel.svelte';
 import { notes } from './stores/notes.svelte';
-import { renderWithProviders } from '$lib/test/render';
+import { renderWithProviders } from '#lib/test/render.js';
 
 /* Typing into a note that has not arrived loses the typing: the answer replaces it and the next save sends the emptiness back.
    The page reads the note (the recipe page and cook mode both do), so each test asks for it as the page would. */

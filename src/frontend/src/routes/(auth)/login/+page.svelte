@@ -102,7 +102,7 @@
     }
 
     // Replaced, not pushed, so back does not land on a sign-in form for an existing session.
-    await goto(destination, { replaceState: true });
+    await goto(destination, { replace: true });
   }
 </script>
 
