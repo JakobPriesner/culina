@@ -574,7 +574,7 @@ jobs:
       # "Manage Actions access", every push is refused at the manifest with
       # "denied: permission_denied: read_package" — after the layers have gone
       # up and after a login that succeeded, so nothing here looks wrong.
-      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
