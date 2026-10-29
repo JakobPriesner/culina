@@ -3,6 +3,7 @@
 This file provides instructions and context for AI coding agents working on this project.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:6cd5cc61 -->
+
 ## Beads Issue Tracker
 
 This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
@@ -37,6 +38,7 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 3. **Update issue status** - Close finished work, update in-progress items
 4. **Report git state** - Run `git status` and propose the commit/push commands; wait for approval
 5. **Hand off** - Summarize changes, validation, issue status, and any blocked sync/commit/push step; if one is blocked, report the exact command and error
+
 <!-- END BEADS INTEGRATION -->
 
 ## Conventions & Patterns
@@ -45,3 +47,4 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
   the container image, or anything the server serves, and no `sourceMappingURL`
   pointing at one. Reported web app stacks stay minified; don't propose making
   them readable by shipping maps.
+- **No AI attribution in commits.** Commits must only come from `Jakob Priesner <jakob.priesner@outlook.de>`. Never include `Claude`, `Anthropic`, `Co-Authored-By`, `Generated with Claude`, or AI `Signed-off-by` lines in commit messages or author fields.

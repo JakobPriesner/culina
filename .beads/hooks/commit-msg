@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+# Reject any commit that includes Claude/AI attribution or non-Jakob authorship.
+msg_file="$1"
+
+if grep -Eiq '(^Co-Authored-By:|^Signed-off-by:|noreply@anthropic\.com|Generated with.*Claude)' "$msg_file"; then
+  echo >&2 "commit-msg: rejected — AI/bot attribution trailers (Claude/Co-Authored-By/Signed-off-by) are not allowed in commits."
+  exit 1
+fi
+
+author_email="${GIT_AUTHOR_EMAIL:-$(git config user.email)}"
+committer_email="${GIT_COMMITTER_EMAIL:-$(git config user.email)}"
+
+if [ "$author_email" != "jakob.priesner@outlook.de" ] || [ "$committer_email" != "jakob.priesner@outlook.de" ]; then
+  echo >&2 "commit-msg: rejected — commits must come from Jakob Priesner <jakob.priesner@outlook.de>."
+  exit 1
+fi
