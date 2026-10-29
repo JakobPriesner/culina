@@ -101,9 +101,15 @@
     order: 3;
   }
 
+  /* The dates take what back, today and forward leave on their row, so the two stay together whatever the range says. */
   .range {
     order: 4;
+    flex: 1 1 0;
     min-width: 0;
+  }
+
+  .range :global(.anchor) {
+    max-width: 100%;
   }
 
   /* The segments are as wide as their words: "Tage" and "Woche" each get a full thumb's width. */
@@ -129,6 +135,7 @@
 
     .range {
       order: 2;
+      flex: 0 1 auto;
       margin-inline-end: auto;
     }
 

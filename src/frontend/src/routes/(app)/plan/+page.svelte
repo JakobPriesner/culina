@@ -142,7 +142,8 @@
   const title = $derived(
     view === 'week' ? weekTitle(offset) : daysTitle(start, preferences.locale)
   );
-  const range = $derived(rangeOf(start, preferences.locale, count));
+  // On a narrow phone the range shares its row with back, today and forward: the dates alone, no weekdays.
+  const range = $derived(rangeOf(start, preferences.locale, count, narrow.current));
 
   /** The day an "add" was pressed for, which is also what opens the picker. */
   let adding = $state<string | null>(null);

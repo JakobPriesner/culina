@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { planDayHref, weekOffsetOf } from './weekDates';
+import { planDayHref, rangeOf, weekOffsetOf } from './weekDates';
 
 afterEach(() => vi.useRealTimers());
 
@@ -20,5 +20,19 @@ describe('the week a date is in', () => {
     vi.useFakeTimers({ now: new Date('2026-10-21T10:00:00') });
 
     expect(planDayHref('2026-10-27')).toBe('/plan?week=1&tag=2026-10-27');
+  });
+});
+
+describe('the days on screen as text', () => {
+  it('says the weekdays of a run that is not a week, and leaves them out where short', () => {
+    // A Thursday, four days.
+    const long = rangeOf('2026-10-29', 'de-DE', 4);
+    const short = rangeOf('2026-10-29', 'de-DE', 4, true);
+
+    expect(long).toContain('Do.');
+    expect(short).not.toContain('Do.');
+    expect(short).toContain('29.');
+    expect(short).toContain('1.');
+    expect(short.length).toBeLessThan(long.length);
   });
 });

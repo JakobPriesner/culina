@@ -129,7 +129,8 @@
 
   .ground {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+    /* Never wider than the ground itself, so the gallery reflows at 320px. */
+    grid-template-columns: repeat(auto-fit, minmax(min(20rem, 100%), 1fr));
     gap: var(--space-4);
     padding: var(--space-4);
     border-radius: var(--radius-lg);

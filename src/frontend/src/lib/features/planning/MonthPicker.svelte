@@ -73,7 +73,7 @@
       {popovertarget}
       aria-label={`${range}. ${m['plan.jump.label']()}`}
     >
-      {range}
+      <span class="label">{range}</span>
       <svg
         viewBox="0 0 24 24"
         fill="none"
@@ -163,6 +163,19 @@
     cursor: pointer;
   }
 
+  /* Beside back, today and forward on a phone it takes the room they leave, and a long range ends in an ellipsis
+     rather than pushing them onto a line of their own. */
+  .trigger {
+    max-width: calc(100% + var(--space-2));
+  }
+
+  .label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .trigger:hover {
     background: var(--surface-hover);
     color: var(--text);
@@ -176,6 +189,7 @@
   }
 
   .trigger svg {
+    flex: none;
     width: 1rem;
     height: 1rem;
   }

@@ -34,11 +34,12 @@ export const planDayHref = (date: string) =>
 
 /**
  * The days on screen as text; `formatRange` avoids repeating the month ("September 7 – 13"). A run of days that does
- * not start on a Monday says its weekdays, as it is not a week anyone knows by its dates.
+ * not start on a Monday says its weekdays, as it is not a week anyone knows by its dates; `short` leaves them out
+ * where a phone's row has no room for them.
  */
-export const rangeOf = (from: string, locale: string, count = 7) => {
+export const rangeOf = (from: string, locale: string, count = 7, short = false) => {
   const start = dayOf(from);
-  const weekdays = start.getDay() !== 1 || count !== 7;
+  const weekdays = !short && (start.getDay() !== 1 || count !== 7);
 
   return new Intl.DateTimeFormat(locale, {
     weekday: weekdays ? 'short' : undefined,

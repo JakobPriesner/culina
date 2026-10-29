@@ -49,7 +49,10 @@ test.describe('a photo of how yours turned out', () => {
 
     await expect(page.getByRole('region', { name: /your attempts|deine versuche/i })).toBeHidden();
 
-    await page.getByRole('button', { name: /start cooking|kochen starten/i }).click();
+    await page
+      .getByRole('button', { name: /start cooking|kochen starten/i })
+      .first()
+      .click();
     await page.getByRole('button', { name: /^(i made it|hab ich gekocht)$/i }).click();
 
     // Waited for: navigating right away races the write that creates the attempt.

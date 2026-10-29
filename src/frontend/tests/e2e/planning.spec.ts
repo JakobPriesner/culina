@@ -135,7 +135,7 @@ test.describe('planning a week', () => {
     });
 
     await page.goto(`/recipes/${recipeId}?yield=5`);
-    await page.getByRole('button', { name: /add to plan|einplanen/i }).click();
+    await page.getByRole('button', { name: /^(add to plan|einplanen|plan|planen)$/i }).click();
 
     const sheet = page.getByRole('dialog', { name: new RegExp(plannedTitle) });
 
@@ -293,7 +293,11 @@ const everythingOnTheList =
 /** The recipe's whole ingredient list onto the shopping list, through its sheet. */
 async function addToList(page: Page, recipeId: string) {
   await page.goto(`/recipes/${recipeId}`);
-  await page.getByRole('button', { name: /shopping list|einkaufsliste/i }).click();
+  await page
+    .getByRole('button', {
+      name: /^(add to the shopping list|auf die einkaufsliste|shop|einkaufen)$/i
+    })
+    .click();
   await page
     .getByRole('button', { name: /^(add \d+ ingredients?|\d+ zutat(en)? hinzufügen)$/i })
     .click();
