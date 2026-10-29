@@ -14,11 +14,15 @@ import type { Dictionary, Manifest } from './routePreloads.ts';
  */
 export const budgets = {
   firstLoadBytes: 80 * 1024,
-  heaviestRouteBytes: 340 * 1024,
+  // 348 since 29 October 2026: the recipe page's servings now carry what the plan says (as planned, cooked today),
+  // and its steps' ingredient tokens and floating cook buttons came with the 28 October UI reviews.
+  heaviestRouteBytes: 348 * 1024,
   // 550 since 28 October 2026: the barcode fallback decoder (barcode-detector, about 14 kB) and the diary's scan and
   // search, loaded only when a package is scanned; the first load did not change.
   totalJavaScriptBytes: 550 * 1024,
-  totalStyleBytes: 73 * 1024
+  // 76 since 29 October 2026: the 28 October UI reviews (epics y6ti, 6ilt), the frosted scroll edge under the header
+  // and dock, and the Reduce Transparency and Increase Contrast fallbacks every glass surface now has.
+  totalStyleBytes: 76 * 1024
 } as const;
 
 export interface Weight {
