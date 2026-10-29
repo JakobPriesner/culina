@@ -88,6 +88,8 @@ export class WeekDrag {
   #start = { x: 0, y: 0 };
   #pending: Held | null = null;
   #scrolling = 0;
+  /** What auto-scroll moves: the week's own column beside the list (`data-plan-scroller`), else the page. */
+  #scroller: HTMLElement | null = null;
   #onDrop: OnDrop = () => {};
 
   /** Starts watching a press; nothing is lifted until it becomes a drag. */
@@ -106,6 +108,7 @@ export class WeekDrag {
     this.#onDrop = onDrop;
     this.#start = { x: event.clientX, y: event.clientY };
     this.#pending = { ...held, width: source.getBoundingClientRect().width };
+    this.#scroller = source.closest<HTMLElement>('[data-plan-scroller]');
 
     window.addEventListener('pointermove', this.#move);
     window.addEventListener('pointerup', this.#release);
@@ -194,10 +197,12 @@ export class WeekDrag {
     this.stop();
   };
 
-  /** Scrolls near an edge; seven days never fit on a phone. */
+  /** Scrolls near an edge of the page or of the week's column; seven days never fit on a phone. */
   #autoScroll(y: number): void {
-    const above = edge - y;
-    const below = y - (window.innerHeight - edge);
+    const scroller = this.#scroller ?? window;
+    const box = this.#scroller?.getBoundingClientRect() ?? { top: 0, bottom: window.innerHeight };
+    const above = box.top + edge - y;
+    const below = y - (box.bottom - edge);
     const by = above > 0 ? -above : below > 0 ? below : 0;
 
     cancelAnimationFrame(this.#scrolling);
@@ -209,7 +214,7 @@ export class WeekDrag {
     const step = Math.sign(by) * Math.min(edgeSpeed, (Math.abs(by) / edge) * edgeSpeed);
 
     const run = () => {
-      window.scrollBy(0, step);
+      scroller.scrollBy(0, step);
       this.#aim(this.#at.x, this.#at.y);
       this.#scrolling = requestAnimationFrame(run);
     };
@@ -234,6 +239,7 @@ export class WeekDrag {
     this.#held = null;
     this.#landing = null;
     this.#pending = null;
+    this.#scroller = null;
   }
 
   /** Releases everything, for a component unmounting mid-drag. */

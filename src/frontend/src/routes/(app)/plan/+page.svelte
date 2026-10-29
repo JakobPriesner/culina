@@ -247,7 +247,8 @@
   <!-- On a phone the way through time rides in the header bar beside Plan | Liste, so it is always in reach. -->
   <WocheSwitch view="plan" trailing={travelInBar ? travel : undefined} />
   <div class="hub" class:beside={listBeside.current}>
-    <div class="week">
+    <!-- Beside the list each column scrolls itself, so dragging a meal past an edge scrolls this one, not the page. -->
+    <div class="week" data-plan-scroller={listBeside.current || undefined}>
       <PlanHeader
         {title}
         {range}
@@ -385,12 +386,35 @@
 {/if}
 
 <style>
-  /* The week and, from 80rem, the list beside it, parted by one straight hairline the height of the pane. */
+  /*
+   * The week and, from 80rem, the list beside it, parted by one straight hairline the height of the pane. The two fill
+   * the screen below the header and each scrolls itself: the page does not scroll as well (a short window still lets it,
+   * rather than leave two slivers).
+   */
   .beside {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
+    grid-template-rows: minmax(0, 1fr);
     gap: var(--space-8);
-    align-items: start;
+    height: calc(100dvh - var(--pinned-top) - var(--bottom-inset) - var(--space-6));
+    min-height: 24rem;
+  }
+
+  /* The page's room to scroll past the end, kept only as the gap under the columns. */
+  :global(.page):has(> .beside) {
+    padding-block-end: var(--space-6);
+  }
+
+  .beside > .week,
+  .list {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* Each column scrolls itself, so a day sought and a sticky heading go to the column's top, not under the shell's header. */
+  .beside > .week,
+  .list > :global(*) {
+    --header-inset: 0px;
   }
 
   .tip-after {
@@ -447,17 +471,8 @@
   }
 
   .list {
-    position: sticky;
-    top: var(--pinned-top);
-    max-height: calc(100dvh - var(--pinned-top) - var(--space-6));
-    overflow-y: auto;
     padding-inline-start: var(--space-8);
     border-inline-start: 1px solid var(--border);
-  }
-
-  /* The pane scrolls itself, so its section headings stick to its own top, not under the shell's header. */
-  .list > :global(*) {
-    --header-inset: 0px;
   }
 
   /* A meal carried over the list: dropping it here puts its shopping on, as a day's outline says it would land there. */
