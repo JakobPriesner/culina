@@ -66,7 +66,7 @@ test.describe('planning a week', () => {
     await page.goto('/');
     await page.getByRole('link', { name: /^(week|woche)$/i }).click();
 
-    await expect(page).toHaveURL(/\/plan$/);
+    await expect(page).toHaveURL(/\/week\/plan$/);
 
     // The days on screen: the week with its days already over folded, or a run from today on a phone.
     await expect(
@@ -92,7 +92,7 @@ test.describe('planning a week', () => {
     if (!listBeside(page)) await expect(page.getByText(everythingOnTheList)).toBeVisible();
     await expect(page.getByRole('button', { name: weekToList })).toBeHidden();
 
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
     // Exact: the planned-meals list names the same line again, with its amount.
     await expect(page.getByText(ingredient, { exact: true })).toBeVisible();
   });
@@ -108,7 +108,7 @@ test.describe('planning a week', () => {
 
     await addToList(page, recipeId);
 
-    await page.goto('/plan');
+    await page.goto('/week/plan');
     await page.getByRole('button', { name: addOnDay }).last().click();
 
     const sheet = page.getByRole('dialog');
@@ -121,7 +121,7 @@ test.describe('planning a week', () => {
     await expect(page.getByRole('button', { name: weekToList })).toHaveCount(0);
 
     // Doubling here used to be silent.
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
     await expect(page.getByRole('listitem').filter({ hasText: flour })).toContainText(/250\s*g/);
   });
 
@@ -150,7 +150,7 @@ test.describe('planning a week', () => {
       sheet.getByRole('button', { name: /add to week|zur woche hinzufügen/i }).click()
     ]);
 
-    await page.goto('/plan');
+    await page.goto('/week/plan');
 
     await expect(cardOf(page, new RegExp(plannedTitle))).toContainText(/5 servings|5 Portionen/i);
   });
@@ -198,7 +198,7 @@ test.describe('planning a week', () => {
   });
 
   test('moves a meal without a pointer, through the grip', async () => {
-    await page.goto('/plan');
+    await page.goto('/week/plan');
 
     await expect(cardOf(page, title)).toBeVisible();
 
@@ -253,7 +253,7 @@ test.describe('planning a week', () => {
   });
 
   test('takes a meal off the plan again', async () => {
-    await page.goto('/plan');
+    await page.goto('/week/plan');
 
     await expect(cardOf(page, title)).toBeVisible();
 
@@ -278,7 +278,7 @@ test.describe('planning a week', () => {
       ).toBeVisible();
     }
 
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
     await expect(page.getByText(ingredient)).toBeHidden();
   });
 });
@@ -320,7 +320,7 @@ async function inDays(page: Page): Promise<void> {
 
 /** The days on screen, loaded: today's heading is drawn with them. */
 async function openWeek(page: Page): Promise<void> {
-  await page.goto('/plan');
+  await page.goto('/week/plan');
   await expect(page.getByRole('heading', { level: 2, name: /^(today|heute)\b/i })).toBeVisible();
 }
 

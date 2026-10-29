@@ -157,7 +157,7 @@ test.describe('library refinement @offline', () => {
     const expected = [
       ['Recipes', '/'],
       ['Cookbooks', '/cookbooks'],
-      ['Week', '/plan'],
+      ['Week', '/week/plan'],
       ['Nutrition', '/diary']
     ] as const;
     await expect(navigation.getByRole('link')).toHaveCount(4);
@@ -173,7 +173,7 @@ test.describe('library refinement @offline', () => {
     }
     // Back from the last destination, Diary, is the one before it.
     await page.goBack();
-    await expect(page).toHaveURL(/\/plan$/);
+    await expect(page).toHaveURL(/\/week\/plan$/);
     await expect(navigation.getByRole('link', { name: 'Week', exact: true })).toHaveAttribute(
       'aria-current',
       'page'

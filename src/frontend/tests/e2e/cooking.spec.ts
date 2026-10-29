@@ -68,7 +68,7 @@ test.describe('cooking a recipe', () => {
     await expect(page.getByText(/step 2 of 3|schritt 2 von 3/i)).toBeVisible();
     await expect(page.locator('[aria-current="step"]')).toBeFocused();
 
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
 
     const bar = page.getByText(new RegExp(`cooking ${title}|Gerade am Kochen: ${title}`, 'i'));
 

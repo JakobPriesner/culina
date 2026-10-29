@@ -162,7 +162,7 @@ test.describe('kitchen display and badge lifecycle @offline', () => {
         }
       });
     });
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
     await expect(page.getByRole('heading', { name: /^Shopping/ }).first()).toBeVisible();
     await expect
       .poll(() =>

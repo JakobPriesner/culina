@@ -215,7 +215,7 @@ test.describe('Woche @offline', () => {
         await page.screenshot({ path: test.info().outputPath(`home-${locale}-${width}.png`) });
 
         await links.filter({ hasText: locale === 'de' ? 'Woche' : 'Week' }).click();
-        await expect(page).toHaveURL(/\/plan/);
+        await expect(page).toHaveURL(/\/week\/plan/);
         await settled(page);
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
         await page.screenshot({ path: test.info().outputPath(`plan-${locale}-${width}.png`) });
@@ -230,7 +230,7 @@ test.describe('Woche @offline', () => {
         );
         await expectWholeWords(listSegment);
         await listSegment.click();
-        await expect(page).toHaveURL(/\/shopping/);
+        await expect(page).toHaveURL(/\/week\/shopping/);
         await settled(page);
         await expect(nav.locator('[aria-current="page"]')).toHaveText(
           locale === 'de' ? 'Woche' : 'Week'
@@ -239,7 +239,7 @@ test.describe('Woche @offline', () => {
 
         await links.filter({ hasText: locale === 'de' ? 'Rezepte' : 'Recipes' }).click();
         await links.filter({ hasText: locale === 'de' ? 'Woche' : 'Week' }).click();
-        await expect(page).toHaveURL(/\/shopping/);
+        await expect(page).toHaveURL(/\/week\/shopping/);
         await expectReflow(page);
       });
     }
@@ -250,7 +250,7 @@ test.describe('Woche @offline', () => {
       await page.setViewportSize({ width, height: 900 });
       await responsiveData(page, 'de', { activeCooking: false });
       await diaryOn(page);
-      await page.goto('/plan');
+      await page.goto('/week/plan');
       await settled(page);
       const pane = page.getByRole('complementary', { name: 'Einkauf' });
       const paneHeading = pane.getByRole('heading', {
@@ -282,7 +282,7 @@ test.describe('Woche @offline', () => {
     await responsiveData(page, 'de', { activeCooking: false });
     await diaryOn(page);
     const { asked } = await weekToShop(page);
-    await page.goto('/plan');
+    await page.goto('/week/plan');
     await unfolded(page);
 
     const pane = page.getByRole('complementary', { name: 'Einkauf' });
@@ -313,7 +313,7 @@ test.describe('Woche @offline', () => {
     await responsiveData(page, 'de', { activeCooking: false });
     await diaryOn(page);
     const { tuesday } = await weekToShop(page, { listed: true });
-    await page.goto('/plan');
+    await page.goto('/week/plan');
     await unfolded(page);
     const pane = page.getByRole('complementary', { name: 'Einkauf' });
 
@@ -339,7 +339,7 @@ test.describe('Woche @offline', () => {
     await responsiveData(page, 'de', { activeCooking: false });
     await diaryOn(page);
     await weekToShop(page, { listed: true });
-    await page.goto('/plan');
+    await page.goto('/week/plan');
     await unfolded(page);
     const card = page.locator('[data-plan-day] .card', { hasText: 'Linsen-Dal' });
     const line = page
@@ -368,7 +368,7 @@ test.describe('Woche @offline', () => {
     await responsiveData(page, 'de', { activeCooking: false });
     await diaryOn(page);
     const { asked } = await weekToShop(page, { listed: true });
-    await page.goto('/plan');
+    await page.goto('/week/plan');
     await unfolded(page);
     const pane = page.getByRole('complementary', { name: 'Einkauf' });
 
@@ -393,7 +393,7 @@ test.describe('Woche @offline', () => {
     await responsiveData(page, 'de', { activeCooking: false });
     await diaryOn(page);
     const { asked } = await weekToShop(page);
-    await page.goto('/plan');
+    await page.goto('/week/plan');
     await unfolded(page);
     const pane = page.getByRole('complementary', { name: 'Einkauf' });
 
@@ -425,7 +425,7 @@ test.describe('Woche @offline', () => {
     await responsiveData(page, 'de', { activeCooking: false });
     await diaryOn(page);
     await weekToShop(page, { listed: true });
-    await page.goto('/plan');
+    await page.goto('/week/plan');
     await settled(page);
 
     // As it opens: today first, the days before it one line, and the rest of the week on the first screen.
@@ -447,7 +447,7 @@ test.describe('Woche @offline', () => {
     await responsiveData(page, 'de', { activeCooking: false });
     await diaryOn(page);
     await emptyWeek(page);
-    await page.goto('/plan');
+    await page.goto('/week/plan');
     await unfolded(page);
 
     await expect(page.getByRole('heading', { name: 'Noch nichts geplant' })).toBeVisible();
@@ -467,7 +467,7 @@ test.describe('Woche @offline', () => {
     await responsiveData(page, 'de', { activeCooking: false });
     await diaryOn(page);
     await emptyWeek(page, { listInUse: true });
-    await page.goto('/plan');
+    await page.goto('/week/plan');
     await unfolded(page);
 
     await expect(page.getByText('Noch nichts geplant')).toBeVisible();
@@ -485,7 +485,7 @@ test.describe('Woche @offline', () => {
       await held;
       await route.fallback();
     });
-    await page.goto('/plan');
+    await page.goto('/week/plan');
     const skeleton = page.locator('ol.week[aria-busy="true"]');
     await expect(skeleton).toHaveClass(/rows/);
     await expect(skeleton.locator('li.row')).toHaveCount(7);
@@ -499,7 +499,7 @@ test.describe('Woche @offline', () => {
     await responsiveData(page, 'de', { activeCooking: false, longShoppingLine: true });
     await diaryOn(page);
     await wholeWeek(page);
-    await page.goto('/plan');
+    await page.goto('/week/plan');
     await unfolded(page);
     const switchTo = (name: string) =>
       page.getByRole('group', { name: 'Woche' }).getByRole('button', { name }).click();
@@ -507,14 +507,14 @@ test.describe('Woche @offline', () => {
     await page.evaluate(() => window.scrollTo({ top: 500 }));
     await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(500);
     await switchTo('Einkaufsliste');
-    await expect(page).toHaveURL(/\/shopping$/);
+    await expect(page).toHaveURL(/\/week\/shopping$/);
     // A first visit to the list starts at its top.
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     await page.evaluate(() => window.scrollTo({ top: 120 }));
     await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(120);
 
     await switchTo('Essensplan');
-    await expect(page).toHaveURL(/\/plan$/);
+    await expect(page).toHaveURL(/\/week\/plan$/);
     await settled(page);
     await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(500);
 
@@ -527,16 +527,16 @@ test.describe('Woche @offline', () => {
     await responsiveData(page, 'de', { activeCooking: false });
     await diaryOn(page);
     await weekToShop(page, { listed: true });
-    await page.goto('/plan');
+    await page.goto('/week/plan');
     await unfolded(page);
     await page
       .locator('[data-plan-day]', { hasText: 'Linsen-Dal' })
       .getByRole('link', { name: 'Auf der Einkaufsliste' })
       .click();
-    await expect(page).toHaveURL(/\/shopping\?mahlzeit=e-1$/);
+    await expect(page).toHaveURL(/\/week\/shopping\?mahlzeit=e-1$/);
     await expect(page.locator('li.row.marked', { hasText: 'Paprika' })).toBeVisible();
     await page.goBack();
-    await expect(page).toHaveURL(/\/plan$/);
+    await expect(page).toHaveURL(/\/week\/plan$/);
   });
 
   test('on a phone the list says what this week still needs', async ({ page }) => {
@@ -544,7 +544,7 @@ test.describe('Woche @offline', () => {
     await responsiveData(page, 'de', { activeCooking: false });
     await diaryOn(page);
     await weekToShop(page);
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
     await settled(page);
     await expect(
       page.getByText('Diese Woche: 2 Mahlzeiten noch nicht auf der Einkaufsliste')
@@ -556,7 +556,7 @@ test.describe('Woche @offline', () => {
     await page.setViewportSize({ width: 1100, height: 900 });
     await responsiveData(page, 'de', { activeCooking: false });
     await diaryOn(page);
-    await page.goto('/plan');
+    await page.goto('/week/plan');
     await unfolded(page);
     await expect(page.getByRole('group', { name: 'Woche' })).toBeVisible();
     await expect(page.getByRole('complementary', { name: 'Einkauf' })).toHaveCount(0);
@@ -584,7 +584,7 @@ test.describe('Woche @offline', () => {
       await page.setViewportSize({ width, height });
       await responsiveData(page, 'de', { activeCooking: false });
       await diaryOn(page);
-      await page.goto('/plan');
+      await page.goto('/week/plan');
       await settled(page);
       await page.getByRole('button', { name: 'Alles klar' }).click();
       await page.evaluate(() => window.scrollTo(0, 0));

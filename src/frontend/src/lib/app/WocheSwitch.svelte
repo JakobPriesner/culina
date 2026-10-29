@@ -54,7 +54,7 @@
     if (id === view) return;
     const to = id === 'list' ? 'list' : 'plan';
     const returning = woche.leave(view, to, window.scrollY);
-    void goto(to === 'list' ? resolve('/(app)/shopping') : resolve('/(app)/plan'), {
+    void goto(to === 'list' ? resolve('/(app)/week/shopping') : resolve('/(app)/week/plan'), {
       reset: !returning
     });
   }
@@ -81,7 +81,7 @@
 </script>
 
 {#snippet bar()}
-  <div class="switch" class:reading={view === 'list'}>
+  <div class="switch">
     <SegmentedControl
       label={m['woche.switch.label']()}
       selected={view}
@@ -114,13 +114,5 @@
 
   .switch > :global(:first-child .segment) {
     flex: 1;
-  }
-
-  /* The list is read in a column of its own measure; the bar lines up with it. */
-  @media (min-width: 48rem) {
-    .reading {
-      max-width: var(--measure);
-      margin-inline: auto;
-    }
   }
 </style>

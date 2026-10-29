@@ -228,7 +228,7 @@ describe('the search overlay', () => {
       await user.keyboard('{ArrowDown}{Enter}');
 
       expect(onclose).toHaveBeenCalledOnce();
-      expect(goto).toHaveBeenCalledWith('/shopping');
+      expect(goto).toHaveBeenCalledWith('/week/shopping');
     });
   });
 

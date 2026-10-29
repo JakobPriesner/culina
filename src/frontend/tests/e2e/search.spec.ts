@@ -136,7 +136,7 @@ test.describe('search @offline', () => {
     test.skip(testInfo.project.name !== 'desktop', 'Keyboard shortcuts.');
     await responsiveData(page);
 
-    await page.goto('/plan');
+    await page.goto('/week/plan');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await page.keyboard.press('/');
     await expect(page.getByRole('combobox', { name: 'Rezepte durchsuchen' })).toBeFocused();
@@ -158,7 +158,7 @@ test.describe('search @offline', () => {
       route.fulfill({ json: { items: [] } })
     );
 
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
     await page.getByRole('button', { name: 'Rezepte durchsuchen' }).click();
     const field = page.getByRole('combobox', { name: 'Rezepte durchsuchen' });
 

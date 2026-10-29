@@ -23,7 +23,7 @@
   {:else}
     <p class="shop-note" role="status">
       {m['plan.shop.done']()}
-      <a href={resolve('/(app)/shopping')}>{m['plan.openList']()}</a>
+      <a href={resolve('/(app)/week/shopping')}>{m['plan.openList']()}</a>
     </p>
   {/if}
 </div>

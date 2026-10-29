@@ -3,10 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { matchPlaces, type Place } from './places';
 
 const places: Place[] = [
-  { key: 'shopping', label: 'Einkauf', href: '/shopping', keywords: ['Einkaufsliste', 'Liste'] },
-  { key: 'plan', label: 'Woche', href: '/plan', keywords: ['Plan'] },
+  {
+    key: 'shopping',
+    label: 'Einkauf',
+    href: '/week/shopping',
+    keywords: ['Einkaufsliste', 'Liste']
+  },
+  { key: 'plan', label: 'Woche', href: '/week/plan', keywords: ['Plan'] },
   { key: 'paste', label: 'Rezept einfügen', href: '/recipes/new?start=paste' },
-  { key: 'item-1', label: 'Zucchini', detail: 'Auf der Einkaufsliste', href: '/shopping' }
+  { key: 'item-1', label: 'Zucchini', detail: 'Auf der Einkaufsliste', href: '/week/shopping' }
 ];
 
 const keys = (typed: string) => matchPlaces(typed, places).map((place) => place.key);

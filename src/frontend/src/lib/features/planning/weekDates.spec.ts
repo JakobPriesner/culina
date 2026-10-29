@@ -19,6 +19,6 @@ describe('the week a date is in', () => {
   it('leads to the plan at that day', () => {
     vi.useFakeTimers({ now: new Date('2026-10-21T10:00:00') });
 
-    expect(planDayHref('2026-10-27')).toBe('/plan?week=1&tag=2026-10-27');
+    expect(planDayHref('2026-10-27')).toBe('/week/plan?week=1&tag=2026-10-27');
   });
 });

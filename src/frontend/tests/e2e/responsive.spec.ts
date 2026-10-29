@@ -27,8 +27,8 @@ test.describe('responsive production layouts @offline', () => {
           '/',
           '/cookbooks',
           `/cookbooks/${cookbookId}`,
-          '/shopping',
-          '/plan',
+          '/week/shopping',
+          '/week/plan',
           '/me',
           '/me/appearance',
           '/me/household',
@@ -69,25 +69,25 @@ test.describe('responsive production layouts @offline', () => {
             if (
               locale === 'de' &&
               [320, 768, 1280].includes(width) &&
-              ['/', '/shopping', '/plan', `/recipes/${recipeId}`].includes(path)
+              ['/', '/week/shopping', '/week/plan', `/recipes/${recipeId}`].includes(path)
             ) {
               await page.screenshot({
                 path: testInfo.outputPath(`${width}-${path.replaceAll('/', '_') || 'home'}.png`)
               });
             }
-            if (path === '/shopping' || path.endsWith('/edit')) {
+            if (path === '/week/shopping' || path.endsWith('/edit')) {
               const name = page.locator(
-                path === '/shopping' ? '#shopping-add-name' : '#g0-add-ingredient-name'
+                path === '/week/shopping' ? '#shopping-add-name' : '#g0-add-ingredient-name'
               );
               await expect(name).toBeVisible();
               expect((await name.boundingBox())!.width).toBeGreaterThanOrEqual(150);
             }
-            if (path === '/' || path === '/plan') {
+            if (path === '/' || path === '/week/plan') {
               const grid = page.locator(path === '/' ? 'ul.grid' : 'ol.week');
               const columns = await grid.evaluate(
                 (el) => getComputedStyle(el).gridTemplateColumns.split(' ').length
               );
-              if (path === '/plan') {
+              if (path === '/week/plan') {
                 for (const name of await page.locator('.card .name').all()) {
                   expect((await name.boundingBox())!.width).toBeGreaterThanOrEqual(100);
                 }
@@ -110,7 +110,7 @@ test.describe('responsive production layouts @offline', () => {
               } else {
                 expect(columns).toBe(
                   // The plan is an agenda at every width: one column of days (rows from 48rem).
-                  path === '/plan' ? 1 : width < 640 ? 1 : width < 1024 ? 2 : 3
+                  path === '/week/plan' ? 1 : width < 640 ? 1 : width < 1024 ? 2 : 3
                 );
               }
             }
@@ -127,7 +127,7 @@ test.describe('responsive production layouts @offline', () => {
       test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport matrix.');
       await page.setViewportSize({ width, height: 900 });
       await responsiveData(page, 'de');
-      await page.goto('/plan');
+      await page.goto('/week/plan');
 
       const title = page.locator('.card a.name[href^="/recipes/"]').first();
       await expect(title).toBeVisible();
@@ -166,7 +166,7 @@ test.describe('responsive production layouts @offline', () => {
     await expectReflow(page);
     await expect(page.locator('#g0-ingredient-0-name')).toBeVisible();
     expect((await page.locator('#g0-ingredient-0-name').boundingBox())!.width).toBeGreaterThan(200);
-    await page.goto('/plan');
+    await page.goto('/week/plan');
     await page.getByRole('button', { name: /^(Einen Tag|Eine Woche) weiter$/i }).click();
     await expectReflow(page);
     await page
@@ -206,7 +206,7 @@ test.describe('responsive production layouts @offline', () => {
       await page.setViewportSize({ width, height: 740 });
       await responsiveData(page, 'de', { longShoppingLine: true });
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.goto('/shopping');
+      await page.goto('/week/shopping');
       const row = page.getByRole('listitem').filter({ hasText: 'Vanillezuckerpäckchen' });
       const name = row.getByText('Vanillezuckerpäckchen', { exact: true });
       await expect(name).toBeVisible();
@@ -226,7 +226,7 @@ test.describe('responsive production layouts @offline', () => {
       await page.setViewportSize({ width, height: 740 });
       await responsiveData(page);
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.goto('/shopping');
+      await page.goto('/week/shopping');
       const meals = page.getByText(/Mahlzeiten und Rezepte auf dieser Liste: \d+/);
       await expect(meals).toBeVisible();
       await expect(page.getByText(/1 schon vergangen/)).toBeVisible();
@@ -269,7 +269,7 @@ test.describe('responsive production layouts @offline', () => {
       await page.setViewportSize({ width, height });
       await responsiveData(page);
       await page.emulateMedia({ reducedMotion: 'reduce' });
-      await page.goto('/plan');
+      await page.goto('/week/plan');
       await page.getByRole('button', { name: /^(Einen Tag|Eine Woche) weiter$/i }).click();
       await page
         .getByRole('button', { name: /Hinzufügen/i })
@@ -845,7 +845,7 @@ test.describe('responsive production layouts @offline', () => {
     await page.setViewportSize({ width: 844, height: 390 });
     await responsiveData(page);
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    for (const path of ['/login', '/register', '/shopping', `/recipes/${recipeId}/cook`]) {
+    for (const path of ['/login', '/register', '/week/shopping', `/recipes/${recipeId}/cook`]) {
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expectReflow(page);
@@ -853,7 +853,7 @@ test.describe('responsive production layouts @offline', () => {
     const next = page.getByRole('button', { name: /nächster schritt/i });
     await next.scrollIntoViewIfNeeded();
     await expect(next).toBeInViewport({ ratio: 1 });
-    await page.goto('/plan');
+    await page.goto('/week/plan');
     await page
       .getByRole('button', { name: /Hinzufügen/i })
       .first()

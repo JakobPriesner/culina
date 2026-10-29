@@ -30,7 +30,7 @@
         {
             "name": "Shopping List",
             "short_name": "Shopping",
-            "url": "/shopping",
+            "url": "/week/shopping",
             "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
         },
         {
@@ -42,7 +42,7 @@
         {
             "name": "Meal Plan",
             "short_name": "Plan",
-            "url": "/plan",
+            "url": "/week/plan",
             "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
         },
         {

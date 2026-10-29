@@ -42,12 +42,12 @@ test.describe('the first-run path', () => {
     // Waited for: a deep link followed before sign-out lands happens while still signed in.
     await expect(page).toHaveURL(/\/login/);
 
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
     await expect(page).toHaveURL(/\/login\?next=%2Fshopping/);
 
     await signIn(page, email, password);
 
-    await expect(page).toHaveURL(/\/shopping$/);
+    await expect(page).toHaveURL(/\/week\/shopping$/);
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 });

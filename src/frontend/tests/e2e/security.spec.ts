@@ -68,7 +68,7 @@ test.describe('the way in', () => {
     const stranger = await browser.newContext();
     const strangersPage = await stranger.newPage();
 
-    await strangersPage.goto('/shopping');
+    await strangersPage.goto('/week/shopping');
 
     await expect(strangersPage).toHaveURL(/\/login\?next=%2Fshopping/);
 
@@ -76,7 +76,7 @@ test.describe('the way in', () => {
     await strangersPage.getByRole('textbox', { name: /password|passwort/i }).fill(who.password);
     await strangersPage.getByRole('button', { name: /(^|\s)(sign (me )?in|anmelden)$/i }).click();
 
-    await expect(strangersPage).toHaveURL(/\/shopping$/);
+    await expect(strangersPage).toHaveURL(/\/week\/shopping$/);
     await expect(strangersPage.getByRole('heading', { level: 1 })).toBeVisible();
 
     await stranger.close();

@@ -39,16 +39,16 @@ export const destinations: readonly Destination[] = [
     match: startsWith('/cookbooks')
   },
   {
-    href: resolve('/(app)/plan'),
+    href: resolve('/(app)/week/plan'),
     icon: 'plan',
     label: m['nav.plan'],
-    match: startsWith('/plan')
+    match: startsWith('/week/plan')
   },
   {
-    href: resolve('/(app)/shopping'),
+    href: resolve('/(app)/week/shopping'),
     icon: 'shopping',
     label: m['nav.shopping'],
-    match: startsWith('/shopping')
+    match: startsWith('/week/shopping')
   }
 ];
 
@@ -67,10 +67,10 @@ const diaryDestination: Destination = {
 export function barDestinations(view: WocheView): Destination[] {
   const [recipes, cookbooks] = destinations;
   const week: Destination = {
-    href: view === 'list' ? resolve('/(app)/shopping') : resolve('/(app)/plan'),
+    href: view === 'list' ? resolve('/(app)/week/shopping') : resolve('/(app)/week/plan'),
     icon: 'plan',
     label: m['nav.plan'],
-    match: (path) => startsWith('/plan')(path) || startsWith('/shopping')(path)
+    match: startsWith('/week')
   };
 
   return [recipes!, cookbooks!, week, diaryDestination];

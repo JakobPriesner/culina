@@ -5,7 +5,6 @@
   import WeekToList from '$features/planning/WeekToList.svelte';
   import ShoppingListView from '$features/shopping/ShoppingListView.svelte';
   import { m } from '$shell/i18n';
-  import Page from '$shell/Page.svelte';
   import WocheSwitch from '$shell/WocheSwitch.svelte';
 
   /** Woche's list: the household's shopping, with what this week still needs at its top. */
@@ -19,11 +18,18 @@
 
 <svelte:head><title>{m['shopping.title']()}</title></svelte:head>
 
-<Page width="reading">
-  <WocheSwitch view="list" />
+<WocheSwitch view="list" />
+<!-- Read in a column of its own measure, starting where the plan does, so flipping Plan | Liste moves nothing. -->
+<div class="list">
   <ShoppingListView>
     {#snippet seam()}
       {#if householdId}<WeekToList {householdId} week={monday} offset={0} />{/if}
     {/snippet}
   </ShoppingListView>
-</Page>
+</div>
+
+<style>
+  .list {
+    max-width: var(--measure);
+  }
+</style>

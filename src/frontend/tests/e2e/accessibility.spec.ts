@@ -90,7 +90,7 @@ test.describe('what a machine can check, signed in', () => {
 
     cookbookId = await seedCookbook(page, unique('Accessible shelf'), recipeId);
 
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
 
     const what = page.getByRole('combobox', { name: /what to buy|was du brauchst/i });
 
@@ -132,7 +132,7 @@ test.describe('what a machine can check, signed in', () => {
   });
 
   test('the shopping list has no violations', async () => {
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
 
     expect(await violations(page)).toEqual([]);
@@ -245,7 +245,7 @@ test.describe('what moves while a page loads', () => {
 
   for (const [name, path] of [
     ['recipe list', '/'],
-    ['shopping list', '/shopping']
+    ['shopping list', '/week/shopping']
   ] as const) {
     test(`the ${name} settles without shifting`, async () => {
       await page.addInitScript(() => {
@@ -363,7 +363,7 @@ test.describe('reaching everything with a keyboard', () => {
 
   test('the first stop is the skip link, on every screen', async () => {
     // Without it, keyboard users tab through the navigation on every page.
-    for (const path of ['/', `/recipes/${recipeId}`, '/shopping', '/me']) {
+    for (const path of ['/', `/recipes/${recipeId}`, '/week/shopping', '/me']) {
       await page.goto(path);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await page.keyboard.press('Tab');

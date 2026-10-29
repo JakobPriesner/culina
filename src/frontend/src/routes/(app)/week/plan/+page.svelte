@@ -42,7 +42,6 @@
   import { session } from '$features/auth/session.svelte';
   import { explain } from '$shell/explain';
   import { m } from '$shell/i18n';
-  import Page from '$shell/Page.svelte';
   import { preferences } from '$shell/preferences.svelte';
   import { toaster } from '$shell/toaster.svelte';
   import DiaryTodayLine from '$features/diary/DiaryTodayLine.svelte';
@@ -243,123 +242,121 @@
 
 {#snippet travel()}<PlanNav {view} {atToday} onstep={step} ontoday={toToday} />{/snippet}
 
-<Page>
-  <!-- On a phone the way through time rides in the header bar beside Plan | Liste, so it is always in reach. -->
-  <WocheSwitch view="plan" trailing={travelInBar ? travel : undefined} />
-  <div class="hub" class:beside={listBeside.current}>
-    <!-- Beside the list each column scrolls itself, so dragging a meal past an edge scrolls this one, not the page. -->
-    <div class="week" data-plan-scroller={listBeside.current || undefined}>
-      <PlanHeader
-        {title}
-        {range}
-        from={start}
-        to={end}
-        locale={preferences.locale}
-        {view}
-        onview={choose}
-        nav={!travelInBar}
-        {atToday}
-        onstep={step}
-        ontoday={toToday}
-        onjump={jump}
+<!-- On a phone the way through time rides in the header bar beside Plan | Liste, so it is always in reach. -->
+<WocheSwitch view="plan" trailing={travelInBar ? travel : undefined} />
+<div class="hub" class:beside={listBeside.current}>
+  <!-- Beside the list each column scrolls itself, so dragging a meal past an edge scrolls this one, not the page. -->
+  <div class="week" data-plan-scroller={listBeside.current || undefined}>
+    <PlanHeader
+      {title}
+      {range}
+      from={start}
+      to={end}
+      locale={preferences.locale}
+      {view}
+      onview={choose}
+      nav={!travelInBar}
+      {atToday}
+      onstep={step}
+      ontoday={toToday}
+      onjump={jump}
+    />
+
+    <!-- Above the week on a phone, where it is read first; beside the list under it, so the rows keep the screen. -->
+    {#if !listBeside.current}{@render tip()}{/if}
+
+    {#if mealPlan.error}
+      <ErrorState title={m['error.unexpected.title']()} body={m['error.unexpected.body']()}>
+        {#snippet action()}
+          <Button
+            variant="primary"
+            onclick={() => householdId && void mealPlan.load(householdId, start, count)}
+          >
+            {m['error.retry']()}
+          </Button>
+        {/snippet}
+      </ErrorState>
+    {:else if mealPlan.loading && mealPlan.days.length === 0}
+      <PlanWeekSkeleton rows={wide.current} {count} />
+    {:else}
+      <PlanWeek
+        days={mealPlan.days}
+        {householdId}
+        {drag}
+        rows={wide.current}
+        seek={sought}
+        folded={foldsEarlier}
+        onunfold={() => planView.showEarlier(start)}
+        onlines={listBeside.current ? (meal) => lineMarks.show(meal.entryId) : undefined}
+        ontolist={listBeside.current ? (meal) => void actions.toList(meal.entryId) : undefined}
+        ondrop={actions.drop}
+        onadd={addOn}
+        onedit={(meal) => (editing = meal)}
+        onremove={(meal) => void actions.unplan(meal)}
+        onmadeit={(meal) => void actions.madeIt(meal)}
+        todayExtra={householdId ? diaryToday : undefined}
       />
 
-      <!-- Above the week on a phone, where it is read first; beside the list under it, so the rows keep the screen. -->
-      {#if !listBeside.current}{@render tip()}{/if}
-
-      {#if mealPlan.error}
-        <ErrorState title={m['error.unexpected.title']()} body={m['error.unexpected.body']()}>
-          {#snippet action()}
-            <Button
-              variant="primary"
-              onclick={() => householdId && void mealPlan.load(householdId, start, count)}
+      {#if mealPlan.meals.length > 0}
+        <!-- Beside the list the seam at its top does this, where the lines arrive. -->
+        {#if !listBeside.current}
+          <PlanShopBar {unshopped} busy={actions.ui.busy} onshop={() => void actions.shop()} />
+        {/if}
+      {:else if !mealPlan.loading}
+        <!-- One state for the place: the big one only while the list is empty too (the pane then shows just its
+             add field); a list in use gets a quiet line, as nothing about it is missing. -->
+        {#if shopping.status === 'loading' || shopping.status === 'idle'}
+          <!-- Which of the two is not known before the list is read. -->
+        {:else if shopping.items.length === 0}
+          <!-- Olli under the days and talking about them, in line with them: centred in the column, a page-sized
+               empty state floated below the rows it was about, often below the fold. -->
+          <div class="empty-week" class:wide={wide.current}>
+            <OlliSays pose="peeking" size={wide.current ? 'md' : 'sm'}>
+              <h2 class="empty-title">{m['plan.empty.title']()}</h2>
+              <p>{m['plan.empty.description']()}</p>
+              <div class="empty-action">
+                <Button variant="primary" onclick={() => addOn(firstOpenDay)}
+                  >{m['plan.empty.action']()}</Button
+                >
+              </div>
+            </OlliSays>
+          </div>
+        {:else}
+          <p class="nothing-planned">
+            {m['plan.empty.title']()}
+            <button
+              type="button"
+              class="text-action hit-target reach"
+              onclick={() => addOn(firstOpenDay)}>{m['plan.empty.action']()}</button
             >
-              {m['error.retry']()}
-            </Button>
-          {/snippet}
-        </ErrorState>
-      {:else if mealPlan.loading && mealPlan.days.length === 0}
-        <PlanWeekSkeleton rows={wide.current} {count} />
-      {:else}
-        <PlanWeek
-          days={mealPlan.days}
-          {householdId}
-          {drag}
-          rows={wide.current}
-          seek={sought}
-          folded={foldsEarlier}
-          onunfold={() => planView.showEarlier(start)}
-          onlines={listBeside.current ? (meal) => lineMarks.show(meal.entryId) : undefined}
-          ontolist={listBeside.current ? (meal) => void actions.toList(meal.entryId) : undefined}
-          ondrop={actions.drop}
-          onadd={addOn}
-          onedit={(meal) => (editing = meal)}
-          onremove={(meal) => void actions.unplan(meal)}
-          onmadeit={(meal) => void actions.madeIt(meal)}
-          todayExtra={householdId ? diaryToday : undefined}
-        />
-
-        {#if mealPlan.meals.length > 0}
-          <!-- Beside the list the seam at its top does this, where the lines arrive. -->
-          {#if !listBeside.current}
-            <PlanShopBar {unshopped} busy={actions.ui.busy} onshop={() => void actions.shop()} />
-          {/if}
-        {:else if !mealPlan.loading}
-          <!-- One state for the place: the big one only while the list is empty too (the pane then shows just its
-               add field); a list in use gets a quiet line, as nothing about it is missing. -->
-          {#if shopping.status === 'loading' || shopping.status === 'idle'}
-            <!-- Which of the two is not known before the list is read. -->
-          {:else if shopping.items.length === 0}
-            <!-- Olli under the days and talking about them, in line with them: centred in the column, a page-sized
-                 empty state floated below the rows it was about, often below the fold. -->
-            <div class="empty-week" class:wide={wide.current}>
-              <OlliSays pose="peeking" size={wide.current ? 'md' : 'sm'}>
-                <h2 class="empty-title">{m['plan.empty.title']()}</h2>
-                <p>{m['plan.empty.description']()}</p>
-                <div class="empty-action">
-                  <Button variant="primary" onclick={() => addOn(firstOpenDay)}
-                    >{m['plan.empty.action']()}</Button
-                  >
-                </div>
-              </OlliSays>
-            </div>
-          {:else}
-            <p class="nothing-planned">
-              {m['plan.empty.title']()}
-              <button
-                type="button"
-                class="text-action hit-target reach"
-                onclick={() => addOn(firstOpenDay)}>{m['plan.empty.action']()}</button
-              >
-            </p>
-          {/if}
+          </p>
         {/if}
       {/if}
-
-      {#if listBeside.current}<div class="tip-after">{@render tip()}</div>{/if}
-    </div>
-    {#if listBeside.current}
-      <!-- A meal dropped here puts its shopping on the list; the meal stays on its day. -->
-      <aside
-        class="list"
-        class:over={drag.landing?.list === true}
-        aria-label={m['shopping.title']()}
-        data-plan-list
-      >
-        <ShoppingListView pane shown={{ from: start, to: end }}>
-          {#snippet seam()}
-            {#if householdId}
-              <WithdrawNote {householdId} />
-              {#each mealPlan.weeks as monday (monday)}
-                <WeekToList {householdId} week={monday} offset={weekOffsetOf(monday)} />
-              {/each}
-            {/if}
-          {/snippet}
-        </ShoppingListView>
-      </aside>
     {/if}
+
+    {#if listBeside.current}<div class="tip-after">{@render tip()}</div>{/if}
   </div>
-</Page>
+  {#if listBeside.current}
+    <!-- A meal dropped here puts its shopping on the list; the meal stays on its day. -->
+    <aside
+      class="list"
+      class:over={drag.landing?.list === true}
+      aria-label={m['shopping.title']()}
+      data-plan-list
+    >
+      <ShoppingListView pane shown={{ from: start, to: end }}>
+        {#snippet seam()}
+          {#if householdId}
+            <WithdrawNote {householdId} />
+            {#each mealPlan.weeks as monday (monday)}
+              <WeekToList {householdId} week={monday} offset={weekOffsetOf(monday)} />
+            {/each}
+          {/if}
+        {/snippet}
+      </ShoppingListView>
+    </aside>
+  {/if}
+</div>
 
 {#if drag.held}
   <CarriedMeal held={drag.held} at={drag.at} />

@@ -90,7 +90,7 @@
         key: `item-${item.itemId}`,
         label: item.name,
         detail: m['plan.onList'](),
-        href: resolve('/(app)/shopping')
+        href: resolve('/(app)/week/shopping')
       }))
   ]);
 

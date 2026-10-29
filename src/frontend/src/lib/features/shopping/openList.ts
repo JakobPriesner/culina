@@ -6,7 +6,7 @@ export const openListAction = {
   label: () => m['plan.openList'](),
   run: () => {
     // Imported on use: `$app/navigation` is not needed until somebody follows the toast.
-    void import('$app/navigation').then(({ goto }) => goto(resolve('/(app)/shopping')));
+    void import('$app/navigation').then(({ goto }) => goto(resolve('/(app)/week/shopping')));
   }
 };
 

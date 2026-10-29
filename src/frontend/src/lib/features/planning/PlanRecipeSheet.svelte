@@ -181,7 +181,7 @@
       action: {
         label: () => m['plan.recipe.showWeek'](),
         // eslint-disable-next-line svelte/no-navigation-without-resolve -- The route is resolved; only the week query is appended.
-        run: () => void goto(`${resolve('/(app)/plan')}${weekOf}`)
+        run: () => void goto(`${resolve('/(app)/week/plan')}${weekOf}`)
       }
     });
     onclose();

@@ -116,7 +116,7 @@ test.describe('responsive transitions @offline', () => {
       await page.setViewportSize({ width, height: 900 });
       for (const path of [
         '/login',
-        '/shopping',
+        '/week/shopping',
         `/recipes/${recipeId}/edit`,
         `/cookbooks/${cookbookId}`
       ]) {

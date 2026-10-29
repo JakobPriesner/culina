@@ -57,7 +57,7 @@ test.describe('the shopping list', () => {
   });
 
   test('takes a written line on Enter, with its unit intact', async () => {
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
 
     // German on purpose: in a new English account every unit's word is its code, so this test could not fail.
     const switched = await page.request.put('/api/v1/users/me/settings', {
@@ -109,7 +109,7 @@ test.describe('the shopping list', () => {
       await expect(page.getByText(/added to|hinzugefügt/i)).toBeVisible();
     }
 
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
 
     const row = page.getByRole('listitem').filter({ hasText: butter });
 
@@ -139,7 +139,7 @@ test.describe('the shopping list', () => {
       .click();
     await expect(page.getByText(/added to|hinzugefügt/i)).toBeVisible();
 
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
 
     const row = page.getByRole('listitem').filter({ hasText: orzo });
 
@@ -166,7 +166,7 @@ test.describe('the shopping list', () => {
       ingredients: [{ quantity: 50, unit: 'g', name: basil }]
     });
 
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
 
     await page
       .getByRole('button', { name: /add a recipe|rezept hinzufügen/i })
@@ -208,7 +208,7 @@ test.describe('the shopping list', () => {
   test('keeps what is already in the trolley, and clears it in one go', async () => {
     const name = unique('Salz');
 
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
 
     await write(page, { amount: '1', unit: 'Prise', name });
 
@@ -234,7 +234,7 @@ test.describe('the shopping list', () => {
   test('remembers a line moved to another section for the next time it is added', async () => {
     const name = unique('Erbsen');
 
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
 
     const frozen = page
       .locator('section')
@@ -264,7 +264,7 @@ test.describe('the shopping list', () => {
   test('keeps its rows clear of the bars pinned to the bottom', async () => {
     const name = unique('Mehl');
 
-    await page.goto('/shopping');
+    await page.goto('/week/shopping');
 
     await write(page, { amount: '1', unit: 'kg', name });
 

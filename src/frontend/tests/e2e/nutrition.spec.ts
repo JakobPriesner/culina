@@ -432,7 +432,7 @@ test.describe('nutrition on a recipe @offline', () => {
       await responsiveData(page, 'de', { nutritionLines: true });
       // The whole week, its days gone unfolded: the fixture plans every day.
       await page.addInitScript(() => localStorage.setItem('culina.plan.view', 'week'));
-      await page.goto('/plan');
+      await page.goto('/week/plan');
       const earlier = page.getByRole('button', { name: /Früher diese Woche/ });
       await expect(days(page).first()).toBeVisible();
       if ((await earlier.count()) > 0) await earlier.click();
@@ -443,7 +443,7 @@ test.describe('nutrition on a recipe @offline', () => {
 
     test('leaves out the "mind." when everything is exact', async ({ page }) => {
       await responsiveData(page, 'en');
-      await page.goto('/plan');
+      await page.goto('/week/plan');
 
       await expect(days(page).first()).toHaveText(/^521\skcal per serving$/);
     });
@@ -452,7 +452,7 @@ test.describe('nutrition on a recipe @offline', () => {
       page
     }) => {
       await responsiveData(page, 'de', { nutritionLines: true, nutritionVariant: 'whole' });
-      await page.goto('/plan');
+      await page.goto('/week/plan');
 
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
       await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
@@ -463,7 +463,7 @@ test.describe('nutrition on a recipe @offline', () => {
       test.skip(testInfo.project.name !== 'desktop', 'Explicit viewport.');
       await page.setViewportSize({ width: 320, height: 720 });
       await responsiveData(page, 'de', { nutritionLines: true });
-      await page.goto('/plan');
+      await page.goto('/week/plan');
       await expect(days(page).first()).toBeVisible();
       await expectReflow(page);
     });

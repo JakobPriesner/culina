@@ -30,7 +30,7 @@ export const weekOffsetOf = (date: string) => {
 
 /** The plan opened at one day, in its week: where a list line, or a meal on the list, leads back to. */
 export const planDayHref = (date: string) =>
-  `${resolve('/(app)/plan')}?week=${weekOffsetOf(date)}&tag=${date}`;
+  `${resolve('/(app)/week/plan')}?week=${weekOffsetOf(date)}&tag=${date}`;
 
 /**
  * The days on screen as text; `formatRange` avoids repeating the month ("September 7 – 13"). A run of days that does

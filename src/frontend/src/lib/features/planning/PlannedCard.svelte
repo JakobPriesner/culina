@@ -146,7 +146,7 @@
             <a
               class="listed to-lines"
               data-no-drag
-              href={`${resolve('/(app)/shopping')}?mahlzeit=${meal.entryId}`}
+              href={`${resolve('/(app)/week/shopping')}?mahlzeit=${meal.entryId}`}
               >{@render listedMark()}{m['plan.onList']()}</a
             >
             <!-- eslint-enable svelte/no-navigation-without-resolve -->
