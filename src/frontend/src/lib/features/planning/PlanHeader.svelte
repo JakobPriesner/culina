@@ -11,7 +11,7 @@
    * The plan's head: what is on screen (title, and its dates, which open the month), how it is looked at, and the way
    * through time. On a phone upright that is two rows, the title with Tage | Woche and then the way through time beside
    * the dates it moves, so the first day starts high. From 30rem the way through time rides in the header bar (`nav`) and
-   * the head is one row; from 80rem (the list beside the week) the dates sit under the title.
+   * the head is one row; from 70rem (the list beside the week) the dates sit under the title.
    */
   interface Props {
     title: string;
@@ -142,7 +142,7 @@
   }
 
   /* Beside the list: the title over its dates on the left, the controls at the right. */
-  @media (min-width: 80rem) {
+  @media (min-width: 70rem) {
     .head {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto auto;

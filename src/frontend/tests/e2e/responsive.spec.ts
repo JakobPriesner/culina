@@ -227,7 +227,12 @@ test.describe('responsive production layouts @offline', () => {
       await responsiveData(page);
       await page.emulateMedia({ reducedMotion: 'reduce' });
       await page.goto('/week/shopping');
-      const meals = page.getByText(/Mahlzeiten und Rezepte auf dieser Liste: \d+/);
+      // At 1280px the list opens beside the week, where it names the meals beyond the days on screen.
+      const meals = page.getByText(
+        width < 1120
+          ? /Mahlzeiten und Rezepte auf dieser Liste: \d+/
+          : /Außerdem auf der Einkaufsliste: \d+/
+      );
       await expect(meals).toBeVisible();
       await expect(page.getByText(/1 schon vergangen/)).toBeVisible();
       await meals.click();

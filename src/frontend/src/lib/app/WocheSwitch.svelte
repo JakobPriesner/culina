@@ -1,20 +1,18 @@
 <script lang="ts">
   import { onMount, type Snippet } from 'svelte';
-  import { MediaQuery } from 'svelte/reactivity';
 
   import { goto } from '$app/navigation';
-  import { resolve } from '$app/paths';
   import { SegmentedControl } from '$ds';
   import { session } from '$features/auth/session.svelte';
   import { shopping } from '$features/shopping/stores/shopping.svelte';
 
   import { headerAccessory } from './headerAccessory.svelte';
   import { m } from './i18n';
-  import { woche, type WocheView } from './woche.svelte';
+  import { listBeside, woche, wocheHref, type WocheView } from './woche.svelte';
 
   /**
    * Flips Woche between its plan and its list, and remembers which was last so the Woche tab returns there. From
-   * 80rem the week shows the list beside it, so the switch is not drawn over the plan there.
+   * 70rem the week shows the list beside it, so the switch is not drawn over the plan there.
    * It rides in the header bar (see headerAccessory), so it stays in reach and the header's fade ends below it.
    */
   interface Props {
@@ -24,8 +22,6 @@
   }
 
   let { view, trailing }: Props = $props();
-
-  const listBeside = new MediaQuery('(min-width: 80rem)', false);
 
   $effect(() => {
     if (view === 'plan' && listBeside.current) return;
@@ -54,9 +50,8 @@
     if (id === view) return;
     const to = id === 'list' ? 'list' : 'plan';
     const returning = woche.leave(view, to, window.scrollY);
-    void goto(to === 'list' ? resolve('/(app)/week/shopping') : resolve('/(app)/week/plan'), {
-      reset: !returning
-    });
+    // eslint-disable-next-line svelte/no-navigation-without-resolve -- wocheHref resolves the route.
+    void goto(wocheHref(to), { reset: !returning });
   }
 
   // Back through the switch: the view opens where it was left, not at its top (or, for the week, at today). The page

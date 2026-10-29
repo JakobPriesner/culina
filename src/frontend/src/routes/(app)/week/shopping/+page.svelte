@@ -1,10 +1,13 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
+  import { page } from '$app/state';
   import { session } from '$features/auth/session.svelte';
   import { mealPlan } from '$features/planning/mealPlan.svelte';
   import { mondayOf } from '$features/planning/weekDates';
   import WeekToList from '$features/planning/WeekToList.svelte';
   import ShoppingListView from '$features/shopping/ShoppingListView.svelte';
   import { m } from '$shell/i18n';
+  import { listBeside, wocheHref } from '$shell/woche.svelte';
   import WocheSwitch from '$shell/WocheSwitch.svelte';
 
   /** Woche's list: the household's shopping, with what this week still needs at its top. */
@@ -13,6 +16,17 @@
 
   $effect(() => {
     if (householdId) void mealPlan.load(householdId, monday);
+  });
+
+  /**
+   * Where the list fits beside the week, the list alone gives way to the plan, on arrival or when the window widens.
+   * The query goes along: `?mahlzeit=` marks its lines in the pane as here.
+   */
+  $effect(() => {
+    if (listBeside.current) {
+      // eslint-disable-next-line svelte/no-navigation-without-resolve -- The route is resolved; only the query is appended.
+      void goto(`${wocheHref('plan')}${page.url.search}`, { replaceState: true });
+    }
   });
 </script>
 

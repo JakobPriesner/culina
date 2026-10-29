@@ -4,7 +4,7 @@
   import { hrefAtYield } from '$features/recipes/surface/yieldInUrl';
   import { m } from '$shell/i18n';
 
-  import { cookedOn, asDate } from './mealPlan.svelte';
+  import { cookedOn, dateToday } from './mealPlan.svelte';
   import { upcoming } from './upcoming.svelte';
 
   /**
@@ -19,7 +19,7 @@
   let { recipeId }: Props = $props();
 
   const dishes = $derived(upcoming.dishesWith(recipeId));
-  const today = asDate(new Date());
+  const today = dateToday();
 </script>
 
 {#if dishes.length > 1}

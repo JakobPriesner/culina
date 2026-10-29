@@ -6,7 +6,7 @@
   import { m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
 
-  import { asDate, type MealSlot, type PlannedDay } from './mealPlan.svelte';
+  import { dateToday, type MealSlot, type PlannedDay } from './mealPlan.svelte';
   import { mealSlots, slotLabel } from './slots';
   import { dayOf } from './weekDates';
 
@@ -38,7 +38,7 @@
   }: Props = $props();
 
   const id = $props.id();
-  const today = asDate(new Date());
+  const today = dateToday();
 
   const longDay = $derived(
     new Intl.DateTimeFormat(preferences.locale, { weekday: 'long', day: 'numeric', month: 'long' })

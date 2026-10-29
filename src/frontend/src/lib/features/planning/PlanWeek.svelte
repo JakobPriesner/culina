@@ -4,7 +4,7 @@
   import { m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
 
-  import { asDate, type PlannedDay, type PlannedMeal } from './mealPlan.svelte';
+  import { dateToday, type PlannedDay, type PlannedMeal } from './mealPlan.svelte';
   import PlanDay from './PlanDay.svelte';
   import { rangeOf } from './weekDates';
   import type { OnDrop, WeekDrag } from './weekDrag.svelte';
@@ -51,7 +51,7 @@
     todayExtra
   }: Props = $props();
 
-  const today = asDate(new Date());
+  const today = dateToday();
 
   /** The days already over that fold away: only ones before today, and never the day a list line led to. */
   const earlier = $derived(

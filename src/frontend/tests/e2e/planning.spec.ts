@@ -307,8 +307,8 @@ function cardOf(page: Page, title: string | RegExp): Locator {
     .filter({ has: page.getByRole('link', { name: title, exact: typeof title === 'string' }) });
 }
 
-/** From 80rem the list sits beside the week, and its top line says what the week still needs instead of a bar. */
-const listBeside = (page: Page) => page.viewportSize()!.width >= 1280;
+/** From 70rem the list sits beside the week, and its top line says what the week still needs instead of a bar. */
+const listBeside = (page: Page) => page.viewportSize()!.width >= 1120;
 
 /**
  * The plan as the coming days from today, whatever the screen: in the week view the days already over fold into one

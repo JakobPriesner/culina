@@ -4,6 +4,9 @@
 export const asDate = (day: Date): string =>
   `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
 
+/** Today, as the API spells it. */
+export const dateToday = (): string => asDate(new Date());
+
 /** The Monday of the week `date` belongs to: the server plans, reads and shops in Monday weeks. */
 export const weekStart = (date: string): string =>
   plusDays(date, -((new Date(`${date}T12:00:00`).getDay() + 6) % 7));

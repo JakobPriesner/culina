@@ -1,7 +1,7 @@
 import { resolve } from '$app/paths';
 
 import { m } from './i18n';
-import type { WocheView } from './woche.svelte';
+import { wocheHref, type WocheView } from './woche.svelte';
 
 /** The stable workflows; the bar shows them in the same order on desktop and mobile. */
 export type DestinationIcon = 'recipes' | 'cookbooks' | 'plan' | 'shopping' | 'diary';
@@ -67,7 +67,7 @@ const diaryDestination: Destination = {
 export function barDestinations(view: WocheView): Destination[] {
   const [recipes, cookbooks] = destinations;
   const week: Destination = {
-    href: view === 'list' ? resolve('/(app)/week/shopping') : resolve('/(app)/week/plan'),
+    href: wocheHref(view),
     icon: 'plan',
     label: m['nav.plan'],
     match: startsWith('/week')

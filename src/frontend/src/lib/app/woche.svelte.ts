@@ -1,7 +1,23 @@
+import { MediaQuery } from 'svelte/reactivity';
+
+import { resolve } from '$app/paths';
+
 import { readDevice, writeDevice } from './deviceStorage';
 
 /** Woche's two views: the week's plan and the household's list. */
 export type WocheView = 'plan' | 'list';
+
+/**
+ * From 70rem, a tablet on its side, the plan shows the list beside the week, live; below, the week needs the whole
+ * width (at 1024px beside a pane its cards wrapped on touch), so Plan | Liste flips between the two. PlanHeader's
+ * stylesheet repeats the breakpoint, as CSS cannot read it from here.
+ */
+export const listBeside = new MediaQuery('(min-width: 70rem)', false);
+
+/** The page each view lives on. */
+export function wocheHref(view: WocheView) {
+  return view === 'list' ? resolve('/(app)/week/shopping') : resolve('/(app)/week/plan');
+}
 
 const viewKey = 'culina.woche.view';
 

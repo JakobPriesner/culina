@@ -1,66 +1,47 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
   import { MediaQuery } from 'svelte/reactivity';
 
   import { page } from '$app/state';
   import { Button, ErrorState } from '$ds';
-
-  import CarriedMeal from '$features/planning/CarriedMeal.svelte';
+  import { session } from '$features/auth/session.svelte';
+  import DiaryTodayLine from '$features/diary/DiaryTodayLine.svelte';
+  import { recipeAnswers } from '$features/nutrition/stores/recipeAnswers.svelte';
   import CoachTip from '$features/onboarding/CoachTip.svelte';
-  import OlliSays from '$features/onboarding/OlliSays.svelte';
+  import CarriedMeal from '$features/planning/CarriedMeal.svelte';
+  import EditMealSheet from '$features/planning/EditMealSheet.svelte';
   import {
-    asDate,
     mealPlan,
     placeOf,
-    plusDays,
-    weekStart,
     type MealSlot,
     type PlannedMeal
   } from '$features/planning/mealPlan.svelte';
-  import { shopping } from '$features/shopping/stores/shopping.svelte';
-  import EditMealSheet from '$features/planning/EditMealSheet.svelte';
+  import PlanEmpty from '$features/planning/PlanEmpty.svelte';
   import PlanHeader from '$features/planning/PlanHeader.svelte';
+  import PlanListPane from '$features/planning/PlanListPane.svelte';
+  import PlanNav from '$features/planning/PlanNav.svelte';
   import PlanRecipePicker from '$features/planning/PlanRecipePicker.svelte';
   import PlanShopBar from '$features/planning/PlanShopBar.svelte';
   import PlanWeek from '$features/planning/PlanWeek.svelte';
-  import WeekToList from '$features/planning/WeekToList.svelte';
   import PlanWeekSkeleton from '$features/planning/PlanWeekSkeleton.svelte';
+  import { PlanWindow } from '$features/planning/planWindow.svelte';
   import { usePlanActions } from '$features/planning/usePlanActions.svelte';
-  import {
-    daysTitle,
-    mondayOf,
-    rangeOf,
-    weekOffsetOf,
-    weekTitle
-  } from '$features/planning/weekDates';
-  import PlanNav from '$features/planning/PlanNav.svelte';
-  import { daysShown, planView, type PlanView } from '$features/planning/planView.svelte';
-  import { lineMarks } from '$features/shopping/lineMarks.svelte';
   import { WeekDrag } from '$features/planning/weekDrag.svelte';
-  import { recipeAnswers } from '$features/nutrition/stores/recipeAnswers.svelte';
   import type { RecipeSummary } from '$features/recipes/types';
-  import { session } from '$features/auth/session.svelte';
-  import { explain } from '$shell/explain';
+  import { lineMarks } from '$features/shopping/lineMarks.svelte';
+  import ListSummary from '$features/shopping/ListSummary.svelte';
+  import { shopping } from '$features/shopping/stores/shopping.svelte';
   import { m } from '$shell/i18n';
   import { preferences } from '$shell/preferences.svelte';
-  import { toaster } from '$shell/toaster.svelte';
-  import DiaryTodayLine from '$features/diary/DiaryTodayLine.svelte';
+  import { listBeside } from '$shell/woche.svelte';
   import WocheSwitch from '$shell/WocheSwitch.svelte';
-  import ShoppingListView from '$features/shopping/ShoppingListView.svelte';
-  import WithdrawNote from '$features/shopping/WithdrawNote.svelte';
 
   /**
    * The plan, looked at as the coming days or as a week (docs/woche-design.md §10); never a calendar to plan a month in
    * (that brings recurrence and a second shopping list), though the month is how to jump to a date. Meals move by dragging.
-   * Woche's first view: the list is its second (docs/woche-design.md).
+   * Woche's first view: the list is its second, and sits beside the week where it fits (`listBeside`).
    */
   const householdId = $derived(session.activeHouseholdId);
-
-  /**
-   * From 80rem the list sits beside the week, live; below, the week needs the whole width (seven day columns broke
-   * words at 1280px beside a pane), so the switch stays.
-   */
-  const listBeside = new MediaQuery('(min-width: 80rem)', false);
 
   /**
    * Too narrow for back, today and forward beside Plan | Liste (a phone upright): a second pinned row would take a
@@ -75,73 +56,18 @@
   /** Wide enough for a day to be a row: its name in a column, its meals side by side. */
   const wide = new MediaQuery('(min-width: 48rem)', false);
 
-  const today = asDate(new Date());
-
-  /** `?week=1` opens on next week, as "See the week" does after planning ahead; `?tag=` on a day a list line leads back to. */
   const askedWeek = Number.parseInt(page.url.searchParams.get('week') ?? '', 10);
+  const shown = new PlanWindow({
+    week: Number.isNaN(askedWeek) ? null : askedWeek,
+    listBeside: listBeside.current
+  });
 
-  /**
-   * The coming days on a phone, where the week's first days would be a screen of meals already eaten; the week beside
-   * the list, which it is the shopping of. Whichever was chosen last on this device wins over both.
-   */
-  const opening: PlanView = Number.isNaN(askedWeek)
-    ? (planView.chosen ?? (listBeside.current ? 'week' : 'days'))
-    : 'week';
-
-  let view = $state(opening);
-
-  /** The first day on screen: a Monday in the week view, any day in the days view. */
-  let start = $state(
-    Number.isNaN(askedWeek) ? (opening === 'week' ? mondayOf(0) : today) : mondayOf(askedWeek)
-  );
-
-  const count = $derived(view === 'week' ? 7 : daysShown);
-  const end = $derived(plusDays(start, count - 1));
-  const offset = $derived(weekOffsetOf(start));
-  const atToday = $derived(view === 'week' ? start === mondayOf(0) : start === today);
-
-  /** `?tag=`: the day a list line (or a meal on the list) leads back to, shown and marked. */
-  let sought = $state<string | null>(null);
-
-  // Also for a link followed on this page, from the list beside the week.
+  // `?tag=`, also for a link followed on this page from the list beside the week: only the address is followed.
   $effect(() => {
     const tag = page.url.searchParams.get('tag');
 
-    if (tag) {
-      sought = tag;
-      start = view === 'week' ? weekStart(tag) : tag;
-    }
+    if (tag) untrack(() => shown.seek(tag));
   });
-
-  /** The days of this week already over, folded into one line until asked for: on a Saturday, Monday is history. */
-  const foldsEarlier = $derived(
-    view === 'week' && start === mondayOf(0) && !planView.earlierShown(start)
-  );
-
-  function choose(next: PlanView) {
-    planView.choose(next);
-    // The week holding what was shown; the days from today when that week is this one, else from its Monday.
-    start = next === 'week' ? weekStart(start) : weekStart(start) === mondayOf(0) ? today : start;
-    view = next;
-  }
-
-  function step(direction: -1 | 1) {
-    start = plusDays(start, direction * (view === 'week' ? 7 : 1));
-  }
-
-  function toToday() {
-    start = view === 'week' ? mondayOf(0) : today;
-  }
-
-  function jump(date: string) {
-    start = view === 'week' ? weekStart(date) : date;
-  }
-
-  /** The title says what is shown: this week, next week, the coming days, or from which day. */
-  const title = $derived(
-    view === 'week' ? weekTitle(offset) : daysTitle(start, preferences.locale)
-  );
-  const range = $derived(rangeOf(start, preferences.locale, count));
 
   /** The day an "add" was pressed for, which is also what opens the picker. */
   let adding = $state<string | null>(null);
@@ -150,16 +76,16 @@
   /** The meal being answered in the sheet (its day, meal and servings), rather than aimed at. */
   let editing = $state<PlannedMeal | null>(null);
 
-  /** Where "Rezept planen" plans for: today when it is on screen, else the first day shown. */
-  const firstOpenDay = $derived(start <= today && today <= end ? today : start);
-
-  const plannedThisWeek = $derived([
+  const plannedRecipes = $derived([
     ...new Set(mealPlan.days.flatMap((day) => day.meals.map((meal) => meal.recipeId)))
   ]);
 
   const unshopped = $derived(
     mealPlan.weeks.reduce((sum, monday) => sum + mealPlan.unshoppedIn(monday).length, 0)
   );
+
+  /** Whether the list is empty is not known before it is read, and an empty week says so differently for each. */
+  const listRead = $derived(shopping.status !== 'idle' && shopping.status !== 'loading');
 
   const drag = new WeekDrag();
   const actions = usePlanActions({
@@ -173,59 +99,38 @@
     recipeAnswers.reset();
   });
 
-  $effect(() => {
-    if (householdId) {
-      void mealPlan.load(householdId, start, count);
-    }
-  });
+  function load() {
+    if (householdId) void mealPlan.load(householdId, shown.start, shown.count);
+  }
+
+  $effect(load);
 
   // Each planned recipe's nutrition, asked for in parallel and never waited for: the day lines appear as they arrive.
   $effect(() => {
-    if (householdId) {
-      void recipeAnswers.ensure(plannedThisWeek, householdId);
-    }
+    if (householdId) void recipeAnswers.ensure(plannedRecipes, householdId);
   });
-
-  async function pick(recipe: RecipeSummary) {
-    if (!householdId || !adding) {
-      return;
-    }
-
-    const ok = await mealPlan.plan(householdId, { date: adding, recipeId: recipe.id, slot });
-
-    if (ok) {
-      adding = null;
-
-      return;
-    }
-
-    const failure = mealPlan.writeError;
-    toaster.show({
-      message: () => (failure ? explain(failure) : m['plan.recipe.failed']()),
-      tone: 'danger'
-    });
-  }
 
   function addOn(date: string) {
     adding = date;
     slot = 'dinner';
   }
 
-  function sheetAnswered(to: {
-    date: string;
-    slot: MealSlot;
-    servings: number;
-    updateList: boolean;
-  }) {
+  async function pick(recipe: RecipeSummary) {
+    if (adding && (await actions.plan({ date: adding, recipeId: recipe.id, slot }))) {
+      adding = null;
+    }
+  }
+
+  function save(to: Parameters<typeof actions.edit>[1]) {
     const meal = editing;
 
     editing = null;
 
-    if (meal) {
-      void actions.edit(meal, to);
-    }
+    if (meal) void actions.edit(meal, to);
   }
 </script>
+
+<svelte:head><title>{shown.title}</title></svelte:head>
 
 {#snippet diaryToday()}<DiaryTodayLine />{/snippet}
 
@@ -238,9 +143,10 @@
     </CoachTip>
   {/if}
 {/snippet}
-<svelte:head><title>{title}</title></svelte:head>
 
-{#snippet travel()}<PlanNav {view} {atToday} onstep={step} ontoday={toToday} />{/snippet}
+{#snippet travel()}
+  <PlanNav view={shown.view} atToday={shown.atToday} onstep={shown.step} ontoday={shown.toToday} />
+{/snippet}
 
 <!-- On a phone the way through time rides in the header bar beside Plan | Liste, so it is always in reach. -->
 <WocheSwitch view="plan" trailing={travelInBar ? travel : undefined} />
@@ -248,18 +154,18 @@
   <!-- Beside the list each column scrolls itself, so dragging a meal past an edge scrolls this one, not the page. -->
   <div class="week" data-plan-scroller={listBeside.current || undefined}>
     <PlanHeader
-      {title}
-      {range}
-      from={start}
-      to={end}
+      title={shown.title}
+      range={shown.range}
+      from={shown.start}
+      to={shown.end}
       locale={preferences.locale}
-      {view}
-      onview={choose}
+      view={shown.view}
+      onview={shown.choose}
       nav={!travelInBar}
-      {atToday}
-      onstep={step}
-      ontoday={toToday}
-      onjump={jump}
+      atToday={shown.atToday}
+      onstep={shown.step}
+      ontoday={shown.toToday}
+      onjump={shown.jump}
     />
 
     <!-- Above the week on a phone, where it is read first; beside the list under it, so the rows keep the screen. -->
@@ -268,25 +174,20 @@
     {#if mealPlan.error}
       <ErrorState title={m['error.unexpected.title']()} body={m['error.unexpected.body']()}>
         {#snippet action()}
-          <Button
-            variant="primary"
-            onclick={() => householdId && void mealPlan.load(householdId, start, count)}
-          >
-            {m['error.retry']()}
-          </Button>
+          <Button variant="primary" onclick={load}>{m['error.retry']()}</Button>
         {/snippet}
       </ErrorState>
     {:else if mealPlan.loading && mealPlan.days.length === 0}
-      <PlanWeekSkeleton rows={wide.current} {count} />
+      <PlanWeekSkeleton rows={wide.current} count={shown.count} />
     {:else}
       <PlanWeek
         days={mealPlan.days}
         {householdId}
         {drag}
         rows={wide.current}
-        seek={sought}
-        folded={foldsEarlier}
-        onunfold={() => planView.showEarlier(start)}
+        seek={shown.sought}
+        folded={shown.foldsEarlier}
+        onunfold={shown.showEarlier}
         onlines={listBeside.current ? (meal) => lineMarks.show(meal.entryId) : undefined}
         ontolist={listBeside.current ? (meal) => void actions.toList(meal.entryId) : undefined}
         ondrop={actions.drop}
@@ -302,59 +203,28 @@
         {#if !listBeside.current}
           <PlanShopBar {unshopped} busy={actions.ui.busy} onshop={() => void actions.shop()} />
         {/if}
-      {:else if !mealPlan.loading}
-        <!-- One state for the place: the big one only while the list is empty too (the pane then shows just its
-             add field); a list in use gets a quiet line, as nothing about it is missing. -->
-        {#if shopping.status === 'loading' || shopping.status === 'idle'}
-          <!-- Which of the two is not known before the list is read. -->
-        {:else if shopping.items.length === 0}
-          <!-- Olli under the days and talking about them, in line with them: centred in the column, a page-sized
-               empty state floated below the rows it was about, often below the fold. -->
-          <div class="empty-week" class:wide={wide.current}>
-            <OlliSays pose="peeking" size={wide.current ? 'md' : 'sm'}>
-              <h2 class="empty-title">{m['plan.empty.title']()}</h2>
-              <p>{m['plan.empty.description']()}</p>
-              <div class="empty-action">
-                <Button variant="primary" onclick={() => addOn(firstOpenDay)}
-                  >{m['plan.empty.action']()}</Button
-                >
-              </div>
-            </OlliSays>
-          </div>
-        {:else}
-          <p class="nothing-planned">
-            {m['plan.empty.title']()}
-            <button
-              type="button"
-              class="text-action hit-target reach"
-              onclick={() => addOn(firstOpenDay)}>{m['plan.empty.action']()}</button
-            >
-          </p>
-        {/if}
+      {:else if !mealPlan.loading && listRead}
+        <PlanEmpty
+          listInUse={shopping.items.length > 0}
+          wide={wide.current}
+          onplan={() => addOn(shown.firstOpenDay)}
+        />
       {/if}
     {/if}
+
+    <!-- Without the list beside it, the list at a glance under the week; the switch still leads to the whole list. -->
+    {#if !listBeside.current && !mealPlan.error}<ListSummary />{/if}
 
     {#if listBeside.current}<div class="tip-after">{@render tip()}</div>{/if}
   </div>
   {#if listBeside.current}
-    <!-- A meal dropped here puts its shopping on the list; the meal stays on its day. -->
-    <aside
-      class="list"
-      class:over={drag.landing?.list === true}
-      aria-label={m['shopping.title']()}
-      data-plan-list
-    >
-      <ShoppingListView pane shown={{ from: start, to: end }}>
-        {#snippet seam()}
-          {#if householdId}
-            <WithdrawNote {householdId} />
-            {#each mealPlan.weeks as monday (monday)}
-              <WeekToList {householdId} week={monday} offset={weekOffsetOf(monday)} />
-            {/each}
-          {/if}
-        {/snippet}
-      </ShoppingListView>
-    </aside>
+    <PlanListPane
+      {householdId}
+      from={shown.start}
+      to={shown.end}
+      weeks={mealPlan.weeks}
+      over={drag.landing?.list === true}
+    />
   {/if}
 </div>
 
@@ -365,8 +235,8 @@
 <EditMealSheet
   meal={editing}
   days={mealPlan.aroundDays}
-  from={editing ? (placeOf(mealPlan.knownDays, editing.entryId)?.date ?? start) : start}
-  onsave={sheetAnswered}
+  from={editing ? (placeOf(mealPlan.knownDays, editing.entryId)?.date ?? shown.start) : shown.start}
+  onsave={save}
   onclose={() => (editing = null)}
 />
 
@@ -384,9 +254,8 @@
 
 <style>
   /*
-   * The week and, from 80rem, the list beside it, parted by one straight hairline the height of the pane. The two fill
-   * the screen below the header and each scrolls itself: the page does not scroll as well (a short window still lets it,
-   * rather than leave two slivers).
+   * The week and, beside it, the list. The two fill the screen below the header and each scrolls itself: the page does
+   * not scroll as well (a short window still lets it, rather than leave two slivers).
    */
   .beside {
     display: grid;
@@ -402,79 +271,14 @@
     padding-block-end: var(--space-6);
   }
 
-  .beside > .week,
-  .list {
+  /* Scrolled on its own, so a day sought and a sticky heading go to the column's top, not under the shell's header. */
+  .beside > .week {
     overflow-y: auto;
     overscroll-behavior: contain;
-  }
-
-  /* Each column scrolls itself, so a day sought and a sticky heading go to the column's top, not under the shell's header. */
-  .beside > .week,
-  .list > :global(*) {
     --header-inset: 0px;
   }
 
   .tip-after {
     margin-top: var(--space-6);
-  }
-
-  .empty-week {
-    margin-top: var(--space-6);
-  }
-
-  /* Olli at the bubble's top, as in a coach tip: the button makes the bubble taller than the pot. */
-  .empty-week :global(.says) {
-    align-items: flex-start;
-  }
-
-  .empty-week :global(.bubble) {
-    max-width: 34rem;
-  }
-
-  /* The tail at the pot's middle: the small one on a phone, so the bubble keeps the width to read in. */
-  .empty-week :global(.bubble::before) {
-    top: 1.4rem;
-  }
-
-  .empty-week.wide :global(.bubble::before) {
-    top: 2.4rem;
-  }
-
-  .empty-title {
-    margin-bottom: var(--space-1);
-    font-family: var(--font-editorial);
-    font-size: var(--text-xl);
-    font-weight: var(--weight-regular);
-    letter-spacing: -0.02em;
-  }
-
-  .empty-week p {
-    color: var(--text-muted);
-    text-wrap: pretty;
-  }
-
-  .empty-action {
-    margin-top: var(--space-3);
-  }
-
-  .nothing-planned {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-2);
-    margin-top: var(--space-4);
-    color: var(--text-muted);
-    font-size: var(--text-sm);
-  }
-
-  .list {
-    padding-inline-start: var(--space-8);
-    border-inline-start: 1px solid var(--border);
-  }
-
-  /* A meal carried over the list: dropping it here puts its shopping on, as a day's outline says it would land there. */
-  .list.over {
-    outline: 2px dashed var(--border-focus);
-    outline-offset: calc(-1 * var(--space-1));
   }
 </style>

@@ -24,7 +24,7 @@
   import { createLingering } from '$features/shopping/lingering.svelte';
   import { trackShopFinished } from '$features/shopping/shopFinished.svelte';
   import { shopping, type ShoppingItem } from '$features/shopping/stores/shopping.svelte';
-  import { asDate } from '$features/planning/mealPlan.svelte';
+  import { dateToday } from '$features/planning/mealPlan.svelte';
   import { lineMarks } from '$features/shopping/lineMarks.svelte';
   import { upcoming } from '$features/planning/upcoming.svelte';
   import { explain } from '$shell/explain';
@@ -76,7 +76,7 @@
    * added up. Beside the plan, only what the plan does not show already: other days, and recipes added by themselves.
    */
   const plannedMeals = $derived(
-    listedMealsOf(shopping.items, asDate(new Date())).filter(
+    listedMealsOf(shopping.items, dateToday()).filter(
       (day) => !shown || !day.date || day.date < shown.from || day.date > shown.to
     )
   );

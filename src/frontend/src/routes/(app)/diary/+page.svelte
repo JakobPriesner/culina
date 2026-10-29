@@ -583,16 +583,20 @@
     min-inline-size: 0;
   }
 
+  /* The week and its numbers sit on one raised card at every width, the meals' own surface. */
+  .aside {
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    background: var(--surface-raised);
+  }
+
   /* Portrait tablets keep one reading column. The week and its totals share a compact overview instead of
-     stretching seven dates and three figures across the whole page. Phones keep their full-width week. */
+     stretching seven dates and three figures across the whole page. Phones stack them on the same card. */
   @media (48rem <= width < 64rem) {
     .aside {
       display: grid;
       grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
       align-items: center;
-      padding: var(--space-4);
-      border-radius: var(--radius-lg);
-      background: var(--surface-raised);
     }
 
     .calendar:only-child {
@@ -611,12 +615,13 @@
   }
 
   /*
-   * From 64rem the day's title, its week and numbers stand still in their own column, the week and numbers on one
-   * raised card, the meals' own surface (docs/food-log-redesign.md §4.2); only the meals beside them scroll.
+   * From 64rem the day's title, its week and numbers stand still in their own column beside the meals
+   * (docs/food-log-redesign.md §4.2), the two centred on the page; only the meals beside them scroll.
    */
   @media (min-width: 64rem) {
     .log {
       grid-template-columns: minmax(20rem, 24rem) minmax(0, 52rem);
+      justify-content: center;
       align-items: start;
       gap: var(--space-8) var(--space-12);
       max-inline-size: none;
@@ -634,8 +639,6 @@
 
     .aside {
       padding: var(--space-6);
-      border-radius: var(--radius-lg);
-      background: var(--surface-raised);
     }
 
     .meals:not(.alone) {

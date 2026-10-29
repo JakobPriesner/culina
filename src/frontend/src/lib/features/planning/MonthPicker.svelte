@@ -3,7 +3,7 @@
 
   import { m } from '$shell/i18n';
 
-  import { asDate, plusDays, weekStart } from './mealPlan.svelte';
+  import { asDate, dateToday, plusDays, weekStart } from './mealPlan.svelte';
   import { dayOf } from './weekDates';
 
   /**
@@ -26,7 +26,7 @@
   let paged = $state<string | null>(null);
   const month = $derived(paged ?? `${from.slice(0, 7)}-01`);
 
-  const today = asDate(new Date());
+  const today = dateToday();
 
   const title = $derived(
     new Intl.DateTimeFormat(locale, { month: 'long', year: 'numeric' }).format(dayOf(month))

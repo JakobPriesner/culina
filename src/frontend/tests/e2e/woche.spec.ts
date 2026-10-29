@@ -3,7 +3,7 @@ import { expectReflow, expectWholeWords, responsiveData } from './support/respon
 
 /**
  * Woche holds the week's plan and the household's list (docs/woche-design.md), rendered with the layout fixtures:
- * the four tabs, the Plan | Liste switch on phones, and the list beside the week from 80rem.
+ * the four tabs, the Plan | Liste switch on phones, and the list beside the week from 70rem.
  */
 
 /** A person who keeps a diary, with nothing logged; after `responsiveData`, whose catch-all it overrides. */
@@ -245,7 +245,7 @@ test.describe('Woche @offline', () => {
     }
   }
 
-  for (const width of [1280, 1440]) {
+  for (const width of [1133, 1280, 1440]) {
     test(`the list sits beside the week at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await responsiveData(page, 'de', { activeCooking: false });
@@ -552,15 +552,104 @@ test.describe('Woche @offline', () => {
     await expectReflow(page);
   });
 
-  test('between 64 and 80rem the switch stays and the week keeps the width', async ({ page }) => {
-    await page.setViewportSize({ width: 1100, height: 900 });
+  for (const [width, height] of [
+    [390, 844],
+    [820, 1180]
+  ] as const) {
+    test(`without the list beside it, the plan shows the list at a glance at ${width}px`, async ({
+      page
+    }) => {
+      await page.setViewportSize({ width, height });
+      await responsiveData(page, 'de', { activeCooking: false });
+      await diaryOn(page);
+      await weekToShop(page);
+      const line = (name: string, section: string, isChecked = false) => ({
+        itemId: name,
+        name,
+        quantity: 1,
+        unit: null,
+        section,
+        isChecked,
+        isManual: true,
+        sources: []
+      });
+      await page.route('**/api/v1/households/*/shopping-list', (route) =>
+        route.fulfill({
+          json: {
+            listId: 'list-1',
+            version: 1,
+            items: [
+              line('Paprika', 'produce'),
+              line('Zucchini', 'produce'),
+              line('Feta', 'dairy_eggs'),
+              line('Milch', 'dairy_eggs', true),
+              line('Guanciale', 'meat_fish'),
+              line('Brot', 'bakery'),
+              line('Spaghetti', 'dry_goods'),
+              line('Kreuzkümmel', 'spices_baking')
+            ]
+          }
+        })
+      );
+      await page.goto('/week/plan');
+      await settled(page);
+
+      // What is still to buy, in shop order, the sections past the fourth only counted; ticked lines are not there.
+      const summary = page.locator('section.summary');
+      await expect(summary.getByRole('heading', { level: 2 })).toHaveText('Einkaufsliste');
+      await expect(summary).toContainText('7 fehlen noch');
+      await expect(summary.getByRole('listitem')).toHaveText([
+        'Obst & Gemüse 2 Paprika, Zucchini',
+        'Milch & Eier 1 Feta',
+        'Fleisch & Fisch 1 Guanciale',
+        'Backwaren 1 Brot'
+      ]);
+      await expect(summary).toContainText('und 2 weitere Bereiche');
+      await expectReflow(page);
+      await summary.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: test.info().outputPath(`summary-${width}.png`) });
+
+      await summary.getByRole('link', { name: 'Einkaufsliste' }).click();
+      await expect(page).toHaveURL(/\/week\/shopping$/);
+    });
+  }
+
+  test('beside the list the plan has no summary of it', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await responsiveData(page, 'de', { activeCooking: false });
+    await diaryOn(page);
+    await weekToShop(page, { listed: true });
+    await page.goto('/week/plan');
+    await settled(page);
+    await expect(page.locator('section.summary')).toHaveCount(0);
+  });
+
+  test('between 64 and 70rem the switch stays and the week keeps the width', async ({ page }) => {
+    await page.setViewportSize({ width: 1080, height: 810 });
     await responsiveData(page, 'de', { activeCooking: false });
     await diaryOn(page);
     await page.goto('/week/plan');
     await unfolded(page);
     await expect(page.getByRole('group', { name: 'Woche' })).toBeVisible();
     await expect(page.getByRole('complementary', { name: 'Einkauf' })).toHaveCount(0);
-    await page.screenshot({ path: test.info().outputPath('plan-1100.png') });
+    await page.screenshot({ path: test.info().outputPath('plan-1080.png') });
+  });
+
+  test('the list alone gives way to the week beside it once the window is wide enough', async ({
+    page
+  }) => {
+    await page.setViewportSize({ width: 820, height: 900 });
+    await responsiveData(page, 'de', { activeCooking: false });
+    await diaryOn(page);
+    await page.goto('/week/shopping');
+    await expect(page.getByRole('group', { name: 'Woche' })).toBeVisible();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await expect(page).toHaveURL(/\/week\/plan$/);
+    await expect(page.getByRole('complementary', { name: 'Einkauf' })).toBeVisible();
+    // Narrowed again, the week stays, with Plan | Liste back over it.
+    await page.setViewportSize({ width: 820, height: 900 });
+    await expect(page.getByRole('complementary', { name: 'Einkauf' })).toHaveCount(0);
+    await expect(page.getByRole('group', { name: 'Woche' })).toBeVisible();
   });
 
   test('on a wide screen the header keeps one row', async ({ page }) => {

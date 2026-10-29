@@ -2,7 +2,7 @@ import type { AppError } from '$api';
 import { LatestRead, registerStore, type LoadStatus } from '$shell/stores';
 
 import {
-  asDate,
+  dateToday,
   cookedOn,
   mealPlan,
   readWeek,
@@ -66,14 +66,14 @@ class UpcomingStore {
 
   /** Today's meals, in the server's slot order. */
   get today(): readonly PlannedMeal[] {
-    const today = asDate(new Date());
+    const today = dateToday();
 
     return this.days.find((day) => day.date === today)?.meals ?? [];
   }
 
   /** Today's meals already cooked, so the week can say so instead of offering them again. */
   get cookedToday(): readonly PlannedMeal[] {
-    const today = asDate(new Date());
+    const today = dateToday();
 
     return this.today.filter((meal) => cookedOn(meal, today));
   }
@@ -181,7 +181,7 @@ class UpcomingStore {
       return;
     }
 
-    const today = asDate(new Date());
+    const today = dateToday();
 
     this.#days = [...thisWeek.value.days, ...nextWeek.value.days].filter(
       (day) => day.date >= today

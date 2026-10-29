@@ -2,7 +2,7 @@ import { resolve } from '$app/paths';
 
 import { m } from '$shell/i18n';
 
-import { asDate, plusDays } from './mealPlan.svelte';
+import { asDate, dateToday, plusDays } from './mealPlan.svelte';
 
 export const addDays = (from: Date, days: number) =>
   new Date(from.getFullYear(), from.getMonth(), from.getDate() + days);
@@ -63,7 +63,7 @@ export const weekdayName = (date: string, locale: string) =>
 
 /** Near days by how near they are, as a calendar says them; any other day by its weekday. */
 export const dayName = (date: string, locale: string): string => {
-  const today = asDate(new Date());
+  const today = dateToday();
 
   return date === today
     ? m['plan.today']()
@@ -84,7 +84,7 @@ export const dayDate = (date: string, locale: string): string =>
 
 /** The coming days' name: from today, what they are; from another day, which day they start on. */
 export const daysTitle = (from: string, locale: string): string =>
-  from === asDate(new Date())
+  from === dateToday()
     ? m['plan.days.title']()
     : m['plan.days.from']({
         day: new Intl.DateTimeFormat(locale, {

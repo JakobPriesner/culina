@@ -5,7 +5,7 @@ import { LatestRead, registerStore } from '$shell/stores';
 
 import type { components } from '$api/generated/schema';
 
-import { asDate, plusDays, weeksOf, weekStart } from './days';
+import { asDate, dateToday, plusDays, weeksOf, weekStart } from './days';
 
 /** A planned week, as the server reads and answers it: every write returns the whole week the meal is in. */
 type Week = components['schemas']['PlanningMealPlanResponse'];
@@ -16,7 +16,7 @@ export type PlannedMeal = PlannedDay['meals'][number];
 /** Which meal of the day. Omitted means dinner, which is what people plan. */
 export type MealSlot = 'breakfast' | 'lunch' | 'dinner';
 
-export { asDate, plusDays, weekStart, weeksOf } from './days';
+export { asDate, dateToday, plusDays, weekStart, weeksOf } from './days';
 
 export interface MealDestination {
   readonly date: string;
@@ -209,7 +209,7 @@ class MealPlanStore {
    * Shows `count` days from `from` (a week from its Monday by default), reading the weeks they fall in. Weeks already
    * read show at once and are read again behind them, so stepping a day at a time never waits or blanks.
    */
-  async load(householdId: string, from = weekStart(asDate(new Date())), count = 7): Promise<void> {
+  async load(householdId: string, from = weekStart(dateToday()), count = 7): Promise<void> {
     const isLatest = this.#reads.start();
     const weeks = weeksOf(from, count);
 

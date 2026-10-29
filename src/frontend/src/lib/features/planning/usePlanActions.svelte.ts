@@ -32,6 +32,27 @@ interface Page {
 export function usePlanActions(page: Page) {
   const ui = $state({ busy: false });
 
+  /** Plans a recipe on a day; whether it was, so the picker closes only then. */
+  async function plan(meal: { date: string; recipeId: string; slot: MealSlot }) {
+    const householdId = page.householdId();
+
+    if (!householdId) {
+      return false;
+    }
+
+    if (await mealPlan.plan(householdId, meal)) {
+      return true;
+    }
+
+    const failure = mealPlan.writeError;
+    toaster.show({
+      message: () => (failure ? explain(failure) : m['plan.recipe.failed']()),
+      tone: 'danger'
+    });
+
+    return false;
+  }
+
   /** Moves a meal and offers undo; a drop is cheap to reverse, a confirmation would interrupt it. */
   async function move(entryId: string, to: { date: string; slot?: MealSlot; position?: number }) {
     const householdId = page.householdId();
@@ -285,5 +306,5 @@ export function usePlanActions(page: Page) {
     void page.reload();
   }
 
-  return { ui, move, edit, drop, shop, unplan, madeIt, toList };
+  return { ui, plan, move, edit, drop, shop, unplan, madeIt, toList };
 }

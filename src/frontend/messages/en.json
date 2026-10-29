@@ -734,6 +734,16 @@
       }
     }
   ],
+  "shopping.summary.more": [
+    {
+      "declarations": ["input count", "local countPlural = count: plural"],
+      "selectors": ["countPlural"],
+      "match": {
+        "countPlural=one": "and one more section",
+        "countPlural=*": "and {count} more sections"
+      }
+    }
+  ],
   "shopping.addRecipe": "From a recipe",
   "shopping.addFields": "Add to the list",
   "shopping.itemName": "What to buy",

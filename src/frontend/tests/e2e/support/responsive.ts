@@ -820,7 +820,7 @@ export async function openShoppingFromCooking(page: Page) {
   if ((await nav.count()) === 0) {
     await page.getByRole('link', { name: 'Back to recipe', exact: true }).click();
   }
-  // Woche holds the list: its List view on a phone, the pane beside the week from 80rem.
+  // Woche holds the list: its List view on a phone, the pane beside the week from 70rem.
   await nav.getByRole('link', { name: 'Week', exact: true }).click();
   const list = page
     .getByRole('group', { name: 'Week' })
