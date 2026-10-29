@@ -1,7 +1,7 @@
 using System.Net;
 using System.Text;
-using IntegrationTests.Fixtures;
 using Infrastructure.Products;
+using IntegrationTests.Fixtures;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace IntegrationTests.Products;
