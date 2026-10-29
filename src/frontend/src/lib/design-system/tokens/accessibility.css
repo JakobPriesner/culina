@@ -1,0 +1,19 @@
+/*
+ * The person's own display settings, which every theme yields to (Apple's Liquid Glass guidance: glass adapts to
+ * Reduce Transparency and Increase Contrast, and custom surfaces must too). `data-transparency` and `data-contrast`
+ * sit on <html> beside `data-mode`, stamped before the first paint from the media queries (app.html) and followed
+ * afterwards (displaySettings.ts); the iOS app reports Reduce Transparency itself, which WebKit cannot.
+ *
+ * Both settings make glass solid: blur and see-through tints are exactly what they ask to remove. Increase Contrast's
+ * stronger text, borders and accent are the theme's own (`[data-contrast='more']` blocks in each theme). Imported
+ * after the themes; `html` in the selector outranks a theme's mode block, so the order is not what makes it win.
+ */
+
+html[data-theme][data-transparency='reduced'],
+html[data-theme][data-contrast='more'] {
+  --glass-filter: none;
+  --surface-glass: var(--surface);
+  --surface-bar-glass: var(--surface);
+  --surface-nav-glass: var(--surface-sunken);
+  --surface-overlay-glass: var(--surface-overlay);
+}

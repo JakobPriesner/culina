@@ -7,8 +7,11 @@
   import NavIcon from './NavIcon.svelte';
   import { woche } from './woche.svelte';
 
-  /** The same direct destinations: a top bar on desktop and a bottom bar on phones. */
-  let { placement }: { placement: 'top' | 'bottom' } = $props();
+  /**
+   * The same direct destinations: a top bar on desktop and a bottom bar on phones. `compact` recedes the bottom bar to
+   * its icons while a page is read downwards, as an iOS tab bar minimises; every destination stays one tap away.
+   */
+  let { placement, compact = false }: { placement: 'top' | 'bottom'; compact?: boolean } = $props();
   const current = $derived(page.url.pathname);
   const destinations = $derived(barDestinations(woche.view));
   const selected = $derived(destinations.find((destination) => destination.match(current))?.href);
@@ -16,7 +19,12 @@
 
 <!-- Every destination is a household's: without one (just signed up, on /welcome) they would only lead back there. -->
 {#if session.activeHouseholdId}
-  <nav use:selectionIndicator={{ selected }} class="nav {placement}" aria-label={m['nav.label']()}>
+  <nav
+    use:selectionIndicator={{ selected }}
+    class="nav {placement}"
+    class:compact
+    aria-label={m['nav.label']()}
+  >
     {#each destinations as destination (destination.icon)}
       {@const active = destination.match(current)}
       <a
@@ -74,8 +82,7 @@
     padding: var(--space-1);
     border-radius: var(--radius-full);
     background: var(--surface-nav-glass);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: var(--glass-filter);
     box-shadow: var(--shadow-glass);
     gap: var(--space-1);
   }
@@ -104,18 +111,25 @@
     box-shadow: var(--shadow-card);
   }
 
-  /* An inset dock keeps the four destinations in thumb reach, with one moving tile for the current page. */
+  /*
+   * A floating glass dock keeps the four destinations in thumb reach, concentric with the screen's corner it sits near
+   * (in practice a capsule), with one moving lens for the current page. The lens is neutral and the current
+   * destination's icon and label take the accent, as an iOS tab bar marks it: colour in navigation stays sparing.
+   */
   .bottom {
+    --dock-padding: 0.375rem;
+    --dock-radius: calc(var(--radius-screen) - var(--screen-inset));
+
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--space-1);
     max-width: 32rem;
     margin-inline: auto;
-    padding: 0.375rem;
-    border: 1px solid var(--border);
-    border-radius: 1.75rem;
-    background: var(--surface-raised);
-    box-shadow: var(--shadow-dock);
+    padding: var(--dock-padding);
+    border-radius: var(--dock-radius);
+    background: var(--surface-nav-glass);
+    backdrop-filter: var(--glass-filter);
+    box-shadow: var(--shadow-glass);
     pointer-events: auto;
   }
 
@@ -123,11 +137,15 @@
     min-width: 0;
     min-height: 3.5rem;
     padding: var(--space-1);
-    border-radius: 1.25rem;
+    border-radius: calc(var(--dock-radius) - var(--dock-padding));
     text-align: center;
     flex-direction: column;
     justify-content: center;
     gap: var(--space-1);
+    transition:
+      color var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast) var(--ease-out),
+      min-height var(--duration-base) var(--ease-out);
   }
 
   .bottom .icon {
@@ -135,17 +153,16 @@
     height: var(--space-6);
   }
 
-  /* Text, not accent: the accent's olive on the accent-mixed tile reads at about 3.9:1, short of a small label's 4.5. */
+  /* The accent reads 4.5:1 or more on the raised lens in every theme and mode (themes.spec.ts). */
   .bottom .destination.active {
-    color: var(--text);
+    color: var(--accent);
   }
 
   .bottom:not([data-indicator-ready]) .destination.active,
   .bottom :global(.selection-indicator) {
-    border-radius: 1.25rem;
-    /* Stronger than the usual subtle tint, so the current destination reads at a glance. */
-    background: var(--surface-accent-strong);
-    box-shadow: none;
+    border-radius: calc(var(--dock-radius) - var(--dock-padding));
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-card);
   }
 
   .bottom .destination:not(.active):hover {
@@ -154,6 +171,21 @@
 
   .bottom .destination:active {
     background: var(--surface-selected);
+  }
+
+  /* Compact: icons only, at the 44px floor; the labels stay as the links' names. */
+  .bottom.compact .destination {
+    min-height: var(--control-sm);
+    gap: 0;
+  }
+
+  .bottom.compact .label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 
   .bottom .label {
@@ -175,8 +207,9 @@
    */
   @media (width < 25rem) {
     .bottom {
+      --dock-padding: 2px;
+
       gap: 2px;
-      padding: 2px;
     }
 
     .bottom .destination {

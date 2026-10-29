@@ -13,6 +13,7 @@
   import { m } from '$shell/i18n';
   import { appIcon } from '$shell/appIcon.svelte';
   import { connection } from '$shell/connection.svelte';
+  import { followDisplaySettings } from '$shell/displaySettings';
   import { preferences } from '$shell/preferences.svelte';
   import { report } from '$shell/telemetry';
   import { watchForUpdates } from '$shell/updates.svelte';
@@ -28,6 +29,7 @@
     document.getElementById('boot')?.remove();
 
     const stopFollowingTheDevice = preferences.start();
+    const stopFollowingTheDisplay = followDisplaySettings();
     appIcon.start();
     // Not under the dev server, where every rebuild would prompt a reload, nor in the app, whose code changes only with an app update.
     const stopWatchingForUpdates = dev || native ? () => {} : watchForUpdates();
@@ -46,6 +48,7 @@
 
     return () => {
       stopFollowingTheDevice();
+      stopFollowingTheDisplay();
       stopWatchingForUpdates();
       stopFollowingTheNetwork();
     };

@@ -108,7 +108,7 @@
     background: var(--surface-overlay-glass);
     color: var(--text);
     box-shadow: var(--shadow-glass);
-    backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: var(--glass-filter);
   }
 
   /* A steady mark, not a pulse: a blinking light in the corner of the eye for twenty minutes is a nuisance. */

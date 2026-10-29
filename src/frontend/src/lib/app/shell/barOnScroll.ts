@@ -1,10 +1,10 @@
 /**
- * When the bottom bar of a phone gets out of the way: hidden while reading down a page, back on any
- * deliberate scroll up, at the top and at the end. `anchor` is where the bar last could have changed:
- * the highest point while it shows, the lowest while it is hidden, so a turn is measured from there.
+ * When the bottom bar of a phone recedes, as an iOS tab bar minimises: compact while reading down a page, full again on
+ * any deliberate scroll up, at the top and at the end. `anchor` is where the bar last could have changed: the highest
+ * point while it is full, the lowest while it is compact, so a turn is measured from there.
  */
 export interface BarScroll {
-  readonly hidden: boolean;
+  readonly compact: boolean;
   readonly anchor: number;
 }
 
@@ -14,12 +14,12 @@ export const travel = 24;
 /** Near the top there is nothing to make room for. */
 export const nearTop = 64;
 
-export const shown: BarScroll = { hidden: false, anchor: 0 };
+export const shown: BarScroll = { compact: false, anchor: 0 };
 
 /**
- * `byReader`: the reader scrolled (wheel, touch, a scroll key). Only that hides the bar; a scroll the
- * page makes (focus moving to a field, a jump to a found word) leaves it, so nothing slides over what
- * was just brought into view and a keyboard keeps its way out.
+ * `byReader`: the reader scrolled (wheel, touch, a scroll key). Only that makes the bar compact; a scroll the
+ * page makes (focus moving to a field, a jump to a found word) leaves it, so nothing changes under what was
+ * just brought into view.
  */
 export function barAfterScroll(
   before: BarScroll,
@@ -28,20 +28,20 @@ export function barAfterScroll(
   byReader = true
 ): BarScroll {
   if (y <= nearTop || atEnd) {
-    return { hidden: false, anchor: y };
+    return { compact: false, anchor: y };
   }
 
-  if (before.hidden) {
+  if (before.compact) {
     return y < before.anchor - travel
-      ? { hidden: false, anchor: y }
-      : { hidden: true, anchor: Math.max(before.anchor, y) };
+      ? { compact: false, anchor: y }
+      : { compact: true, anchor: Math.max(before.anchor, y) };
   }
 
   if (!byReader) {
-    return { hidden: false, anchor: y };
+    return { compact: false, anchor: y };
   }
 
   return y > before.anchor + travel
-    ? { hidden: true, anchor: y }
-    : { hidden: false, anchor: Math.min(before.anchor, y) };
+    ? { compact: true, anchor: y }
+    : { compact: false, anchor: Math.min(before.anchor, y) };
 }

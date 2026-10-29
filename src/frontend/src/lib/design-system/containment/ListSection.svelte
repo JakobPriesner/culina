@@ -66,6 +66,14 @@
     inset: 0;
   }
 
+  /*
+   * A pressed button's scale would make it the overlay's containing block, shrinking the overlay to the button: a press
+   * on the title would then end off it, and the click would never reach the button.
+   */
+  .end > :global(button:active:not(:disabled)) {
+    transform: none;
+  }
+
   .end {
     display: flex;
     align-items: center;

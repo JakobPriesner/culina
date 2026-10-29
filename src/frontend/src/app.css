@@ -2,6 +2,8 @@
 @import './lib/design-system/tokens/scales.css';
 @import './lib/design-system/tokens/semantic.css';
 @import './lib/design-system/themes/warm-paper.css';
+/* After the themes: the person's Reduce Transparency and Increase Contrast win over any of them. */
+@import './lib/design-system/tokens/accessibility.css';
 @import './lib/design-system/tokens/kitchen-lighting.css';
 /* After the themes: on paper every one of them is ink on paper. */
 @import './lib/design-system/tokens/print.css';
@@ -275,7 +277,8 @@ a:focus-visible {
   top: 0;
   transition:
     transform 220ms var(--ease-out),
-    width 220ms var(--ease-out);
+    width 220ms var(--ease-out),
+    scale var(--duration-fast) var(--ease-out);
 }
 .selection-indicator.underline {
   background: var(--accent);

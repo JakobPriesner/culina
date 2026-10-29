@@ -151,9 +151,7 @@
     padding: var(--space-3) var(--space-4) var(--space-4);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    background: var(--surface-overlay-glass);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    background: var(--surface-overlay);
     box-shadow: var(--shadow-overlay);
     animation: popoverIn var(--duration-fast) var(--ease-out);
     color: var(--text);

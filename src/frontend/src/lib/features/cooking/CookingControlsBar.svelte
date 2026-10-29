@@ -50,6 +50,26 @@
     min-width: 0;
   }
 
+  /*
+   * A foldable half open like a laptop (iPhone Duo, an Android foldable): the screen reports two segments stacked, and
+   * the controls take the lower one whole, from just below the fold to the bottom, while the step reads on the upper
+   * one; nothing sits in the fold. The cook page already keeps a step clear of the bar's measured height. A screen
+   * that reports one segment keeps the floating bar.
+   */
+  @media (vertical-viewport-segments: 2) {
+    .controls {
+      bottom: 0;
+      min-height: env(viewport-segment-height 0 1);
+      align-content: center;
+      margin-inline: calc(-1 * var(--layout-gutter-start)) calc(-1 * var(--layout-gutter-end));
+      padding: var(--space-4) var(--layout-gutter-end)
+        max(var(--space-4), env(safe-area-inset-bottom, 0px)) var(--layout-gutter-start);
+      border-width: 1px 0 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+  }
+
   /* Short or narrow phones: the bar stays pinned, so it spends less of the screen. */
   @media screen and (max-height: 32rem), screen and (max-width: 24rem) {
     .controls {

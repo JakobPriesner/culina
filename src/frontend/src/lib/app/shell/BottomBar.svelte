@@ -1,26 +1,35 @@
 <script lang="ts">
+  import EdgeEffect from '$ds/display/EdgeEffect.svelte';
+
   import { page } from '$app/state';
 
   import { session } from '$features/auth/session.svelte';
 
   import Navigation from '../Navigation.svelte';
   import { barAfterScroll, shown, type BarScroll } from './barOnScroll';
+  import SearchButton from './SearchButton.svelte';
 
-  /** The destinations along the bottom of a compact screen; absent on a wide one. */
+  /**
+   * The destinations along the bottom of a compact screen, with search beside them as its own circle, where iOS puts
+   * it on an iPhone; absent on a wide screen, whose header holds both.
+   */
   interface Props {
+    /** Whether search is offered here; the shell decides, as for the header. */
+    searchable: boolean;
     /** How tall the bar is, zero where it is not shown. */
     height?: number;
-    /** Slid below the screen edge while a page is read downwards, so a recipe gets the screen; see `barAfterScroll`. */
-    hidden?: boolean;
   }
 
-  let { height = $bindable(0), hidden = $bindable(false) }: Props = $props();
+  let { searchable, height = $bindable(0) }: Props = $props();
+
+  /** Receded to icons while a page is read downwards, so a recipe gets the screen; see `barAfterScroll`. */
+  let compact = $state(false);
 
   let scroll: BarScroll = shown;
 
   function follow(next: BarScroll) {
     scroll = next;
-    hidden = next.hidden;
+    compact = next.compact;
   }
 
   // No bar without a household, and nothing for the page to keep clear of.
@@ -28,7 +37,7 @@
     if (!session.activeHouseholdId) height = 0;
   });
 
-  // A new page starts with the way out in view.
+  // A new page starts with the bar in full.
   $effect(() => {
     void page.url.pathname;
     follow(shown);
@@ -69,11 +78,14 @@
 {#if session.activeHouseholdId}
   <div
     class="bar"
-    class:hidden
     bind:clientHeight={height}
-    onfocusin={() => follow({ hidden: false, anchor: window.scrollY })}
+    onfocusin={() => follow({ compact: false, anchor: window.scrollY })}
   >
-    <Navigation placement="bottom" />
+    <EdgeEffect edge="bottom" />
+    <div class="row">
+      <Navigation placement="bottom" {compact} />
+      {#if searchable}<div class="find"><SearchButton /></div>{/if}
+    </div>
   </div>
 {/if}
 
@@ -83,18 +95,52 @@
     position: sticky;
     bottom: 0;
     z-index: var(--z-shell);
-    /* The measured frame includes the floating gap and the home indicator, so other docks clear it. */
+    /*
+     * The measured frame includes the gap below the dock, so other docks clear it. The dock sits into the home
+     * indicator's strip as an iOS tab bar does, never closer to the edge than a floating surface keeps.
+     */
     padding-top: var(--space-2);
-    padding-bottom: max(var(--space-2), env(safe-area-inset-bottom, 0px));
+    padding-bottom: max(
+      var(--screen-inset),
+      calc(env(safe-area-inset-bottom, 0px) - var(--space-3))
+    );
     padding-inline: max(var(--space-3), env(safe-area-inset-left, 0px))
       max(var(--space-3), env(safe-area-inset-right, 0px));
     pointer-events: none;
-    transition: transform var(--duration-base) var(--ease-out);
   }
 
-  /* Slid below the screen edge rather than removed, so the page does not reflow under the reader. */
-  .hidden {
-    transform: translateY(100%);
+  /* Destinations and search on one line, search a separate circle at the trailing end. */
+  .row {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    gap: var(--space-2);
+    max-width: 36rem;
+    margin-inline: auto;
+  }
+
+  .row > :global(nav) {
+    flex: 1;
+    min-width: 0;
+    margin-inline: 0;
+  }
+
+  /* The same glass as the dock, as tall as it, and round. */
+  .find {
+    display: flex;
+    flex-shrink: 0;
+    aspect-ratio: 1;
+    border-radius: var(--radius-full);
+    background: var(--surface-nav-glass);
+    backdrop-filter: var(--glass-filter);
+    box-shadow: var(--shadow-glass);
+    pointer-events: auto;
+  }
+
+  .find :global(.search) {
+    width: 100%;
+    height: 100%;
   }
 
   @media (width < 64rem) {

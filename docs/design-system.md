@@ -38,9 +38,10 @@ minus the padding between):
 | --------------- | ------- | ----------------------------------------------------------------------------------------------- |
 | `--radius-sm`   | 6px     | tags inside text, code                                                                          |
 | `--radius-md`   | 12px    | fields, list cells, notices                                                                     |
-| `--radius-lg`   | 20px    | cards, photos, popovers, toasts, week days                                                      |
-| `--radius-xl`   | 28px    | sheets and dialogs                                                                              |
+| `--radius-lg`   | 20px    | cards, photos, popovers, toasts, week days, grouped list sections                               |
+| `--radius-xl`   | 28px    | dialogs, wide-screen sheets, a phone's sheet at its large detent                                |
 | `--radius-full` | capsule | every control a finger presses: buttons, chips, search fields, segmented controls, icon buttons |
+| `--radius-screen` | ~54px | the phone's own corner; a surface floating near it takes this minus its `--screen-inset`      |
 
 The focus ring follows the element's own corners; only text links get a slight
 radius of their own.
@@ -56,7 +57,7 @@ text arrows. The `@` glyph and keyboard hint appear only in a step's mention
 list, not in ordinary comboboxes.
 
 **Header.** The brand stays left and the navigation centred; on the right,
-search and the account menu are pinned to the edge, and a page's own
+search (from 64rem; a phone's is beside the bottom bar) and the account menu are pinned to the edge, and a page's own
 action (today only "new recipe" on the library) sits before them, so nothing
 moves when it comes and goes. The header is capped at `--layout-wide`, so its
 right column never grows: the create button is a plus (named by its label and
@@ -74,6 +75,63 @@ every width.
   settings column. One column at the reading measure.
 
 A new page names its template instead of inventing a fourth width.
+
+## Liquid Glass (28 October 2026)
+
+From reading Apple's *Adopting Liquid Glass*, *Liquid Glass*, *Interface fundamentals* and *Preparing your app for
+iPhone Duo* (epic `culina-v2-njha`). Culina is a web page in a WKWebView, so none of the SwiftUI or UIKit glass
+APIs reach it; what carries over is the discipline.
+
+**Glass is the layer above content, never content.** One token, `--glass-filter` (`scales.css`), is the only
+backdrop blur; the design-system lint (`findStrayGlass`) fails on any other, except the scroll edge effect's own
+stacked ramp in `EdgeEffect`. The audit of the nine surfaces that blurred:
+
+| Surface | Decision |
+| --- | --- |
+| Header brand, top navigation, header tools | glass: navigation over content |
+| Phone dock and its search circle | glass (new): navigation over content |
+| Recipe phone bar's Back circle | glass (new): a toolbar over the photo |
+| Button `media` variant | glass: a control on a photograph |
+| Now cooking pill | glass: the bar's accessory over content |
+| Editor rail (phone), settings category rail | glass: navigation pinned over content |
+| Ingredient quick look | **solid** `--surface-overlay`: content, and every other popover is solid |
+| Image generating status | **solid**: a status, not a control; `--generating-panel` is denser instead |
+| Cook-mode controls | solid, as before: a large panel read across a counter |
+
+**The person's display settings win.** `data-transparency` and `data-contrast` sit on `<html>` beside
+`data-mode`, stamped by `app.html` before the first paint and followed by `displaySettings.ts`; the iOS app
+reports Reduce Transparency itself (`CulinaDisplayPlugin.swift`), since WebKit cannot. Either setting makes every
+glass token solid and the edge effect a solid band with a hairline (`tokens/accessibility.css`). Increase
+Contrast also takes each theme's `[data-mode][data-contrast='more']` block: muted text at 7:1, edges and the
+accent a step further from the ground. `themes.spec.ts` reads those blocks over their mode and checks them.
+
+**Scroll edge effect.** `EdgeEffect` frosts the page under a floating bar (the header, the phone dock, the
+recipe's phone bar once its title has scrolled away) instead of a solid strip or a hairline.
+
+**The phone dock** is a glass capsule concentric with the screen's corner, its search a separate glass circle at
+the trailing end (Apple puts search at the bottom on an iPhone; from 64rem it is in the header). Reading down a
+page recedes it to its icons at the 44px floor rather than sliding it away, as an iOS tab bar minimises: every
+destination stays one tap away, and what is under way stays above it. The current destination is a neutral
+raised lens with its icon and label in the accent, not an accent tile (decided 28 October 2026,
+`culina-v2-njha.8`): Apple asks for colour in navigation to stay sparing, and the accent on the raised lens
+reads at 6.5:1 light and 7.8:1 dark (checked in `themes.spec.ts`), above the 3.9:1 that kept the old tile's label
+in plain text.
+
+**Sheets.** A phone's sheet floats inset from the screen's edges by `--screen-inset`, every corner rounded
+concentric with the screen's; at the large detent it is flush and full width again, as iOS's is once expanded.
+`Popover`'s phone sheet follows the same geometry.
+
+**Menus open from their trigger.** Every `ActionMenu` already does. The account menu stays a sheet on a phone
+(decided in `84a42b1e`): it is a long panel of choices, not a short list of actions.
+
+**Controls answer a touch.** A held `Switch` knob stretches and lifts; a held `SegmentedControl` thumb swells 4%.
+
+**Native.** The iOS app follows Dynamic Type (`dynamicType.ts` scales the root font from WebKit's
+`-apple-system-body`), and its icon is a layered Icon Composer document (`native/ios/App/App/AppIcon.icon`) with
+default, dark, clear and tinted appearances; the asset catalog's PNG remains for iOS before 26. Cook mode on a
+foldable half open like a laptop gives the controls the lower segment whole (`vertical-viewport-segments`), so
+nothing sits in the fold; WebKit does not report segments yet, and the Xcode 27.0 SDK has no reserved-region API
+or iPhone Duo simulator, so this works on Android foldables today and on iPhone Duo once either arrives.
 
 ## September 2026 refinement
 
@@ -115,7 +173,8 @@ plus and a short verb ("Rezept", "Kochbuch", "Eintragen"), its accessible name t
 full wording starting with the visible words. The header holds navigation, search
 and the account only; it has no "+". Per-row adds (a day's "+" in Woche, a meal's
 "+" in the diary) stay where they are and add no title-row button. The phone dock
-always shows each destination's label under its icon.
+shows each destination's label under its icon, and recedes to the icons alone while a page is read
+downwards (see *Liquid Glass*, below).
 The logo and main navigation retain their matched translucent backgrounds.
 Current destinations use a raised selection shadow, text emphasis, and
 `aria-current`. Every navigation item is a link, not a modal launcher.
@@ -249,11 +308,11 @@ never `--surface-raised` or `--border-strong` directly:
 --field-border   --field-border-hover   --field-border-focus  --field-border-error
 ```
 
-Decided 28 October 2026 (culina-v2-6ilt.12): **a field is white on the warm page**, where white says
-"write here", and takes **the inset fill inside a white group** (`Card`, `ListSection`, a settings
-group, a dialog or sheet, a popover), where a white field would vanish into the white. Those containers
-swap one token, `--field-surface: var(--field-surface-inset)`; nothing else changes (border, focus and
-error are the same everywhere). A cream group (`--surface-sunken`) keeps white fields. **A disabled
+Decided 29 October 2026, replacing the 28 October split (culina-v2-6ilt.12): **every field has the
+inset fill** (`--c-sand-75`; `--c-forest-950` in dark), on the warm page as inside a white group, so a
+field looks the same wherever it sits. `--field-surface` and `--field-surface-inset` hold the same
+value; the groups that still swap one for the other (`Card`, `ListSection`, a dialog or sheet, a
+popover) change nothing by it. Border, focus and error are the same everywhere. **A disabled
 field has no fill and a dashed edge**, so it never shares a colour with an enabled one (the navbar's
 sand, once proposed for fields, was exactly the old disabled fill). The gallery's "Field surfaces"
 section (`/design`, gallery builds only) shows the three grounds at rest, focused, invalid and

@@ -200,7 +200,7 @@
     border-color: var(--border-on-media);
     background: var(--control-on-media);
     color: var(--text-on-media);
-    backdrop-filter: blur(12px) saturate(140%);
+    backdrop-filter: var(--glass-filter);
   }
 
   .media:hover:not([aria-disabled='true']) {

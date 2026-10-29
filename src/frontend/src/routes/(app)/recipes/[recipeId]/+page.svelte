@@ -10,13 +10,14 @@
   import { cooking } from '$features/cooking/stores/cooking.svelte';
   import { notes } from '$features/cooking/stores/notes.svelte';
   import { metaFigureOf } from '$features/nutrition/headline';
+  import { upcoming } from '$features/planning/upcoming.svelte';
+  import { dayOf } from '$features/planning/weekDates';
   import NutritionPanel from '$features/nutrition/NutritionPanel.svelte';
   import { nutrition } from '$features/nutrition/stores/nutrition.svelte';
   import DietQuestion from '$features/recipes/DietQuestion.svelte';
   import RecipeBackLink from '$features/recipes/detail/RecipeBackLink.svelte';
   import RecipeSheets, { type RecipeSheet } from '$features/recipes/detail/RecipeSheets.svelte';
   import RecipeStub from '$features/recipes/detail/RecipeStub.svelte';
-  import RecipeWhereabouts from '$features/recipes/detail/RecipeWhereabouts.svelte';
   import { useDietAnswer } from '$features/recipes/detail/useDietAnswer.svelte';
   import { useRecipeActions } from '$features/recipes/detail/useRecipeActions.svelte';
   import { useRecipeDeletion } from '$features/recipes/detail/useRecipeDeletion.svelte';
@@ -73,6 +74,11 @@
   );
 
   const shelves = $derived(cookbooks.membershipsOf(recipeId));
+  /** The next meal it is planned for and not yet cooked: the plan action says the day, the servings offer its number. */
+  const planned = $derived.by(() => {
+    const next = upcoming.nextFor(recipeId);
+    return next && !next.cooked ? { day: dayOf(next.date), servings: next.servings } : null;
+  });
   const alreadyCooking = $derived(cooking.session?.recipeId === recipeId);
   /** Just made: the wrap-up is the next thing, so the cooking action steps aside meanwhile. */
   const wrappingUp = $derived(cookLog.justRecorded?.recipeId === recipeId);
@@ -105,6 +111,15 @@
   $effect(() => {
     if (recipeId) {
       void related.load(recipeId, session.activeHouseholdId);
+    }
+  });
+
+  // Where the recipe stands, which its plan and list actions say.
+  $effect(() => {
+    const household = session.activeHouseholdId;
+    if (household) {
+      void upcoming.load(household);
+      void shopping.load(household);
     }
   });
 
@@ -179,6 +194,7 @@
       cooked={{ count: cookLog.count, lastMadeAt: cookLog.lastMadeAt }}
       onaddtolist={() => (sheet = 'list')}
       listed={shopping.householdId === session.activeHouseholdId && shopping.holdsRecipe(recipeId)}
+      {planned}
       onTheList={shopping.householdId === session.activeHouseholdId
         ? (name) => shopping.onTheList(name)
         : undefined}
@@ -193,16 +209,7 @@
       nutrition={nutritionLink}
       stepNote={(id) => notes.stepNote(id)}
     >
-      {#snippet whereabouts()}
-        {#if session.activeHouseholdId && recipes.detail}
-          <RecipeWhereabouts
-            {recipeId}
-            householdId={session.activeHouseholdId}
-            {servings}
-            yields={recipes.detail}
-            onscale={actions.scale}
-          />
-        {/if}
+      {#snippet note()}
         <NotePeek {recipeId} />
       {/snippet}
     </RecipeSurface>

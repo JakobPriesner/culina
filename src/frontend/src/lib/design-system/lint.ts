@@ -127,3 +127,45 @@ export async function findUnknownTokens(root: string): Promise<string[]> {
 export const unknownTokenRemedy =
   'Use a step that exists, or add one to src/lib/design-system/tokens/scales.css. ' +
   'The scale is sparse on purpose: fewer choices make spacing consistent.';
+
+/** Where a backdrop blur may be spelled out: the token itself, and the scroll edge effect's stacked ramp. */
+const glassOwners = [
+  'src/lib/design-system/tokens/',
+  'src/lib/design-system/display/EdgeEffect.svelte'
+];
+
+/**
+ * Finds a backdrop-filter that is not the one glass (`var(--glass-filter)`) or `none`, and any `-webkit-` twin of it.
+ * A blur written in place is a glass Reduce Transparency cannot turn off, and the ninth slightly different one nobody
+ * meant. The twin is worse than redundant: the build's minifier folds a `var()` pair into the prefixed property alone,
+ * which Chrome and Firefox ignore, so the glass silently vanishes there; the minifier adds the prefix itself.
+ */
+export async function findStrayGlass(root: string): Promise<string[]> {
+  const violations: string[] = [];
+
+  for await (const entry of glob('src/**/*.{css,svelte}', { cwd: root })) {
+    const path = entry.replaceAll('\\', '/');
+
+    if (glassOwners.some((owner) => path.startsWith(owner))) {
+      continue;
+    }
+
+    const css = withoutComments(styleSource(path, await readFile(`${root}/${path}`, 'utf8')));
+
+    for (const match of css.matchAll(/(-webkit-)?backdrop-filter\s*:\s*([^;}]+)/g)) {
+      const value = match[2]!.trim();
+
+      if (match[1]) {
+        violations.push(`${path}:${lineOf(css, match.index)} writes the -webkit- twin (${value})`);
+      } else if (value !== 'var(--glass-filter)' && value !== 'none') {
+        violations.push(`${path}:${lineOf(css, match.index)} blurs with ${value}`);
+      }
+    }
+  }
+
+  return violations.sort();
+}
+
+export const strayGlassRemedy =
+  'Glass is one token: write `backdrop-filter: var(--glass-filter)` with no -webkit- twin, and only on what ' +
+  'floats above content. A different strength belongs in tokens/scales.css, not in a component.';

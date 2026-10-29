@@ -14,6 +14,7 @@ export { default as Avatar } from './display/Avatar.svelte';
 export { default as Badge } from './display/Badge.svelte';
 export { default as Meter } from './display/Meter.svelte';
 export { default as Chevron } from './display/Chevron.svelte';
+export { default as EdgeEffect } from './display/EdgeEffect.svelte';
 export { default as Icon } from './display/Icon.svelte';
 export { default as Image } from './display/Image.svelte';
 export { default as SectionLabel } from './display/SectionLabel.svelte';

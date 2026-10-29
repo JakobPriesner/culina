@@ -69,14 +69,13 @@
   data-plan-row={row || undefined}
 >
   <div class="top">
-    <!-- A tap on the day's name adds to it, as its "+" does; the "+" stays the way in for a keyboard. -->
-    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
-    <h2 class="name" onclick={onadd}>
+    <h2 class="name">
       <span class="label">{dayName(day.date, preferences.locale)}</span>
       <span class="date">{dayDate(day.date, preferences.locale)}</span>
     </h2>
 
-    <!-- The day's "+" at the end of its line, as a list's section adds to itself: no row of its own for a button. -->
+    <!-- The day's "+" at the end of its line, as a list's section adds to itself: no row of its own for a button. A tap
+         anywhere on the day off its cards and its diary line adds to it, as the "+" does. -->
     <div class="add">
       <IconButton
         label={m['plan.addOn']({ day: weekdayName(day.date, preferences.locale) })}
@@ -149,6 +148,7 @@
     min-width: 0;
     padding: var(--space-3);
     border-top: 1px solid var(--border);
+    position: relative;
     /* Lands clear of the floating header when a list line leads here. */
     scroll-margin-top: calc(var(--header-inset) + var(--space-4));
   }
@@ -205,7 +205,6 @@
     font-size: var(--text-base);
     font-weight: var(--weight-semibold);
     line-height: var(--leading-tight);
-    cursor: pointer;
   }
 
   .date {
@@ -228,6 +227,24 @@
   .add {
     flex: none;
     color: var(--text-muted);
+  }
+
+  /*
+   * The "+" reaches across its whole day, as a list section's does; the cards (positioned already) and the diary line
+   * come after it and sit above. Not scaled while pressed: that would shrink the reach to the button mid-click.
+   */
+  .add > :global(button)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+
+  .add > :global(button:active:not(:disabled)) {
+    transform: none;
+  }
+
+  .extra {
+    position: relative;
   }
 
   .meals {

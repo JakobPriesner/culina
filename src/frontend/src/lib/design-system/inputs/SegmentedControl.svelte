@@ -81,6 +81,17 @@
     box-shadow: var(--shadow-card);
   }
 
+  /* Held, the chosen segment's raised thumb swells a little under the finger, as an iOS control's does. */
+  .segments:has(.segment:active) :global(.selection-indicator) {
+    scale: 1.04;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .segments:has(.segment:active) :global(.selection-indicator) {
+      scale: none;
+    }
+  }
+
   /*
    * A phone: the whole row, each part grown from its label, so every option reads as a place to tap rather
    * than a word beside the chosen one, at a size a thumb finds. Still a pill, as on a wide screen; a label

@@ -72,6 +72,13 @@
           });
         }
         root.dataset.boot = boot;
+
+        // Reduce Transparency and Increase Contrast, read like the mode so glass is never painted first and then
+        // removed (tokens/accessibility.css; displaySettings.ts follows changes and the iOS app's own report).
+        root.dataset.transparency = matchMedia('(prefers-reduced-transparency: reduce)').matches
+          ? 'reduced'
+          : 'normal';
+        root.dataset.contrast = matchMedia('(prefers-contrast: more)').matches ? 'more' : 'normal';
       })();
     </script>
     <!--

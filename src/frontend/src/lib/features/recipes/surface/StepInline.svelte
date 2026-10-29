@@ -129,27 +129,26 @@
     >{/if}{/each}
 
 <style>
-  /* Marked words, not a control: a highlighter stroke under the lower half, weight on the amount.
-     Padding paid back by margin, so the words sit exactly where plain prose would; a button's own
-     tight line-height keeps lines with references no taller. */
+  /* A token, as Shortcuts draws a variable or Mail an address: accent words on a capsule of their tint, weight on the
+     amount, so an ingredient stands out of the sentence at a glance. A button's own tight line-height keeps lines with
+     references no taller. */
   .ingredient {
     display: inline-block;
     max-width: 100%;
-    padding: 0 0.12em;
-    margin: 0 -0.12em;
+    padding: 0.05em 0.35em;
     border: 0;
     border-radius: var(--radius-sm);
-    background-image: linear-gradient(var(--surface-highlight), var(--surface-highlight));
-    background-position: 0 100%;
-    background-repeat: no-repeat;
-    background-size: 100% 0.6em;
-    color: var(--text);
+    background: var(--surface-accent-subtle);
+    color: var(--accent);
     font: inherit;
     line-height: var(--leading-tight);
     text-align: inherit;
     vertical-align: baseline;
     cursor: pointer;
-    transition: background-size var(--duration-slow) ease;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+      background-color var(--duration-fast) var(--ease-out),
+      transform var(--duration-fast) var(--ease-out);
   }
 
   .ingredient .amount {
@@ -163,18 +162,26 @@
     outline-offset: 2px;
   }
 
-  /* Pointed at (here or from the ingredient list) the stroke fills the words, not a ring that would read as focus; the open quick look stays lit. */
+  /* Pointed at (here or from the ingredient list) the capsule deepens, not a ring that would read as focus; the open
+     quick look stays lit. Held, it gives a little under the finger, as an iOS button does. */
   .ingredient.is-highlighted {
-    background-size: 100% 100%;
-    transition-duration: var(--duration-fast);
-    transition-timing-function: var(--ease-out);
+    background-color: var(--surface-highlight);
   }
 
   @media (hover: hover) {
     .ingredient:hover {
-      background-size: 100% 100%;
-      transition-duration: var(--duration-fast);
-      transition-timing-function: var(--ease-out);
+      background-color: var(--surface-highlight);
+    }
+  }
+
+  .ingredient:active {
+    background-color: var(--surface-highlight);
+    transform: scale(var(--press-scale-small));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ingredient:active {
+      transform: none;
     }
   }
 
