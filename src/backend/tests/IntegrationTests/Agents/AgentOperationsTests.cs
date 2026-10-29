@@ -92,6 +92,8 @@ public class AgentOperationsTests(PostgresFixture postgres)
         "getDatabaseSettingsV1",
         "updateDatabaseSettingsV1",
         "getRegistrationPolicyV1",
+        "getProductSettingsV1",
+        "updateProductSettingsV1",
 
         // Pictures travel as files or a stream, which a tool cannot carry.
         "setRecipeImageV1",
@@ -129,11 +131,14 @@ public class AgentOperationsTests(PostgresFixture postgres)
         "getRecipeIntakePhotoV1",
         "reviewRecipeIntakeV1",
 
-        // What a household says a barcode is: it serves the scanner, and is not yet decided on for agents.
+        // What a household says a barcode is, and Open Food Facts' catalogue behind it: they serve the scanner, a
+        // catalogue lookup leaves the instance for a third party, and neither is yet decided on for agents.
         "getHouseholdProductV1",
         "listHouseholdProductsV1",
         "setHouseholdProductV1",
         "removeHouseholdProductV1",
+        "getCatalogueProductV1",
+        "searchCatalogueV1",
 
         // What the web app reports about itself and what it showed.
         "recordSuggestionImpressionsV1",
