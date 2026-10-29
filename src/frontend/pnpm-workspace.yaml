@@ -7,3 +7,8 @@ overrides:
   # ^0.6.0 (only 3 moved on), and 0.7 is the same API with the check added.
   # Remove this once @sveltejs/kit no longer resolves to a 0.6.
   cookie@<0.7.0: ^0.7.2
+  # GHSA-4w7w-5xrc-9h26, GHSA-2m5v-pch6-74hx, GHSA-qrxm-fqhp-jwvm and the cache-poisoning
+  # advisory beside them: undici 8 before 8.12.2. Only jsdom asks for it, for the unit
+  # tests; 8.12.2 is a patch release of the same API. Remove this once jsdom resolves to
+  # a patched undici on its own.
+  undici@>=8.0.0 <8.12.2: ^8.12.2
