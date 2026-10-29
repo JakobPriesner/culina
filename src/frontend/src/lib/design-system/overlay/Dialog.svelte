@@ -205,6 +205,8 @@
   bind:this={element}
   class="dialog {placement}"
   aria-labelledby={titleId}
+  aria-hidden={open ? undefined : true}
+  inert={!open}
   onclose={synchronise}
   onpointerdown={pressBackdrop}
   onclick={dismissOnBackdrop}

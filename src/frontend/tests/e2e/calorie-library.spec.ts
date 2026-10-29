@@ -20,22 +20,25 @@ test.describe('calories in the overview @offline', () => {
     await expect(card.locator('.calories')).toContainText('kcal');
     await expect(page.locator('.feature .calories').first()).toBeVisible();
 
-    const info = card.getByRole('button', { name: 'About calorie values' });
+    // A grid of cards says what the figure means once, on the featured card, not thirty times.
+    await expect(card.getByRole('button', { name: 'About calorie values' })).toHaveCount(0);
+    const feature = page.locator('.feature').first();
+    const info = feature.getByRole('button', { name: 'About calorie values' });
     if (testInfo.project.name === 'desktop') {
       await info.focus();
       await page.keyboard.press('Enter');
     } else {
       await info.tap();
     }
-    await expect(card.locator('.explanation')).toBeVisible();
-    await expect(card.locator('.explanation')).toContainText('minimum');
-    await expect(card.locator('.explanation')).toContainText('per serving');
+    const explanation = feature.locator('.explanation');
+    await expect(explanation).toBeVisible();
+    await expect(explanation).toContainText('per serving');
     await expect(page).toHaveURL(/\/$/);
     await expect(page.getByRole('complementary', { name: /^Cooking / })).toBeVisible();
     const accessibility = await new AxeBuilder({ page }).analyze();
     expect(accessibility.violations).toEqual([]);
     await page.keyboard.press('Escape');
-    await expect(card.locator('.explanation')).toBeHidden();
+    await expect(explanation).toBeHidden();
     await expectReflow(page);
     await page.screenshot({ path: testInfo.outputPath('calorie-overview.png'), fullPage: true });
   });

@@ -43,7 +43,10 @@ test.describe('cooking a recipe', () => {
     });
 
     await page.goto(`/recipes/${recipeId}`);
-    await page.getByRole('button', { name: /^(start cooking|kochen starten)$/i }).click();
+    await page
+      .getByRole('button', { name: /^(start cooking|kochen starten)$/i })
+      .first()
+      .click();
 
     await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/cook`));
 
@@ -148,7 +151,10 @@ test.describe('cooking a recipe', () => {
     await page.getByRole('textbox', { name: /your notes|deine notizen/i }).fill(note);
     await expect(page.getByRole('status').filter({ hasText: /saved|gespeichert/i })).toBeVisible();
 
-    await page.getByRole('button', { name: /^(start cooking|kochen starten)$/i }).click();
+    await page
+      .getByRole('button', { name: /^(start cooking|kochen starten)$/i })
+      .first()
+      .click();
     await page.getByRole('button', { name: /your notes|deine notizen/i }).click();
 
     const sheet = page.getByRole('dialog', { name: /your notes|deine notizen/i });
@@ -157,7 +163,12 @@ test.describe('cooking a recipe', () => {
     await expect(sheet.getByRole('textbox').first()).toHaveValue(note);
 
     await sheet.getByRole('button', { name: /^(close|schließen)$/i }).click();
-    await page.getByRole('button', { name: /^(stop cooking|kochen beenden)$/i }).click();
+    // A phone keeps "stop" in the kitchen sheet; a wide screen shows it on the cooking bar.
+    const stop = page.getByRole('button', { name: /^(stop cooking|kochen beenden)$/i });
+    if (!(await stop.isVisible())) {
+      await page.getByRole('button', { name: /^(kitchen controls|küchensteuerung)$/i }).click();
+    }
+    await stop.click();
   });
 
   test('puts the biggest target under the thumb that is pressed most', async () => {

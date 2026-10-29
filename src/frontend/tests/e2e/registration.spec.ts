@@ -43,11 +43,15 @@ test.describe('the first-run path', () => {
     await expect(page).toHaveURL(/\/login/);
 
     await page.goto('/week/shopping');
-    await expect(page).toHaveURL(/\/login\?next=%2Fshopping/);
+    await expect(page).toHaveURL(/\/login\?next=%2Fweek%2Fshopping/);
 
     await signIn(page, email, password);
 
-    await expect(page).toHaveURL(/\/week\/shopping$/);
+    // Wide screens show the requested list beside the plan on Woche's paired page.
+    await expect(page).toHaveURL(/\/week\/(shopping|plan)$/);
+    await expect(
+      page.getByRole('combobox', { name: /what to buy|was du brauchst/i })
+    ).toBeVisible();
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   });
 });

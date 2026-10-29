@@ -70,7 +70,9 @@ test.describe('a household that inherits another', () => {
 
       await expect(page.getByText(/can change it|ändern kann es aber nur/i)).toBeVisible();
 
-      await expect(page.getByRole('button', { name: /^(add to plan|einplanen)$/i })).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: /^(add to plan|einplanen|plan|planen)$/i })
+      ).toBeVisible();
       await expect(page.getByRole('link', { name: /^(edit|bearbeiten)$/i })).toHaveCount(0);
       await expect(
         page.getByRole('button', { name: /^(delete recipe|rezept löschen)$/i })

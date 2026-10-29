@@ -102,7 +102,11 @@ test.describe('the shopping list', () => {
 
     for (const recipeId of [cake, biscuits]) {
       await page.goto(`/recipes/${recipeId}`);
-      await page.getByRole('button', { name: /shopping list|einkaufsliste/i }).click();
+      await page
+        .getByRole('button', {
+          name: /^(add to the shopping list|auf die einkaufsliste|shop|einkaufen)$/i
+        })
+        .click();
       await page
         .getByRole('button', { name: /^(add \d+ ingredients?|\d+ zutat(en)? hinzufügen)$/i })
         .click();
@@ -133,7 +137,11 @@ test.describe('the shopping list', () => {
     });
 
     await page.goto(`/recipes/${recipeId}?yield=6`);
-    await page.getByRole('button', { name: /shopping list|einkaufsliste/i }).click();
+    await page
+      .getByRole('button', {
+        name: /^(add to the shopping list|auf die einkaufsliste|shop|einkaufen)$/i
+      })
+      .click();
     await page
       .getByRole('button', { name: /^(add \d+ ingredients?|\d+ zutat(en)? hinzufügen)$/i })
       .click();

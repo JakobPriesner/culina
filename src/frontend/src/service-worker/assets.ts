@@ -41,7 +41,9 @@ export async function assetResponse(event: FetchEvent, url: URL): Promise<Respon
   const cache = await caches.open(cacheName);
 
   if (hashedBuildFiles.has(url.pathname)) {
-    const cached = await cache.match(request);
+    // Installation and module/style requests can send different Origin/Accept headers. A proxy's Vary
+    // must not hide the installed copy: the content hash fixes these files' bytes for every request.
+    const cached = await cache.match(request, { ignoreVary: true });
 
     if (cached) {
       return cached;

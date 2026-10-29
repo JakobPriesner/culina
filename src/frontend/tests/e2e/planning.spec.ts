@@ -135,7 +135,7 @@ test.describe('planning a week', () => {
     });
 
     await page.goto(`/recipes/${recipeId}?yield=5`);
-    await page.getByRole('button', { name: /add to plan|einplanen/i }).click();
+    await page.getByRole('button', { name: /^(add to plan|einplanen|plan|planen)$/i }).click();
 
     const sheet = page.getByRole('dialog', { name: new RegExp(plannedTitle) });
 
@@ -293,7 +293,11 @@ const everythingOnTheList =
 /** The recipe's whole ingredient list onto the shopping list, through its sheet. */
 async function addToList(page: Page, recipeId: string) {
   await page.goto(`/recipes/${recipeId}`);
-  await page.getByRole('button', { name: /shopping list|einkaufsliste/i }).click();
+  await page
+    .getByRole('button', {
+      name: /^(add to the shopping list|auf die einkaufsliste|shop|einkaufen)$/i
+    })
+    .click();
   await page
     .getByRole('button', { name: /^(add \d+ ingredients?|\d+ zutat(en)? hinzufügen)$/i })
     .click();
@@ -367,6 +371,40 @@ async function dayOtherThan(page: Page, date: string): Promise<string> {
 }
 
 /**
+ * The card in the middle of the screen, clear of the sticky header (a press under it never reaches the card) and of the
+ * floating dock. Scrolled at once rather than smoothly, then read only once it holds still: a finger's swipe just
+ * before keeps the page coasting, and boxes read mid-scroll miss both ends of the drag.
+ */
+async function bringIntoReach(page: Page, card: Locator): Promise<void> {
+  await expect
+    .poll(async () => {
+      await card.evaluate((element) =>
+        element.scrollIntoView({ block: 'center', behavior: 'instant' })
+      );
+      const before = (await card.boundingBox())?.y;
+      await page.waitForTimeout(200);
+      return before === (await card.boundingBox())?.y;
+    })
+    .toBe(true);
+}
+
+/**
+ * Where to let go over a day: just inside its edge nearest the card, so a day grown tall with meals is still met on
+ * screen, next to the card, rather than at a middle that may lie under the dock or past the screen's end.
+ */
+function dropPoint(
+  from: { y: number },
+  onto: { x: number; y: number; width: number; height: number }
+) {
+  const inside = Math.min(48, onto.height / 2);
+
+  return {
+    x: onto.x + onto.width / 2,
+    y: onto.y > from.y ? onto.y + inside : onto.y + onto.height - inside
+  };
+}
+
+/**
  * Picks a card up and puts it down on another day, in steps like a hand; both ends are scrolled
  * into view first.
  */
@@ -374,8 +412,7 @@ async function dragCardOnto(page: Page, title: string, date: string): Promise<vo
   const card = cardOf(page, title);
   const target = page.locator(`[data-plan-day="${date}"]`);
 
-  await target.scrollIntoViewIfNeeded();
-  await card.scrollIntoViewIfNeeded();
+  await bringIntoReach(page, card);
 
   // By its title: the card's middle can be its list or cook control, which stay clicks.
   const from = await card.getByRole('link', { name: title, exact: true }).boundingBox();
@@ -389,10 +426,7 @@ async function dragCardOnto(page: Page, title: string, date: string): Promise<vo
   const start = { x: from.x + from.width / 2, y: from.y + from.height / 2 };
 
   // Kept clear of the screen edges, where a real drag would start scrolling.
-  const to = {
-    x: onto.x + onto.width / 2,
-    y: Math.max(96, Math.min(onto.y + onto.height / 2, viewport.height - 96))
-  };
+  const to = dropPoint(from, onto);
 
   // Watched before the button comes up: the move is sent immediately and the optimistic redraw
   // would let a reload beat the request.
@@ -426,8 +460,7 @@ async function touchDragOnto(
   const card = cardOf(page, title);
   const target = page.locator(`[data-plan-day="${date}"]`);
 
-  await target.scrollIntoViewIfNeeded();
-  await card.scrollIntoViewIfNeeded();
+  await bringIntoReach(page, card);
 
   // By its title: the card's middle can be its list or cook control, which stay clicks.
   const from = await card.getByRole('link', { name: title, exact: true }).boundingBox();
@@ -439,10 +472,7 @@ async function touchDragOnto(
   }
 
   const start = { x: from.x + from.width / 2, y: from.y + from.height / 2 };
-  const to = {
-    x: onto.x + onto.width / 2,
-    y: Math.max(96, Math.min(onto.y + onto.height / 2, viewport.height - 96))
-  };
+  const to = dropPoint(from, onto);
 
   const touch = await page.context().newCDPSession(page);
   const at = (x: number, y: number) => ({ x: Math.round(x), y: Math.round(y) });

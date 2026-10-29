@@ -26,6 +26,7 @@
   import PlanWeekSkeleton from '$features/planning/PlanWeekSkeleton.svelte';
   import { PlanWindow } from '$features/planning/planWindow.svelte';
   import { usePlanActions } from '$features/planning/usePlanActions.svelte';
+  import { rangeOf } from '$features/planning/weekDates';
   import { WeekDrag } from '$features/planning/weekDrag.svelte';
   import type { RecipeSummary } from '$features/recipes/types';
   import { lineMarks } from '$features/shopping/lineMarks.svelte';
@@ -61,6 +62,11 @@
     week: Number.isNaN(askedWeek) ? null : askedWeek,
     listBeside: listBeside.current
   });
+
+  // On a narrow phone the range shares its row with back, today and forward: the dates alone, no weekdays.
+  const range = $derived(
+    narrow.current ? rangeOf(shown.start, preferences.locale, shown.count, true) : shown.range
+  );
 
   // `?tag=`, also for a link followed on this page from the list beside the week: only the address is followed.
   $effect(() => {
@@ -155,7 +161,7 @@
   <div class="week" data-plan-scroller={listBeside.current || undefined}>
     <PlanHeader
       title={shown.title}
-      range={shown.range}
+      {range}
       from={shown.start}
       to={shown.end}
       locale={preferences.locale}

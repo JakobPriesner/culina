@@ -157,9 +157,13 @@ describe("a dialog's content", () => {
     renderWithProviders(DialogHarness, {});
 
     await userEvent.click(open());
+    const surface = dialog();
     await userEvent.click(screen.getByRole('button', { name: 'Close' }));
 
     expect(field()).toBeInTheDocument();
+    // The exit is still painted, but its fields must no longer compete with the next dialog.
+    expect(surface).toHaveAttribute('aria-hidden', 'true');
+    expect(surface).toHaveProperty('inert', true);
 
     finishExit();
 

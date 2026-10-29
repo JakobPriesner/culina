@@ -65,7 +65,7 @@ describe('the household’s ingredient names', () => {
     await show();
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Rename or merge “Hühnchenbrustfilet”' })
+      screen.getByRole('button', { name: 'Rename / merge “Hühnchenbrustfilet”' })
     );
 
     const field = screen.getByRole('textbox', { name: 'New name for “Hühnchenbrustfilet”' });
@@ -87,7 +87,7 @@ describe('the household’s ingredient names', () => {
     await show();
 
     await userEvent.click(
-      screen.getByRole('button', { name: 'Rename or merge “Hühnchenbrustfilet”' })
+      screen.getByRole('button', { name: 'Rename / merge “Hühnchenbrustfilet”' })
     );
 
     const field = screen.getByRole('textbox', { name: 'New name for “Hühnchenbrustfilet”' });

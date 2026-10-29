@@ -367,8 +367,9 @@
     }
   }
 
-  /* Two short labels and two circles need about 383px; narrower (a 360 or 320px phone), editing joins the menu, first in it. */
-  @media (width < 24rem) {
+  /* Two short labels and two circles need about 383px of row, which the page's gutters leave from a 416px screen;
+     narrower (a 390, 360 or 320px phone), editing joins the menu, first in it, so the row stays one line. */
+  @media (width < 26rem) {
     .edit-in-menu .edit {
       display: none;
     }

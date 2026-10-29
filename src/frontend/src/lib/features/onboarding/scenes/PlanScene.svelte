@@ -90,7 +90,7 @@
         type="button"
         class="day"
         class:chosen={day === index}
-        aria-label={one.long}
+        aria-label={`${one.short}, ${one.long}`}
         aria-pressed={day === index}
         disabled={day !== null && day !== index}
         onclick={() => place(index)}

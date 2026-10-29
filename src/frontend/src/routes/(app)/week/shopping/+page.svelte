@@ -32,15 +32,18 @@
 
 <svelte:head><title>{m['shopping.title']()}</title></svelte:head>
 
-<WocheSwitch view="list" />
-<!-- Read in a column of its own measure, starting where the plan does, so flipping Plan | Liste moves nothing. -->
-<div class="list">
-  <ShoppingListView>
-    {#snippet seam()}
-      {#if householdId}<WeekToList {householdId} week={monday} offset={0} />{/if}
-    {/snippet}
-  </ShoppingListView>
-</div>
+<!-- A wide screen redirects to the paired page. Do not offer a field here whose draft that navigation would discard. -->
+{#if !listBeside.current}
+  <WocheSwitch view="list" />
+  <!-- Read in a column of its own measure, starting where the plan does, so flipping Plan | Liste moves nothing. -->
+  <div class="list">
+    <ShoppingListView>
+      {#snippet seam()}
+        {#if householdId}<WeekToList {householdId} week={monday} offset={0} />{/if}
+      {/snippet}
+    </ShoppingListView>
+  </div>
+{/if}
 
 <style>
   .list {

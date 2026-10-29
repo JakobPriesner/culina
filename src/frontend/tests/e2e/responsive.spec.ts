@@ -502,8 +502,9 @@ test.describe('responsive production layouts @offline', () => {
     await page.goto(`/recipes/${recipeId}`);
 
     const title = page.getByRole('heading', { level: 1 });
-    // The stepper, at the top of the ingredients, which come before the tags and the note on a phone.
-    const servings = page.locator('article.surface .ingredients .servings .stepper');
+    const actions = page.locator('article.surface .head .actions');
+    // The ingredients, which come before the tags and the note on a phone.
+    const ingredients = page.locator('article.surface .ingredients');
     // The recipe's own cooking action leads back; the floating pill stays off its page.
     const resume = page.getByRole('button', { name: 'Weiterkochen' });
     await expect(title).toBeVisible();
@@ -513,14 +514,18 @@ test.describe('responsive production layouts @offline', () => {
     // The shell header gives way to the recipe's own sticky back bar.
     await expect(page.locator('.shell > header.header')).toBeHidden();
 
-    // The photo is big on purpose (4:3, at most 18rem); the title and servings must still clear the bar.
+    // The photo is big on purpose (4:3, at most 18rem). Since the actions left the photograph for a row of their own
+    // and the description joined the head, the servings no longer fit above the bar on a phone; the title and that
+    // one row of actions must still clear it, and the ingredients start on the first screen.
     const hero = (await page.locator('article.surface > .hero').boundingBox())!;
     expect(hero.height).toBeLessThanOrEqual(288);
     const resumeBox = (await resume.boundingBox())!;
     const titleBox = (await title.boundingBox())!;
     expect(titleBox.y + titleBox.height).toBeLessThan(resumeBox.y);
-    const servingsBox = (await servings.boundingBox())!;
-    expect(servingsBox.y + servingsBox.height).toBeLessThan(resumeBox.y);
+    const actionsBox = (await actions.boundingBox())!;
+    expect(actionsBox.height).toBeLessThanOrEqual(56);
+    expect(actionsBox.y + actionsBox.height).toBeLessThan(resumeBox.y);
+    expect((await ingredients.boundingBox())!.y).toBeLessThan(resumeBox.y);
     await expectReflow(page);
     await page.screenshot({ path: testInfo.outputPath('recipe-reading-390.png') });
   });

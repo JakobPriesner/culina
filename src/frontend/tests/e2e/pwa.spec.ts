@@ -64,6 +64,48 @@ test.describe('the service worker @offline', () => {
     expect(cached.filter((path) => path.startsWith('/api'))).toEqual([]);
     expect(cached).toContain('/');
   });
+
+  test('opens cached build files offline when request headers differ from installation', async ({
+    page,
+    context
+  }) => {
+    await page.goto('/');
+    await activeWorkerState(page);
+    await page.reload();
+    await expect
+      .poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
+      .toBe(true);
+
+    // A proxy can add Vary (the preview adds Vary: Origin). Installation and a later module/style request
+    // need not send the same headers, but a content-hashed build file still has exactly the same bytes.
+    const asset = await page.evaluate(async () => {
+      const name = (await caches.keys()).find((key) => key.startsWith('culina-'))!;
+      const cache = await caches.open(name);
+      const key = (await cache.keys()).find((request) =>
+        /\/_app\/immutable\/.*\.css$/.test(new URL(request.url).pathname)
+      )!;
+      const response = (await cache.match(key))!;
+      const body = await response.text();
+      const headers = new Headers(response.headers);
+
+      headers.set('Vary', 'Accept');
+      await cache.delete(key, { ignoreVary: true });
+      await cache.put(new Request(key.url), new Response(body, { headers }));
+
+      return { url: key.url, body };
+    });
+
+    await context.setOffline(true);
+    const body = await page.evaluate(async (url) => {
+      // eslint-disable-next-line no-restricted-globals -- Exercises the browser's static asset cache, not the API.
+      const response = await fetch(url, { cache: 'no-store', headers: { Accept: 'text/css' } });
+
+      return response.text();
+    }, asset.url);
+
+    expect(body).toBe(asset.body);
+    await context.setOffline(false);
+  });
 });
 
 /** The offline badge: a statement, not an alarm; it lives in the signed-in shell, so this needs an account. */

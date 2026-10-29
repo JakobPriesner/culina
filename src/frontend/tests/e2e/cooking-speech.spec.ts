@@ -56,7 +56,10 @@ test.describe('hearing a step', () => {
       page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken);
 
     await page.goto(`/recipes/${recipeId}`);
-    await page.getByRole('button', { name: /^(start cooking|kochen starten)$/i }).click();
+    await page
+      .getByRole('button', { name: /^(start cooking|kochen starten)$/i })
+      .first()
+      .click();
     await expect(page).toHaveURL(new RegExp(`/recipes/${recipeId}/cook`));
 
     await page.getByRole('button', { name: /^(read step aloud|schritt vorlesen)$/i }).click();

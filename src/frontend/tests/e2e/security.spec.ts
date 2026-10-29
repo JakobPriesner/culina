@@ -70,13 +70,17 @@ test.describe('the way in', () => {
 
     await strangersPage.goto('/week/shopping');
 
-    await expect(strangersPage).toHaveURL(/\/login\?next=%2Fshopping/);
+    await expect(strangersPage).toHaveURL(/\/login\?next=%2Fweek%2Fshopping/);
 
     await strangersPage.getByLabel(/email|e-mail/i).fill(who.email);
     await strangersPage.getByRole('textbox', { name: /password|passwort/i }).fill(who.password);
     await strangersPage.getByRole('button', { name: /(^|\s)(sign (me )?in|anmelden)$/i }).click();
 
-    await expect(strangersPage).toHaveURL(/\/week\/shopping$/);
+    // Wide screens show the requested list beside the plan on Woche's paired page.
+    await expect(strangersPage).toHaveURL(/\/week\/(shopping|plan)$/);
+    await expect(
+      strangersPage.getByRole('combobox', { name: /what to buy|was du brauchst/i })
+    ).toBeVisible();
     await expect(strangersPage.getByRole('heading', { level: 1 })).toBeVisible();
 
     await stranger.close();

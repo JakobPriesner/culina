@@ -37,11 +37,12 @@
   onmouseleave={() => onhover?.(null)}
 >
   {#if scalable && amount.text}
+    <!-- The name starts with the amount it shows, so "600 g" said aloud presses it (WCAG 2.5.3). -->
     <button
       type="button"
       class="amount scale"
-      aria-label={m['recipe.scaleFrom']({ name: line.name })}
-      title={m['recipe.scaleFrom']({ name: line.name })}
+      aria-label={m['recipe.scaleFrom']({ amount: amount.text, name: line.name })}
+      title={m['recipe.scaleFrom']({ amount: amount.text, name: line.name })}
       onclick={() => onscaleto?.(line.ids[0] ?? '')}>{amount.text}</button
     >
   {:else}

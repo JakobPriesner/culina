@@ -590,6 +590,15 @@
     background: var(--surface-raised);
   }
 
+  /* A narrow phone has no width to spare for the card's sides: it reaches into the page's gutter and keeps a thin
+     edge, so the seven days, which already reach past it, stay a thumb wide each. */
+  @media (width < 24rem) {
+    .aside {
+      margin-inline: calc(var(--space-2) * -1);
+      padding-inline: var(--space-2);
+    }
+  }
+
   /* Portrait tablets keep one reading column. The week and its totals share a compact overview instead of
      stretching seven dates and three figures across the whole page. Phones stack them on the same card. */
   @media (48rem <= width < 64rem) {
