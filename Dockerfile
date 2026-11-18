@@ -20,7 +20,7 @@
 # same bytes for arm64 as for amd64 — and running `pnpm install` a second time
 # under emulation is how a two-architecture build goes from fifteen minutes to
 # more than ninety and is killed by the timeout.
-FROM --platform=$BUILDPLATFORM node:26-alpine@sha256:c6ad9e9c1d80f6eb607c26b4b0a132ff7a2344fad1c78ea3baa2a7d4c8de6d94 AS frontend
+FROM --platform=$BUILDPLATFORM node:26-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5 AS frontend
 
 WORKDIR /src
 
@@ -46,7 +46,7 @@ RUN pnpm generate:api && pnpm build
 # same for both architectures, and only the native launcher (/app/Api) and a few
 # native packages are not, which `-a` picks. Building arm64 under emulation is
 # what made publishing take twenty minutes.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b AS backend
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0@sha256:bef136a371963aaa46ec97882845ef6f54dec15728bb4b128b1c2a400ffbc9b4 AS backend
 
 # amd64 or arm64, set by buildx; `-a` accepts Docker's names as they are.
 ARG TARGETARCH
@@ -94,7 +94,7 @@ RUN mkdir -p /data/images /data/keys /data/config
 # ── 3. What ships ────────────────────────────────────────────────────────────
 # Chiseled: no shell and no package manager, which is both a much smaller
 # attack surface and a much smaller CVE feed to keep up with.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled@sha256:c89a6a61f494f20a5ae302990e814627a8d91b332fd4a8e7c1707c2d4da9555d AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled@sha256:7c625e44e5d588b4d7b2a913e94ca4bd5098ce47442da404829e4c7936a764e1 AS runtime
 
 # Traceable to a commit, from `docker inspect`, without asking anyone.
 ARG REVISION=unknown
